@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { projectPlanService } from "@/services/projectplan.service";
 import { ProjectPlanListItem, ProjectPlanStatus } from "@/dtos/projectplan.dto";
 import { Loading, ErrorMessage } from "@/components";
@@ -33,7 +33,7 @@ function getStatusLabel(status: ProjectPlanStatus): string {
     case "concept":
       return "Concept";
     case "ingediend":
-      return "Ingediend";
+      return "In review";
     case "go":
       return "GO";
     case "no-go":
@@ -45,35 +45,16 @@ function getStatusLabel(status: ProjectPlanStatus): string {
 
 export default function ProjectPlansListPage() {
   const [data, setData] = useState<ProjectPlanListItem[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [courseFilter, setCourseFilter] = useState<string>("all");
 
-  // Build courses list from actual projectplans data
-  useEffect(() => {
-    if (data.length > 0) {
-      const uniqueCourses = new Map<number, Course>();
-      data.forEach((item) => {
-        if (item.course_id && item.course_name) {
-          uniqueCourses.set(item.course_id, {
-            id: item.course_id,
-            name: item.course_name,
-          });
-        }
-      });
-      setCourses(Array.from(uniqueCourses.values()));
-    }
-  }, [data]);
-
-  async function fetchList(courseId?: number, status?: StatusFilter) {
+  async function fetchList(status?: StatusFilter) {
     setLoading(true);
     setError(null);
     try {
       const response = await projectPlanService.listProjectPlans({
-        course_id: courseId,
         status: status === "all" ? undefined : status,
       });
       setData(response.items || []);
@@ -85,30 +66,40 @@ export default function ProjectPlansListPage() {
   }
 
   useEffect(() => {
-    const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
-    fetchList(courseId, statusFilter);
-  }, [statusFilter, courseFilter]);
+    fetchList(statusFilter);
+  }, [statusFilter]);
 
-  // Filter data by search query
-  const filteredData = data.filter((item) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      item.project_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.title && item.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (item.course_name && item.course_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      item.team_members.some((member) => member.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSearch;
-  });
+  // Filter and sort data
+  const filteredAndSortedData = useMemo(() => {
+    // Apply search filter
+    let filtered = data.filter((item) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        item.project_title.toLowerCase().includes(query) ||
+        (item.title && item.title.toLowerCase().includes(query)) ||
+        item.team_members.some((member) => member.toLowerCase().includes(query)) ||
+        `team ${item.team_number}`.toLowerCase().includes(query)
+      );
+    });
 
-  // Group projectplans by course
-  const groupedByCourse: Record<string, ProjectPlanListItem[]> = {};
-  filteredData.forEach((item) => {
-    const courseKey = item.course_name || "Geen vak";
-    if (!groupedByCourse[courseKey]) {
-      groupedByCourse[courseKey] = [];
-    }
-    groupedByCourse[courseKey].push(item);
-  });
+    // Sort by status priority and then by updated_at
+    const statusPriority: Record<ProjectPlanStatus, number> = {
+      ingediend: 0,
+      "no-go": 1,
+      concept: 2,
+      go: 3,
+    };
+
+    return filtered.sort((a, b) => {
+      // First sort by status priority
+      const statusDiff = statusPriority[a.status] - statusPriority[b.status];
+      if (statusDiff !== 0) return statusDiff;
+
+      // Within same status, sort by most recently updated first
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  }, [data, searchQuery]);
 
   return (
     <>
@@ -116,9 +107,9 @@ export default function ProjectPlansListPage() {
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Projectplan</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">Projectplannen</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Overzicht van projectplannen (GO/NO-GO) per vak.
+              Overzicht van projectplannen voor bovenbouwprojecten
             </p>
           </div>
           <Link
@@ -132,65 +123,49 @@ export default function ProjectPlansListPage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* FilterBar */}
-        <div className="mb-6 rounded-xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            {/* Left side: search + dropdowns */}
-            <div className="flex flex-wrap gap-3 items-center flex-1">
-              {/* Search field */}
-              <div className="relative flex-1 min-w-[200px] max-w-md">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Zoek op titel, vak of team…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-9 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        {/* Search & Filter Bar */}
+        <div className="rounded-xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            {/* Search field */}
+            <div className="relative flex-1">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
-              </div>
-
-              {/* Course dropdown */}
-              <select
-                className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
-                value={courseFilter}
-                onChange={(e) => setCourseFilter(e.target.value)}
-              >
-                <option value="all">Alle vakken</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Status dropdown */}
-              <select
-                className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              >
-                <option value="all">Alle statussen</option>
-                <option value="concept">Concept</option>
-                <option value="ingediend">Ingediend</option>
-                <option value="go">GO</option>
-                <option value="no-go">NO-GO</option>
-              </select>
+              </svg>
+              <input
+                type="text"
+                placeholder="Zoek op team, leerling of project…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-9 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
             </div>
+
+            {/* Status dropdown */}
+            <select
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[160px]"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            >
+              <option value="all">Alle statussen</option>
+              <option value="concept">Concept</option>
+              <option value="ingediend">In review</option>
+              <option value="go">GO</option>
+              <option value="no-go">NO-GO</option>
+            </select>
           </div>
         </div>
 
+        {/* Loading, Error, Empty states */}
         {loading && (
           <div className="p-6">
             <Loading />
@@ -206,54 +181,61 @@ export default function ProjectPlansListPage() {
             Geen projectplannen gevonden.
           </div>
         )}
-        {!loading &&
-          !error &&
-          Object.keys(groupedByCourse).length > 0 &&
-          Object.keys(groupedByCourse).map((courseName) => (
-            <section key={courseName} className="space-y-3">
-              <h3 className="text-lg font-semibold text-slate-800 px-2">
-                {courseName}
-              </h3>
-              <div className="space-y-3">
-                {groupedByCourse[courseName].map((item) => {
-                  const progressPercentage =
-                    item.required_total > 0
-                      ? (item.required_complete / item.required_total) * 100
-                      : 0;
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="group flex items-stretch justify-between gap-4 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-                    >
-                      {/* Left side: content */}
-                      <div className="flex flex-1 flex-col gap-1">
-                        {/* Title + Status pill */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-semibold text-slate-900">
-                            Team {item.team_number || "?"} - {item.project_title}
-                          </h3>
-                          <span className={getStatusBadgeClasses(item.status)}>
-                            {getStatusLabel(item.status)}
+        {/* Projectplans List */}
+        {!loading && !error && filteredAndSortedData.length > 0 && (
+          <div className="space-y-2">
+            {filteredAndSortedData.map((item) => {
+              const progressPercentage =
+                item.required_total > 0
+                  ? (item.required_complete / item.required_total) * 100
+                  : 0;
+
+              return (
+                <Link
+                  key={item.id}
+                  href={`/teacher/projectplans/${item.id}`}
+                  className="block group"
+                >
+                  <div className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+                    {/* Left side: content */}
+                    <div className="flex flex-1 flex-col gap-1.5 min-w-0">
+                      {/* Team + Title + Status */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base font-semibold text-slate-900">
+                          Team {item.team_number || "?"}
+                        </h3>
+                        <span className="text-slate-500">·</span>
+                        <span className="text-sm text-slate-600">
+                          {item.title || "(zonder titel)"}
+                        </span>
+                        <span className={getStatusBadgeClasses(item.status)}>
+                          {getStatusLabel(item.status)}
+                        </span>
+                        {item.locked && (
+                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            🔒 Vergrendeld
                           </span>
-                          {item.locked && (
-                            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                              🔒 Vergrendeld
-                            </span>
-                          )}
-                        </div>
+                        )}
+                      </div>
 
-                        {/* Team members */}
-                        <div className="text-sm text-slate-600">
-                          {item.team_members.length > 0 ? (
-                            <span>{item.team_members.join(", ")}</span>
-                          ) : (
-                            <span className="text-slate-400">Geen teamleden</span>
-                          )}
-                        </div>
+                      {/* Team members */}
+                      <div className="text-sm text-slate-600">
+                        {item.team_members.length > 0 ? (
+                          <span>{item.team_members.join(", ")}</span>
+                        ) : (
+                          <span className="text-slate-400">Geen teamleden</span>
+                        )}
+                      </div>
 
-                        {/* Progress bar */}
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
+                      {/* Project name */}
+                      <div className="text-sm text-slate-500">
+                        Project: {item.project_title}
+                      </div>
+
+                      {/* Progress bar + Last updated */}
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
                           <div
                             className="inline-block h-1 w-20 rounded-full bg-slate-200"
                             role="progressbar"
@@ -268,33 +250,44 @@ export default function ProjectPlansListPage() {
                             />
                           </div>
                           <span>
-                            {item.required_complete}/{item.required_total} verplicht compleet
+                            {item.required_complete}/{item.required_total} verplicht
                           </span>
                         </div>
-
-                        {/* Last updated */}
                         <div className="text-xs text-slate-500">
-                          Laatst bijgewerkt:{" "}
-                          {new Date(item.updated_at).toLocaleDateString("nl-NL")}
+                          Bijgewerkt: {new Date(item.updated_at).toLocaleDateString("nl-NL")}
                         </div>
                       </div>
-
-                      {/* Right side: buttons */}
-                      <div className="flex shrink-0 items-center gap-2">
-                        {/* View button */}
-                        <Link
-                          href={`/teacher/projectplans/${item.id}`}
-                          className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                        >
-                          Bekijken
-                        </Link>
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+
+                    {/* Right side: arrow icon */}
+                    <div className="flex shrink-0 items-center">
+                      <svg
+                        className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* No results after filtering */}
+        {!loading && !error && data.length > 0 && filteredAndSortedData.length === 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-slate-500 text-center">
+            Geen projectplannen gevonden met de huidige filters.
+          </div>
+        )}
       </main>
     </>
   );
