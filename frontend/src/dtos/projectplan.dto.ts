@@ -85,6 +85,12 @@ export type ProjectPlanListResponse = {
   per_page: number;
 };
 
+// Create DTO
+export type ProjectPlanCreate = {
+  project_id: number;
+  title?: string;
+};
+
 // Update DTOs
 export type ProjectPlanUpdate = {
   title?: string;

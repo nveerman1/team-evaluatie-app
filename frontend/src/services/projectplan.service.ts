@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import {
   ProjectPlan,
+  ProjectPlanCreate,
   ProjectPlanListItem,
   ProjectPlanListResponse,
   ProjectPlanUpdate,
@@ -27,6 +28,14 @@ export const projectPlanService = {
       "/teacher/projectplans",
       { params }
     );
+    return response.data;
+  },
+
+  /**
+   * Create a new project plan
+   */
+  async createProjectPlan(data: ProjectPlanCreate): Promise<ProjectPlan> {
+    const response = await api.post<ProjectPlan>("/teacher/projectplans", data);
     return response.data;
   },
 

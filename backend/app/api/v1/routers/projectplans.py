@@ -20,6 +20,7 @@ from app.infra.db.models import (
     ProjectTeamMember,
 )
 from app.api.v1.schemas.projectplans import (
+    ProjectPlanCreate,
     ProjectPlanUpdate,
     ProjectPlanOut,
     ProjectPlanListItem,
@@ -281,6 +282,102 @@ def list_projectplans(
         )
     
     return ProjectPlanListOut(items=items, total=total, page=page, per_page=per_page)
+
+
+@teacher_router.post("", response_model=ProjectPlanOut, status_code=status.HTTP_201_CREATED)
+def create_projectplan(
+    payload: ProjectPlanCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Create a new project plan for a project.
+    Teacher must have access to the project's course.
+    """
+    require_role(user, ["teacher", "admin"])
+    
+    # Get the project and verify access
+    project = db.query(Project).filter(Project.id == payload.project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Check if teacher has access to this project's course
+    if user.role == "teacher" and project.course_id:
+        from app.core.rbac import get_accessible_course_ids
+        accessible_courses = get_accessible_course_ids(db, user)
+        if project.course_id not in accessible_courses:
+            raise HTTPException(status_code=403, detail="No access to this project's course")
+    
+    # Check if a plan already exists for this project
+    existing_plan = (
+        db.query(ProjectPlan)
+        .filter(
+            ProjectPlan.project_id == payload.project_id,
+            ProjectPlan.school_id == user.school_id,
+        )
+        .first()
+    )
+    if existing_plan:
+        raise HTTPException(
+            status_code=400,
+            detail="A project plan already exists for this project"
+        )
+    
+    # Create the project plan
+    project_plan = ProjectPlan(
+        school_id=user.school_id,
+        project_id=payload.project_id,
+        title=payload.title,
+        status="concept",
+        locked=False,
+    )
+    db.add(project_plan)
+    db.flush()  # Get project_plan.id
+    
+    # Define section metadata
+    section_keys = [
+        "client",
+        "problem",
+        "goal",
+        "method",
+        "planning",
+        "tasks",
+        "motivation",
+        "risks",
+    ]
+    
+    # Create empty sections
+    for key in section_keys:
+        section = ProjectPlanSection(
+            school_id=user.school_id,
+            project_plan_id=project_plan.id,
+            key=key,
+            status="empty",
+        )
+        db.add(section)
+    
+    db.commit()
+    db.refresh(project_plan)
+    
+    # Log the action
+    log_action(
+        db=db,
+        user_id=user.id,
+        action="create_projectplan",
+        resource_type="projectplan",
+        resource_id=project_plan.id,
+        details={"project_id": payload.project_id, "title": payload.title},
+    )
+    
+    # Return with sections loaded
+    plan = (
+        db.query(ProjectPlan)
+        .options(joinedload(ProjectPlan.sections))
+        .filter(ProjectPlan.id == project_plan.id)
+        .first()
+    )
+    
+    return ProjectPlanOut.model_validate(plan)
 
 
 @teacher_router.get("/{plan_id}", response_model=ProjectPlanOut)
