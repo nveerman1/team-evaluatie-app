@@ -39,6 +39,17 @@ from app.api.v1.schemas.projectplans import (
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
 logger = logging.getLogger(__name__)
 
+SECTION_NAMES = {
+    "client": "Opdrachtgever",
+    "problem": "Probleemstelling",
+    "goal": "Doel",
+    "method": "Methode",
+    "planning": "Planning",
+    "tasks": "Taken",
+    "motivation": "Motivatie",
+    "risks": "Risico's",
+}
+
 
 def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
     """Get all course IDs that a teacher is assigned to via teacher_courses"""
@@ -963,7 +974,8 @@ def submit_projectplan(
     for key in required_text_sections:
         section = sections_by_key.get(key)
         if not section or not section.text or not section.text.strip():
-            errors.append(f"{key.capitalize()} sectie moet ingevuld zijn")
+            section_name = SECTION_NAMES.get(key, key.capitalize())
+            errors.append(f"{section_name} sectie moet ingevuld zijn")
     
     if errors:
         raise HTTPException(
