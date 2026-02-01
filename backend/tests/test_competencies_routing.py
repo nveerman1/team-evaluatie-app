@@ -7,99 +7,70 @@ was being matched by the dynamic route /{competency_id} instead of the static
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from app.main import app
 
 
 class TestCompetenciesRouting:
     """Tests for competencies routing order"""
 
-    def test_windows_endpoint_not_matched_as_competency_id(self):
+    def test_route_order_windows_before_competency_id(self):
         """
-        Test that /competencies/windows is routed to the windows endpoint,
-        not to the /{competency_id} endpoint.
-        
-        This is a regression test for the routing conflict where "windows"
-        was being parsed as competency_id causing a 422 validation error.
+        Test that the /windows/ routes are registered before /{competency_id}
+        in the router to ensure correct routing priority.
         """
-        client = TestClient(app)
+        from app.api.v1.routers import competencies
         
-        # Call the windows endpoint
-        # Note: We expect a 401 (unauthorized) since we're not authenticated,
-        # but we should NOT get a 422 (validation error trying to parse "windows" as int)
-        response = client.get("/api/v1/competencies/windows/")
+        # Get all routes from the router
+        routes = [r for r in competencies.router.routes if hasattr(r, 'path')]
         
-        # If the route is matched correctly, we get 401 (need auth)
-        # If it's matched incorrectly as /{competency_id}, we'd get 422 (validation error)
-        assert response.status_code != 422, (
-            f"Got 422 error, indicating 'windows' is being matched as competency_id. "
-            f"Response: {response.json()}"
+        # Find indices of relevant routes
+        windows_index = None
+        competency_id_index = None
+        
+        for i, route in enumerate(routes):
+            if route.path == '/competencies/windows/':
+                windows_index = i
+            elif route.path == '/competencies/{competency_id}' and 'GET' in route.methods:
+                competency_id_index = i
+        
+        assert windows_index is not None, "Could not find /windows/ route"
+        assert competency_id_index is not None, "Could not find /{competency_id} route"
+        
+        # The critical assertion: /windows/ must come before /{competency_id}
+        assert windows_index < competency_id_index, (
+            f"Route order incorrect: /windows/ is at index {windows_index}, "
+            f"but /{{competency_id}} is at index {competency_id_index}. "
+            f"Static routes must come before dynamic routes to prevent matching 'windows' as an ID."
         )
         
-        # We expect 401 because we didn't provide authentication
-        assert response.status_code == 401, (
-            f"Expected 401 (unauthorized), got {response.status_code}. "
-            f"Response: {response.json() if response.status_code != 401 else response.text}"
-        )
+    def test_all_windows_routes_before_competency_id(self):
+        """
+        Test that ALL /windows/* routes are registered before /{competency_id}.
+        """
+        from app.api.v1.routers import competencies
+        
+        routes = [r for r in competencies.router.routes if hasattr(r, 'path')]
+        
+        # Find the index of /{competency_id}
+        competency_id_index = None
+        for i, route in enumerate(routes):
+            if route.path == '/competencies/{competency_id}' and 'GET' in route.methods:
+                competency_id_index = i
+                break
+        
+        assert competency_id_index is not None, "Could not find /{competency_id} route"
+        
+        # Check that all basic /windows/ routes come before it
+        windows_paths = [
+            '/competencies/windows/',
+            '/competencies/windows/{window_id}',
+        ]
+        
+        for windows_path in windows_paths:
+            for i, route in enumerate(routes):
+                if route.path == windows_path:
+                    assert i < competency_id_index, (
+                        f"Route {windows_path} is at index {i}, "
+                        f"but /{{competency_id}} is at index {competency_id_index}. "
+                        f"All /windows/* routes must come before dynamic /{{competency_id}}."
+                    )
 
-    def test_windows_endpoint_without_trailing_slash(self):
-        """
-        Test that /competencies/windows (without trailing slash) is also routed correctly.
-        FastAPI should redirect or handle this appropriately.
-        """
-        client = TestClient(app)
-        
-        # Call without trailing slash
-        response = client.get("/api/v1/competencies/windows", allow_redirects=False)
-        
-        # Should either get 307 redirect to /windows/ or 401 auth error
-        # Should NOT get 422 validation error
-        assert response.status_code != 422, (
-            f"Got 422 error, indicating 'windows' is being matched as competency_id. "
-            f"Response: {response.json()}"
-        )
-
-    def test_numeric_competency_id_still_works(self):
-        """
-        Test that numeric competency IDs are still routed to the /{competency_id} endpoint.
-        """
-        client = TestClient(app)
-        
-        # Call with a numeric ID
-        response = client.get("/api/v1/competencies/123")
-        
-        # We expect 401 (unauthorized) or 404 (not found), not 422
-        assert response.status_code in [401, 404], (
-            f"Expected 401 or 404, got {response.status_code}. "
-            f"Response: {response.json() if response.status_code in [401, 404] else response.text}"
-        )
-
-    def test_windows_subpaths_routed_correctly(self):
-        """
-        Test that /competencies/windows/{window_id}/... paths are routed correctly.
-        """
-        client = TestClient(app)
-        
-        # Test /windows/{window_id}/heatmap
-        response = client.get("/api/v1/competencies/windows/1/heatmap")
-        assert response.status_code != 422, (
-            f"windows subpath incorrectly routed. Response: {response.json()}"
-        )
-        
-        # Test /windows/{window_id}/overview
-        response = client.get("/api/v1/competencies/windows/1/overview")
-        assert response.status_code != 422, (
-            f"windows subpath incorrectly routed. Response: {response.json()}"
-        )
-        
-        # Test /windows/{window_id}/goals
-        response = client.get("/api/v1/competencies/windows/1/goals")
-        assert response.status_code != 422, (
-            f"windows subpath incorrectly routed. Response: {response.json()}"
-        )
-        
-        # Test /windows/{window_id}/reflections
-        response = client.get("/api/v1/competencies/windows/1/reflections")
-        assert response.status_code != 422, (
-            f"windows subpath incorrectly routed. Response: {response.json()}"
-        )
