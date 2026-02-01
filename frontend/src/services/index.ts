@@ -22,3 +22,4 @@ export * from "./academic-year.service";
 export * from "./submission.service";
 export * from "./grades.service";
 export * from "./task.service";
+export * from "./projectplan.service";

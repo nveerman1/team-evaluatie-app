@@ -19,3 +19,4 @@ export * from "./omza.dto";
 export * from "./competency-monitor.dto";
 export * from "./academic-year.dto";
 export * from "./task.dto";
+export * from "./projectplan.dto";
