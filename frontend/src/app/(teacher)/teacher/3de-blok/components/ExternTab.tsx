@@ -454,7 +454,7 @@ export default function ExternTab() {
                 </th>
                 <th className="px-5 py-3 w-44">Naam</th>
                 <th className="px-5 py-3 w-20">Klas</th>
-                <th className="px-5 py-3 w-20">Locatie</th>
+                <th className="px-5 py-3 w-32">Locatie</th>
                 <th className="px-5 py-3 w-[44%]">Omschrijving</th>
                 <th className="px-5 py-3 w-28">Starttijd</th>
                 <th className="px-5 py-3 w-28">Eindtijd</th>
