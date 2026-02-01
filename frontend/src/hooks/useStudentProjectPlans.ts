@@ -7,29 +7,27 @@ export function useStudentProjectPlans() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadProjectPlans() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await projectPlanService.listMyProjectPlans();
-        setProjectPlans(data);
-      } catch (e: any) {
-        setError(e?.response?.data?.detail || e?.message || 'Failed to load projectplans');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadProjectPlans();
-  }, []);
-
-  return { projectPlans, loading, error, refetch: () => {
+  const fetchProjectPlans = async () => {
     setLoading(true);
     setError(null);
-    projectPlanService.listMyProjectPlans()
-      .then(data => setProjectPlans(data))
-      .catch(e => setError(e?.response?.data?.detail || e?.message || 'Failed to load projectplans'))
-      .finally(() => setLoading(false));
-  }};
+    try {
+      const data = await projectPlanService.listMyProjectPlans();
+      setProjectPlans(data);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to load projectplans');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjectPlans();
+  }, []);
+
+  return { 
+    projectPlans, 
+    loading, 
+    error, 
+    refetch: fetchProjectPlans 
+  };
 }
