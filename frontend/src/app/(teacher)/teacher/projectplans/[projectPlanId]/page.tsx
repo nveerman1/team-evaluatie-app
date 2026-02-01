@@ -87,12 +87,13 @@ export default function ProjectPlanDetailPage() {
     if (!plan) return;
     setIsUpdating(true);
     try {
-      const updated = await projectPlanService.updateSectionFeedback(
+      await projectPlanService.updateSectionFeedback(
         plan.id,
         sectionKey as ProjectPlanSectionKey,
         { teacher_note: feedback, status }
       );
-      setPlan(updated);
+      // Refetch the full plan to get updated state
+      await fetchPlan();
       toast.success("Feedback opgeslagen");
     } catch (e: any) {
       toast.error(e?.response?.data?.detail || "Opslaan feedback mislukt");
