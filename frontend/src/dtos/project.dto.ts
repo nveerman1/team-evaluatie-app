@@ -10,6 +10,8 @@ export type Project = {
   slug?: string;
   description?: string;
   class_name?: string;
+  period?: string; // P1, P2, P3, P4
+  level?: string; // "onderbouw" | "bovenbouw"
   start_date?: string; // ISO date string
   end_date?: string; // ISO date string
   status: "concept" | "active" | "completed" | "archived";
@@ -44,6 +46,7 @@ export type ProjectCreate = {
   description?: string;
   class_name?: string;
   period?: string;
+  level?: string; // "onderbouw" | "bovenbouw"
   start_date?: string;
   end_date?: string;
   status?: string;
