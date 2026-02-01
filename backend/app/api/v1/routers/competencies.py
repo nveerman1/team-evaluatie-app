@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import List, Literal, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
@@ -753,9 +753,9 @@ def delete_window(
     return None
 
 
-@router.get("/{competency_id}", response_model=CompetencyOut)
+@router.get("/{competency_id:int}", response_model=CompetencyOut)
 def get_competency(
-    competency_id: int,
+    competency_id: int = Path(..., description="Competency ID (numeric only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -789,10 +789,10 @@ def get_competency(
     return _to_competency_out(competency, current_user.id)
 
 
-@router.patch("/{competency_id}", response_model=CompetencyOut)
+@router.patch("/{competency_id:int}", response_model=CompetencyOut)
 def update_competency(
-    competency_id: int,
     data: CompetencyUpdate,
+    competency_id: int = Path(..., description="Competency ID (numeric only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -880,9 +880,9 @@ def update_competency(
         raise HTTPException(status_code=400, detail="Database constraint violation")
 
 
-@router.delete("/{competency_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{competency_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_competency(
-    competency_id: int,
+    competency_id: int = Path(..., description="Competency ID (numeric only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
