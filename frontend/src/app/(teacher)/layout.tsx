@@ -17,6 +17,7 @@ import {
   FileStack,
   UsersRound,
   Clock,
+  FileCheck,
 } from "lucide-react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -100,6 +101,7 @@ export default function TeacherLayout({
               <div className="space-y-1">
                 <NavItem href="/teacher/projects" label="Projecten" icon={Layers} />
                 <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" icon={CheckSquare} />
+                <NavItem href="/teacher/projectplans" label="Projectplan" icon={FileCheck} />
                 <NavItem href="/teacher/evaluations" label="Peerevaluaties" icon={Users} />
                 <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
                 <NavItem href="/teacher/project-notes" label="Projectaantekeningen" icon={FileEdit} />
