@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import List, Literal, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
@@ -610,9 +610,152 @@ def create_competency(
         raise HTTPException(status_code=400, detail="Database constraint violation")
 
 
-@router.get("/{competency_id}", response_model=CompetencyOut)
+# ============ Competency Window CRUD ============
+# NOTE: These routes MUST come before /{competency_id} to avoid "windows" being matched as an ID
+
+
+@router.get("/windows/", response_model=List[CompetencyWindowOut])
+def list_windows(
+    status_filter: Optional[str] = Query(None),
+    course_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    List all competency windows.
+    
+    Access control:
+    - Students: see windows for courses they're enrolled in
+    - Teachers: see windows for courses they're assigned to
+    - Admins: see all windows in their school
+    """
+    query = select(CompetencyWindow).where(
+        CompetencyWindow.school_id == current_user.school_id
+    )
+
+    # If user is a student, only show windows for courses they're enrolled in
+    if current_user.role == "student":
+        # Get course IDs where student is enrolled
+        student_course_ids = (
+            db.query(CourseEnrollment.course_id)
+            .filter(
+                CourseEnrollment.student_id == current_user.id,
+                CourseEnrollment.active.is_(True),
+            )
+            .distinct()
+            .all()
+        )
+        course_ids = [cid for (cid,) in student_course_ids]
+
+        if course_ids:
+            query = query.where(CompetencyWindow.course_id.in_(course_ids))
+        else:
+            # Student has no courses, filter to impossible condition
+            query = query.where(CompetencyWindow.id == -1)
+    
+    # If user is a teacher (not admin), only show windows for courses they're assigned to
+    elif current_user.role == "teacher":
+        teacher_course_ids = _get_user_course_ids(db, current_user)
+        if teacher_course_ids:
+            query = query.where(CompetencyWindow.course_id.in_(teacher_course_ids))
+        else:
+            # Teacher has no assigned courses, return empty
+            query = query.where(CompetencyWindow.id == -1)
+
+    if status_filter:
+        query = query.where(CompetencyWindow.status == status_filter)
+    if course_id:
+        query = query.where(CompetencyWindow.course_id == course_id)
+    query = query.order_by(CompetencyWindow.start_date.desc())
+
+    windows = db.execute(query).scalars().all()
+    return windows
+
+
+@router.post(
+    "/windows/", response_model=CompetencyWindowOut, status_code=status.HTTP_201_CREATED
+)
+def create_window(
+    data: CompetencyWindowCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new competency window (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can create windows")
+
+    window = CompetencyWindow(school_id=current_user.school_id, **data.model_dump())
+    db.add(window)
+    db.commit()
+    db.refresh(window)
+    return window
+
+
+@router.get("/windows/{window_id}", response_model=CompetencyWindowOut)
+def get_window(
+    window_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a specific window"""
+    window = db.get(CompetencyWindow, window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+    
+    # If user is a teacher (not admin), verify they have access to the window's course
+    if current_user.role == "teacher" and window.course_id:
+        teacher_course_ids = _get_user_course_ids(db, current_user)
+        if teacher_course_ids and window.course_id not in teacher_course_ids:
+            raise HTTPException(status_code=404, detail="Window not found")
+    
+    return window
+
+
+@router.patch("/windows/{window_id}", response_model=CompetencyWindowOut)
+def update_window(
+    window_id: int,
+    data: CompetencyWindowUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a window (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can update windows")
+
+    window = db.get(CompetencyWindow, window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(window, key, value)
+
+    db.commit()
+    db.refresh(window)
+    return window
+
+
+@router.delete("/windows/{window_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_window(
+    window_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a window (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can delete windows")
+
+    window = db.get(CompetencyWindow, window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+
+    db.delete(window)
+    db.commit()
+    return None
+
+
+@router.get("/{competency_id:int}", response_model=CompetencyOut)
 def get_competency(
-    competency_id: int,
+    competency_id: int = Path(..., description="Competency ID (numeric only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -646,10 +789,10 @@ def get_competency(
     return _to_competency_out(competency, current_user.id)
 
 
-@router.patch("/{competency_id}", response_model=CompetencyOut)
+@router.patch("/{competency_id:int}", response_model=CompetencyOut)
 def update_competency(
-    competency_id: int,
     data: CompetencyUpdate,
+    competency_id: int = Path(..., description="Competency ID (numeric only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -737,9 +880,9 @@ def update_competency(
         raise HTTPException(status_code=400, detail="Database constraint violation")
 
 
-@router.delete("/{competency_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{competency_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_competency(
-    competency_id: int,
+    competency_id: int = Path(..., description="Competency ID (numeric only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -968,148 +1111,6 @@ def delete_rubric_level(
         raise HTTPException(status_code=404, detail="Rubric level not found")
 
     db.delete(rubric_level)
-    db.commit()
-    return None
-
-
-# ============ Competency Window CRUD ============
-
-
-@router.get("/windows/", response_model=List[CompetencyWindowOut])
-def list_windows(
-    status_filter: Optional[str] = Query(None),
-    course_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    List all competency windows.
-    
-    Access control:
-    - Students: see windows for courses they're enrolled in
-    - Teachers: see windows for courses they're assigned to
-    - Admins: see all windows in their school
-    """
-    query = select(CompetencyWindow).where(
-        CompetencyWindow.school_id == current_user.school_id
-    )
-
-    # If user is a student, only show windows for courses they're enrolled in
-    if current_user.role == "student":
-        # Get course IDs where student is enrolled
-        student_course_ids = (
-            db.query(CourseEnrollment.course_id)
-            .filter(
-                CourseEnrollment.student_id == current_user.id,
-                CourseEnrollment.active.is_(True),
-            )
-            .distinct()
-            .all()
-        )
-        course_ids = [cid for (cid,) in student_course_ids]
-
-        if course_ids:
-            query = query.where(CompetencyWindow.course_id.in_(course_ids))
-        else:
-            # Student has no courses, filter to impossible condition
-            query = query.where(CompetencyWindow.id == -1)
-    
-    # If user is a teacher (not admin), only show windows for courses they're assigned to
-    elif current_user.role == "teacher":
-        teacher_course_ids = _get_user_course_ids(db, current_user)
-        if teacher_course_ids:
-            query = query.where(CompetencyWindow.course_id.in_(teacher_course_ids))
-        else:
-            # Teacher has no assigned courses, return empty
-            query = query.where(CompetencyWindow.id == -1)
-
-    if status_filter:
-        query = query.where(CompetencyWindow.status == status_filter)
-    if course_id:
-        query = query.where(CompetencyWindow.course_id == course_id)
-    query = query.order_by(CompetencyWindow.start_date.desc())
-
-    windows = db.execute(query).scalars().all()
-    return windows
-
-
-@router.post(
-    "/windows/", response_model=CompetencyWindowOut, status_code=status.HTTP_201_CREATED
-)
-def create_window(
-    data: CompetencyWindowCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Create a new competency window (teacher only)"""
-    if current_user.role not in ["teacher", "admin"]:
-        raise HTTPException(status_code=403, detail="Only teachers can create windows")
-
-    window = CompetencyWindow(school_id=current_user.school_id, **data.model_dump())
-    db.add(window)
-    db.commit()
-    db.refresh(window)
-    return window
-
-
-@router.get("/windows/{window_id}", response_model=CompetencyWindowOut)
-def get_window(
-    window_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get a specific window"""
-    window = db.get(CompetencyWindow, window_id)
-    if not window or window.school_id != current_user.school_id:
-        raise HTTPException(status_code=404, detail="Window not found")
-    
-    # If user is a teacher (not admin), verify they have access to the window's course
-    if current_user.role == "teacher" and window.course_id:
-        teacher_course_ids = _get_user_course_ids(db, current_user)
-        if teacher_course_ids and window.course_id not in teacher_course_ids:
-            raise HTTPException(status_code=404, detail="Window not found")
-    
-    return window
-
-
-@router.patch("/windows/{window_id}", response_model=CompetencyWindowOut)
-def update_window(
-    window_id: int,
-    data: CompetencyWindowUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Update a window (teacher only)"""
-    if current_user.role not in ["teacher", "admin"]:
-        raise HTTPException(status_code=403, detail="Only teachers can update windows")
-
-    window = db.get(CompetencyWindow, window_id)
-    if not window or window.school_id != current_user.school_id:
-        raise HTTPException(status_code=404, detail="Window not found")
-
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(window, key, value)
-
-    db.commit()
-    db.refresh(window)
-    return window
-
-
-@router.delete("/windows/{window_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_window(
-    window_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete a window (teacher only)"""
-    if current_user.role not in ["teacher", "admin"]:
-        raise HTTPException(status_code=403, detail="Only teachers can delete windows")
-
-    window = db.get(CompetencyWindow, window_id)
-    if not window or window.school_id != current_user.school_id:
-        raise HTTPException(status_code=404, detail="Window not found")
-
-    db.delete(window)
     db.commit()
     return None
 
