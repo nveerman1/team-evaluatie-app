@@ -30,6 +30,7 @@ export default function StudentProjectPlanPage() {
 
   useEffect(() => {
     loadProjectPlan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadProjectPlan = async () => {
