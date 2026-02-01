@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import { ApiAuthError } from "@/lib/api";
 import { projectPlanService } from "@/services/projectplan.service";
@@ -189,12 +190,12 @@ export default function CreateProjectPlanInner() {
           >
             {saving ? "Opslaan…" : "Opslaan & verder"}
           </button>
-          <a
+          <Link
             href="/teacher/projectplans"
             className="px-4 py-2 rounded-xl border"
           >
             Annuleer
-          </a>
+          </Link>
         </div>
       </form>
     </main>

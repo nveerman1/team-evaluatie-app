@@ -1,6 +1,6 @@
 "use client";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectPlanService } from "@/services/projectplan.service";
@@ -35,6 +35,9 @@ export default function ProjectPlanDetailPage() {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set());
   const [savingSection, setSavingSection] = useState<SectionKey | null>(null);
   const [savingTeam, setSavingTeam] = useState(false);
+  
+  // Refs for section feedback textareas
+  const feedbackRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   // Section metadata
   const sectionMetadata: Record<SectionKey, { title: string; description: string }> = {
@@ -467,15 +470,17 @@ export default function ProjectPlanDetailPage() {
                               <div className="space-y-3">
                                 <h4 className="text-sm font-medium text-gray-700">Docent feedback</h4>
                                 <textarea
+                                  ref={(el) => {
+                                    feedbackRefs.current[section.key] = el;
+                                  }}
                                   className="w-full h-32 rounded-lg border border-gray-300 px-3 py-2 text-sm"
                                   placeholder="Schrijf hier feedback voor de studenten..."
                                   defaultValue={section.teacher_note || ""}
-                                  id={`feedback-${section.key}`}
                                 />
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => {
-                                      const textarea = document.getElementById(`feedback-${section.key}`) as HTMLTextAreaElement;
+                                      const textarea = feedbackRefs.current[section.key];
                                       handleSectionFeedback(section.key, SectionStatus.APPROVED, textarea?.value || "");
                                     }}
                                     disabled={isSaving}
@@ -485,7 +490,7 @@ export default function ProjectPlanDetailPage() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      const textarea = document.getElementById(`feedback-${section.key}`) as HTMLTextAreaElement;
+                                      const textarea = feedbackRefs.current[section.key];
                                       handleSectionFeedback(section.key, SectionStatus.REVISION, textarea?.value || "");
                                     }}
                                     disabled={isSaving}
