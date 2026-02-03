@@ -9,6 +9,7 @@ from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.infra.services.rate_limiter import RateLimiter
 from app.core.security import decode_access_token
+from app.core.auth_utils import normalize_email
 from app.core.config import settings
 from sqlalchemy.orm import Session
 from app.infra.db.session import SessionLocal
@@ -184,7 +185,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 try:
                     db = SessionLocal()
                     try:
-                        user = db.query(User).filter(User.email == x_user_email).first()
+                        # Normalize email for case-insensitive lookup
+                        normalized_email = normalize_email(x_user_email)
+                        user = db.query(User).filter(User.email == normalized_email).first()
                         if user and not user.archived:
                             logger.info(f"User found via X-User-Email: role={user.role}")
                             return user.role

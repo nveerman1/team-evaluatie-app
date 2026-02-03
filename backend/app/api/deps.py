@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.core.config import settings
+from app.core.auth_utils import normalize_email
 from app.infra.db.session import SessionLocal
 from app.infra.db.models import User
 
@@ -35,7 +36,10 @@ def get_current_user(
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    user = db.query(User).filter(User.email == sub).first()
+    
+    # Normalize email for case-insensitive lookup
+    normalized_email = normalize_email(sub)
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user:
         raise credentials_exception
     return user

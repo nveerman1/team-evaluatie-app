@@ -338,3 +338,56 @@ class TestDevLoginEndpoint:
 
             # Should return 401
             assert response.status_code == 401
+
+    def test_dev_login_with_uppercase_email(self, client, test_user, monkeypatch):
+        """Test that dev-login normalizes email case"""
+        from app.core.config import settings
+
+        monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
+
+        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+            mock_db = MagicMock()
+            mock_get_db.return_value = mock_db
+            
+            # User stored with lowercase email
+            test_user.email = "teacher@example.com"
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
+
+            # Login with uppercase email
+            response = client.post(
+                "/api/v1/auth/dev-login?email=TEACHER@EXAMPLE.COM",
+                follow_redirects=False,
+            )
+
+            # Should succeed (find user with normalized email)
+            assert response.status_code in [302, 303, 307]
+            assert "access_token" in response.cookies
+
+    def test_dev_login_with_mixed_case_email(self, client, test_user, monkeypatch):
+        """Test that dev-login normalizes mixed-case email"""
+        from app.core.config import settings
+
+        monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
+
+        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+            mock_db = MagicMock()
+            mock_get_db.return_value = mock_db
+            
+            # User stored with lowercase email
+            test_user.email = "l316student@school.nl"
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
+
+            # Login with mixed-case email
+            response = client.post(
+                "/api/v1/auth/dev-login?email=L316Student@School.NL",
+                follow_redirects=False,
+            )
+
+            # Should succeed (find user with normalized email)
+            assert response.status_code in [302, 303, 307]
+            assert "access_token" in response.cookies
+
