@@ -377,7 +377,8 @@ def main():
         }
         students_by_nameclass[key_name_class(name, class_name)] = old_uid
 
-
+    print(f"Found {len(students_by_uid)} students in dump.")
+    
     if cfg.dry_run:
         # we can also count logs/external quickly
         logs_count = sum(1 for _ in iter_insert_rows(cfg.dump_path, "logs"))
