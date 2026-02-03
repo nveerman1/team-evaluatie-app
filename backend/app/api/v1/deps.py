@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.infra.db.session import SessionLocal
 from app.infra.db.models import User
 from app.core.config import settings
+from app.core.auth_utils import normalize_email
 from app.core.security import decode_access_token
 import logging
 
@@ -55,7 +56,9 @@ async def get_current_user_dev(
             f"Dev-login used for user: {x_user_email}. "
             "This authentication method should only be used in local development."
         )
-        user = db.query(User).filter(User.email == x_user_email).first()
+        # Normalize email for case-insensitive lookup
+        normalized_email = normalize_email(x_user_email)
+        user = db.query(User).filter(User.email == normalized_email).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Unknown user"
@@ -112,8 +115,11 @@ async def get_current_user_dev(
             detail="Invalid token payload",
         )
 
+    # Normalize email for case-insensitive lookup
+    normalized_email = normalize_email(email)
+
     # Get user from database
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -200,8 +206,11 @@ async def get_current_user_prod(
             detail="Invalid token payload",
         )
 
+    # Normalize email for case-insensitive lookup
+    normalized_email = normalize_email(email)
+
     # Get user from database
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

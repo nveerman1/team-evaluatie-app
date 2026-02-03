@@ -13,6 +13,7 @@ from app.api.v1.schemas.auth import UserRead
 from app.infra.db.models import User, School
 from app.core.azure_ad import azure_ad_authenticator
 from app.core.security import create_access_token
+from app.core.auth_utils import normalize_email
 from app.core.config import settings
 from app.core.redirect_validator import (
     normalize_and_validate_return_to,
@@ -266,8 +267,11 @@ def dev_login(
         "This endpoint should ONLY be used in local development!"
     )
 
+    # Normalize email for case-insensitive lookup
+    normalized_email = normalize_email(email)
+
     # Find user
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"

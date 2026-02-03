@@ -15,6 +15,7 @@ import requests
 from fastapi import HTTPException, status
 
 from app.core.config import settings
+from app.core.auth_utils import normalize_email
 from app.infra.db.models import User
 from sqlalchemy.orm import Session
 
@@ -239,6 +240,9 @@ class AzureADAuthenticator:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="No email found in Azure AD profile",
             )
+
+        # Normalize email for case-insensitive comparison and storage
+        email = normalize_email(email)
 
         # Validate domain
         if not self.validate_domain(email):
