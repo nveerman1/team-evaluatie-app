@@ -61,6 +61,9 @@ interface ProjectWithLevel extends RunningProjectItem {
  * @param batchSize - Number of items to process concurrently
  * @param processor - Async function to process each item
  * @returns Array of settled results
+ * 
+ * Note: Batches are processed sequentially (one batch completes before the next starts)
+ * to ensure we never exceed the concurrent request limit and trigger rate limiting.
  */
 async function processBatched<T, R>(
   items: T[],
