@@ -240,5 +240,76 @@ class TestAzureADUserProvisioning:
         assert user.email == "existing@school.nl"
 
 
+class TestEmailNormalization:
+    """Test that email normalization works across all auth paths."""
+
+    @patch("app.core.azure_ad.Session")
+    def test_azure_ad_provision_with_uppercase_email(self, mock_session):
+        """Azure AD provisioning should normalize uppercase emails to match existing users"""
+        from app.core.azure_ad import AzureADAuthenticator
+        from app.infra.db.models import User
+
+        # Setup
+        authenticator = AzureADAuthenticator()
+        mock_db = MagicMock()
+
+        # Mock existing user with lowercase email
+        existing_user = User(
+            id=1,
+            school_id=1,
+            email="l316student@school.nl",  # Stored in lowercase
+            name="Test Student",
+            role="student",
+            auth_provider="local",
+        )
+        mock_db.query.return_value.filter.return_value.first.return_value = (
+            existing_user
+        )
+
+        # Azure AD returns uppercase email
+        profile = {"mail": "L316Student@school.nl", "displayName": "Test Student"}
+
+        # Call provision_or_update_user
+        user = authenticator.provision_or_update_user(mock_db, profile, school_id=1)
+
+        # Verify the existing user was found and updated (not a new user created)
+        mock_db.add.assert_not_called()  # Should NOT add a new user
+        assert user.auth_provider == "azure_ad"  # Should update auth provider
+        assert user.email == "l316student@school.nl"  # Email should remain lowercase
+
+    @patch("app.core.azure_ad.Session")
+    def test_azure_ad_provision_new_user_normalizes_email(self, mock_session):
+        """New users from Azure AD should have normalized (lowercase) emails"""
+        from app.core.azure_ad import AzureADAuthenticator
+
+        # Setup
+        authenticator = AzureADAuthenticator()
+        mock_db = MagicMock()
+
+        # Mock user query to return None (user doesn't exist)
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+
+        # Azure AD returns mixed-case email
+        profile = {"mail": "NewUser@School.NL", "displayName": "New User"}
+
+        # Call provision_or_update_user
+        user = authenticator.provision_or_update_user(mock_db, profile, school_id=1)
+
+        # Verify user was added with normalized email
+        mock_db.add.assert_called_once()
+        assert user.email == "newuser@school.nl"  # Should be lowercase
+
+    def test_normalize_email_function(self):
+        """Test the normalize_email utility function directly"""
+        from app.core.auth_utils import normalize_email
+
+        # Test various cases
+        assert normalize_email("Test@Example.COM") == "test@example.com"
+        assert normalize_email("  test@example.com  ") == "test@example.com"
+        assert normalize_email("L316Student@School.NL") == "l316student@school.nl"
+        assert normalize_email("") == ""
+        assert normalize_email(None) == ""
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
