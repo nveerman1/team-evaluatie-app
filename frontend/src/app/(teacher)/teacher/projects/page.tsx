@@ -55,6 +55,32 @@ interface ProjectWithLevel extends RunningProjectItem {
   subprojects?: Subproject[];
 }
 
+/**
+ * Process items in batches to avoid overwhelming the server with concurrent requests
+ * @param items - Array of items to process
+ * @param batchSize - Number of items to process concurrently
+ * @param processor - Async function to process each item
+ * @returns Array of settled results
+ * 
+ * Note: Batches are processed sequentially (one batch completes before the next starts)
+ * to ensure we never exceed the concurrent request limit and trigger rate limiting.
+ */
+async function processBatched<T, R>(
+  items: T[],
+  batchSize: number,
+  processor: (item: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.allSettled(batch.map(processor));
+    results.push(...batchResults);
+  }
+  
+  return results;
+}
+
 // Team type for course teams
 interface CourseTeam {
   team_number: number;
@@ -971,10 +997,12 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           };
         });
         
-        // Fetch project details and subprojects in parallel
+        // Fetch project details and subprojects in batches to avoid rate limiting
+        // Process 5 projects at a time to avoid overwhelming the server
+        const BATCH_SIZE = 5;
         const [projectDetails, subprojectsResults] = await Promise.all([
-          Promise.allSettled(basicProjects.map(p => projectService.getProject(p.project_id))),
-          Promise.allSettled(basicProjects.map(p => projectService.listSubprojects(p.project_id))),
+          processBatched(basicProjects, BATCH_SIZE, p => projectService.getProject(p.project_id)),
+          processBatched(basicProjects, BATCH_SIZE, p => projectService.listSubprojects(p.project_id)),
         ]);
         
         // Enrich projects with details and subprojects
@@ -1044,6 +1072,10 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     // Only fetch when courses are loaded
     if (courses.length > 0) {
       fetchProjects();
+    } else {
+      // No courses available yet - stop loading
+      setLoading(false);
+      setProjects([]);
     }
   }, [courses, refreshKey]);
 
