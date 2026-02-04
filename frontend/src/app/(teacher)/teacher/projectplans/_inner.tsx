@@ -17,7 +17,6 @@ export default function ProjectPlansListInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [courseFilter, setCourseFilter] = useState<string>("all");
 
   // Build courses list from actual projectplans data
@@ -36,13 +35,12 @@ export default function ProjectPlansListInner() {
     }
   }, [data]);
 
-  async function fetchList(courseId?: number, status?: string) {
+  async function fetchList(courseId?: number) {
     setLoading(true);
     setError(null);
     try {
       const response = await projectPlanService.listProjectPlans({
         course_id: courseId,
-        status: status === "all" ? undefined : status,
       });
       setData(response.items || []);
     } catch (e: any) {
@@ -58,9 +56,8 @@ export default function ProjectPlansListInner() {
 
   useEffect(() => {
     const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
-    const status = statusFilter === "all" ? undefined : statusFilter;
-    fetchList(courseId, status);
-  }, [statusFilter, courseFilter]);
+    fetchList(courseId);
+  }, [courseFilter]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Weet je zeker dat je dit projectplan wilt verwijderen?"))
@@ -68,8 +65,7 @@ export default function ProjectPlansListInner() {
     try {
       await projectPlanService.deleteProjectPlan(id);
       const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      fetchList(courseId, status);
+      fetchList(courseId);
     } catch (e: any) {
       if (e instanceof ApiAuthError) {
         alert(e.originalMessage);
@@ -135,8 +131,7 @@ export default function ProjectPlansListInner() {
     try {
       await projectPlanService.updateProjectPlan(id, { status: newStatus as any });
       const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      fetchList(courseId, status);
+      fetchList(courseId);
     } catch (e: any) {
       if (e instanceof ApiAuthError) {
         alert(e.originalMessage);
@@ -210,19 +205,6 @@ export default function ProjectPlansListInner() {
                     {c.name}
                   </option>
                 ))}
-              </select>
-
-              {/* Status dropdown */}
-              <select
-                className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">Alle statussen</option>
-                <option value="concept">Concept</option>
-                <option value="ingediend">Ingediend</option>
-                <option value="go">GO</option>
-                <option value="no-go">NO-GO</option>
               </select>
             </div>
           </div>
