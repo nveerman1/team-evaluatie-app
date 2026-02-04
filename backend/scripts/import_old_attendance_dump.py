@@ -6,7 +6,7 @@ import hashlib
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
-from typing import Any, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Iterator, List, Optional
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -15,6 +15,7 @@ from sqlalchemy.engine import Engine
 # ---------------------------
 # Config
 # ---------------------------
+
 
 @dataclass
 class Config:
@@ -29,7 +30,10 @@ class Config:
 # MySQL dump parsing (INSERT INTO `table` VALUES (...),(...);)
 # ---------------------------
 
-INSERT_RE = re.compile(r"^INSERT INTO `(?P<table>[^`]+)` VALUES\s*(?P<values>.+);$", re.IGNORECASE)
+INSERT_RE = re.compile(
+    r"^INSERT INTO `(?P<table>[^`]+)` VALUES\s*(?P<values>.+);$", re.IGNORECASE
+)
+
 
 def iter_insert_rows(dump_path: str, table: str) -> Iterator[List[Any]]:
     """
@@ -63,6 +67,7 @@ def iter_insert_rows(dump_path: str, table: str) -> Iterator[List[Any]]:
                 capturing = False
                 buf = []
 
+
 def _parse_insert_stmt(stmt: str, expected_table: str) -> Iterator[List[Any]]:
     m = INSERT_RE.match(stmt.strip())
     if not m:
@@ -74,6 +79,7 @@ def _parse_insert_stmt(stmt: str, expected_table: str) -> Iterator[List[Any]]:
     # values_blob looks like: (..),(..),(..)
     for tup in _split_mysql_tuples(values_blob):
         yield _parse_mysql_tuple(tup)
+
 
 def _split_mysql_tuples(values_blob: str) -> Iterator[str]:
     """
@@ -109,6 +115,7 @@ def _split_mysql_tuples(values_blob: str) -> Iterator[str]:
                     yield s[start : i + 1]
                     start = None
         i += 1
+
 
 def _parse_mysql_tuple(tup: str) -> List[Any]:
     """
@@ -182,7 +189,7 @@ def _parse_mysql_tuple(tup: str) -> List[Any]:
 # Helpers
 # ---------------------------
 
-from typing import Any
+
 
 def norm(s: Any) -> str:
     if s is None:
@@ -194,6 +201,7 @@ def key_name_class(name: str, class_name: str) -> tuple[str, str]:
     # normalize aggressively to match reliably
     return (norm(name).casefold(), norm(class_name).casefold())
 
+
 def placeholder_email(name: str, class_name: str, school_id: int) -> str:
     """
     Deterministic placeholder so reruns are idempotent-ish.
@@ -201,6 +209,7 @@ def placeholder_email(name: str, class_name: str, school_id: int) -> str:
     base = f"{school_id}|{norm(name)}|{norm(class_name)}"
     h = hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
     return f"import+{h}@example.invalid"
+
 
 def parse_dt_utc(val: Any) -> Optional[datetime]:
     if val is None:
@@ -212,7 +221,10 @@ def parse_dt_utc(val: Any) -> Optional[datetime]:
     dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
     return dt.replace(tzinfo=timezone.utc)
 
-def ensure_check_order(ci: datetime, co: Optional[datetime]) -> tuple[datetime, Optional[datetime]]:
+
+def ensure_check_order(
+    ci: datetime, co: Optional[datetime]
+) -> tuple[datetime, Optional[datetime]]:
     if co is None:
         return ci, None
     if co <= ci:
@@ -225,8 +237,10 @@ def ensure_check_order(ci: datetime, co: Optional[datetime]) -> tuple[datetime, 
 # Import logic
 # ---------------------------
 
+
 def get_engine(dsn: str) -> Engine:
     return create_engine(dsn, future=True, pool_pre_ping=True)
+
 
 def load_existing_users(engine: Engine, school_id: int) -> dict[tuple[str, str], int]:
     """
@@ -234,19 +248,26 @@ def load_existing_users(engine: Engine, school_id: int) -> dict[tuple[str, str],
     """
     mapping: dict[tuple[str, str], int] = {}
     with engine.begin() as conn:
-        rows = conn.execute(
-            text("""
+        rows = (
+            conn.execute(
+                text(
+                    """
                 SELECT id, name, class_name
                 FROM users
                 WHERE school_id = :sid AND role = 'student'
-            """),
-            {"sid": school_id},
-        ).mappings().all()
+            """
+                ),
+                {"sid": school_id},
+            )
+            .mappings()
+            .all()
+        )
 
     for r in rows:
         k = key_name_class(r["name"], r["class_name"] or "")
         mapping[k] = int(r["id"])
     return mapping
+
 
 def upsert_user_and_rfid(
     conn,
@@ -264,7 +285,8 @@ def upsert_user_and_rfid(
 
     # Create / fetch user by (school_id, email) uniqueness
     user_id = conn.execute(
-        text("""
+        text(
+            """
             INSERT INTO users (school_id, email, name, role, auth_provider, password_hash, archived, class_name)
             VALUES (:sid, :email, :name, 'student', 'import', NULL, false, :class_name)
             ON CONFLICT (school_id, email)
@@ -272,23 +294,32 @@ def upsert_user_and_rfid(
                 name = EXCLUDED.name,
                 class_name = COALESCE(EXCLUDED.class_name, users.class_name)
             RETURNING id
-        """),
-        {"sid": school_id, "email": email, "name": name, "class_name": class_name or None},
+        """
+        ),
+        {
+            "sid": school_id,
+            "email": email,
+            "name": name,
+            "class_name": class_name or None,
+        },
     ).scalar_one()
 
     if rfid_uid:
         # RFIDCard.uid is unique
         conn.execute(
-            text("""
+            text(
+                """
                 INSERT INTO rfid_cards (user_id, uid, label, is_active, created_by, created_at, updated_at)
                 VALUES (:uid_user, :rfid, NULL, true, NULL, NOW(), NOW())
                 ON CONFLICT (uid)
                 DO UPDATE SET user_id = EXCLUDED.user_id, is_active = true, updated_at = NOW()
-            """),
+            """
+            ),
             {"uid_user": int(user_id), "rfid": rfid_uid},
         )
 
     return int(user_id)
+
 
 def insert_attendance_event(
     conn,
@@ -313,7 +344,8 @@ def insert_attendance_event(
     check_in, check_out = ensure_check_order(check_in, check_out)
 
     conn.execute(
-        text("""
+        text(
+            """
             INSERT INTO attendance_events
                 (user_id, project_id, check_in, check_out, is_external, location, description,
                  approval_status, approved_by, approved_at, source, created_at, updated_at, created_by)
@@ -321,7 +353,8 @@ def insert_attendance_event(
                 (:user_id, NULL, :check_in, :check_out, :is_external, :location, :description,
                  :approval_status, NULL, :approved_at, :source, NOW(), NOW(), NULL)
             ON CONFLICT DO NOTHING
-        """),
+        """
+        ),
         {
             "user_id": user_id,
             "check_in": check_in,
@@ -335,6 +368,7 @@ def insert_attendance_event(
         },
     )
 
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--dsn", default=None, help="Postgres DSN (or set DATABASE_URL)")
@@ -347,7 +381,9 @@ def main():
     if not dsn:
         raise SystemExit("Missing --dsn or DATABASE_URL")
 
-    cfg = Config(dsn=dsn, dump_path=args.dump, school_id=args.school_id, dry_run=args.dry_run)
+    cfg = Config(
+        dsn=dsn, dump_path=args.dump, school_id=args.school_id, dry_run=args.dry_run
+    )
 
     engine = get_engine(cfg.dsn)
 
@@ -363,7 +399,7 @@ def main():
         if len(row) < 11:
             continue
 
-        old_uid = norm(row[1])     # RFID uid
+        old_uid = norm(row[1])  # RFID uid
         name = norm(row[2])
         class_name = norm(row[4])  # <-- HIER zit de klas (bv. 'V6')
 
@@ -378,7 +414,7 @@ def main():
         students_by_nameclass[key_name_class(name, class_name)] = old_uid
 
     print(f"Found {len(students_by_uid)} students in dump.")
-    
+
     if cfg.dry_run:
         # we can also count logs/external quickly
         logs_count = sum(1 for _ in iter_insert_rows(cfg.dump_path, "logs"))
@@ -400,11 +436,13 @@ def main():
                 # still ensure RFIDCard exists
                 uid = st["uid"]
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO rfid_cards (user_id, uid, label, is_active, created_by, created_at, updated_at)
                         VALUES (:user_id, :rfid, NULL, true, NULL, NOW(), NOW())
                         ON CONFLICT (uid) DO UPDATE SET user_id = EXCLUDED.user_id, is_active = true, updated_at = NOW()
-                    """),
+                    """
+                    ),
                     {"user_id": nameclass_to_userid[k], "rfid": uid},
                 )
                 continue
@@ -459,7 +497,9 @@ def main():
             )
             imported_logs += 1
 
-    print(f"Imported logs -> attendance_events: {imported_logs}, skipped: {skipped_logs}")
+    print(
+        f"Imported logs -> attendance_events: {imported_logs}, skipped: {skipped_logs}"
+    )
 
     # ---- Step D: import external_work -> attendance_events (is_external=true)
     # old external_work columns (from your dump):
@@ -479,10 +519,9 @@ def main():
             description = row[5]
             start_time = parse_dt_utc(row[6])
             end_time = parse_dt_utc(row[7])
-            submitted_at = parse_dt_utc(row[8])  # optional
+            # submitted_at = parse_dt_utc(row[8])  # optional
             status = row[9]  # approved/pending/rejected
             reviewed_at = None
-
 
             st = students_by_uid.get(old_uid)
             if not st or not start_time:
@@ -509,7 +548,9 @@ def main():
             )
             imported_ext += 1
 
-    print(f"Imported external_work -> attendance_events: {imported_ext}, skipped: {skipped_ext}")
+    print(
+        f"Imported external_work -> attendance_events: {imported_ext}, skipped: {skipped_ext}"
+    )
     print("Done.")
 
 
