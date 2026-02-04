@@ -1,5 +1,12 @@
 // DTOs for ProjectPlan (GO/NO-GO) feature
 
+export enum ProjectPlanStatus {
+  DRAFT = 'draft',
+  OPEN = 'open',
+  PUBLISHED = 'published',
+  CLOSED = 'closed',
+}
+
 export enum PlanStatus {
   CONCEPT = 'concept',
   INGEDIEND = 'ingediend',
@@ -65,6 +72,7 @@ export interface ProjectPlan {
   school_id: number;
   title?: string;
   version?: string;
+  status: ProjectPlanStatus;
   created_at: string;
   updated_at: string;
 }
@@ -81,6 +89,7 @@ export interface ProjectPlanListItem {
   id: number;
   title?: string;
   version?: string;
+  status: ProjectPlanStatus;
   project_id: number;
   project_name: string;
   course_id?: number;
@@ -102,11 +111,13 @@ export interface ProjectPlanCreate {
   project_id: number;
   title?: string;
   version?: string;
+  status?: ProjectPlanStatus;
 }
 
 export interface ProjectPlanUpdate {
   title?: string;
   version?: string;
+  status?: ProjectPlanStatus;
 }
 
 export interface ProjectPlanTeamUpdate {

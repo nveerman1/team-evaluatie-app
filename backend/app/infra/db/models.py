@@ -794,6 +794,9 @@ class ProjectPlan(Base):
     # Component metadata
     title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(30), default="draft", nullable=False
+    )  # draft|open|published|closed
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -817,6 +820,7 @@ class ProjectPlan(Base):
     __table_args__ = (
         Index("ix_project_plan_project_id", "project_id"),
         Index("ix_project_plan_school", "school_id"),
+        Index("ix_project_plan_status", "status"),
     )
 
 

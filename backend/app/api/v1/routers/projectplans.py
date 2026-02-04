@@ -34,6 +34,7 @@ from app.api.v1.schemas.projectplans import (
     SectionKey,
     SectionStatus,
     PlanStatus,
+    ProjectPlanStatus,
 )
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
@@ -203,6 +204,7 @@ def create_projectplan(
         project_id=payload.project_id,
         title=payload.title,
         version=payload.version,
+        status=payload.status if payload.status else "draft",
     )
     db.add(pp)
     db.flush()
@@ -251,6 +253,7 @@ def create_projectplan(
         school_id=pp.school_id,
         title=pp.title,
         version=pp.version,
+        status=pp.status,
         created_at=pp.created_at,
         updated_at=pp.updated_at,
     )
@@ -351,6 +354,7 @@ def list_projectplans(
                 id=pp.id,
                 title=pp.title,
                 version=pp.version,
+                status=pp.status,
                 project_id=pp.project_id,
                 project_name=project_name,
                 course_id=course_id_val,
@@ -503,6 +507,8 @@ def update_projectplan(
         pp.title = payload.title
     if payload.version is not None:
         pp.version = payload.version
+    if payload.status is not None:
+        pp.status = payload.status
     
     db.commit()
     db.refresh(pp)
@@ -515,6 +521,7 @@ def update_projectplan(
         school_id=pp.school_id,
         title=pp.title,
         version=pp.version,
+        status=pp.status,
         created_at=pp.created_at,
         updated_at=pp.updated_at,
     )
@@ -698,9 +705,11 @@ def list_my_projectplans(
     if not project_ids:
         return []
     
+    # Only show projectplans with status open, published, or closed (not draft)
     projectplans = db.query(ProjectPlan).filter(
         ProjectPlan.project_id.in_(project_ids),
         ProjectPlan.school_id == user.school_id,
+        ProjectPlan.status.in_(["open", "published", "closed"]),
     ).all()
     
     items = []
@@ -718,6 +727,7 @@ def list_my_projectplans(
                 id=pp.id,
                 title=pp.title,
                 version=pp.version,
+                status=pp.status,
                 project_id=pp.project_id,
                 project_name=project_name,
                 course_id=course_id_val,
@@ -748,10 +758,11 @@ def get_my_projectplan(
     pp = db.query(ProjectPlan).filter(
         ProjectPlan.id == projectplan_id,
         ProjectPlan.school_id == user.school_id,
+        ProjectPlan.status.in_(["open", "published", "closed"]),
     ).first()
     
     if not pp:
-        raise HTTPException(status_code=404, detail="ProjectPlan not found")
+        raise HTTPException(status_code=404, detail="ProjectPlan not found or not published")
     
     student_teams = db.query(ProjectTeamMember.project_team_id).filter(
         ProjectTeamMember.user_id == user.id,

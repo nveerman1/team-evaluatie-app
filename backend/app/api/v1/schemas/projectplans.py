@@ -8,6 +8,14 @@ from enum import Enum
 # ---------- Enums ----------
 
 
+class ProjectPlanStatus(str, Enum):
+    """Status of a project plan (visibility control)"""
+    DRAFT = "draft"
+    OPEN = "open"
+    PUBLISHED = "published"
+    CLOSED = "closed"
+
+
 class PlanStatus(str, Enum):
     """Status of a project plan team instance"""
     CONCEPT = "concept"
@@ -119,6 +127,7 @@ class ProjectPlanBase(BaseModel):
     """Base schema for project plans"""
     title: Optional[str] = None
     version: Optional[str] = None
+    status: ProjectPlanStatus = ProjectPlanStatus.DRAFT
 
 
 class ProjectPlanCreate(ProjectPlanBase):
@@ -130,6 +139,7 @@ class ProjectPlanUpdate(BaseModel):
     """Update schema for project plans"""
     title: Optional[str] = None
     version: Optional[str] = None
+    status: Optional[ProjectPlanStatus] = None
 
 
 class ProjectPlanOut(ProjectPlanBase):
