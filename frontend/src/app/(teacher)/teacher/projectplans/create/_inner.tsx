@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ApiAuthError } from "@/lib/api";
 import { projectPlanService } from "@/services/projectplan.service";
 import { projectService } from "@/services";
-import { ProjectPlanCreate } from "@/dtos/projectplan.dto";
+import { ProjectPlanCreate, ProjectPlanStatus } from "@/dtos/projectplan.dto";
 import { Loading } from "@/components";
 import type { ProjectListItem } from "@/dtos/project.dto";
 import { useCourses } from "@/hooks";
@@ -23,6 +23,7 @@ export default function CreateProjectPlanInner() {
   const [courseId, setCourseId] = useState<number | "">("");
   const [projectId, setProjectId] = useState<number | "">("");
   const [version, setVersion] = useState("");
+  const [status, setStatus] = useState<ProjectPlanStatus>(ProjectPlanStatus.DRAFT);
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
@@ -65,6 +66,7 @@ export default function CreateProjectPlanInner() {
         project_id: Number(projectId),
         title: title || undefined,
         version: version || undefined,
+        status: status,
       };
       const result = await projectPlanService.createProjectPlan(payload);
       router.push(`/teacher/projectplans/${result.id}?tab=overzicht`);
@@ -179,6 +181,26 @@ export default function CreateProjectPlanInner() {
           />
           <p className="text-xs text-gray-500">
             Gebruik om verschillende versies van een projectplan te onderscheiden.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">
+            Zichtbaarheid <span className="text-red-500">*</span>
+          </label>
+          <select
+            className="w-full px-3 py-2 border rounded-lg"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as ProjectPlanStatus)}
+            required
+          >
+            <option value={ProjectPlanStatus.DRAFT}>Concept (niet zichtbaar voor studenten)</option>
+            <option value={ProjectPlanStatus.OPEN}>Open (zichtbaar voor studenten)</option>
+            <option value={ProjectPlanStatus.PUBLISHED}>Gepubliceerd (zichtbaar voor studenten)</option>
+            <option value={ProjectPlanStatus.CLOSED}>Gesloten (alleen lezen voor studenten)</option>
+          </select>
+          <p className="text-xs text-gray-500">
+            Bepaalt of studenten het projectplan kunnen zien. Kies &quot;Concept&quot; om eerst in te stellen voordat studenten het zien.
           </p>
         </div>
 

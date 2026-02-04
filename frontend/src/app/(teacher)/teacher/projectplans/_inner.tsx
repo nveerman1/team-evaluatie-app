@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiAuthError } from "@/lib/api";
 import { projectPlanService } from "@/services/projectplan.service";
-import { ProjectPlanListItem, PlanStatus } from "@/dtos/projectplan.dto";
+import { ProjectPlanListItem, PlanStatus, ProjectPlanStatus } from "@/dtos/projectplan.dto";
 import { Loading, ErrorMessage } from "@/components";
 
 type Course = {
@@ -112,6 +112,38 @@ export default function ProjectPlansListInner() {
         {count} {badge.label}
       </span>
     );
+  };
+
+  // Helper to get projectplan status badge  
+  const getProjectPlanStatusBadge = (status: string) => {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
+      "draft": { bg: "bg-gray-100", text: "text-gray-700", label: "Concept" },
+      "open": { bg: "bg-blue-100", text: "text-blue-700", label: "Open" },
+      "published": { bg: "bg-green-100", text: "text-green-700", label: "Gepubliceerd" },
+      "closed": { bg: "bg-red-100", text: "text-red-700", label: "Gesloten" },
+    };
+    const badge = badges[status] || badges["draft"];
+    return (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${badge.bg} ${badge.text}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  // Handle status change
+  const handleStatusChange = async (id: number, newStatus: string) => {
+    try {
+      await projectPlanService.updateProjectPlan(id, { status: newStatus as any });
+      const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
+      const status = statusFilter === "all" ? undefined : statusFilter;
+      fetchList(courseId, status);
+    } catch (e: any) {
+      if (e instanceof ApiAuthError) {
+        alert(e.originalMessage);
+      } else {
+        alert(e?.response?.data?.detail || e?.message || "Status wijzigen mislukt");
+      }
+    }
   };
 
   return (
@@ -226,10 +258,28 @@ export default function ProjectPlansListInner() {
               >
                 {/* Left side: content */}
                 <div className="flex flex-1 flex-col gap-1">
-                  {/* Title */}
-                  <h3 className="text-base font-semibold text-slate-900">
-                    {item.title || `Projectplan: ${item.project_name}`}
-                  </h3>
+                  {/* Title and Status */}
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-slate-900">
+                      {item.title || `Projectplan: ${item.project_name}`}
+                    </h3>
+                    {getProjectPlanStatusBadge(item.status)}
+                  </div>
+
+                  {/* Status selector */}
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-slate-500">Zichtbaarheid:</span>
+                    <select
+                      value={item.status}
+                      onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                      className="text-xs rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-100"
+                    >
+                      <option value="draft">Concept (niet zichtbaar voor studenten)</option>
+                      <option value="open">Open (zichtbaar voor studenten)</option>
+                      <option value="published">Gepubliceerd (zichtbaar voor studenten)</option>
+                      <option value="closed">Gesloten (zichtbaar maar niet te bewerken)</option>
+                    </select>
+                  </div>
 
                   {/* Project name */}
                   <div className="text-sm text-slate-600">
