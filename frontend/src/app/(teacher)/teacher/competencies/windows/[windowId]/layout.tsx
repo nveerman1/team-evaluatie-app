@@ -137,6 +137,7 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
           <div className="mb-4">
             <Link
               href="/teacher/competencies"
+              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
               className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ← Terug naar overzicht

@@ -44,6 +44,7 @@ export function ProjectAssessmentTabs({ assessmentId }: ProjectAssessmentTabsPro
             <Link
               key={tab.id}
               href={tab.href(assessmentId)}
+              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
               className={`
                 py-4 px-1 border-b-2 font-medium text-sm transition-colors
                 ${

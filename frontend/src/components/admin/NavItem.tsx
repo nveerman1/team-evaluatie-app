@@ -17,6 +17,7 @@ export function NavItem({ href, label, icon: Icon }: NavItemProps) {
   return (
     <Link
       href={href}
+      prefetch={process.env.NODE_ENV === "production" ? false : undefined}
       className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left w-full ${
         isActive
           ? "bg-slate-600 text-slate-50 shadow-sm"

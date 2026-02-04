@@ -41,6 +41,7 @@ export function CompetencyMonitorTabs({ windowId }: CompetencyMonitorTabsProps) 
             <Link
               key={tab.id}
               href={tab.href(windowId)}
+              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
               className={`
                 py-4 px-1 border-b-2 font-medium text-sm transition-colors
                 ${
