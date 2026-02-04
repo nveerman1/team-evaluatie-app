@@ -23,6 +23,7 @@ export function PageHeader({ onRefresh, onExportAll }: PageHeaderProps) {
           <div className="flex gap-2 sm:self-start">
             <Link
               href="/student"
+              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
               className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
               <span className="mr-2">←</span>

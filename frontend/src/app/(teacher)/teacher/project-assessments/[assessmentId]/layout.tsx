@@ -121,6 +121,7 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
           <div className="mb-4">
             <Link
               href="/teacher/project-assessments"
+              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
               className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ← Terug naar overzicht
