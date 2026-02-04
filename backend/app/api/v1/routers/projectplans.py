@@ -448,7 +448,7 @@ def get_projectplan_overview(
             ProjectTeam.id == team.project_team_id
         ).first()
         team_number = project_team.team_number if project_team else None
-        team_name = project_team.team_name if project_team else f"Team {team_number}"
+        team_name = project_team.display_name_at_time if project_team else f"Team {team_number}"
         
         members = db.query(User.name).join(
             ProjectTeamMember, ProjectTeamMember.user_id == User.id
