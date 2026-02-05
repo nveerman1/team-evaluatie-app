@@ -60,7 +60,7 @@ export const projectPlanService = {
   /**
    * Update projectplan component metadata (teacher/admin)
    */
-  async updateProjectPlan(id: number, payload: ProjectPlanUpdate): Promise<ProjectPlanDetail> {
+  async updateProjectPlan(id: number, payload: ProjectPlanUpdate): Promise<ProjectPlan> {
     const { data } = await api.patch(`/projectplans/${id}`, payload);
     return data;
   },
