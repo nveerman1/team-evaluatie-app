@@ -3,15 +3,17 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useStudentDashboard, useCurrentUser, useStudentOverview } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
+import { useStudentProjectPlans } from "@/hooks/useStudentProjectPlans";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import { Loading, ErrorMessage } from "@/components";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock } from "lucide-react";
+import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
+import { ProjectPlanDashboardCard } from "@/components/student/dashboard/ProjectPlanDashboardCard";
 import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
@@ -27,6 +29,11 @@ function StudentDashboardContent() {
     loading: projectLoading,
     error: projectError,
   } = useStudentProjectAssessments();
+  const {
+    projectPlans,
+    loading: projectPlansLoading,
+    error: projectPlansError,
+  } = useStudentProjectPlans();
   const { items: peerResults } = usePeerFeedbackResults();
   const { data: overviewData, isLoading: overviewLoading } = useStudentOverview();
   const searchParams = useSearchParams();
@@ -80,6 +87,16 @@ function StudentDashboardContent() {
     if (!q) return projectAssessments || [];
     return (projectAssessments || []).filter((p) => p.title.toLowerCase().includes(q));
   }, [projectAssessments, searchQuery]);
+
+  // Filter project plans by search query
+  const filteredProjectPlans = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return projectPlans || [];
+    return (projectPlans || []).filter((p) => 
+      p.project_name.toLowerCase().includes(q) ||
+      p.teams?.[0]?.title?.toLowerCase().includes(q)
+    );
+  }, [projectPlans, searchQuery]);
 
   if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -151,6 +168,12 @@ function StudentDashboardContent() {
                   className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <Target className="mr-2 h-4 w-4" /> Competentiescan
+                </TabsTrigger>
+                <TabsTrigger
+                  value="projectplannen"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Projectplannen
                 </TabsTrigger>
                 <TabsTrigger
                   value="inleveren"
@@ -240,6 +263,39 @@ function StudentDashboardContent() {
             {/* COMPETENTIESCAN */}
             <TabsContent value="scans" className="mt-6 space-y-4">
               <CompetencyScanDashboardTab searchQuery={searchQuery} />
+            </TabsContent>
+
+            {/* PROJECTPLANNEN */}
+            <TabsContent value="projectplannen" className="mt-6 space-y-4">
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-slate-600" />
+                    <p className="text-sm font-semibold text-slate-900">Mijn projectplannen</p>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Vul hier je projectplan in. Na goedkeuring door de docent krijg je een GO om te starten.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                {projectPlansLoading ? (
+                  <Loading />
+                ) : projectPlansError ? (
+                  <ErrorMessage message={projectPlansError} />
+                ) : filteredProjectPlans.length === 0 ? (
+                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+                    <p className="text-slate-500">
+                      {searchQuery ? "Geen projectplannen gevonden met deze zoekopdracht." : "Nog geen projectplannen beschikbaar."}
+                    </p>
+                  </div>
+                ) : (
+                  filteredProjectPlans.map((projectPlan) => (
+                    <ProjectPlanDashboardCard key={projectPlan.id} projectPlan={projectPlan} />
+                  ))
+                )}
+              </div>
             </TabsContent>
 
             {/* PROJECTBEOORDELINGEN */}
