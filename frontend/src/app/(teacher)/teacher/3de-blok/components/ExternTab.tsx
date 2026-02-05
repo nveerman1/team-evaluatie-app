@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { attendanceService, type AttendanceEvent } from "@/services/attendance.service";
 import { toast } from "@/lib/toast";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Pagination } from "@/components/ui/pagination";
 
 type Status = "pending" | "approved" | "rejected";
 
@@ -124,25 +126,57 @@ export default function ExternTab() {
   const [classQuery, setClassQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
   
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
+  
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<ExternalWorkRow | null>(null);
 
+  // Debounce the name query with 300ms delay
+  const debouncedNameQuery = useDebounce(nameQuery, 300);
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedNameQuery, classQuery, statusFilter]);
+
+  // Fetch data when page or filters change
   useEffect(() => {
     fetchExternalWork();
-  }, []);
+  }, [debouncedNameQuery, classQuery, statusFilter, page]);
 
   const fetchExternalWork = async () => {
     try {
       setLoading(true);
       
-      const params: Record<string, boolean | number> = {
+      const params: Record<string, boolean | number | string> = {
         is_external: true,
-        per_page: 100,
+        per_page: pageSize,
+        page: page,
       };
+
+      // Add search query if provided
+      if (debouncedNameQuery.trim()) {
+        params.q = debouncedNameQuery.trim();
+      }
+
+      // Add class filter if provided
+      if (classQuery.trim()) {
+        params.class_name = classQuery.trim();
+      }
+
+      // Add approval status filter if not "all"
+      if (statusFilter !== "all") {
+        params.approval_status = statusFilter;
+      }
 
       const response = await attendanceService.listEvents(params);
       setEvents(response.events);
+      setTotalPages(response.total_pages);
+      setTotal(response.total);
     } catch (err) {
       console.error("Error fetching external work:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
@@ -171,25 +205,14 @@ export default function ExternTab() {
     });
   }, [events]);
 
-  const filtered = useMemo(() => {
-    const nq = nameQuery.trim().toLowerCase();
-    const cq = classQuery.trim().toLowerCase();
-    return rows.filter((r) => {
-      const matchName = !nq || r.student_name.toLowerCase().includes(nq);
-      const matchClass = !cq || r.class_name.toLowerCase().includes(cq);
-      const matchStatus = statusFilter === "all" || r.status === statusFilter;
-      return matchName && matchClass && matchStatus;
-    });
-  }, [rows, nameQuery, classQuery, statusFilter]);
-
   const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[Number(id)]).map(Number), [selected]);
   const selectedCount = selectedIds.length;
-  const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selected[r.id]);
+  const allVisibleSelected = rows.length > 0 && rows.every((r) => selected[r.id]);
 
   function toggleSelectAllVisible() {
     setSelected((prev) => {
       const next = { ...prev };
-      for (const r of filtered) next[r.id] = !allVisibleSelected;
+      for (const r of rows) next[r.id] = !allVisibleSelected;
       return next;
     });
   }
@@ -200,7 +223,7 @@ export default function ExternTab() {
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; text: string; clear: () => void }> = [];
-    if (nameQuery.trim()) chips.push({ key: "name", text: `Naam: ${nameQuery}`, clear: () => setNameQuery("") });
+    if (debouncedNameQuery.trim()) chips.push({ key: "name", text: `Naam: ${debouncedNameQuery}`, clear: () => setNameQuery("") });
     if (classQuery.trim()) chips.push({ key: "class", text: `Klas: ${classQuery}`, clear: () => setClassQuery("") });
     if (statusFilter !== "all")
       chips.push({
@@ -209,7 +232,7 @@ export default function ExternTab() {
         clear: () => setStatusFilter("all"),
       });
     return chips;
-  }, [nameQuery, classQuery, statusFilter]);
+  }, [debouncedNameQuery, classQuery, statusFilter]);
 
   async function handleStatusChange(id: number, newStatus: Status) {
     try {
@@ -267,18 +290,18 @@ export default function ExternTab() {
   }
 
   async function approveAllFilteredPending() {
-    const pendingFiltered = filtered.filter((r) => r.status === "pending");
-    if (pendingFiltered.length === 0) {
+    const pendingVisible = rows.filter((r) => r.status === "pending");
+    if (pendingVisible.length === 0) {
       toast.info("Geen in afwachting registraties gevonden");
       return;
     }
 
-    if (!confirm(`Weet je zeker dat je alle ${pendingFiltered.length} in afwachting registraties wilt goedkeuren?`)) {
+    if (!confirm(`Weet je zeker dat je alle ${pendingVisible.length} in afwachting registraties wilt goedkeuren?`)) {
       return;
     }
 
     try {
-      const ids = pendingFiltered.map((r) => r.id);
+      const ids = pendingVisible.map((r) => r.id);
       await attendanceService.bulkApproveExternalWork(ids);
       toast.success(`${ids.length} registraties goedgekeurd`);
       await fetchExternalWork();
@@ -290,7 +313,7 @@ export default function ExternTab() {
 
   function exportCsv() {
     const header = ["Naam", "Klas", "Locatie", "Omschrijving", "Start", "Eind", "Duur", "Status"].join(",");
-    const lines = filtered.map((r) =>
+    const lines = rows.map((r) =>
       [
         r.student_name,
         r.class_name,
@@ -310,7 +333,7 @@ export default function ExternTab() {
     a.download = `extern-werk.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("CSV geëxporteerd");
+    toast.success("CSV geëxporteerd (huidige gefilterde pagina)");
   }
 
   function openDetailModal(row: ExternalWorkRow) {
@@ -388,8 +411,8 @@ export default function ExternTab() {
               <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{selectedCount}</span>
             </span>
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-              <span className="text-slate-500">Zichtbaar</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{filtered.length}</span>
+              <span className="text-slate-500">Deze pagina</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{rows.length}</span>
             </span>
           </div>
 
@@ -463,7 +486,7 @@ export default function ExternTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((r) => (
+              {rows.map((r) => (
                 <tr key={r.id} className="group hover:bg-slate-50/60">
                   <td className="px-5 py-4 align-top">
                     <input
@@ -524,7 +547,7 @@ export default function ExternTab() {
                 </tr>
               ))}
 
-              {filtered.length === 0 && (
+              {rows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-5 py-10 text-center">
                     <div className="text-sm font-medium text-slate-900">Geen resultaten</div>
@@ -536,8 +559,11 @@ export default function ExternTab() {
           </table>
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-xs text-slate-500">
-          <div>Toont {filtered.length} registraties</div>
+        <div className="flex flex-col items-center justify-between border-t border-slate-200 px-5 py-4 gap-4 sm:flex-row">
+          <div className="text-xs text-slate-500">Toont {rows.length} van {total} registraties</div>
+          {totalPages > 1 && (
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          )}
         </div>
       </div>
 

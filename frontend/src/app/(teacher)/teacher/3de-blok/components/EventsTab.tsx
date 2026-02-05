@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Trash2,
   Edit,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { attendanceService, type AttendanceEvent } from "@/services/attendance.service";
 import { toast } from "@/lib/toast";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface SchoolCheckRow {
   id: number;
@@ -81,15 +83,23 @@ export default function EventsTab() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<SchoolCheckRow | null>(null);
   const [editCheckIn, setEditCheckIn] = useState("");
   const [editCheckOut, setEditCheckOut] = useState("");
 
+  // Debounce the search query
+  const debouncedNameQuery = useDebounce(nameQuery, 300);
+
   useEffect(() => {
     fetchSchoolEvents();
-  }, []);
+  }, [debouncedNameQuery, classQuery, startDate, endDate, page]);
 
   const fetchSchoolEvents = async () => {
     try {
@@ -97,11 +107,28 @@ export default function EventsTab() {
       
       const params: Record<string, boolean | number | string> = {
         is_external: false,
-        per_page: 100,
+        per_page: pageSize,
+        page: page,
       };
+
+      // Add optional filters
+      if (debouncedNameQuery.trim()) {
+        params.q = debouncedNameQuery.trim();
+      }
+      if (classQuery.trim()) {
+        params.class_name = classQuery.trim();
+      }
+      if (startDate) {
+        params.start_date = startDate;
+      }
+      if (endDate) {
+        params.end_date = endDate;
+      }
 
       const response = await attendanceService.listEvents(params);
       setEvents(response.events);
+      setTotalPages(response.total_pages);
+      setTotal(response.total);
     } catch (err) {
       console.error("Error fetching school events:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
@@ -110,6 +137,11 @@ export default function EventsTab() {
       setLoading(false);
     }
   };
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedNameQuery, classQuery, startDate, endDate]);
 
   // Transform events to rows with user data
   const rows: SchoolCheckRow[] = useMemo(() => {
@@ -127,31 +159,8 @@ export default function EventsTab() {
     });
   }, [events]);
 
-  const filtered = useMemo(() => {
-    const nq = nameQuery.trim().toLowerCase();
-    const cq = classQuery.trim().toLowerCase();
-    return rows.filter((r) => {
-      const matchName = !nq || r.student_name.toLowerCase().includes(nq);
-      const matchClass = !cq || r.class_name.toLowerCase().includes(cq);
-      
-      let matchDate = true;
-      if (startDate || endDate) {
-        const checkInDate = new Date(r.check_in);
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setHours(0, 0, 0, 0);
-          matchDate = matchDate && checkInDate >= start;
-        }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          matchDate = matchDate && checkInDate <= end;
-        }
-      }
-      
-      return matchName && matchClass && matchDate;
-    });
-  }, [rows, nameQuery, classQuery, startDate, endDate]);
+  // Use rows directly without client-side filtering (server-side pagination handles it)
+  const filtered = rows;
 
   const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[Number(id)]).map(Number), [selected]);
   const selectedCount = selectedIds.length;
@@ -230,7 +239,7 @@ export default function EventsTab() {
     a.download = `in-uitcheck-log.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("CSV geëxporteerd");
+    toast.success("CSV geëxporteerd (huidige pagina)");
   }
 
   function openEditModal(row: SchoolCheckRow) {
@@ -448,8 +457,18 @@ export default function EventsTab() {
           </table>
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-xs text-slate-500">
-          <div>Toont {filtered.length} registraties</div>
+        <div className="flex flex-col gap-4 border-t border-slate-200 px-5 py-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between text-xs text-slate-500">
+            <div>Toont {filtered.length} van {total} registraties</div>
+          </div>
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              className="justify-center"
+            />
+          )}
         </div>
       </div>
 

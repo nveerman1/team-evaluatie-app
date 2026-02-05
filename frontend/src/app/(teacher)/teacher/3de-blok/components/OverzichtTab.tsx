@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { fetchWithErrorHandling } from "@/lib/api";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Pagination } from "@/components/ui/pagination";
 
 interface StudentOverview {
   user_id: number;
@@ -15,6 +17,14 @@ interface StudentOverview {
   total_external_approved_seconds: number;
   total_external_pending_seconds: number;
   lesson_blocks: number;
+}
+
+interface OverviewResponse {
+  items: StudentOverview[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 interface Project {
@@ -50,6 +60,13 @@ export default function OverzichtTab() {
   const [courseFilter, setCourseFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  // Debounce search term
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     fetchCourses();
@@ -57,7 +74,12 @@ export default function OverzichtTab() {
 
   useEffect(() => {
     fetchOverview();
-  }, [courseFilter, projectFilter]);
+  }, [debouncedSearchTerm, courseFilter, projectFilter, page]);
+
+  useEffect(() => {
+    // Reset page to 1 when search or filters change (synchronized with fetch dependencies)
+    setPage(1);
+  }, [debouncedSearchTerm, courseFilter, projectFilter]);
 
   useEffect(() => {
     // Fetch projects when course filter changes
@@ -102,12 +124,17 @@ export default function OverzichtTab() {
       setError(null);
       
       const params = new URLSearchParams();
+      if (debouncedSearchTerm) params.append("q", debouncedSearchTerm);
       if (courseFilter) params.append("course_id", courseFilter);
       if (projectFilter) params.append("project_id", projectFilter);
+      params.append("page", page.toString());
+      params.append("per_page", pageSize.toString());
       
       const response = await fetchWithErrorHandling(`/api/v1/attendance/overview?${params.toString()}`);
-      const data = await response.json();
-      setStudents(data);
+      const data: OverviewResponse = await response.json();
+      setStudents(data.items);
+      setTotal(data.total);
+      setTotalPages(data.total_pages);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error fetching overview:", err);
@@ -116,11 +143,6 @@ export default function OverzichtTab() {
       setLoading(false);
     }
   };
-
-  const filteredStudents = students.filter((student) =>
-    student.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.user_email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   // Get unique classes
   const uniqueClasses = Array.from(new Set(students.map(s => s.class_name).filter(Boolean)));
@@ -206,75 +228,89 @@ export default function OverzichtTab() {
       </div>
 
       {/* Students Table */}
-      <div className="overflow-x-auto overflow-y-hidden rounded-xl">
-        <table className="w-full bg-white">
-          <thead className="bg-slate-50">
-            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-5 py-3">Rang</th>
-              <th className="px-5 py-3">Student</th>
-              <th className="px-5 py-3">Klas</th>
-              <th className="px-5 py-3">School uren</th>
-              <th className="px-5 py-3">Extern (goedgekeurd)</th>
-              <th className="px-5 py-3">Extern (in afwachting)</th>
-              <th className="px-5 py-3">Lesblokken</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white">
-            {filteredStudents.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-500">
-                  Geen studenten gevonden
-                </td>
+      <div className="space-y-4">
+        <div className="text-sm text-gray-600">
+          Toont {students.length > 0 ? (page - 1) * pageSize + 1 : 0} tot {Math.min(page * pageSize, total)} van {total} studenten
+        </div>
+        <div className="overflow-x-auto overflow-y-hidden rounded-xl">
+          <table className="w-full bg-white">
+            <thead className="bg-slate-50">
+              <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-3">Rang</th>
+                <th className="px-5 py-3">Student</th>
+                <th className="px-5 py-3">Klas</th>
+                <th className="px-5 py-3">School uren</th>
+                <th className="px-5 py-3">Extern (goedgekeurd)</th>
+                <th className="px-5 py-3">Extern (in afwachting)</th>
+                <th className="px-5 py-3">Lesblokken</th>
               </tr>
-            ) : (
-              filteredStudents.map((student, index) => (
-                <tr key={student.user_id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      {index < 3 ? (
-                        <span className="text-2xl">
-                          {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500 font-medium">#{index + 1}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="text-base font-bold text-slate-900">{student.user_name}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {student.class_name ? (
-                      <Badge variant="outline">{student.class_name}</Badge>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-sm text-slate-700">
-                      {formatDuration(student.total_school_seconds)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-sm text-green-600">
-                      {formatDuration(student.total_external_approved_seconds)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-sm text-yellow-600">
-                      {formatDuration(student.total_external_pending_seconds)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge variant="default" className="text-lg px-3 py-1">
-                      {student.lesson_blocks}
-                    </Badge>
+            </thead>
+            <tbody className="bg-white">
+              {students.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-8 text-gray-500">
+                    Geen studenten gevonden
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                students.map((student, index) => (
+                  <tr key={student.user_id} className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        {(page - 1) * pageSize + index < 3 ? (
+                          <span className="text-2xl">
+                            {(page - 1) * pageSize + index === 0 ? "🥇" : (page - 1) * pageSize + index === 1 ? "🥈" : "🥉"}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 font-medium">#{(page - 1) * pageSize + index + 1}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="text-base font-bold text-slate-900">{student.user_name}</div>
+                    </td>
+                    <td className="px-5 py-4">
+                      {student.class_name ? (
+                        <Badge variant="outline">{student.class_name}</Badge>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-sm text-slate-700">
+                        {formatDuration(student.total_school_seconds)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-sm text-green-600">
+                        {formatDuration(student.total_external_approved_seconds)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-sm text-yellow-600">
+                        {formatDuration(student.total_external_pending_seconds)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <Badge variant="default" className="text-lg px-3 py-1">
+                        {student.lesson_blocks}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex justify-center pt-4">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
