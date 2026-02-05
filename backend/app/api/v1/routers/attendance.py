@@ -256,8 +256,8 @@ def list_attendance_events(
     # Get total count using distinct on AttendanceEvent.id
     total = query.with_entities(AttendanceEvent.id).distinct().count()
 
-    # Calculate total pages
-    total_pages = (total + per_page - 1) // per_page if total > 0 else 0
+    # Calculate total pages (at least 1 page even when empty)
+    total_pages = max(1, (total + per_page - 1) // per_page)
 
     # Pagination
     offset = (page - 1) * per_page
@@ -912,9 +912,13 @@ def get_attendance_overview(
 ):
     """
     Get attendance overview for all students (teacher/admin only)
-    Returns totals per student
+    Returns totals per student, sorted by lesson blocks (descending)
+    
     When project_id is provided, only counts events within the project's date range
     When course_id is provided, filters to students enrolled in that course
+    
+    Note: Pagination happens after computing all aggregations to maintain
+    correct global ranking. For large datasets, consider using a materialized view.
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -976,6 +980,8 @@ def get_attendance_overview(
     # Get total count before pagination
     total_students = query.count()
 
+    # Fetch all students (we need to compute aggregations for ranking)
+    # Note: For large datasets, this should be optimized with a materialized view
     students = query.all()
 
     result = []
@@ -1062,8 +1068,8 @@ def get_attendance_overview(
     # Sort by lesson blocks descending
     result.sort(key=lambda x: x["lesson_blocks"], reverse=True)
 
-    # Apply pagination after sorting
-    total_pages = (len(result) + per_page - 1) // per_page if len(result) > 0 else 0
+    # Apply pagination after sorting (needed for correct global ranking)
+    total_pages = max(1, (len(result) + per_page - 1) // per_page)
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     paginated_result = result[start_idx:end_idx]
@@ -1123,7 +1129,7 @@ def list_students_with_cards(
 
     # Get total count
     total = query.count()
-    total_pages = (total + per_page - 1) // per_page if total > 0 else 0
+    total_pages = max(1, (total + per_page - 1) // per_page)
 
     # Apply pagination
     offset = (page - 1) * per_page
