@@ -204,7 +204,7 @@ def create_projectplan(
         project_id=payload.project_id,
         title=payload.title,
         version=payload.version,
-        status=payload.status if payload.status else "draft",
+        status=payload.status.value if payload.status else "draft",
     )
     db.add(pp)
     db.flush()
@@ -508,7 +508,7 @@ def update_projectplan(
     if payload.version is not None:
         pp.version = payload.version
     if payload.status is not None:
-        pp.status = payload.status
+        pp.status = payload.status.value if hasattr(payload.status, 'value') else payload.status
     
     db.commit()
     db.refresh(pp)
