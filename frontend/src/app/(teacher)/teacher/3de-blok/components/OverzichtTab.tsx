@@ -77,9 +77,9 @@ export default function OverzichtTab() {
   }, [debouncedSearchTerm, courseFilter, projectFilter, page]);
 
   useEffect(() => {
-    // Reset page to 1 when search or filters change (synchronized with fetch dependencies)
+    // Reset page to 1 when search or filters change (immediate, before debounce)
     setPage(1);
-  }, [debouncedSearchTerm, courseFilter, projectFilter]);
+  }, [searchTerm, courseFilter, projectFilter]);
 
   useEffect(() => {
     // Fetch projects when course filter changes

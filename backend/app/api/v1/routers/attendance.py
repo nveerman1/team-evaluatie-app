@@ -1069,6 +1069,8 @@ def get_attendance_overview(
     result.sort(key=lambda x: x["lesson_blocks"], reverse=True)
 
     # Apply pagination after sorting (needed for correct global ranking)
+    # Note: total is len(result) because we want to show count AFTER filters,
+    # not the raw database count. This matches user expectations for filtered results.
     total_pages = max(1, (len(result) + per_page - 1) // per_page)
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page

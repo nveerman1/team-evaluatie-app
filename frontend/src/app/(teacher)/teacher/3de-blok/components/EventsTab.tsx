@@ -138,10 +138,10 @@ export default function EventsTab() {
     }
   };
 
-  // Reset page to 1 when filters change
+  // Reset page to 1 when filters change (immediate, before debounce)
   useEffect(() => {
     setPage(1);
-  }, [debouncedNameQuery, classQuery, startDate, endDate]);
+  }, [nameQuery, classQuery, startDate, endDate]);
 
   // Transform events to rows with user data
   const rows: SchoolCheckRow[] = useMemo(() => {

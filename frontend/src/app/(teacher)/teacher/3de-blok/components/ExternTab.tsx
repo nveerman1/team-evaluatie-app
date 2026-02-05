@@ -138,10 +138,10 @@ export default function ExternTab() {
   // Debounce the name query with 300ms delay
   const debouncedNameQuery = useDebounce(nameQuery, 300);
 
-  // Reset page to 1 whenever filters change
+  // Reset page to 1 whenever filters change (immediate, before debounce)
   useEffect(() => {
     setPage(1);
-  }, [debouncedNameQuery, classQuery, statusFilter]);
+  }, [nameQuery, classQuery, statusFilter]);
 
   // Fetch data when page or filters change
   useEffect(() => {
