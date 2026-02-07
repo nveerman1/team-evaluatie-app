@@ -173,17 +173,6 @@ export default function RFIDTab() {
 
   const totalCards = useMemo(() => students.reduce((acc, s) => acc + s.cards.length, 0), [students]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Studenten laden...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {error && (
@@ -257,7 +246,19 @@ export default function RFIDTab() {
 
         {/* Table body */}
         <div className="divide-y divide-slate-200">
-          {rows.map((row) => {
+          {loading ? (
+            <div className="px-5 py-16 text-center">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+                <p className="text-sm text-slate-600">Laden...</p>
+              </div>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-slate-600">
+              Geen studenten gevonden
+            </div>
+          ) : (
+            rows.map((row) => {
             const isOpen = openRowId === row.id;
             const primaryHint = getPrimaryCardHint(row.cards);
 
@@ -391,18 +392,7 @@ export default function RFIDTab() {
                 )}
               </div>
             );
-          })}
-
-          {rows.length === 0 && (
-            <div className="px-3 py-10 text-center">
-              <div className="text-sm font-medium text-slate-900">Geen resultaten</div>
-              <div className="text-xs text-slate-500">Pas je zoekterm aan of wis de filter.</div>
-              <div className="mt-3">
-                <Button variant="secondary" onClick={() => setSearchQuery("")} disabled={!searchQuery.trim()}>
-                  Wissen
-                </Button>
-              </div>
-            </div>
+          })
           )}
         </div>
       </div>

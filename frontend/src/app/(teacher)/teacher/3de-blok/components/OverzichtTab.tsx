@@ -147,17 +147,6 @@ export default function OverzichtTab() {
   // Get unique classes
   const uniqueClasses = Array.from(new Set(students.map(s => s.class_name).filter(Boolean)));
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Overzicht laden...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {error && (
@@ -246,7 +235,16 @@ export default function OverzichtTab() {
               </tr>
             </thead>
             <tbody className="bg-white">
-              {students.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+                      <p className="text-sm text-slate-600">Laden...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : students.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-gray-500">
                     Geen studenten gevonden
