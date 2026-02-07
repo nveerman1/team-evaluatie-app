@@ -172,6 +172,7 @@ class AttendanceEventListOut(BaseModel):
     total: int
     page: int
     per_page: int
+    total_pages: int
 
 
 # ============ External Work Schemas ============

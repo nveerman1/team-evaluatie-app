@@ -24,6 +24,7 @@ export interface AttendanceEventListResponse {
   total: number;
   page: number;
   per_page: number;
+  total_pages: number;
 }
 
 export interface OpenSession {
@@ -154,6 +155,7 @@ export const attendanceService = {
     is_external?: boolean;
     status_open?: boolean;
     approval_status?: string;
+    q?: string;
     page?: number;
     per_page?: number;
   }): Promise<AttendanceEventListResponse> {

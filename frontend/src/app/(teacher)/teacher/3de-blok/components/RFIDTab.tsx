@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Pagination,
+} from "@/components/ui/pagination";
 import { 
   CreditCard, 
   Plus, 
@@ -30,13 +33,13 @@ import {
 } from "lucide-react";
 import { rfidService } from "@/services/attendance.service";
 import { fetchWithErrorHandling } from "@/lib/api";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   type StudentWithCards,
   type StudentRow,
   type SortKey,
   type SortDir,
   buildStudentRows,
-  filterRows,
   sortRows,
   getInitials,
   getPrimaryCardHint,
@@ -48,6 +51,9 @@ export default function RFIDTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [openRowId, setOpenRowId] = useState<number | null>(null);
   const [addDialogStudent, setAddDialogStudent] = useState<StudentRow | null>(null);
   const [newCardData, setNewCardData] = useState({ uid: "", label: DEFAULT_CARD_LABEL });
@@ -55,18 +61,36 @@ export default function RFIDTab() {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
+  const pageSize = 50;
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Reset page to 1 when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  // Fetch when debounced search, page, sortKey, or sortDir changes
   useEffect(() => {
     fetchStudentsAndCards();
-  }, []);
+  }, [debouncedSearchQuery, page, sortKey, sortDir]);
 
   const fetchStudentsAndCards = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetchWithErrorHandling("/api/v1/attendance/students");
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(pageSize),
+        ...(debouncedSearchQuery.trim() && { q: debouncedSearchQuery.trim() }),
+      });
+      
+      const response = await fetchWithErrorHandling(`/api/v1/attendance/students?${params}`);
       const data = await response.json();
-      setStudents(data);
+      
+      setStudents(data.items || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.total_pages || 1);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error fetching students:", err);
@@ -144,23 +168,10 @@ export default function RFIDTab() {
 
   const rows = useMemo(() => {
     const studentRows = buildStudentRows(students);
-    const filtered = filterRows(studentRows, searchQuery);
-    return sortRows(filtered, sortKey, sortDir);
-  }, [students, searchQuery, sortKey, sortDir]);
+    return sortRows(studentRows, sortKey, sortDir);
+  }, [students, sortKey, sortDir]);
 
   const totalCards = useMemo(() => students.reduce((acc, s) => acc + s.cards.length, 0), [students]);
-  const studentsWithoutCards = useMemo(() => students.filter(s => s.cards.length === 0).length, [students]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Studenten laden...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -174,10 +185,14 @@ export default function RFIDTab() {
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary" className="gap-1 rounded-full">
           <Users className="h-3.5 w-3.5" />
-          {students.length} leerlingen
+          {total} leerlingen
         </Badge>
         <Badge variant="secondary" className="rounded-full">{totalCards} kaarten</Badge>
-        <Badge variant="secondary" className="rounded-full">{studentsWithoutCards} zonder kaart</Badge>
+        {rows.length > 0 && (
+          <Badge variant="secondary" className="rounded-full">
+            Toont {rows.length} van {total} studenten
+          </Badge>
+        )}
       </div>
 
       {/* Search bar */}
@@ -231,7 +246,19 @@ export default function RFIDTab() {
 
         {/* Table body */}
         <div className="divide-y divide-slate-200">
-          {rows.map((row) => {
+          {loading ? (
+            <div className="px-5 py-16 text-center">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+                <p className="text-sm text-slate-600">Laden...</p>
+              </div>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-slate-600">
+              Geen studenten gevonden
+            </div>
+          ) : (
+            rows.map((row) => {
             const isOpen = openRowId === row.id;
             const primaryHint = getPrimaryCardHint(row.cards);
 
@@ -365,21 +392,19 @@ export default function RFIDTab() {
                 )}
               </div>
             );
-          })}
-
-          {rows.length === 0 && (
-            <div className="px-3 py-10 text-center">
-              <div className="text-sm font-medium text-slate-900">Geen resultaten</div>
-              <div className="text-xs text-slate-500">Pas je zoekterm aan of wis de filter.</div>
-              <div className="mt-3">
-                <Button variant="secondary" onClick={() => setSearchQuery("")} disabled={!searchQuery.trim()}>
-                  Wissen
-                </Button>
-              </div>
-            </div>
+          })
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      )}
 
       {/* Add card dialog */}
       <Dialog open={!!addDialogStudent} onOpenChange={(v) => !v && setAddDialogStudent(null)}>
