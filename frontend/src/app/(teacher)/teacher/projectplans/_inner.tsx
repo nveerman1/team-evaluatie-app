@@ -129,15 +129,24 @@ export default function ProjectPlansListInner() {
   // Handle status change
   const handleStatusChange = async (id: number, newStatus: string) => {
     try {
-      console.log(`Updating status for projectplan ${id} to ${newStatus}`);
+      console.log(`[DEBUG] Starting status update for projectplan ${id} to ${newStatus}`);
+      console.log('[DEBUG] About to call projectPlanService.updateProjectPlan');
+      
       const response = await projectPlanService.updateProjectPlan(id, { status: newStatus as any });
+      
+      console.log('[DEBUG] API call completed successfully');
       console.log('Update response:', response);
       console.log('Response status:', response.status);
+      
       const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
+      console.log('[DEBUG] About to fetch list');
+      
       await fetchList(courseId);
+      
       console.log('List refreshed');
       console.log('Current data:', data.map(item => ({ id: item.id, status: item.status })));
     } catch (e: any) {
+      console.error('[DEBUG] Error caught:', e);
       console.error('Status update error:', e);
       if (e instanceof ApiAuthError) {
         alert(e.originalMessage);
