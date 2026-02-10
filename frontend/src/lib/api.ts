@@ -54,6 +54,11 @@ const instance = axios.create({
 // ---- REQUEST INTERCEPTOR ----
 // Zet X-User-Email altijd vanuit storage en voorkom hardcoded/legacy defaults.
 instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Log all requests in development
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.url}`, config.data);
+  }
+  
   // Alleen in de browser (SSR heeft geen storage)
   if (typeof window !== "undefined") {
     const email =
@@ -74,7 +79,13 @@ instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // ---- RESPONSE INTERCEPTOR ----
 instance.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Log all responses in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[API RESPONSE] ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`, res.data);
+    }
+    return res;
+  },
   (err: AxiosError<any>) => {
     // Don't log or handle canceled/aborted requests
     // Check multiple conditions for canceled requests
