@@ -127,7 +127,7 @@ class ProjectPlanBase(BaseModel):
     """Base schema for project plans"""
     title: Optional[str] = None
     version: Optional[str] = None
-    status: ProjectPlanStatus = ProjectPlanStatus.DRAFT
+    status: Optional[ProjectPlanStatus] = ProjectPlanStatus.DRAFT
 
 
 class ProjectPlanCreate(ProjectPlanBase):

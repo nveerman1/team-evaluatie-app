@@ -365,6 +365,7 @@ def list_projectplans(
                 updated_at=pp.updated_at,
             )
         )
+        logger.info(f"List endpoint - ProjectPlan {pp.id} status from DB: {pp.status}")
     
     return ProjectPlanListResponse(items=items, page=page, limit=limit, total=total)
 
@@ -503,17 +504,21 @@ def update_projectplan(
     
     pp = _get_projectplan_with_access_check(db, projectplan_id, user)
     
+    logger.info(f"Before update - ProjectPlan {pp.id} status: {pp.status}")
+    
     if payload.title is not None:
         pp.title = payload.title
     if payload.version is not None:
         pp.version = payload.version
     if payload.status is not None:
-        pp.status = payload.status.value if hasattr(payload.status, 'value') else payload.status
+        new_status = payload.status.value if hasattr(payload.status, 'value') else payload.status
+        logger.info(f"Setting status from {pp.status} to {new_status}")
+        pp.status = new_status
     
     db.commit()
     db.refresh(pp)
     
-    logger.info(f"Updated ProjectPlan {pp.id} by user {user.id}")
+    logger.info(f"After update - ProjectPlan {pp.id} status: {pp.status}")
     
     return ProjectPlanOut(
         id=pp.id,
