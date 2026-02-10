@@ -68,7 +68,6 @@ class ProjectTeamService:
         project_team = ProjectTeam(
             school_id=school_id,
             project_id=project_id,
-            team_id=None,  # No longer links to groups
             display_name_at_time=team_name,
             version=version,
         )
@@ -323,8 +322,8 @@ class ProjectTeamService:
             new_team = ProjectTeam(
                 school_id=school_id,
                 project_id=target_project_id,
-                team_id=source_team.team_id,  # Keep reference to original group
                 display_name_at_time=source_team.display_name_at_time,
+                team_number=source_team.team_number,
                 version=1,  # Reset version for new project
             )
             db.add(new_team)
