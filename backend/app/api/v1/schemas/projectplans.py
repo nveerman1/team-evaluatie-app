@@ -168,6 +168,7 @@ class ProjectPlanListItem(BaseModel):
     id: int
     title: Optional[str] = None
     version: Optional[str] = None
+    status: Optional[ProjectPlanStatus] = ProjectPlanStatus.DRAFT
     project_id: int
     project_name: str
     course_id: Optional[int] = None
