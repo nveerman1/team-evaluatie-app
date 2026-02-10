@@ -495,7 +495,9 @@ def update_projectplan(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Update projectplan metadata (title, version) - teacher/admin only"""
+    """Update projectplan metadata (title, version, status) - teacher/admin only"""
+    logger.info(f"=== UPDATE ENDPOINT CALLED === ProjectPlan {projectplan_id}, payload: {payload}")
+    
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=403,
