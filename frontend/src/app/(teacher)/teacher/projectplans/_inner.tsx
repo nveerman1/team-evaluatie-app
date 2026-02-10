@@ -36,14 +36,19 @@ export default function ProjectPlansListInner() {
   }, [data]);
 
   async function fetchList(courseId?: number) {
+    console.log('[FETCHLIST] Starting fetchList with courseId:', courseId);
     setLoading(true);
     setError(null);
     try {
       const response = await projectPlanService.listProjectPlans({
         course_id: courseId,
       });
+      console.log('[FETCHLIST] Got response:', response);
+      console.log('[FETCHLIST] Response items:', response.items?.map(item => ({ id: item.id, status: item.status })));
       setData(response.items || []);
+      console.log('[FETCHLIST] Data state set');
     } catch (e: any) {
+      console.error('[FETCHLIST] Error:', e);
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
@@ -128,25 +133,30 @@ export default function ProjectPlansListInner() {
 
   // Handle status change
   const handleStatusChange = async (id: number, newStatus: string) => {
+    console.log(`[HANDLER ENTRY] handleStatusChange called with id=${id}, newStatus=${newStatus}`);
+    
     try {
       console.log(`[DEBUG] Starting status update for projectplan ${id} to ${newStatus}`);
       console.log('[DEBUG] About to call projectPlanService.updateProjectPlan');
+      console.log('[DEBUG] Payload:', { status: newStatus });
       
       const response = await projectPlanService.updateProjectPlan(id, { status: newStatus as any });
       
       console.log('[DEBUG] API call completed successfully');
+      console.log('[DEBUG] Full response object:', JSON.stringify(response, null, 2));
       console.log('Update response:', response);
       console.log('Response status:', response.status);
       
       const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
-      console.log('[DEBUG] About to fetch list');
+      console.log('[DEBUG] About to fetch list with courseId:', courseId);
       
       await fetchList(courseId);
       
-      console.log('List refreshed');
-      console.log('Current data:', data.map(item => ({ id: item.id, status: item.status })));
+      console.log('[DEBUG] List refreshed');
+      console.log('[DEBUG] Current data after refresh:', data.map(item => ({ id: item.id, status: item.status })));
     } catch (e: any) {
-      console.error('[DEBUG] Error caught:', e);
+      console.error('[DEBUG] Error caught in handleStatusChange:', e);
+      console.error('[DEBUG] Error type:', typeof e, e?.constructor?.name);
       console.error('Status update error:', e);
       if (e instanceof ApiAuthError) {
         alert(e.originalMessage);
