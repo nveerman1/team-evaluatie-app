@@ -197,8 +197,9 @@ def list_attendance_events(
     approval_status: Optional[str] = Query(
         None, description="Filter by approval status"
     ),
+    q: Optional[str] = Query(None, description="Search by name or email"),
     page: int = Query(1, ge=1),
-    per_page: int = Query(30, ge=1, le=100),
+    per_page: int = Query(30, ge=1, le=50),
 ):
     """
     List attendance events with filters
@@ -224,6 +225,16 @@ def list_attendance_events(
     if class_name and current_user.role in ["teacher", "admin"]:
         query = query.filter(User.class_name == class_name)
 
+    # Search by name or email (teachers/admins only)
+    if q and current_user.role in ["teacher", "admin"]:
+        search_pattern = f"%{q}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern),
+            )
+        )
+
     if project_id:
         query = query.filter(AttendanceEvent.project_id == project_id)
 
@@ -244,6 +255,9 @@ def list_attendance_events(
 
     # Get total count using distinct on AttendanceEvent.id
     total = query.with_entities(AttendanceEvent.id).distinct().count()
+
+    # Calculate total pages (at least 1 page even when empty)
+    total_pages = max(1, (total + per_page - 1) // per_page)
 
     # Pagination
     offset = (page - 1) * per_page
@@ -277,7 +291,7 @@ def list_attendance_events(
         events_out.append(AttendanceEventOut(**event_dict))
 
     return AttendanceEventListOut(
-        events=events_out, total=total, page=page, per_page=per_page
+        events=events_out, total=total, page=page, per_page=per_page, total_pages=total_pages
     )
 
 
@@ -892,12 +906,19 @@ def get_attendance_overview(
     current_user: User = Depends(get_current_user),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
+    q: Optional[str] = Query(None, description="Search by name or email"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(30, ge=1, le=50),
 ):
     """
     Get attendance overview for all students (teacher/admin only)
-    Returns totals per student
+    Returns totals per student, sorted by lesson blocks (descending)
+    
     When project_id is provided, only counts events within the project's date range
     When course_id is provided, filters to students enrolled in that course
+    
+    Note: Pagination happens after computing all aggregations to maintain
+    correct global ranking. For large datasets, consider using a materialized view.
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -946,6 +967,21 @@ def get_attendance_overview(
             User.archived.is_(False),
         )
 
+    # Apply search filter
+    if q:
+        search_pattern = f"%{q}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern),
+            )
+        )
+
+    # Get total count before pagination
+    total_students = query.count()
+
+    # Fetch all students (we need to compute aggregations for ranking)
+    # Note: For large datasets, this should be optimized with a materialized view
     students = query.all()
 
     result = []
@@ -1032,7 +1068,21 @@ def get_attendance_overview(
     # Sort by lesson blocks descending
     result.sort(key=lambda x: x["lesson_blocks"], reverse=True)
 
-    return result
+    # Apply pagination after sorting (needed for correct global ranking)
+    # Note: total is len(result) because we want to show count AFTER filters,
+    # not the raw database count. This matches user expectations for filtered results.
+    total_pages = max(1, (len(result) + per_page - 1) // per_page)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_result = result[start_idx:end_idx]
+
+    return {
+        "items": paginated_result,
+        "total": len(result),
+        "page": page,
+        "page_size": per_page,
+        "total_pages": total_pages,
+    }
 
 
 # ============ Students List with RFID Cards ============
@@ -1042,7 +1092,9 @@ def get_attendance_overview(
 def list_students_with_cards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    search: Optional[str] = Query(None),
+    q: Optional[str] = Query(None, description="Search by name, email, class, or card UID"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(30, ge=1, le=50),
 ):
     """
     Get list of students with their RFID cards (teacher/admin only)
@@ -1061,17 +1113,29 @@ def list_students_with_cards(
         User.archived.is_(False),
     )
 
-    if search:
-        search_pattern = f"%{search}%"
+    if q:
+        search_pattern = f"%{q}%"
+        # Search in user fields or join to search by card UID
+        subquery = db.query(RFIDCard.user_id).filter(
+            RFIDCard.uid.ilike(search_pattern)
+        ).subquery()
+        
         query = query.filter(
             or_(
                 User.name.ilike(search_pattern),
                 User.email.ilike(search_pattern),
                 User.class_name.ilike(search_pattern),
+                User.id.in_(subquery),
             )
         )
 
-    students = query.order_by(User.class_name, User.name).all()
+    # Get total count
+    total = query.count()
+    total_pages = max(1, (total + per_page - 1) // per_page)
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    students = query.order_by(User.class_name, User.name).offset(offset).limit(per_page).all()
 
     # Get RFID cards for all students
     result = []
@@ -1104,7 +1168,13 @@ def list_students_with_cards(
             }
         )
 
-    return result
+    return {
+        "items": result,
+        "total": total,
+        "page": page,
+        "page_size": per_page,
+        "total_pages": total_pages,
+    }
 
 
 # ============ Courses and Projects for Filtering ============
