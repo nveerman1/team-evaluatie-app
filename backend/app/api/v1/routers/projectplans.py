@@ -694,13 +694,18 @@ def list_my_projectplans(
             detail="Dit endpoint is alleen voor studenten"
         )
     
+    logger.info(f"Student {user.id} ({user.email}) requesting projectplans")
+    
     student_teams = db.query(ProjectTeamMember.project_team_id).filter(
         ProjectTeamMember.user_id == user.id,
         ProjectTeamMember.school_id == user.school_id,
     ).all()
     team_ids = [t[0] for t in student_teams]
     
+    logger.info(f"Student {user.id} is member of teams: {team_ids}")
+    
     if not team_ids:
+        logger.info(f"Student {user.id} has no team memberships")
         return []
     
     project_ids = db.query(ProjectTeam.project_id).filter(
@@ -709,7 +714,10 @@ def list_my_projectplans(
     ).distinct().all()
     project_ids = [p[0] for p in project_ids]
     
+    logger.info(f"Student {user.id} teams are in projects: {project_ids}")
+    
     if not project_ids:
+        logger.info(f"Student {user.id} teams have no associated projects")
         return []
     
     # Only show projectplans with status open, published, or closed (not draft)
@@ -718,6 +726,10 @@ def list_my_projectplans(
         ProjectPlan.school_id == user.school_id,
         ProjectPlan.status.in_(["open", "published", "closed"]),
     ).all()
+    
+    logger.info(f"Found {len(projectplans)} projectplans with visible status for student {user.id}")
+    for pp in projectplans:
+        logger.info(f"  - ProjectPlan {pp.id} (project {pp.project_id}): status={pp.status}")
     
     items = []
     for pp in projectplans:
