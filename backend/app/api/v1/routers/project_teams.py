@@ -524,8 +524,9 @@ def _format_project_team_output(project_team: ProjectTeam, db: Session) -> Proje
         id=project_team.id,
         school_id=project_team.school_id,
         project_id=project_team.project_id,
-        team_id=project_team.team_id,
+        team_id=None,  # Legacy field, no longer used
         display_name_at_time=project_team.display_name_at_time,
+        team_number=project_team.team_number,
         version=project_team.version,
         backfill_source=project_team.backfill_source,
         created_at=project_team.created_at,

@@ -112,7 +112,7 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
             project_team = (
                 db.query(ProjectTeam)
                 .filter(
-                    ProjectTeam.team_id == note.team_id,
+                    ProjectTeam.team_number == note.team_id,
                     ProjectTeam.project_id == context.project_id,
                 )
                 .first()
