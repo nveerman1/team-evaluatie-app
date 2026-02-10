@@ -44,9 +44,11 @@ export default function ProjectPlansListInner() {
         course_id: courseId,
       });
       console.log('[FETCHLIST] Got response:', response);
-      console.log('[FETCHLIST] Response items:', response.items?.map(item => ({ id: item.id, status: item.status })));
+      console.log('[FETCHLIST] Response items count:', response.items?.length);
+      console.log('[FETCHLIST] First item status (explicit):', response.items?.[0]?.status);
+      console.log('[FETCHLIST] First item (full):', JSON.stringify(response.items?.[0], null, 2));
       setData(response.items || []);
-      console.log('[FETCHLIST] Data state set');
+      console.log('[FETCHLIST] Data state set with', response.items?.length, 'items');
     } catch (e: any) {
       console.error('[FETCHLIST] Error:', e);
       if (e instanceof ApiAuthError) {
@@ -153,7 +155,9 @@ export default function ProjectPlansListInner() {
       await fetchList(courseId);
       
       console.log('[DEBUG] List refreshed');
-      console.log('[DEBUG] Current data after refresh:', data.map(item => ({ id: item.id, status: item.status })));
+      console.log('[DEBUG] Current data after refresh count:', data.length);
+      console.log('[DEBUG] First item in current data:', JSON.stringify(data[0], null, 2));
+      console.log('[DEBUG] First item status:', data[0]?.status);
     } catch (e: any) {
       console.error('[DEBUG] Error caught in handleStatusChange:', e);
       console.error('[DEBUG] Error type:', typeof e, e?.constructor?.name);
