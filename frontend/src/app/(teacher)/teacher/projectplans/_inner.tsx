@@ -132,9 +132,11 @@ export default function ProjectPlansListInner() {
       console.log(`Updating status for projectplan ${id} to ${newStatus}`);
       const response = await projectPlanService.updateProjectPlan(id, { status: newStatus as any });
       console.log('Update response:', response);
+      console.log('Response status:', response.status);
       const courseId = courseFilter === "all" ? undefined : Number(courseFilter);
       await fetchList(courseId);
       console.log('List refreshed');
+      console.log('Current data:', data.map(item => ({ id: item.id, status: item.status })));
     } catch (e: any) {
       console.error('Status update error:', e);
       if (e instanceof ApiAuthError) {
