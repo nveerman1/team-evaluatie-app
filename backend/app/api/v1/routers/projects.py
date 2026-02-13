@@ -997,7 +997,6 @@ def wizard_create_project(
             default_team = ProjectTeam(
                 school_id=user.school_id,
                 project_id=project.id,
-                team_id=None,  # No link to legacy groups
                 # FIX (2026-01): Use proper team name "Team 1" instead of project title
                 # Previously set to f"Project {project.title}" which caused Team 1 to show
                 # project name in overview UI instead of team name

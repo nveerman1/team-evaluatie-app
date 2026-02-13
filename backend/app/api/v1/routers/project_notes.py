@@ -108,11 +108,13 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
         )
 
         # Try to get team_number from project_teams table
+        # Note: note.team_id is a legacy field that may contain team numbers
+        # (not actual IDs) - it should ideally be renamed to team_number
         if context and context.project_id:
             project_team = (
                 db.query(ProjectTeam)
                 .filter(
-                    ProjectTeam.team_id == note.team_id,
+                    ProjectTeam.team_number == note.team_id,
                     ProjectTeam.project_id == context.project_id,
                 )
                 .first()
