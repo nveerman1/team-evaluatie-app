@@ -66,10 +66,12 @@ jobs:
       - name: Build images
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXT_PUBLIC_ENABLE_DEV_LOGIN: "false"
         run: |
           docker build -t tea-backend:ci -f backend/Dockerfile backend
           docker build -t tea-frontend:ci -f frontend/Dockerfile frontend \
-            --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+            --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+            --build-arg NEXT_PUBLIC_ENABLE_DEV_LOGIN=$NEXT_PUBLIC_ENABLE_DEV_LOGIN
 
       - name: Debug docker images
         run: docker images | head -n 50
