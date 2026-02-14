@@ -124,7 +124,7 @@ def update_rfid_card(
     # Find card and verify user belongs to same school
     card = (
         db.query(RFIDCard)
-        .join(User)
+        .join(RFIDCard.user)
         .filter(RFIDCard.id == card_id, User.school_id == current_user.school_id)
         .first()
     )
@@ -163,7 +163,7 @@ def delete_rfid_card(
     # Find card and verify user belongs to same school
     card = (
         db.query(RFIDCard)
-        .join(User)
+        .join(RFIDCard.user)
         .filter(RFIDCard.id == card_id, User.school_id == current_user.school_id)
         .first()
     )
