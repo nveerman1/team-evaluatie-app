@@ -14,7 +14,7 @@ interface TeamBarProps {
   teamIndex: number;
   totalTeams: number;
   members: TeamMember[];
-  averageScore?: string | number;
+  grade?: number | null;
   docOpen: boolean;
   onShowDocument?: () => void;
   onPrevTeam: () => void;
@@ -28,7 +28,7 @@ export function TeamBar({
   teamIndex,
   totalTeams,
   members,
-  averageScore = '—',
+  grade,
   docOpen,
   onShowDocument,
   onPrevTeam,
@@ -36,6 +36,8 @@ export function TeamBar({
   hasPrevTeam,
   hasNextTeam,
 }: TeamBarProps) {
+  const gradeDisplay = grade !== null && grade !== undefined ? grade.toFixed(1) : '—';
+  
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -72,13 +74,14 @@ export function TeamBar({
             {teamIndex + 1} van {totalTeams}
             <span className="mx-2 text-slate-300">•</span>
             Teamleden: <span 
-              className="text-slate-600 inline-block min-w-0 truncate max-w-xs"
+              className="text-slate-600 max-w-xs truncate"
+              style={{ display: 'inline', verticalAlign: 'baseline' }}
               title={members.map(m => m.name).join(', ')}
             >
               {members.map(m => shortName(m.name)).join(', ')}
             </span>
             <span className="mx-2 text-slate-300">•</span>
-            Gemiddelde score: <span className="text-slate-900 font-semibold">{averageScore}</span>
+            Eindcijfer: <span className="text-slate-900 font-semibold">{gradeDisplay}</span>
           </div>
         </div>
       </div>
