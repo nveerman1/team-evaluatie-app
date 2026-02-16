@@ -38,6 +38,7 @@ from app.api.v1.schemas.projectplans import (
 )
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
+student_router = APIRouter(tags=["projectplans"])  # No prefix for /me/projectplans routes
 logger = logging.getLogger(__name__)
 
 SECTION_NAMES = {
@@ -682,7 +683,7 @@ def delete_projectplan(
 
 # ---------- Student Endpoints ----------
 
-@router.get("/me/projectplans")
+@student_router.get("/me/projectplans")
 def list_my_projectplans(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
@@ -761,7 +762,7 @@ def list_my_projectplans(
     return items
 
 
-@router.get("/me/projectplans/{projectplan_id}", response_model=ProjectPlanTeamOut)
+@student_router.get("/me/projectplans/{projectplan_id}", response_model=ProjectPlanTeamOut)
 def get_my_projectplan(
     projectplan_id: int,
     db: Session = Depends(get_db),
@@ -809,7 +810,7 @@ def get_my_projectplan(
     return _team_to_out(team, db)
 
 
-@router.patch("/me/projectplans/{projectplan_team_id}", response_model=ProjectPlanTeamOut)
+@student_router.patch("/me/projectplans/{projectplan_team_id}", response_model=ProjectPlanTeamOut)
 def update_my_projectplan_title(
     projectplan_team_id: int,
     payload: ProjectPlanTeamUpdate,
@@ -860,7 +861,7 @@ def update_my_projectplan_title(
     return _team_to_out(team, db)
 
 
-@router.patch(
+@student_router.patch(
     "/me/projectplans/{projectplan_team_id}/sections/{section_key}",
     response_model=ProjectPlanSectionOut
 )
@@ -941,7 +942,7 @@ def update_my_section(
     return _section_to_out(section)
 
 
-@router.post("/me/projectplans/{projectplan_team_id}/submit")
+@student_router.post("/me/projectplans/{projectplan_team_id}/submit")
 def submit_projectplan(
     projectplan_team_id: int,
     db: Session = Depends(get_db),

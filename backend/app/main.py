@@ -124,6 +124,7 @@ api_v1.include_router(clients_router.router)
 api_v1.include_router(projects_router.router)
 api_v1.include_router(project_teams_router.router)
 api_v1.include_router(projectplans_router.router)
+api_v1.include_router(projectplans_router.student_router)  # Student routes without /projectplans prefix
 api_v1.include_router(omza_router.router)
 api_v1.include_router(templates_router.router)
 api_v1.include_router(student_competency_growth_router.router)
