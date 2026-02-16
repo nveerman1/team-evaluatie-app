@@ -110,7 +110,7 @@ export const projectPlanService = {
    * List projectplans for current student
    */
   async listMyProjectPlans(): Promise<ProjectPlanDetail[]> {
-    const { data } = await api.get('/projectplans/me/projectplans');
+    const { data } = await api.get('/me/projectplans');
     return data;
   },
 
@@ -118,7 +118,7 @@ export const projectPlanService = {
    * Get student's team projectplan detail
    */
   async getMyProjectPlan(id: number): Promise<ProjectPlanTeam> {
-    const { data } = await api.get(`/projectplans/me/projectplans/${id}`);
+    const { data } = await api.get(`/me/projectplans/${id}`);
     return data;
   },
 
@@ -129,7 +129,7 @@ export const projectPlanService = {
     teamId: number,
     payload: ProjectPlanTeamUpdate
   ): Promise<void> {
-    await api.patch(`/projectplans/me/projectplans/${teamId}`, payload);
+    await api.patch(`/me/projectplans/${teamId}`, payload);
   },
 
   /**
@@ -141,7 +141,7 @@ export const projectPlanService = {
     payload: ProjectPlanSectionUpdate
   ): Promise<void> {
     await api.patch(
-      `/projectplans/me/projectplans/${projectPlanTeamId}/sections/${sectionKey}`,
+      `/me/projectplans/${projectPlanTeamId}/sections/${sectionKey}`,
       payload
     );
   },
@@ -150,7 +150,7 @@ export const projectPlanService = {
    * Submit projectplan for review (student)
    */
   async submitProjectPlan(projectPlanTeamId: number): Promise<void> {
-    await api.post(`/projectplans/me/projectplans/${projectPlanTeamId}/submit`);
+    await api.post(`/me/projectplans/${projectPlanTeamId}/submit`);
   },
 };
 
