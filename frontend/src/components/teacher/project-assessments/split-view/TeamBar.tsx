@@ -74,8 +74,7 @@ export function TeamBar({
             {teamIndex + 1} van {totalTeams}
             <span className="mx-2 text-slate-300">•</span>
             Teamleden: <span 
-              className="text-slate-600 max-w-xs truncate"
-              style={{ display: 'inline', verticalAlign: 'baseline' }}
+              className="text-slate-600 max-w-xs truncate align-baseline"
               title={members.map(m => m.name).join(', ')}
             >
               {members.map(m => shortName(m.name)).join(', ')}
