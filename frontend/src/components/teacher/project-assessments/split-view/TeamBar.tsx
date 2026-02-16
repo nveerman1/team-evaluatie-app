@@ -22,6 +22,19 @@ interface TeamBarProps {
   hasNextTeam: boolean;
 }
 
+/**
+ * Convert a full name to short format: "FirstName L."
+ * E.g., "Casper Daniels" -> "Casper D."
+ */
+function shortName(fullName: string): string {
+  if (!fullName || !fullName.trim()) return "";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts[0];
+  const lastName = parts[parts.length - 1];
+  return `${firstName} ${lastName[0]}.`;
+}
+
 export function TeamBar({
   teamNumber,
   teamIndex,
@@ -70,7 +83,12 @@ export function TeamBar({
           <div className="mt-1 text-sm text-slate-500">
             {teamIndex + 1} van {totalTeams}
             <span className="mx-2 text-slate-300">•</span>
-            Teamleden: <span className="text-slate-600">{members.map(m => m.name).join(', ')}</span>
+            Teamleden: <span 
+              className="text-slate-600 inline-block min-w-0 truncate max-w-xs"
+              title={members.map(m => m.name).join(', ')}
+            >
+              {members.map(m => shortName(m.name)).join(', ')}
+            </span>
             <span className="mx-2 text-slate-300">•</span>
             Gemiddelde score: <span className="text-slate-900 font-semibold">{averageScore}</span>
           </div>
