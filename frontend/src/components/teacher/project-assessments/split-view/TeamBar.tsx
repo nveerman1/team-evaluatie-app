@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { shortName } from '@/lib/format';
 
 interface TeamMember {
   id: number;
@@ -20,19 +21,6 @@ interface TeamBarProps {
   onNextTeam: () => void;
   hasPrevTeam: boolean;
   hasNextTeam: boolean;
-}
-
-/**
- * Convert a full name to short format: "FirstName L."
- * E.g., "Casper Daniels" -> "Casper D."
- */
-function shortName(fullName: string): string {
-  if (!fullName || !fullName.trim()) return "";
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0];
-  const firstName = parts[0];
-  const lastName = parts[parts.length - 1];
-  return `${firstName} ${lastName[0]}.`;
 }
 
 export function TeamBar({

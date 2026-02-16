@@ -6,19 +6,7 @@ import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
-
-/**
- * Convert a full name to short format: "FirstName L."
- * E.g., "Casper Daniels" -> "Casper D."
- */
-function shortName(fullName: string): string {
-  if (!fullName || !fullName.trim()) return "";
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0];
-  const firstName = parts[0];
-  const lastName = parts[parts.length - 1];
-  return `${firstName} ${lastName[0]}.`;
-}
+import { shortName } from "@/lib/format";
 
 export default function ProjectAssessmentOverviewInner() {
   const params = useParams();
