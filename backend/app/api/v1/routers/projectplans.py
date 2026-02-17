@@ -31,6 +31,7 @@ from app.api.v1.schemas.projectplans import (
     ProjectPlanTeamOverviewItem,
     ProjectPlanSectionOut,
     ProjectPlanSectionUpdate,
+    ClientData,
     SectionKey,
     SectionStatus,
     PlanStatus,
@@ -781,17 +782,30 @@ def list_my_projectplans(
                             ProjectPlanSection.school_id == user.school_id,
                         ).all()
                         
-                        sections_data = [
-                            ProjectPlanSectionOut(
-                                id=s.id,
-                                project_plan_team_id=s.project_plan_team_id,
-                                key=s.key,
-                                status=s.status,
-                                content=s.content,
-                                teacher_note=s.teacher_note,
+                        sections_data = []
+                        for s in sections:
+                            # Build client data if this is the client section
+                            client_data = None
+                            if s.key == "client":
+                                client_data = ClientData(
+                                    organisation=s.client_organisation,
+                                    contact=s.client_contact,
+                                    email=s.client_email,
+                                    phone=s.client_phone,
+                                    description=s.client_description,
+                                )
+                            
+                            sections_data.append(
+                                ProjectPlanSectionOut(
+                                    id=s.id,
+                                    project_plan_team_id=s.project_plan_team_id,
+                                    key=s.key,
+                                    status=s.status,
+                                    text=s.text,
+                                    client=client_data,
+                                    teacher_note=s.teacher_note,
+                                )
                             )
-                            for s in sections
-                        ]
                         
                         teams_data.append(
                             ProjectPlanTeamOut(
