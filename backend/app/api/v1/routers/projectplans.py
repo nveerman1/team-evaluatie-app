@@ -804,6 +804,8 @@ def list_my_projectplans(
                                     text=s.text,
                                     client=client_data,
                                     teacher_note=s.teacher_note,
+                                    created_at=s.created_at,
+                                    updated_at=s.updated_at,
                                 )
                             )
                         
