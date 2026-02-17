@@ -10,7 +10,6 @@ import { skillTrainingService } from "@/services";
 import type {
   StudentTrainingItem,
   SkillTrainingStatus,
-  STATUS_META as StatusMetaType,
 } from "@/dtos";
 import { STATUS_META, STUDENT_ALLOWED_STATUSES } from "@/dtos";
 

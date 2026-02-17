@@ -48,10 +48,6 @@ def upgrade() -> None:
     op.create_index('ix_skill_training_category', 'skill_trainings', ['competency_category_id'], unique=False)
     op.create_index('ix_skill_training_school', 'skill_trainings', ['school_id'], unique=False)
     op.create_index('ix_skill_training_school_active', 'skill_trainings', ['school_id', 'is_active'], unique=False)
-    op.create_index(op.f('ix_skill_trainings_id'), 'skill_trainings', ['id'], unique=False)
-    op.create_index(op.f('ix_skill_trainings_competency_category_id'), 'skill_trainings', ['competency_category_id'], unique=False)
-    op.create_index(op.f('ix_skill_trainings_learning_objective_id'), 'skill_trainings', ['learning_objective_id'], unique=False)
-    op.create_index(op.f('ix_skill_trainings_school_id'), 'skill_trainings', ['school_id'], unique=False)
     
     # Create skill_training_progress table
     op.create_table(
@@ -77,32 +73,18 @@ def upgrade() -> None:
     op.create_index('ix_skill_progress_course_training', 'skill_training_progress', ['course_id', 'training_id'], unique=False)
     op.create_index('ix_skill_progress_student', 'skill_training_progress', ['student_id'], unique=False)
     op.create_index('ix_skill_progress_training', 'skill_training_progress', ['training_id'], unique=False)
-    op.create_index(op.f('ix_skill_training_progress_id'), 'skill_training_progress', ['id'], unique=False)
-    op.create_index(op.f('ix_skill_training_progress_course_id'), 'skill_training_progress', ['course_id'], unique=False)
-    op.create_index(op.f('ix_skill_training_progress_school_id'), 'skill_training_progress', ['school_id'], unique=False)
-    op.create_index(op.f('ix_skill_training_progress_student_id'), 'skill_training_progress', ['student_id'], unique=False)
-    op.create_index(op.f('ix_skill_training_progress_training_id'), 'skill_training_progress', ['training_id'], unique=False)
 
 
 def downgrade() -> None:
     """
     Remove skill training tables.
     """
-    op.drop_index(op.f('ix_skill_training_progress_training_id'), table_name='skill_training_progress')
-    op.drop_index(op.f('ix_skill_training_progress_student_id'), table_name='skill_training_progress')
-    op.drop_index(op.f('ix_skill_training_progress_school_id'), table_name='skill_training_progress')
-    op.drop_index(op.f('ix_skill_training_progress_course_id'), table_name='skill_training_progress')
-    op.drop_index(op.f('ix_skill_training_progress_id'), table_name='skill_training_progress')
     op.drop_index('ix_skill_progress_training', table_name='skill_training_progress')
     op.drop_index('ix_skill_progress_student', table_name='skill_training_progress')
     op.drop_index('ix_skill_progress_course_training', table_name='skill_training_progress')
     op.drop_index('ix_skill_progress_course', table_name='skill_training_progress')
     op.drop_table('skill_training_progress')
     
-    op.drop_index(op.f('ix_skill_trainings_school_id'), table_name='skill_trainings')
-    op.drop_index(op.f('ix_skill_trainings_learning_objective_id'), table_name='skill_trainings')
-    op.drop_index(op.f('ix_skill_trainings_competency_category_id'), table_name='skill_trainings')
-    op.drop_index(op.f('ix_skill_trainings_id'), table_name='skill_trainings')
     op.drop_index('ix_skill_training_school_active', table_name='skill_trainings')
     op.drop_index('ix_skill_training_school', table_name='skill_trainings')
     op.drop_index('ix_skill_training_category', table_name='skill_trainings')

@@ -10,8 +10,8 @@ import type {
   LearningObjective,
   TeacherProgressMatrixResponse,
   SkillTrainingStatus,
-  STATUS_META,
 } from "@/dtos";
+import { STATUS_META } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
