@@ -695,134 +695,152 @@ def list_my_projectplans(
             detail="Dit endpoint is alleen voor studenten"
         )
     
-    logger.info(f"Student {user.id} ({user.email}) requesting projectplans")
-    
-    student_teams = db.query(ProjectTeamMember.project_team_id).filter(
-        ProjectTeamMember.user_id == user.id,
-        ProjectTeamMember.school_id == user.school_id,
-    ).all()
-    team_ids = [t[0] for t in student_teams]
-    
-    logger.info(f"Student {user.id} is member of teams: {team_ids}")
-    
-    if not team_ids:
-        logger.info(f"Student {user.id} has no team memberships")
-        return []
-    
-    project_ids = db.query(ProjectTeam.project_id).filter(
-        ProjectTeam.id.in_(team_ids),
-        ProjectTeam.school_id == user.school_id,
-    ).distinct().all()
-    project_ids = [p[0] for p in project_ids]
-    
-    logger.info(f"Student {user.id} teams are in projects: {project_ids}")
-    
-    if not project_ids:
-        logger.info(f"Student {user.id} teams have no associated projects")
-        return []
-    
-    # Only show projectplans with status open, published, or closed (not draft)
-    projectplans = db.query(ProjectPlan).filter(
-        ProjectPlan.project_id.in_(project_ids),
-        ProjectPlan.school_id == user.school_id,
-        ProjectPlan.status.in_(["open", "published", "closed"]),
-    ).all()
-    
-    logger.info(f"Found {len(projectplans)} projectplans with visible status for student {user.id}")
-    for pp in projectplans:
-        logger.info(f"  - ProjectPlan {pp.id} (project {pp.project_id}): status={pp.status}")
-    
-    items = []
-    for pp in projectplans:
-        project = db.query(Project).filter(Project.id == pp.project_id).first()
-        project_name = project.title if project else "Unknown"
-        course_id_val = project.course_id if project else None
-        course_name = None
-        if course_id_val:
-            course = db.query(Course).filter(Course.id == course_id_val).first()
-            course_name = course.name if course else None
+    try:
+        logger.info(f"Student {user.id} ({user.email}) requesting projectplans")
         
-        # Get only the student's team(s) for this projectplan
-        student_project_teams = db.query(ProjectTeam).filter(
+        student_teams = db.query(ProjectTeamMember.project_team_id).filter(
+            ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.school_id == user.school_id,
+        ).all()
+        team_ids = [t[0] for t in student_teams]
+        
+        logger.info(f"Student {user.id} is member of teams: {team_ids}")
+        
+        if not team_ids:
+            logger.info(f"Student {user.id} has no team memberships")
+            return []
+        
+        project_ids = db.query(ProjectTeam.project_id).filter(
             ProjectTeam.id.in_(team_ids),
-            ProjectTeam.project_id == pp.project_id,
             ProjectTeam.school_id == user.school_id,
+        ).distinct().all()
+        project_ids = [p[0] for p in project_ids]
+        
+        logger.info(f"Student {user.id} teams are in projects: {project_ids}")
+        
+        if not project_ids:
+            logger.info(f"Student {user.id} teams have no associated projects")
+            return []
+        
+        # Only show projectplans with status open, published, or closed (not draft)
+        projectplans = db.query(ProjectPlan).filter(
+            ProjectPlan.project_id.in_(project_ids),
+            ProjectPlan.school_id == user.school_id,
+            ProjectPlan.status.in_(["open", "published", "closed"]),
         ).all()
         
-        teams_data = []
-        for project_team in student_project_teams:
-            # Get the ProjectPlanTeam record
-            ppt = db.query(ProjectPlanTeam).filter(
-                ProjectPlanTeam.project_plan_id == pp.id,
-                ProjectPlanTeam.project_team_id == project_team.id,
-                ProjectPlanTeam.school_id == user.school_id,
-            ).first()
-            
-            if not ppt:
-                continue  # Skip if no ProjectPlanTeam record exists
-            
-            # Get team members
-            members = db.query(User).join(
-                ProjectTeamMember,
-                ProjectTeamMember.user_id == User.id
-            ).filter(
-                ProjectTeamMember.project_team_id == project_team.id,
-                ProjectTeamMember.school_id == user.school_id,
-            ).all()
-            member_names = [m.name for m in members]
-            
-            # Get sections
-            sections = db.query(ProjectPlanSection).filter(
-                ProjectPlanSection.project_plan_team_id == ppt.id,
-                ProjectPlanSection.school_id == user.school_id,
-            ).all()
-            
-            sections_data = [
-                ProjectPlanSectionOut(
-                    id=s.id,
-                    project_plan_team_id=s.project_plan_team_id,
-                    key=s.key,
-                    status=s.status,
-                    content=s.content,
-                    teacher_note=s.teacher_note,
-                )
-                for s in sections
-            ]
-            
-            teams_data.append(
-                ProjectPlanTeamOut(
-                    id=ppt.id,
-                    project_plan_id=ppt.project_plan_id,
-                    project_team_id=ppt.project_team_id,
-                    status=ppt.status,
-                    title=ppt.title,
-                    global_teacher_note=ppt.global_teacher_note,
-                    locked=ppt.locked,
-                    team_number=project_team.team_number,
-                    team_members=member_names,
-                    sections=sections_data,
-                )
-            )
+        logger.info(f"Found {len(projectplans)} projectplans with visible status for student {user.id}")
+        for pp in projectplans:
+            logger.info(f"  - ProjectPlan {pp.id} (project {pp.project_id}): status={pp.status}")
         
-        items.append(
-            ProjectPlanDetail(
-                id=pp.id,
-                project_id=pp.project_id,
-                school_id=pp.school_id,
-                title=pp.title,
-                version=pp.version,
-                status=pp.status,
-                created_at=pp.created_at,
-                updated_at=pp.updated_at,
-                project_name=project_name,
-                course_id=course_id_val,
-                course_name=course_name,
-                team_count=len(teams_data),
-                teams=teams_data,
-            )
+        items = []
+        for pp in projectplans:
+            try:
+                project = db.query(Project).filter(Project.id == pp.project_id).first()
+                project_name = project.title if project else "Unknown"
+                course_id_val = project.course_id if project else None
+                course_name = None
+                if course_id_val:
+                    course = db.query(Course).filter(Course.id == course_id_val).first()
+                    course_name = course.name if course else None
+                
+                # Get only the student's team(s) for this projectplan
+                student_project_teams = db.query(ProjectTeam).filter(
+                    ProjectTeam.id.in_(team_ids),
+                    ProjectTeam.project_id == pp.project_id,
+                    ProjectTeam.school_id == user.school_id,
+                ).all()
+                
+                teams_data = []
+                for project_team in student_project_teams:
+                    try:
+                        # Get the ProjectPlanTeam record
+                        ppt = db.query(ProjectPlanTeam).filter(
+                            ProjectPlanTeam.project_plan_id == pp.id,
+                            ProjectPlanTeam.project_team_id == project_team.id,
+                            ProjectPlanTeam.school_id == user.school_id,
+                        ).first()
+                        
+                        if not ppt:
+                            logger.info(f"No ProjectPlanTeam found for projectplan {pp.id} team {project_team.id}")
+                            continue  # Skip if no ProjectPlanTeam record exists
+                        
+                        # Get team members
+                        members = db.query(User).join(
+                            ProjectTeamMember,
+                            ProjectTeamMember.user_id == User.id
+                        ).filter(
+                            ProjectTeamMember.project_team_id == project_team.id,
+                            ProjectTeamMember.school_id == user.school_id,
+                        ).all()
+                        member_names = [m.name for m in members]
+                        
+                        # Get sections
+                        sections = db.query(ProjectPlanSection).filter(
+                            ProjectPlanSection.project_plan_team_id == ppt.id,
+                            ProjectPlanSection.school_id == user.school_id,
+                        ).all()
+                        
+                        sections_data = [
+                            ProjectPlanSectionOut(
+                                id=s.id,
+                                project_plan_team_id=s.project_plan_team_id,
+                                key=s.key,
+                                status=s.status,
+                                content=s.content,
+                                teacher_note=s.teacher_note,
+                            )
+                            for s in sections
+                        ]
+                        
+                        teams_data.append(
+                            ProjectPlanTeamOut(
+                                id=ppt.id,
+                                project_plan_id=ppt.project_plan_id,
+                                project_team_id=ppt.project_team_id,
+                                status=ppt.status,
+                                title=ppt.title,
+                                global_teacher_note=ppt.global_teacher_note,
+                                locked=ppt.locked,
+                                team_number=project_team.team_number,
+                                team_members=member_names,
+                                sections=sections_data,
+                            )
+                        )
+                    except Exception as e:
+                        logger.error(f"Error processing team {project_team.id} for projectplan {pp.id}: {e}", exc_info=True)
+                        continue
+                
+                items.append(
+                    ProjectPlanDetail(
+                        id=pp.id,
+                        project_id=pp.project_id,
+                        school_id=pp.school_id,
+                        title=pp.title,
+                        version=pp.version,
+                        status=pp.status,
+                        created_at=pp.created_at,
+                        updated_at=pp.updated_at,
+                        project_name=project_name,
+                        course_id=course_id_val,
+                        course_name=course_name,
+                        team_count=len(teams_data),
+                        teams=teams_data,
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Error processing projectplan {pp.id}: {e}", exc_info=True)
+                continue
+        
+        logger.info(f"Returning {len(items)} projectplans to student {user.id}")
+        return items
+        
+    except Exception as e:
+        logger.error(f"Error in list_my_projectplans for student {user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error loading projectplans: {str(e)}"
         )
-    
-    return items
 
 
 @student_router.get("/me/projectplans/{projectplan_id}", response_model=ProjectPlanTeamOut)
