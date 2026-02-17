@@ -34,9 +34,7 @@ import {
 
 type PeriodFilter = "week" | "maand" | "alles";
 
-interface AttendanceTabProps {
-  searchQuery: string;
-}
+interface AttendanceTabProps {}
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -282,27 +280,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   }, [events]);
 
   // Filter by search query
-  const filteredSessions = useMemo(() => {
-    if (!searchQuery.trim()) return schoolSessions;
-    const q = searchQuery.toLowerCase();
-    return schoolSessions.filter((s) => 
-      formatDateTime(s.check_in).toLowerCase().includes(q) ||
-      (s.check_out && formatDateTime(s.check_out).toLowerCase().includes(q)) ||
-      (s.duration_seconds && formatDuration(s.duration_seconds).toLowerCase().includes(q))
-    );
-  }, [schoolSessions, searchQuery]);
-
-  const filteredExternals = useMemo(() => {
-    if (!searchQuery.trim()) return externalWork;
-    const q = searchQuery.toLowerCase();
-    return externalWork.filter((e) =>
-      (e.location?.toLowerCase().includes(q)) ||
-      (e.description?.toLowerCase().includes(q)) ||
-      formatDateTime(e.check_in).toLowerCase().includes(q) ||
-      (e.check_out && formatDateTime(e.check_out).toLowerCase().includes(q)) ||
-      (e.approval_status?.toLowerCase().includes(q))
-    );
-  }, [externalWork, searchQuery]);
+  // No filtering - display all sessions and external work
 
   if (loading) {
     return (
@@ -458,7 +436,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {filteredSessions.map((s) => (
+                {schoolSessions.map((s) => (
                   <tr key={s.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-900">{formatDateTime(s.check_in)}</td>
                     <td className="px-4 py-3 text-slate-900">{s.check_out ? formatDateTime(s.check_out) : "—"}</td>
@@ -467,7 +445,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                     </td>
                   </tr>
                 ))}
-                {filteredSessions.length === 0 && (
+                {schoolSessions.length === 0 && (
                   <tr>
                     <td colSpan={3} className="px-4 py-6 text-center text-slate-600">
                       Geen sessies gevonden.
@@ -509,7 +487,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {filteredExternals.map((e) => {
+                {externalWork.map((e) => {
                   const isRejected = e.approval_status === "rejected";
                   const expanded = expandedRejectId === e.id;
                   return (
@@ -551,7 +529,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                     </React.Fragment>
                   );
                 })}
-                {filteredExternals.length === 0 && (
+                {externalWork.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-slate-600">
                       Geen registraties gevonden.
