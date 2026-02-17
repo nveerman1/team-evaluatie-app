@@ -4,6 +4,7 @@ from app.core.config import settings
 from fastapi import APIRouter
 from app.api.middleware.security_headers import SecurityHeadersMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
+import logging
 
 from app.api.v1.routers import rubrics as rubrics_router
 from app.api.v1.routers import evaluations as evaluations_router
@@ -52,6 +53,11 @@ from app.api.v1.routers import rfid as rfid_router
 from app.api.v1.routers import tasks as tasks_router
 from app.integrations.somtoday import router as somtoday_router
 
+# Configure logging to show INFO level messages
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Disable API documentation in production for security
 # Swagger UI has historical vulnerabilities (CVE-2023-27322, CVE-2022-31677)
