@@ -433,7 +433,22 @@ export default function ProjectPlanDetailPage() {
 
                 {/* Sections Accordion */}
                 <div className="space-y-3">
-                  {selectedTeam.sections.map((section) => {
+                  {selectedTeam.sections
+                    .sort((a, b) => {
+                      // Define the fixed order of sections
+                      const order = [
+                        SectionKey.CLIENT,
+                        SectionKey.PROBLEM,
+                        SectionKey.GOAL,
+                        SectionKey.METHOD,
+                        SectionKey.PLANNING,
+                        SectionKey.TASKS,
+                        SectionKey.MOTIVATION,
+                        SectionKey.RISKS,
+                      ];
+                      return order.indexOf(a.key) - order.indexOf(b.key);
+                    })
+                    .map((section) => {
                     const meta = sectionMetadata[section.key];
                     const isExpanded = expandedSections.has(section.key);
                     const isSaving = savingSection === section.key;
