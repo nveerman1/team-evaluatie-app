@@ -32,42 +32,42 @@ const SECTION_INFO: Record<
   { label: string; description: string; required: boolean }
 > = {
   [SectionKey.CLIENT]: {
-    label: "Opdrachtgever",
+    label: "1. Opdrachtgever",
     description: "Gegevens van de opdrachtgever",
     required: true,
   },
   [SectionKey.PROBLEM]: {
-    label: "Probleemstelling",
+    label: "2. Probleemstelling",
     description: "Wat is het probleem dat opgelost moet worden?",
     required: true,
   },
   [SectionKey.GOAL]: {
-    label: "Doelstelling",
+    label: "3. Doelstelling",
     description: "Wat wil je bereiken met dit project?",
     required: true,
   },
   [SectionKey.METHOD]: {
-    label: "Methode",
+    label: "4. Methode",
     description: "Hoe ga je het project aanpakken?",
     required: true,
   },
   [SectionKey.PLANNING]: {
-    label: "Planning",
+    label: "5. Planning",
     description: "Wat is de tijdlijn van het project?",
     required: true,
   },
   [SectionKey.TASKS]: {
-    label: "Taken",
+    label: "6. Taakverdeling",
     description: "Wie doet wat in het team?",
     required: true,
   },
   [SectionKey.MOTIVATION]: {
-    label: "Motivatie",
+    label: "7. Motivatie",
     description: "Waarom is dit project interessant?",
     required: false,
   },
   [SectionKey.RISKS]: {
-    label: "Risico's",
+    label: "8. Risico's",
     description: "Welke risico's zie je en hoe pak je die aan?",
     required: false,
   },
@@ -470,7 +470,22 @@ export default function ProjectPlanEditor() {
           </CardHeader>
           <CardContent>
             <Accordion type="multiple" className="w-full">
-              {Object.entries(SECTION_INFO).map(([key, info]) => {
+              {Object.entries(SECTION_INFO)
+                .sort(([keyA], [keyB]) => {
+                  // Define the fixed order of sections
+                  const order = [
+                    SectionKey.CLIENT,
+                    SectionKey.PROBLEM,
+                    SectionKey.GOAL,
+                    SectionKey.METHOD,
+                    SectionKey.PLANNING,
+                    SectionKey.TASKS,
+                    SectionKey.MOTIVATION,
+                    SectionKey.RISKS,
+                  ];
+                  return order.indexOf(keyA as SectionKey) - order.indexOf(keyB as SectionKey);
+                })
+                .map(([key, info]) => {
                 const sectionKey = key as SectionKey;
                 const section = sections[sectionKey];
                 const isEdited = editedSections[sectionKey];
@@ -566,7 +581,7 @@ export default function ProjectPlanEditor() {
                                 }
                                 placeholder="Omschrijving van de opdrachtgever"
                                 disabled={isLocked}
-                                className="rounded-xl min-h-[100px]"
+                                className="rounded-xl min-h-[100px] resize-y"
                               />
                             </div>
                           </div>
@@ -579,7 +594,7 @@ export default function ProjectPlanEditor() {
                             }
                             placeholder={`Vul hier de ${info.label.toLowerCase()} in...`}
                             disabled={isLocked}
-                            className="rounded-xl min-h-[200px]"
+                            className="rounded-xl min-h-[200px] resize-y"
                           />
                         )}
 
