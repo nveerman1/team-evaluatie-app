@@ -821,6 +821,8 @@ def list_my_projectplans(
                                 team_number=project_team.team_number,
                                 team_members=member_names,
                                 sections=sections_data,
+                                created_at=ppt.created_at,
+                                updated_at=ppt.updated_at,
                             )
                         )
                     except Exception as e:
