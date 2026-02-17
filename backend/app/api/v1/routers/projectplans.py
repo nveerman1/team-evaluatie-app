@@ -861,9 +861,9 @@ def list_my_projectplans(
         )
 
 
-@student_router.get("/me/projectplans/{projectplan_id}", response_model=ProjectPlanTeamOut)
+@student_router.get("/me/projectplans/{project_plan_team_id}", response_model=ProjectPlanTeamOut)
 def get_my_projectplan(
-    projectplan_id: int,
+    project_plan_team_id: int,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -874,37 +874,39 @@ def get_my_projectplan(
             detail="Dit endpoint is alleen voor studenten"
         )
     
-    pp = db.query(ProjectPlan).filter(
-        ProjectPlan.id == projectplan_id,
-        ProjectPlan.school_id == user.school_id,
-        ProjectPlan.status.in_(["open", "published", "closed"]),
+    # Get the ProjectPlanTeam record directly
+    team = db.query(ProjectPlanTeam).options(
+        joinedload(ProjectPlanTeam.sections)
+    ).filter(
+        ProjectPlanTeam.id == project_plan_team_id,
+        ProjectPlanTeam.school_id == user.school_id,
     ).first()
     
-    if not pp:
-        raise HTTPException(status_code=404, detail="ProjectPlan not found or not published")
+    if not team:
+        raise HTTPException(status_code=404, detail="ProjectPlan team niet gevonden")
     
+    # Verify student is a member of this team
     student_teams = db.query(ProjectTeamMember.project_team_id).filter(
         ProjectTeamMember.user_id == user.id,
         ProjectTeamMember.school_id == user.school_id,
     ).all()
     team_ids = [t[0] for t in student_teams]
     
-    if not team_ids:
-        raise HTTPException(status_code=404, detail="Je bent geen lid van een team")
+    if team.project_team_id not in team_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="Je bent geen lid van dit team"
+        )
     
-    team = db.query(ProjectPlanTeam).options(
-        joinedload(ProjectPlanTeam.sections)
-    ).filter(
-        ProjectPlanTeam.project_plan_id == pp.id,
-        ProjectPlanTeam.project_team_id.in_(team_ids),
-        ProjectPlanTeam.school_id == user.school_id,
+    # Verify the projectplan is accessible (status check)
+    pp = db.query(ProjectPlan).filter(
+        ProjectPlan.id == team.project_plan_id,
+        ProjectPlan.school_id == user.school_id,
+        ProjectPlan.status.in_(["open", "published", "closed"]),
     ).first()
     
-    if not team:
-        raise HTTPException(
-            status_code=404,
-            detail="Je team heeft geen projectplan voor dit project"
-        )
+    if not pp:
+        raise HTTPException(status_code=404, detail="ProjectPlan niet beschikbaar")
     
     return _team_to_out(team, db)
 
