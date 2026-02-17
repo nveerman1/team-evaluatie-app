@@ -3,6 +3,28 @@
  */
 
 /**
+ * Convert a full name to short format: "FirstName L."
+ * E.g., "Casper Daniels" -> "Casper D."
+ * 
+ * @param fullName - The full name to shorten
+ * @returns Shortened name with first name and last initial, or empty string if invalid
+ * 
+ * @example
+ * shortName("Casper Daniels")        // "Casper D."
+ * shortName("Ahmed Yassin Jacinto")  // "Ahmed J."
+ * shortName("Alice")                 // "Alice"
+ * shortName("")                      // ""
+ */
+export function shortName(fullName: string): string {
+  if (!fullName || !fullName.trim()) return "";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts[0];
+  const lastName = parts[parts.length - 1];
+  return `${firstName} ${lastName[0]}.`;
+}
+
+/**
  * Formats a number with a sign (+/-) and 1 decimal place.
  * Returns "–" for null, undefined, NaN, or Infinity values.
  * 

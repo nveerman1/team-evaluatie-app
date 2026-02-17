@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService, submissionService } from "@/services";
 import {
@@ -620,15 +620,6 @@ export default function EditProjectAssessmentInner() {
     (t) => t.team_number === teamNumber,
   );
 
-  // Calculate average score (must be before early returns due to hooks rules)
-  const averageScore = useMemo(() => {
-    if (!data) return "—";
-    const vals = data.criteria.map((c) => scores[c.id]?.score ?? 0).filter((n) => n > 0);
-    if (!vals.length) return "—";
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    return avg.toFixed(1);
-  }, [data, scores]);
-
   // Get current document based on docType (must be before early returns due to hooks rules)
   const reportSubmission = submissions.find((s) => s.doc_type === 'report');
   const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
@@ -694,7 +685,7 @@ export default function EditProjectAssessmentInner() {
         teamIndex={currentTeamIndex}
         totalTeams={teamsData?.teams.length || 0}
         members={currentTeam.members}
-        averageScore={averageScore}
+        grade={data.grade}
         docOpen={docOpen}
         onShowDocument={() => setDocOpen(true)}
         onPrevTeam={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}

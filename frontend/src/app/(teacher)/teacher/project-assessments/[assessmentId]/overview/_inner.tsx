@@ -6,6 +6,7 @@ import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { shortName } from "@/lib/format";
 
 export default function ProjectAssessmentOverviewInner() {
   const params = useParams();
@@ -145,7 +146,7 @@ export default function ProjectAssessmentOverviewInner() {
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
                   Leden
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-[160px]">
                   Status
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
@@ -178,23 +179,26 @@ export default function ProjectAssessmentOverviewInner() {
                     </Link>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="text-sm text-gray-600">
-                      {team.members.map((m) => m.name).join(", ")}
+                    <div 
+                      className="text-sm text-gray-600 min-w-0 truncate"
+                      title={team.members.map((m) => m.name).join(", ")}
+                    >
+                      {team.members.map((m) => shortName(m.name)).join(", ")}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 w-[160px]">
                     {team.status === "completed" && (
-                      <span className="px-3 py-1 rounded-full border text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
                         ✅ Gereed
                       </span>
                     )}
                     {team.status === "in_progress" && (
-                      <span className="px-3 py-1 rounded-full border text-xs font-medium bg-orange-100 text-orange-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium bg-orange-100 text-orange-800 whitespace-nowrap">
                         ⚠️ In progress
                       </span>
                     )}
                     {team.status === "not_started" && (
-                      <span className="px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600 whitespace-nowrap">
                         ⬜ Niet gestart
                       </span>
                     )}
