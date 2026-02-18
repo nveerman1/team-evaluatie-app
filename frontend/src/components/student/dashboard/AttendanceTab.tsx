@@ -127,7 +127,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  const [period, setPeriod] = useState<PeriodFilter>("week");
+  const [period, setPeriod] = useState<PeriodFilter>("alles");
   const [showNewExternal, setShowNewExternal] = useState(false);
   const [expandedRejectId, setExpandedRejectId] = useState<number | null>(null);
   const [totals, setTotals] = useState<AttendanceTotals | null>(null);
