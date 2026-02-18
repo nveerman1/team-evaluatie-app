@@ -221,3 +221,27 @@ class TestSubmissionsTeacherAccess:
 
         # Verify - should return True (no course filtering when no project)
         assert result is True
+
+    def test_check_teacher_can_access_assessment_different_teacher_no_project(self):
+        """Test that a different teacher can access assessment without project_id (no course to check)"""
+        from app.api.v1.routers.submissions import _check_teacher_can_access_assessment
+
+        # Mock database
+        db = Mock()
+        user = Mock(spec=User)
+        user.school_id = 1
+        user.role = "teacher"
+        user.id = 10
+
+        # Mock assessment without project, created by different teacher
+        assessment = Mock(spec=ProjectAssessment)
+        assessment.id = 1
+        assessment.school_id = 1
+        assessment.project_id = None
+        assessment.teacher_id = 99  # Different teacher
+
+        # Call function
+        result = _check_teacher_can_access_assessment(db, assessment, user)
+
+        # Verify - should return True (no course filtering when no project, all teachers in school can access)
+        assert result is True
