@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Search, ExternalLink, Circle, Flag, Clock, CheckCircle2, BadgeCheck, X } from "lucide-react";
 import { skillTrainingService } from "@/services";
 import type { StudentTrainingItem, SkillTrainingStatus } from "@/dtos";
@@ -33,36 +32,24 @@ function StatusPill({ status }: { status: SkillTrainingStatus }) {
 }
 
 function Modal({ open, onClose, title, children }: any) {
+  if (!open) return null;
+  
   return (
-    <AnimatePresence>
-      {open ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center"
-        >
-          <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} />
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            className="relative z-10 w-[min(820px,92vw)] rounded-2xl bg-white shadow-xl"
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/50 transition-opacity" onClick={onClose} />
+      <div className="relative z-10 w-[min(820px,92vw)] rounded-2xl bg-white shadow-xl transition-all">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <div className="text-base font-semibold text-slate-900">{title}</div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
           >
-            <div className="flex items-center justify-between border-b px-6 py-4">
-              <div className="text-base font-semibold text-slate-900">{title}</div>
-              <button
-                onClick={onClose}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="px-6 py-5">{children}</div>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+      </div>
+    </div>
   );
 }
 
