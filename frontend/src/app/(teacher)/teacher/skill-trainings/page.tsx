@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { skillTrainingService, courseService, competencyService, listLearningObjectives } from "@/services";
 import type {
   SkillTraining,
@@ -13,15 +13,17 @@ import type {
 } from "@/dtos";
 import { STATUS_META } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Plus, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plus, ExternalLink, Users, ChevronDown, Circle, Clock, CheckCircle2, ClipboardCheck, BadgeCheck as BadgeCheckIcon } from "lucide-react";
+
+// Helper function for class names
+function cn(...classes: (string | false | null | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
+}
 
 export default function SkillTrainingsPage() {
   const [trainings, setTrainings] = useState<SkillTraining[]>([]);
@@ -31,16 +33,23 @@ export default function SkillTrainingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Tab state
+  const [tab, setTab] = useState<"matrix" | "overview">("matrix");
+  
   // Progress matrix state
-  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [progressData, setProgressData] = useState<TeacherProgressMatrixResponse | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
+  
+  // Selection for bulk actions
+  const [selectedTrainings, setSelectedTrainings] = useState<Record<string, boolean>>({});
   
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState<SkillTrainingCreate>({
     title: "",
-    url: "",
+    url: "https://technasiummbh.nl/vaardigheden/",
     competency_category_id: 0,
     is_active: true,
   });
@@ -74,10 +83,10 @@ export default function SkillTrainingsPage() {
     }
   };
 
-  const loadProgressMatrix = async (courseId: number) => {
+  const loadProgressMatrix = async (courseId: number, className?: string) => {
     try {
       setLoadingProgress(true);
-      const data = await skillTrainingService.getProgressMatrix(courseId);
+      const data = await skillTrainingService.getProgressMatrix(courseId, className);
       setProgressData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load progress");
@@ -87,9 +96,20 @@ export default function SkillTrainingsPage() {
   };
 
   const handleCourseChange = (courseId: string) => {
-    const id = parseInt(courseId);
-    setSelectedCourseId(id);
-    loadProgressMatrix(id);
+    setSelectedCourseId(courseId);
+    setSelectedTrainings({});
+    if (courseId) {
+      loadProgressMatrix(parseInt(courseId), selectedClass || undefined);
+    } else {
+      setProgressData(null);
+    }
+  };
+
+  const handleClassChange = (className: string) => {
+    setSelectedClass(className);
+    if (selectedCourseId) {
+      loadProgressMatrix(parseInt(selectedCourseId), className || undefined);
+    }
   };
 
   const handleCreateTraining = async () => {
@@ -103,11 +123,14 @@ export default function SkillTrainingsPage() {
       setIsCreateModalOpen(false);
       setCreateForm({
         title: "",
-        url: "",
+        url: "https://technasiummbh.nl/vaardigheden/",
         competency_category_id: 0,
         is_active: true,
       });
       loadData();
+      if (selectedCourseId) {
+        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create training");
     }
@@ -116,7 +139,6 @@ export default function SkillTrainingsPage() {
   const handleStatusClick = async (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => {
     if (!selectedCourseId) return;
     
-    // Cycle through statuses
     const statuses: SkillTrainingStatus[] = ["none", "planned", "in_progress", "submitted", "completed", "mastered"];
     const currentIndex = statuses.indexOf(currentStatus);
     const nextStatus = statuses[(currentIndex + 1) % statuses.length];
@@ -125,296 +147,596 @@ export default function SkillTrainingsPage() {
       await skillTrainingService.updateProgressSingle(
         studentId,
         trainingId,
-        selectedCourseId,
+        parseInt(selectedCourseId),
         nextStatus
       );
-      // Reload matrix
-      loadProgressMatrix(selectedCourseId);
+      if (selectedCourseId) {
+        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
     }
   };
 
+  const groupedTrainings = useMemo(() => {
+    return categories.map((cat) => ({
+      ...cat,
+      trainings: trainings.filter((t) => t.competency_category_id === cat.id),
+    }));
+  }, [categories, trainings]);
+
+  const filteredStudents = progressData?.students || [];
+  
+  const allTrainingIds = useMemo(() => trainings.map((t) => String(t.id)), [trainings]);
+  
+  const anyTrainingSelected = useMemo(() => {
+    return allTrainingIds.some((id) => !!selectedTrainings[id]);
+  }, [allTrainingIds, selectedTrainings]);
+  
+  const allTrainingsSelected = useMemo(() => {
+    return allTrainingIds.length > 0 && allTrainingIds.every((id) => !!selectedTrainings[id]);
+  }, [allTrainingIds, selectedTrainings]);
+
+  const toggleSelectTraining = (trainingId: string, next: boolean) => {
+    setSelectedTrainings((prev) => ({ ...prev, [trainingId]: next }));
+  };
+
+  const toggleSelectAllTrainings = (next: boolean) => {
+    setSelectedTrainings((prev) => {
+      const out = { ...prev };
+      for (const id of allTrainingIds) out[id] = next;
+      return out;
+    });
+  };
+
+  const bulkSetStatus = async (status: SkillTrainingStatus) => {
+    if (!selectedCourseId) return;
+    const trainingIds = allTrainingIds.filter((id) => selectedTrainings[id]).map((id) => parseInt(id));
+    if (trainingIds.length === 0) return;
+    const studentIds = filteredStudents.map((s) => s.student_id);
+
+    try {
+      await skillTrainingService.bulkUpdateProgress(parseInt(selectedCourseId), {
+        student_ids: studentIds,
+        training_ids: trainingIds,
+        status,
+      });
+      if (selectedCourseId) {
+        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to bulk update");
+    }
+  };
+
+  // Get unique class names from students
+  const availableClasses = useMemo(() => {
+    if (!progressData) return [];
+    const classes = new Set(progressData.students.map((s) => s.class_name).filter(Boolean));
+    return Array.from(classes).sort();
+  }, [progressData]);
+
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Vaardigheidstrainingen</h1>
-          <p className="text-gray-600">Beheer trainingen en volg voortgang van studenten</p>
-        </div>
-        
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nieuwe training
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Nieuwe training aanmaken</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div>
-                <Label htmlFor="title">Titel *</Label>
-                <Input
-                  id="title"
-                  value={createForm.title}
-                  onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                  placeholder="Bijv. Onderzoeksmethoden - Basis"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="url">URL *</Label>
-                <Input
-                  id="url"
-                  value={createForm.url}
-                  onChange={(e) => setCreateForm({ ...createForm, url: e.target.value })}
-                  placeholder="https://technasiummbh.nl/vaardigheden/..."
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="category">Competentiecategorie *</Label>
-                <Select
-                  value={createForm.competency_category_id ? String(createForm.competency_category_id) : ""}
-                  onValueChange={(value) => setCreateForm({ ...createForm, competency_category_id: parseInt(value) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecteer categorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={String(cat.id)}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="objective">Leerdoel (optioneel)</Label>
-                <Select
-                  value={createForm.learning_objective_id ? String(createForm.learning_objective_id) : "none"}
-                  onValueChange={(value) => setCreateForm({ 
-                    ...createForm, 
-                    learning_objective_id: value === "none" ? undefined : parseInt(value) 
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Geen leerdoel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Geen leerdoel</SelectItem>
-                    {objectives.map((obj) => (
-                      <SelectItem key={obj.id} value={String(obj.id)}>
-                        {obj.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="level">Niveau</Label>
-                  <Select
-                    value={createForm.level || "none"}
-                    onValueChange={(value) => setCreateForm({ 
-                      ...createForm, 
-                      level: value === "none" ? undefined : value 
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Geen niveau" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Geen niveau</SelectItem>
-                      <SelectItem value="basis">Basis</SelectItem>
-                      <SelectItem value="plus">Plus</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="minutes">Geschatte tijd</Label>
-                  <Input
-                    id="minutes"
-                    value={createForm.est_minutes || ""}
-                    onChange={(e) => setCreateForm({ ...createForm, est_minutes: e.target.value })}
-                    placeholder="Bijv. 10-15 min"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={createForm.is_active}
-                  onChange={(e) => setCreateForm({ ...createForm, is_active: e.target.checked })}
-                  className="rounded"
-                />
-                <Label htmlFor="is_active">Actief</Label>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                  Annuleren
-                </Button>
-                <Button onClick={handleCreateTraining}>
-                  Aanmaken
-                </Button>
+    <div className="min-h-screen bg-slate-50">
+      {/* Page header - sticky */}
+      <div className="sticky top-0 z-40 border-b bg-white/80 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-slate-900">Vaardigheidstrainingen</div>
+              <div className="mt-0.5 text-sm text-slate-600">
+                Docentoverzicht — voortgang per leerling (trainingen staan op technasiummbh.nl)
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="flex items-center gap-2">
+              <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                <DialogTrigger asChild>
+                  <button className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+                    <Plus className="h-4 w-4" />
+                    Training aanmaken
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Nieuwe training aanmaken</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="title">Titel *</Label>
+                      <Input
+                        id="title"
+                        value={createForm.title}
+                        onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                        placeholder="Bijv. Onderzoeksmethoden - Basis"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="url">URL *</Label>
+                      <Input
+                        id="url"
+                        value={createForm.url}
+                        onChange={(e) => setCreateForm({ ...createForm, url: e.target.value })}
+                        placeholder="https://technasiummbh.nl/vaardigheden/..."
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="category">Competentiecategorie *</Label>
+                      <Select
+                        value={createForm.competency_category_id ? String(createForm.competency_category_id) : ""}
+                        onValueChange={(value) => setCreateForm({ ...createForm, competency_category_id: parseInt(value) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecteer categorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={String(cat.id)}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="objective">Leerdoel (optioneel)</Label>
+                      <Select
+                        value={createForm.learning_objective_id ? String(createForm.learning_objective_id) : "none"}
+                        onValueChange={(value) => setCreateForm({ 
+                          ...createForm, 
+                          learning_objective_id: value === "none" ? undefined : parseInt(value) 
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Geen leerdoel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Geen leerdoel</SelectItem>
+                          {objectives.map((obj) => (
+                            <SelectItem key={obj.id} value={String(obj.id)}>
+                              {obj.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="level">Niveau</Label>
+                        <Select
+                          value={createForm.level || "none"}
+                          onValueChange={(value) => setCreateForm({ 
+                            ...createForm, 
+                            level: value === "none" ? undefined : value 
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Geen niveau" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Geen niveau</SelectItem>
+                            <SelectItem value="basis">Basis</SelectItem>
+                            <SelectItem value="plus">Plus</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="minutes">Geschatte tijd</Label>
+                        <Input
+                          id="minutes"
+                          value={createForm.est_minutes || ""}
+                          onChange={(e) => setCreateForm({ ...createForm, est_minutes: e.target.value })}
+                          placeholder="Bijv. 10-15 min"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is_active"
+                        checked={createForm.is_active}
+                        onChange={(e) => setCreateForm({ ...createForm, is_active: e.target.checked })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="is_active">Actief</Label>
+                    </div>
+                    
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                        Annuleren
+                      </Button>
+                      <Button onClick={handleCreateTraining}>
+                        Aanmaken
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <button
+                onClick={() => window?.open?.("https://technasiummbh.nl/vaardigheden", "_blank")}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Naar vaardighedensite
+              </button>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="mt-5 flex items-center gap-2">
+            {[
+              { id: "matrix", label: "Overzicht competenties" },
+              { id: "overview", label: "Overzicht trainingen" },
+            ].map((t) => {
+              const active = tab === (t.id as any);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id as any)}
+                  className={cn(
+                    "rounded-xl px-4 py-2 text-sm font-medium",
+                    active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  )}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="matrix" className="w-full">
-        <TabsList>
-          <TabsTrigger value="matrix">Overzicht trainingen</TabsTrigger>
-          <TabsTrigger value="progress">Overzicht competenties</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="matrix" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Voortgang per training</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label>Selecteer vak</Label>
-                  <Select
-                    value={selectedCourseId ? String(selectedCourseId) : ""}
-                    onValueChange={handleCourseChange}
-                  >
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Kies een vak" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={String(course.id)}>
-                          {course.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {loadingProgress && <Loading />}
-                
-                {progressData && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="sticky left-0 bg-white border p-2 text-left min-w-[200px]">
-                            Student
-                          </th>
-                          {progressData.trainings.map((training) => (
-                            <th key={training.id} className="border p-2 text-left min-w-[150px]">
-                              <div className="text-sm font-semibold">{training.title}</div>
-                              <div className="text-xs text-gray-500">{training.competency_category_name}</div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {progressData.students.map((student) => (
-                          <tr key={student.student_id}>
-                            <td className="sticky left-0 bg-white border p-2 font-medium">
-                              {student.student_name}
-                              {student.class_name && (
-                                <span className="text-xs text-gray-500 ml-2">
-                                  ({student.class_name})
-                                </span>
-                              )}
-                            </td>
-                            {progressData.trainings.map((training) => {
-                              const status = (student.progress[training.id] || "none") as SkillTrainingStatus;
-                              const meta = STATUS_META[status];
-                              
-                              return (
-                                <td key={training.id} className="border p-2">
-                                  <Badge
-                                    className={`${meta.colorClass} cursor-pointer hover:opacity-80`}
-                                    onClick={() => handleStatusClick(student.student_id, training.id, status)}
-                                  >
-                                    {meta.label}
-                                  </Badge>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+      <div className="mx-auto max-w-6xl px-5 py-6">
+        {/* Filter bar */}
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+            <div className="md:col-span-7">
+              <label className="block">
+                <div className="mb-1 text-xs font-medium text-slate-600">Vak (course_id) *</div>
+                <div className="relative">
+                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <ExternalLink className="h-4 w-4" />
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="progress" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Voortgang per competentiecategorie</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                Deze weergave toont de voortgang per competentiecategorie. 
-                Selecteer een vak om de voortgang te zien.
-              </p>
-              {/* This can be extended with progress bars per category */}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Alle trainingen ({trainings.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {trainings.map((training) => (
-              <div
-                key={training.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex-1">
-                  <div className="font-semibold">{training.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {training.competency_category_name}
-                    {training.level && ` • ${training.level}`}
-                    {training.est_minutes && ` • ${training.est_minutes}`}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant={training.is_active ? "default" : "secondary"}>
-                    {training.is_active ? "Actief" : "Inactief"}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(training.url, "_blank")}
+                  <select
+                    value={selectedCourseId}
+                    onChange={(e) => handleCourseChange(e.target.value)}
+                    className="w-full appearance-none rounded-xl border bg-white px-3 py-2 pl-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                   >
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
+                    <option value="">Selecteer een vak</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
-              </div>
-            ))}
+              </label>
+            </div>
+            <div className="md:col-span-5">
+              <label className="block">
+                <div className="mb-1 text-xs font-medium text-slate-600">Klas (optioneel)</div>
+                <div className="relative">
+                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => handleClassChange(e.target.value)}
+                    className="w-full appearance-none rounded-xl border bg-white px-3 py-2 pl-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+                  >
+                    <option value="">Alle klassen</option>
+                    {availableClasses.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </label>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Bulk action bar (only for Overzicht trainingen) */}
+        {tab === "overview" && selectedCourseId && (
+          <div className="mt-3 rounded-2xl border bg-white px-5 py-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm text-slate-600">
+                <span className="font-semibold text-slate-900">{filteredStudents.length}</span> leerlingen •{" "}
+                <span className="font-semibold text-slate-900">{trainings.length}</span> trainingen
+                <span className="mx-2 text-slate-300">•</span>
+                <span className={cn(!anyTrainingSelected && "text-slate-400")}>
+                  Bulk: vink trainingen (kolommen) aan en kies status
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => toggleSelectAllTrainings(!allTrainingsSelected)}
+                  className="rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm bg-white text-slate-700 hover:bg-slate-50"
+                >
+                  {allTrainingsSelected ? "Alle trainingen uit" : "Alle trainingen aan"}
+                </button>
+
+                {(["none", "planned", "in_progress", "submitted", "completed", "mastered"] as SkillTrainingStatus[]).map((st) => (
+                  <button
+                    key={st}
+                    disabled={!anyTrainingSelected}
+                    onClick={() => bulkSetStatus(st)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition",
+                      !anyTrainingSelected
+                        ? "cursor-not-allowed bg-slate-50 text-slate-400"
+                        : "bg-white text-slate-700 hover:bg-slate-50"
+                    )}
+                  >
+                    {STATUS_META[st].label}
+                  </button>
+                ))}
+
+                <button
+                  disabled={!anyTrainingSelected}
+                  onClick={() => setSelectedTrainings({})}
+                  className={cn(
+                    "rounded-xl px-3 py-2 text-sm font-semibold",
+                    !anyTrainingSelected ? "cursor-not-allowed text-slate-400" : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  Selectie wissen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state if no course selected */}
+        {!selectedCourseId ? (
+          <div className="mt-6 rounded-2xl border bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto max-w-md">
+              <div className="text-lg font-semibold text-slate-900">Selecteer eerst een vak</div>
+              <div className="mt-2 text-sm text-slate-600">Zonder vak (course_id) kunnen we geen leerlingen en trainingen tonen.</div>
+            </div>
+          </div>
+        ) : loadingProgress ? (
+          <div className="mt-6 rounded-2xl border bg-white p-10 text-center shadow-sm">
+            <Loading />
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border bg-white shadow-sm">
+            {tab === "matrix" ? (
+              <MatrixView students={filteredStudents} groupedTrainings={groupedTrainings} progressData={progressData} />
+            ) : (
+              <OverviewTable
+                students={filteredStudents}
+                groupedTrainings={groupedTrainings}
+                trainings={trainings}
+                progressData={progressData}
+                onCycle={handleStatusClick}
+                selectedTrainings={selectedTrainings}
+                onToggleTraining={toggleSelectTraining}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Matrix View Component
+function MatrixView({ students, groupedTrainings, progressData }: any) {
+  const getStatus = (studentId: number, trainingId: number): SkillTrainingStatus => {
+    const student = students.find((s: any) => s.student_id === studentId);
+    return (student?.progress[trainingId] || "none") as SkillTrainingStatus;
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-[980px] w-full">
+        <thead className="bg-slate-50">
+          <tr>
+            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Leerling</th>
+            {groupedTrainings.map((group: any) => (
+              <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold text-slate-600">
+                {group.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {students.map((s: any) => (
+            <tr key={s.student_id} className="border-t hover:bg-slate-50/60">
+              <td className="px-5 py-3 font-medium text-slate-900">{s.student_name}</td>
+              {groupedTrainings.map((group: any) => {
+                const total = group.trainings.length;
+                const done = group.trainings.filter((t: any) => {
+                  const st = getStatus(s.student_id, t.id);
+                  return st === "completed" || st === "mastered";
+                }).length;
+                const pct = total ? Math.round((done / total) * 100) : 0;
+                return (
+                  <td key={group.id} className="px-5 py-3">
+                    <div className="h-2 w-full rounded-full bg-slate-100">
+                      <div className="h-2 rounded-full bg-slate-900" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {done}/{total}
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Overview Table Component
+function OverviewTable({ students, groupedTrainings, trainings, progressData, onCycle, selectedTrainings, onToggleTraining }: any) {
+  const flatTrainings = useMemo(() => {
+    const cols: any[] = [];
+    for (const g of groupedTrainings) {
+      for (const t of g.trainings) {
+        cols.push({ groupId: g.id, groupName: g.name, ...t });
+      }
+    }
+    return cols;
+  }, [groupedTrainings]);
+
+  const spans = useMemo(() => {
+    return groupedTrainings.map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      span: Math.max(1, g.trainings.length),
+    }));
+  }, [groupedTrainings]);
+
+  const getStatus = (studentId: number, trainingId: number): SkillTrainingStatus => {
+    const student = students.find((s: any) => s.student_id === studentId);
+    return (student?.progress[trainingId] || "none") as SkillTrainingStatus;
+  };
+
+  const StatusPill = ({ status }: { status: SkillTrainingStatus }) => {
+    const meta = STATUS_META[status];
+    const icons: Record<string, any> = {
+      none: Circle,
+      planned: ClipboardCheck,
+      in_progress: Clock,
+      submitted: ClipboardCheck,
+      completed: CheckCircle2,
+      mastered: BadgeCheckIcon,
+    };
+    const Icon = icons[status] || Circle;
+    
+    return (
+      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold", meta.colorClass)}>
+        <Icon className="h-3.5 w-3.5" />
+        {meta.label}
+      </span>
+    );
+  };
+
+  return (
+    <div className="relative">
+      <div className="overflow-x-auto">
+        <div className="min-w-[1200px]">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              {/* Row 1: competency groups (sticky) */}
+              <tr>
+                <th
+                  className={cn(
+                    "sticky left-0 top-0 z-30 min-w-[260px] w-auto border-b bg-slate-50 px-5 py-3",
+                    "shadow-[1px_0_0_0_rgba(226,232,240,1)]"
+                  )}
+                />
+                {spans.map((g: any) => (
+                  <th
+                    key={g.id}
+                    colSpan={g.span}
+                    className="sticky top-0 z-20 border-b border-l bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-700"
+                  >
+                    {g.name}
+                  </th>
+                ))}
+              </tr>
+
+              {/* Row 2: training titles (sticky) */}
+              <tr>
+                <th
+                  className={cn(
+                    "sticky left-0 top-[44px] z-30 border-b bg-slate-100 px-5 py-3 text-left",
+                    "shadow-[1px_0_0_0_rgba(226,232,240,1)]"
+                  )}
+                >
+                  <div className="text-xs font-semibold text-slate-700">Leerlingen</div>
+                </th>
+
+                {flatTrainings.map((t: any) => (
+                  <th
+                    key={t.id}
+                    className={cn(
+                      "sticky top-[44px] z-20 border-b border-l bg-slate-100 px-4 py-3 text-left",
+                      selectedTrainings?.[t.id] && "bg-slate-200/60"
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedTrainings?.[t.id]}
+                        onChange={(e) => onToggleTraining(String(t.id), e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                        title="Selecteer kolom voor bulk"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-slate-800" title={t.title}>
+                          {t.title}
+                        </div>
+                        <div className="mt-1">
+                          <a
+                            href={t.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-700"
+                            title="Open training"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Open
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {students.map((s: any) => (
+                <tr key={s.student_id} className="hover:bg-slate-50/60">
+                  <td
+                    className={cn(
+                      "sticky left-0 z-10 min-w-[260px] w-auto border-b bg-white px-5 py-3",
+                      "shadow-[1px_0_0_0_rgba(226,232,240,1)]"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-slate-900">{s.student_name}</div>
+                    </div>
+                  </td>
+
+                  {flatTrainings.map((t: any) => {
+                    const st: SkillTrainingStatus = getStatus(s.student_id, t.id);
+                    return (
+                      <td key={`${s.student_id}:${t.id}`} className="border-b border-l bg-white px-4 py-3">
+                        <button
+                          onClick={() => onCycle(s.student_id, t.id, st)}
+                          className="w-full rounded-xl border bg-white px-3 py-2 text-left shadow-sm transition hover:bg-slate-50"
+                          title="Klik om status te wijzigen"
+                        >
+                          <StatusPill status={st} />
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
