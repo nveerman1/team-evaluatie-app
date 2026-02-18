@@ -551,9 +551,9 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
       <table className="min-w-[980px] w-full">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">Leerling</th>
+            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Leerling</th>
             {groupedTrainings.map((group: any) => (
-              <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold text-gray-600">
+              <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {group.name}
               </th>
             ))}
@@ -652,7 +652,7 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                   <th
                     key={g.id}
                     colSpan={g.span}
-                    className="sticky top-0 z-20 border-b border-l border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold text-gray-700"
+                    className="sticky top-0 z-20 border-b border-l border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
                     {g.name}
                   </th>
