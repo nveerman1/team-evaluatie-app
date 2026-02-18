@@ -50,11 +50,11 @@ class SectionStatus(str, Enum):
 
 class ClientData(BaseModel):
     """Client information for the client section"""
-    organisation: Optional[str] = None
-    contact: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    description: Optional[str] = None
+    organisation: Optional[str] = Field(None, max_length=500)
+    contact: Optional[str] = Field(None, max_length=200)
+    email: Optional[str] = Field(None, max_length=320)  # RFC 5321 max email length
+    phone: Optional[str] = Field(None, max_length=50)
+    description: Optional[str] = Field(None, max_length=2000)
 
 
 # ---------- Project Plan Section ----------
@@ -80,11 +80,17 @@ class ProjectPlanSectionOut(ProjectPlanSectionBase):
 
 
 class ProjectPlanSectionUpdate(BaseModel):
-    """Update schema for project plan sections"""
-    text: Optional[str] = None
+    """Update schema for project plan sections (teacher/admin only)"""
+    text: Optional[str] = Field(None, max_length=10000)
     client: Optional[ClientData] = None
     status: Optional[SectionStatus] = None
-    teacher_note: Optional[str] = None
+    teacher_note: Optional[str] = Field(None, max_length=2000)
+
+
+class ProjectPlanSectionStudentUpdate(BaseModel):
+    """Update schema for project plan sections (student only - restricted fields)"""
+    text: Optional[str] = Field(None, max_length=10000)
+    client: Optional[ClientData] = None
 
 
 # ---------- Project Plan Team ----------
@@ -113,11 +119,16 @@ class ProjectPlanTeamOut(ProjectPlanTeamBase):
 
 
 class ProjectPlanTeamUpdate(BaseModel):
-    """Update schema for project plan teams"""
-    title: Optional[str] = None
+    """Update schema for project plan teams (teacher/admin only)"""
+    title: Optional[str] = Field(None, max_length=500)
     status: Optional[PlanStatus] = None
     locked: Optional[bool] = None
-    global_teacher_note: Optional[str] = None
+    global_teacher_note: Optional[str] = Field(None, max_length=2000)
+
+
+class ProjectPlanTeamStudentUpdate(BaseModel):
+    """Update schema for project plan teams (student only - restricted fields)"""
+    title: Optional[str] = Field(None, max_length=500)
 
 
 # ---------- Project Plan ----------
@@ -137,8 +148,8 @@ class ProjectPlanCreate(ProjectPlanBase):
 
 class ProjectPlanUpdate(BaseModel):
     """Update schema for project plans"""
-    title: Optional[str] = None
-    version: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=500)
+    version: Optional[str] = Field(None, max_length=50)
     status: Optional[ProjectPlanStatus] = None
 
 
