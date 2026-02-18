@@ -562,7 +562,7 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
         <tbody>
           {students.map((s: any) => (
             <tr key={s.student_id} className="border-t hover:bg-gray-50/60">
-              <td className="px-5 py-3 font-medium text-gray-900">{s.student_name}</td>
+              <td className="px-5 py-3 text-base font-bold text-slate-900">{s.student_name}</td>
               {groupedTrainings.map((group: any) => {
                 const total = group.trainings.length;
                 const done = group.trainings.filter((t: any) => {
@@ -719,7 +719,7 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                     )}
                   >
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-900">{s.student_name}</div>
+                      <div className="text-base font-bold text-slate-900">{s.student_name}</div>
                     </div>
                   </td>
 
