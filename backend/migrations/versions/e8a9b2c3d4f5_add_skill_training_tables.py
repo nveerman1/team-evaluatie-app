@@ -59,6 +59,7 @@ def upgrade() -> None:
         sa.Column('training_id', sa.Integer(), nullable=False),
         sa.Column('status', sa.String(length=20), nullable=False, server_default='none'),
         sa.Column('updated_by_user_id', sa.Integer(), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('note', sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ondelete='CASCADE'),
