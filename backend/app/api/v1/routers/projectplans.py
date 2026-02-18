@@ -28,9 +28,11 @@ from app.api.v1.schemas.projectplans import (
     ProjectPlanListResponse,
     ProjectPlanTeamOut,
     ProjectPlanTeamUpdate,
+    ProjectPlanTeamStudentUpdate,
     ProjectPlanTeamOverviewItem,
     ProjectPlanSectionOut,
     ProjectPlanSectionUpdate,
+    ProjectPlanSectionStudentUpdate,
     ClientData,
     SectionKey,
     SectionStatus,
@@ -548,6 +550,7 @@ def update_team_status(
     Update team's overall status and feedback (teacher/admin only).
     - Setting status=GO locks the plan
     - Setting status=NO-GO unlocks the plan
+    - Validates status transitions
     """
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
@@ -566,10 +569,34 @@ def update_team_status(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
     
+    # Store old status for logging
+    old_status = team.status
+    
     if payload.status is not None:
+        # Validate status transitions
+        # Valid transitions: concept -> ingediend -> go/no-go
+        # Can always go back to concept from no-go
+        if payload.status != old_status:
+            valid_transitions = {
+                "concept": ["ingediend"],
+                "ingediend": ["go", "no-go", "concept"],
+                "go": ["no-go"],  # Can revert from go to no-go
+                "no-go": ["concept", "ingediend"],  # Can restart process
+            }
+            
+            allowed_next_states = valid_transitions.get(old_status, [])
+            if payload.status not in allowed_next_states:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ongeldige status transitie van '{old_status}' naar '{payload.status}'"
+                )
+        
         team.status = payload.status
+        
+        # Lock/unlock behavior based on status
         if payload.status == "go":
             team.locked = True
+            # Auto-approve submitted sections
             for section in team.sections:
                 if section.status == "submitted":
                     section.status = "approved"
@@ -589,7 +616,7 @@ def update_team_status(
     db.refresh(team)
     
     logger.info(
-        f"Updated ProjectPlanTeam {team.id} status to {team.status} by user {user.id}"
+        f"Updated ProjectPlanTeam {team.id} status from '{old_status}' to '{team.status}' by user {user.id}"
     )
     
     return _team_to_out(team, db)
@@ -914,7 +941,7 @@ def get_my_projectplan(
 @student_router.patch("/me/projectplans/{projectplan_team_id}", response_model=ProjectPlanTeamOut)
 def update_my_projectplan_title(
     projectplan_team_id: int,
-    payload: ProjectPlanTeamUpdate,
+    payload: ProjectPlanTeamStudentUpdate,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -951,6 +978,7 @@ def update_my_projectplan_title(
             detail="Projectplan is vergrendeld en kan niet worden bewerkt"
         )
     
+    # Only allow updating title (schema enforces this)
     if payload.title is not None:
         team.title = payload.title
     
@@ -969,11 +997,11 @@ def update_my_projectplan_title(
 def update_my_section(
     projectplan_team_id: int,
     section_key: SectionKey,
-    payload: ProjectPlanSectionUpdate,
+    payload: ProjectPlanSectionStudentUpdate,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Student updates section content"""
+    """Student updates section content (text and client data only, no status/teacher notes)"""
     if user.role not in ("student",):
         raise HTTPException(
             status_code=403,
@@ -1017,6 +1045,7 @@ def update_my_section(
     
     has_content = False
     
+    # Students can only update text and client data (no status or teacher_note)
     if section_key == "client" and payload.client:
         section.client_organisation = payload.client.organisation
         section.client_contact = payload.client.contact
@@ -1030,6 +1059,7 @@ def update_my_section(
         if payload.text.strip():
             has_content = True
     
+    # Auto-update status from empty to draft when content is added
     if has_content and section.status == "empty":
         section.status = "draft"
     

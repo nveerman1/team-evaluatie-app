@@ -18,6 +18,8 @@ from app.infra.db.models import (
     CompetencyCategory,
     LearningObjective,
     CourseEnrollment,
+    TeacherCourse,
+    Course,
 )
 from app.api.v1.schemas.skill_trainings import (
     SkillTrainingCreate,
@@ -37,6 +39,59 @@ router = APIRouter(prefix="/skill-trainings", tags=["skill-trainings"])
 
 
 # ============ Helper Functions ============
+
+
+def _verify_teacher_course_access(
+    db: Session, 
+    user: User, 
+    course_id: int
+) -> None:
+    """
+    Verify that a teacher has access to the given course.
+    Admins have access to all courses in their school.
+    Teachers must be explicitly assigned to the course via TeacherCourse.
+    
+    Raises HTTPException(403) if access is denied.
+    """
+    if user.role == "admin":
+        # Admins can access all courses in their school
+        course = db.execute(
+            select(Course).where(
+                Course.id == course_id,
+                Course.school_id == user.school_id
+            )
+        ).scalar_one_or_none()
+        
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found"
+            )
+        return
+    
+    if user.role == "teacher":
+        # Teachers must be assigned to the course
+        teacher_course = db.execute(
+            select(TeacherCourse).where(
+                TeacherCourse.course_id == course_id,
+                TeacherCourse.teacher_id == user.id,
+                TeacherCourse.school_id == user.school_id,
+                TeacherCourse.is_active == True
+            )
+        ).scalar_one_or_none()
+        
+        if not teacher_course:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this course"
+            )
+        return
+    
+    # Students and other roles should not call this function
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions"
+    )
 
 
 def _to_skill_training_out(training: SkillTraining) -> SkillTrainingOut:
@@ -263,6 +318,7 @@ def get_progress_matrix(
     Returns all active trainings and all students in the course with their progress.
     
     - Teacher/Admin only
+    - Teachers can only access courses they are assigned to
     """
     if not user or not user.school_id:
         raise HTTPException(
@@ -276,6 +332,9 @@ def get_progress_matrix(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers and admins can view progress"
         )
+    
+    # Verify teacher has access to this course
+    _verify_teacher_course_access(db, user, course_id)
     
     # Get all active trainings for school
     trainings_query = select(SkillTraining).where(
@@ -348,7 +407,7 @@ def update_single_progress(
     training_id: int = Path(..., description="Training ID"),
     course_id: int = Query(..., description="Course ID"),
     status: str = Query(..., description="New status"),
-    note: Optional[str] = Query(None, description="Optional note"),
+    note: Optional[str] = Query(None, description="Optional note", max_length=2000),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -356,6 +415,7 @@ def update_single_progress(
     Update a single student's progress for a training.
     
     - Teacher/Admin only
+    - Teachers can only update progress for students in courses they teach
     """
     if not user or not user.school_id:
         raise HTTPException(
@@ -370,12 +430,30 @@ def update_single_progress(
             detail="Only teachers and admins can update progress"
         )
     
+    # Verify teacher has access to this course
+    _verify_teacher_course_access(db, user, course_id)
+    
     # Verify student exists and belongs to school
     student = db.get(User, student_id)
     if not student or student.school_id != user.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found"
+        )
+    
+    # Verify student is enrolled in the course
+    enrollment = db.execute(
+        select(CourseEnrollment).where(
+            CourseEnrollment.student_id == student_id,
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.active == True
+        )
+    ).scalar_one_or_none()
+    
+    if not enrollment:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Student is not enrolled in this course"
         )
     
     # Verify training exists and belongs to school
@@ -430,6 +508,8 @@ def bulk_update_progress(
     Bulk update progress for multiple students and trainings.
     
     - Teacher/Admin only
+    - Teachers can only update progress for students in courses they teach
+    - Validates all students and trainings exist before updating
     """
     if not user or not user.school_id:
         raise HTTPException(
@@ -444,7 +524,68 @@ def bulk_update_progress(
             detail="Only teachers and admins can update progress"
         )
     
-    # Update or create progress for each combination
+    # Verify teacher has access to this course
+    _verify_teacher_course_access(db, user, course_id)
+    
+    # Validate payload limits (additional validation on top of Pydantic)
+    if len(payload.student_ids) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 100 students per bulk update"
+        )
+    
+    if len(payload.training_ids) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 50 trainings per bulk update"
+        )
+    
+    # Validate all students exist and belong to school
+    students = db.execute(
+        select(User).where(
+            User.id.in_(payload.student_ids),
+            User.school_id == user.school_id,
+            User.role == "student"
+        )
+    ).scalars().all()
+    
+    if len(students) != len(payload.student_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One or more student IDs are invalid"
+        )
+    
+    # Validate all students are enrolled in the course
+    enrollments = db.execute(
+        select(CourseEnrollment).where(
+            CourseEnrollment.student_id.in_(payload.student_ids),
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.active == True
+        )
+    ).scalars().all()
+    
+    enrolled_student_ids = {e.student_id for e in enrollments}
+    if len(enrolled_student_ids) != len(payload.student_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One or more students are not enrolled in this course"
+        )
+    
+    # Validate all trainings exist and belong to school
+    trainings = db.execute(
+        select(SkillTraining).where(
+            SkillTraining.id.in_(payload.training_ids),
+            SkillTraining.school_id == user.school_id
+        )
+    ).scalars().all()
+    
+    if len(trainings) != len(payload.training_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One or more training IDs are invalid"
+        )
+    
+    # All validations passed - proceed with bulk update
     for student_id in payload.student_ids:
         for training_id in payload.training_ids:
             # Get or create progress record
