@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { skillTrainingService, courseService, competencyService } from "@/services";
+import { skillTrainingService, courseService, competencyService, listLearningObjectives } from "@/services";
 import type {
   SkillTraining,
   SkillTrainingCreate,
   Course,
   CompetencyCategory,
-  LearningObjective,
+  LearningObjectiveDto,
   TeacherProgressMatrixResponse,
   SkillTrainingStatus,
 } from "@/dtos";
@@ -21,14 +21,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { learningObjectiveService } from "@/services";
 import { Plus, ExternalLink } from "lucide-react";
 
 export default function SkillTrainingsPage() {
   const [trainings, setTrainings] = useState<SkillTraining[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<CompetencyCategory[]>([]);
-  const [objectives, setObjectives] = useState<LearningObjective[]>([]);
+  const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -53,17 +52,17 @@ export default function SkillTrainingsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [trainingsData, coursesData, categoriesData, objectivesData] = await Promise.all([
+      const [trainingsData, coursesData, categoriesData, objectivesResponse] = await Promise.all([
         skillTrainingService.listTrainings(),
         courseService.getCourses(),
         competencyService.getCategories(),
-        learningObjectiveService.getObjectives(),
+        listLearningObjectives(),
       ]);
       
       setTrainings(trainingsData);
       setCourses(coursesData);
       setCategories(categoriesData);
-      setObjectives(objectivesData);
+      setObjectives(objectivesResponse.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
