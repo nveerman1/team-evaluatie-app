@@ -943,7 +943,7 @@ function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
             <th className="px-5 py-3">Competentie</th>
             <th className="px-5 py-3">Leerdoel</th>
             <th className="px-5 py-3">Niveau</th>
-            <th className="px-5 py-3">Geschatte tijd</th>
+            <th className="px-5 py-3">Tijd</th>
             <th className="px-5 py-3">Actief</th>
             <th className="px-5 py-3">Acties</th>
           </tr>
@@ -959,18 +959,7 @@ function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
             trainings.map((training) => (
               <tr key={training.id} className="border-t hover:bg-gray-50/60">
                 <td className="px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">{training.title}</span>
-                    <a
-                      href={training.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-400 hover:text-gray-600"
-                      title="Open training"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </div>
+                  <span className="text-sm font-medium text-gray-900">{training.title}</span>
                 </td>
                 <td className="px-5 py-4 text-sm text-gray-700">
                   {getCategoryName(training.competency_category_id)}
