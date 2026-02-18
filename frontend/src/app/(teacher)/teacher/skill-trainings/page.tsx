@@ -439,7 +439,9 @@ export default function SkillTrainingsPage() {
             })}
           </nav>
         </div>
-        {/* Filter bar */}
+        
+        {/* Filter bar - only show for matrix and overview tabs */}
+        {tab !== "manage" && (
         <div className="rounded-lg border border-gray-200/80 bg-white p-5 shadow-sm">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
             <div className="md:col-span-7">
@@ -490,6 +492,7 @@ export default function SkillTrainingsPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Bulk action bar (only for Overzicht trainingen) */}
         {tab === "overview" && selectedCourseId && (
@@ -577,6 +580,132 @@ export default function SkillTrainingsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Training Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Training bewerken</DialogTitle>
+          </DialogHeader>
+          {editingTraining && (
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="edit-title">Titel *</Label>
+                <Input
+                  id="edit-title"
+                  value={editingTraining.title}
+                  onChange={(e) => setEditingTraining({ ...editingTraining, title: e.target.value })}
+                  placeholder="Bijv. Onderzoeksmethoden - Basis"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-url">URL *</Label>
+                <Input
+                  id="edit-url"
+                  value={editingTraining.url}
+                  onChange={(e) => setEditingTraining({ ...editingTraining, url: e.target.value })}
+                  placeholder="https://technasiummbh.nl/vaardigheden/..."
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-category">Competentiecategorie *</Label>
+                <Select
+                  value={editingTraining.competency_category_id ? String(editingTraining.competency_category_id) : ""}
+                  onValueChange={(value) => setEditingTraining({ ...editingTraining, competency_category_id: parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer categorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={String(cat.id)}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-objective">Leerdoel (optioneel)</Label>
+                <Select
+                  value={editingTraining.learning_objective_id ? String(editingTraining.learning_objective_id) : "none"}
+                  onValueChange={(value) => setEditingTraining({ 
+                    ...editingTraining, 
+                    learning_objective_id: value === "none" ? undefined : parseInt(value) 
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Geen leerdoel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Geen leerdoel</SelectItem>
+                    {objectives.map((obj) => (
+                      <SelectItem key={obj.id} value={String(obj.id)}>
+                        {obj.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-level">Niveau</Label>
+                  <Select
+                    value={editingTraining.level || "none"}
+                    onValueChange={(value) => setEditingTraining({ 
+                      ...editingTraining, 
+                      level: value === "none" ? undefined : value 
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Geen niveau" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Geen niveau</SelectItem>
+                      <SelectItem value="basis">Basis</SelectItem>
+                      <SelectItem value="plus">Plus</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit-minutes">Geschatte tijd</Label>
+                  <Input
+                    id="edit-minutes"
+                    value={editingTraining.est_minutes || ""}
+                    onChange={(e) => setEditingTraining({ ...editingTraining, est_minutes: e.target.value })}
+                    placeholder="Bijv. 10-15 min"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_active"
+                  checked={editingTraining.is_active}
+                  onChange={(e) => setEditingTraining({ ...editingTraining, is_active: e.target.checked })}
+                  className="rounded"
+                />
+                <Label htmlFor="edit_is_active">Actief</Label>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                  Annuleren
+                </Button>
+                <Button onClick={handleEditTraining}>
+                  Opslaan
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -785,6 +914,110 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+// All Trainings Table Component
+function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
+  trainings: SkillTraining[];
+  categories: CompetencyCategory[];
+  objectives: LearningObjectiveDto[];
+  onEdit: (training: SkillTraining) => void;
+}) {
+  const getCategoryName = (categoryId: number) => {
+    return categories.find(c => c.id === categoryId)?.name || "-";
+  };
+
+  const getObjectiveTitle = (objectiveId?: number) => {
+    if (!objectiveId) return "-";
+    return objectives.find(o => o.id === objectiveId)?.title || "-";
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-gray-50">
+          <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <th className="px-5 py-3">Training</th>
+            <th className="px-5 py-3">Competentie</th>
+            <th className="px-5 py-3">Leerdoel</th>
+            <th className="px-5 py-3">Niveau</th>
+            <th className="px-5 py-3">Geschatte tijd</th>
+            <th className="px-5 py-3">Actief</th>
+            <th className="px-5 py-3">Acties</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white">
+          {trainings.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="px-5 py-8 text-center text-sm text-gray-500">
+                Geen trainingen gevonden
+              </td>
+            </tr>
+          ) : (
+            trainings.map((training) => (
+              <tr key={training.id} className="border-t hover:bg-gray-50/60">
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900">{training.title}</span>
+                    <a
+                      href={training.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-gray-600"
+                      title="Open training"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </div>
+                </td>
+                <td className="px-5 py-4 text-sm text-gray-700">
+                  {getCategoryName(training.competency_category_id)}
+                </td>
+                <td className="px-5 py-4 text-sm text-gray-700">
+                  {getObjectiveTitle(training.learning_objective_id)}
+                </td>
+                <td className="px-5 py-4 text-sm text-gray-700">
+                  {training.level || "-"}
+                </td>
+                <td className="px-5 py-4 text-sm text-gray-700">
+                  {training.est_minutes || "-"}
+                </td>
+                <td className="px-5 py-4">
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                    training.is_active 
+                      ? "bg-green-50 text-green-700" 
+                      : "bg-gray-100 text-gray-600"
+                  )}>
+                    {training.is_active ? "Ja" : "Nee"}
+                  </span>
+                </td>
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={training.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open
+                    </a>
+                    <button
+                      onClick={() => onEdit(training)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
