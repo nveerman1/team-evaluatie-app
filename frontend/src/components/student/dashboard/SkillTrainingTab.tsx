@@ -213,7 +213,7 @@ export function SkillTrainingTab() {
       </div>
 
       {/* Progress per competency */}
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold text-slate-900">Voortgang per competentie</div>
           <div className="text-xs text-slate-500">Afgerond/beheerst ÷ totaal</div>
@@ -224,7 +224,7 @@ export function SkillTrainingTab() {
               key={cat.id}
               onClick={() => setSelectedCompetency(selectedCompetency === cat.id ? null : cat.id)}
               className={cn(
-                "rounded-2xl border p-4 text-left shadow-sm transition hover:bg-slate-50",
+                "rounded-2xl border border-slate-200 p-4 text-left shadow-sm transition hover:bg-slate-50",
                 selectedCompetency === cat.id && "border-slate-300 ring-4 ring-slate-100"
               )}
             >
@@ -245,46 +245,67 @@ export function SkillTrainingTab() {
       </div>
 
       {/* Trainings table */}
-      <div className="rounded-2xl border bg-white shadow-sm">
+      <div className="rounded-2xl border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-[900px] w-full">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Training</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Competentie</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Status</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold text-slate-600">Acties</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Training</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Competentie</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Leerdoel</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Niveau</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tijd</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTrainings.map((item) => (
-                <tr key={item.training.id} className="border-t hover:bg-slate-50">
-                  <td className="px-5 py-3 font-medium text-slate-900">{item.training.title}</td>
-                  <td className="px-5 py-3 text-sm text-slate-700">{item.training.competency_category_name}</td>
-                  <td className="px-5 py-3">
-                    <StatusPill status={item.status} />
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="inline-flex items-center gap-2">
+              {filteredTrainings.map((item) => {
+                const canChangeStatus = STUDENT_ALLOWED_STATUSES.includes(item.status);
+                return (
+                  <tr key={item.training.id} className="border-t hover:bg-slate-50">
+                    <td className="px-5 py-3">
+                      <span className="text-base font-semibold text-slate-900 truncate">{item.training.title}</span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.competency_category_name}</td>
+                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.learning_objective_title || "–"}</td>
+                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.level || "–"}</td>
+                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.est_minutes || "–"}</td>
+                    <td className="px-5 py-3">
                       <button
-                        onClick={() => setDetailsTraining(item)}
-                        className="rounded-xl border px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+                        onClick={() => canChangeStatus && cycleStatus(item)}
+                        disabled={!canChangeStatus}
+                        className={cn(
+                          "transition-opacity",
+                          canChangeStatus ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
+                        )}
+                        title={canChangeStatus ? "Klik om status te wijzigen" : "Status is door docent gezet"}
                       >
-                        Details
+                        <StatusPill status={item.status} />
                       </button>
-                      <a
-                        href={item.training.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Open
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          onClick={() => setDetailsTraining(item)}
+                          className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Details
+                        </button>
+                        <a
+                          href={item.training.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -295,46 +316,67 @@ export function SkillTrainingTab() {
         {detailsTraining && (
           <div className="space-y-4">
             <div>
-              <div className="text-lg font-semibold">{detailsTraining.training.title}</div>
+              <div className="text-lg font-semibold text-slate-900">{detailsTraining.training.title}</div>
               <div className="text-sm text-slate-600">{detailsTraining.training.competency_category_name}</div>
             </div>
 
+            {/* Training details grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {detailsTraining.training.level && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Niveau</div>
+                  <div className="mt-1 text-sm text-slate-800">{detailsTraining.training.level}</div>
+                </div>
+              )}
+              {detailsTraining.training.est_minutes && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tijd</div>
+                  <div className="mt-1 text-sm text-slate-800">{detailsTraining.training.est_minutes}</div>
+                </div>
+              )}
+            </div>
+
             {detailsTraining.training.learning_objective_title && (
-              <div className="rounded-xl border bg-slate-50 px-4 py-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leerdoel</div>
                 <div className="mt-1 text-sm text-slate-800">{detailsTraining.training.learning_objective_title}</div>
               </div>
             )}
 
             <div>
-              <StatusPill status={detailsTraining.status} />
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Status</div>
+              <button
+                onClick={() => cycleStatus(detailsTraining)}
+                disabled={detailsTraining.status === "completed" || detailsTraining.status === "mastered"}
+                className={cn(
+                  "transition-opacity",
+                  detailsTraining.status === "completed" || detailsTraining.status === "mastered"
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer hover:opacity-80"
+                )}
+                title={
+                  detailsTraining.status === "completed" || detailsTraining.status === "mastered"
+                    ? "Status is door docent gezet"
+                    : "Klik om status te wijzigen"
+                }
+              >
+                <StatusPill status={detailsTraining.status} />
+              </button>
               <div className="mt-2 text-xs text-slate-500">
-                Leerling kan: Niet gestart → Gepland → Bezig → Ingeleverd. Afgerond/Beheerst zet de docent.
+                {detailsTraining.status === "completed" || detailsTraining.status === "mastered" 
+                  ? "Status is door docent gezet en kan niet worden gewijzigd."
+                  : "Klik op de status pill om te wijzigen: Niet gestart → Gepland → Bezig → Ingeleverd."}
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  cycleStatus(detailsTraining);
-                  setDetailsTraining(null);
-                }}
-                disabled={detailsTraining.status === "completed" || detailsTraining.status === "mastered"}
-                className={cn(
-                  "rounded-xl border px-4 py-2 text-sm font-semibold",
-                  detailsTraining.status === "completed" || detailsTraining.status === "mastered"
-                    ? "cursor-not-allowed opacity-50"
-                    : "hover:bg-slate-50"
-                )}
-              >
-                Status wijzigen
-              </button>
+            <div className="flex gap-2 pt-2">
               <a
                 href={detailsTraining.training.url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
               >
+                <ExternalLink className="h-4 w-4" />
                 Open training
               </a>
             </div>
