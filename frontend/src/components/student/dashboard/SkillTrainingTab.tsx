@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, ExternalLink, Circle, Flag, Clock, CheckCircle2, BadgeCheck, X } from "lucide-react";
+import { Search, ExternalLink, Circle, Flag, Clock, CheckCircle2, BadgeCheck, X, Sparkles } from "lucide-react";
 import { skillTrainingService } from "@/services";
 import type { StudentTrainingItem, SkillTrainingStatus } from "@/dtos";
 import { STUDENT_ALLOWED_STATUSES } from "@/dtos";
@@ -174,11 +174,14 @@ export function SkillTrainingTab() {
   return (
     <div className="space-y-6">
       {/* Search and filters */}
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border-slate-200 bg-slate-50 p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-lg font-semibold text-slate-900">Trainingen</div>
-            <div className="text-sm text-slate-600">Werk aan je vaardigheden en volg je voortgang.</div>
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-slate-600" />
+              <p className="text-sm font-semibold text-slate-900">Trainingen</p>
+            </div>
+            <p className="text-sm text-slate-600">Werk aan je vaardigheden en volg je voortgang.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -188,7 +191,7 @@ export function SkillTrainingTab() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Zoek training…"
-                className="w-[220px] max-w-full rounded-xl border bg-white py-2 pl-10 pr-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+                className="w-[220px] max-w-full rounded-2xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
               />
             </div>
 
