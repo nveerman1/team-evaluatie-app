@@ -56,7 +56,11 @@ export default function SkillTrainingsPage() {
         skillTrainingService.listTrainings(),
         courseService.getCourses(),
         competencyService.getCategories(),
-        listLearningObjectives(),
+        listLearningObjectives({
+          limit: 100,
+          include_teacher_objectives: true,
+          include_course_objectives: true,
+        }),
       ]);
       
       setTrainings(trainingsData);
