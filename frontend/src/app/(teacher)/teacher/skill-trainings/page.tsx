@@ -34,7 +34,7 @@ export default function SkillTrainingsPage() {
   const [error, setError] = useState<string | null>(null);
   
   // Tab state
-  const [tab, setTab] = useState<"matrix" | "overview">("matrix");
+  const [tab, setTab] = useState<"matrix" | "overview" | "manage">("matrix");
   
   // Progress matrix state
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
@@ -47,6 +47,8 @@ export default function SkillTrainingsPage() {
   
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTraining, setEditingTraining] = useState<SkillTraining | null>(null);
   const [createForm, setCreateForm] = useState<SkillTrainingCreate>({
     title: "",
     url: "https://technasiummbh.nl/vaardigheden/",
@@ -136,6 +138,41 @@ export default function SkillTrainingsPage() {
     }
   };
 
+  const handleEditTraining = async () => {
+    try {
+      if (!editingTraining) return;
+      
+      if (!editingTraining.title || !editingTraining.url || !editingTraining.competency_category_id) {
+        alert("Vul alle verplichte velden in");
+        return;
+      }
+      
+      await skillTrainingService.updateTraining(editingTraining.id, {
+        title: editingTraining.title,
+        url: editingTraining.url,
+        competency_category_id: editingTraining.competency_category_id,
+        learning_objective_id: editingTraining.learning_objective_id || undefined,
+        level: editingTraining.level || undefined,
+        est_minutes: editingTraining.est_minutes || undefined,
+        is_active: editingTraining.is_active,
+      });
+      
+      setIsEditModalOpen(false);
+      setEditingTraining(null);
+      loadData();
+      if (selectedCourseId) {
+        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update training");
+    }
+  };
+
+  const openEditModal = (training: SkillTraining) => {
+    setEditingTraining({ ...training });
+    setIsEditModalOpen(true);
+  };
+
   const handleStatusClick = async (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => {
     if (!selectedCourseId) return;
     
@@ -222,6 +259,7 @@ export default function SkillTrainingsPage() {
   const tabs = [
     { id: "matrix", label: "Overzicht competenties" },
     { id: "overview", label: "Overzicht trainingen" },
+    { id: "manage", label: "Alle trainingen" },
   ];
 
   return (
@@ -505,8 +543,12 @@ export default function SkillTrainingsPage() {
           </div>
         )}
 
-        {/* Empty state if no course selected */}
-        {!selectedCourseId ? (
+        {/* Content area - manage tab doesn't need course selection */}
+        {tab === "manage" ? (
+          <div className="rounded-lg border border-gray-200/80 bg-white shadow-sm">
+            <AllTrainingsTable trainings={trainings} categories={categories} objectives={objectives} onEdit={openEditModal} />
+          </div>
+        ) : !selectedCourseId ? (
           <div className="rounded-lg border border-gray-200/80 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto max-w-md">
               <div className="text-lg font-semibold text-gray-900">Selecteer eerst een vak</div>
