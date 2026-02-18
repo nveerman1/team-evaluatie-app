@@ -43,6 +43,7 @@ backend/.venv/
 # Backup files
 *.bak
 frontend/.pnpm-store/
+frontend/pnpm-lock.yaml
 /var/backups/
 /backups/
 /runs/
