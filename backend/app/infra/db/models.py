@@ -879,6 +879,7 @@ class ProjectPlanTeam(Base):
 
     __table_args__ = (
         UniqueConstraint(
+            "school_id",
             "project_plan_id",
             "project_team_id",
             name="uq_project_plan_team",
@@ -947,7 +948,7 @@ class ProjectPlanSection(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "project_plan_team_id", "key", name="uq_project_plan_team_section_key"
+            "school_id", "project_plan_team_id", "key", name="uq_project_plan_team_section_key"
         ),
         Index("ix_pps_project_plan_team", "project_plan_team_id"),
         Index("ix_pps_key", "key"),
