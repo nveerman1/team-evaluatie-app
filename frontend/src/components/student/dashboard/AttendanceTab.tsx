@@ -202,7 +202,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
         per_page: number;
       } = {
         start_date: startDate,
-        per_page: 100,
+        per_page: 50,
       };
       
       // Note: We don't filter events by project_id because the backend 
