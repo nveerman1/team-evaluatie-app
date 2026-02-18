@@ -127,7 +127,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  const [period, setPeriod] = useState<PeriodFilter>("week");
+  const [period, setPeriod] = useState<PeriodFilter>("alles");
   const [showNewExternal, setShowNewExternal] = useState(false);
   const [expandedRejectId, setExpandedRejectId] = useState<number | null>(null);
   const [totals, setTotals] = useState<AttendanceTotals | null>(null);
@@ -202,7 +202,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
         per_page: number;
       } = {
         start_date: startDate,
-        per_page: 100,
+        per_page: 50,
       };
       
       // Note: We don't filter events by project_id because the backend 
