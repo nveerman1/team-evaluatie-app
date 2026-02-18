@@ -265,7 +265,7 @@ export function SkillTrainingTab() {
                 return (
                   <tr key={item.training.id} className="border-t hover:bg-slate-50">
                     <td className="px-5 py-3">
-                      <span className="text-base font-semibold text-slate-900 truncate">{item.training.title}</span>
+                      <span className="text-sm font-semibold text-slate-900 truncate">{item.training.title}</span>
                     </td>
                     <td className="px-5 py-3 text-sm text-slate-700">{item.training.competency_category_name}</td>
                     <td className="px-5 py-3 text-sm text-slate-700">{item.training.learning_objective_title || "–"}</td>
