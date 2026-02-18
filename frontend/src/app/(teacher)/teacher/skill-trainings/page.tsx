@@ -219,26 +219,30 @@ export default function SkillTrainingsPage() {
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
+  const tabs = [
+    { id: "matrix", label: "Overzicht competenties" },
+    { id: "overview", label: "Overzicht trainingen" },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Page header - sticky */}
-      <div className="sticky top-0 z-40 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-5 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-2xl font-semibold text-slate-900">Vaardigheidstrainingen</div>
-              <div className="mt-0.5 text-sm text-slate-600">
-                Docentoverzicht — voortgang per leerling (trainingen staan op technasiummbh.nl)
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogTrigger asChild>
-                  <button className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
-                    <Plus className="h-4 w-4" />
-                    Training aanmaken
-                  </button>
-                </DialogTrigger>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Vaardigheidstrainingen</h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Docentoverzicht — voortgang per leerling (trainingen staan op technasiummbh.nl)
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <DialogTrigger asChild>
+                <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Plus className="h-4 w-4" />
+                  Training aanmaken
+                </button>
+              </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Nieuwe training aanmaken</DialogTitle>
@@ -360,55 +364,57 @@ export default function SkillTrainingsPage() {
                   </div>
                 </DialogContent>
               </Dialog>
-              <button
-                onClick={() => window?.open?.("https://technasiummbh.nl/vaardigheden", "_blank")}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Naar vaardighedensite
-              </button>
-            </div>
+            <button
+              onClick={() => window?.open?.("https://technasiummbh.nl/vaardigheden", "_blank")}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Naar vaardighedensite
+            </button>
           </div>
+        </header>
+      </div>
 
-          {/* Tabs */}
-          <div className="mt-5 flex items-center gap-2">
-            {[
-              { id: "matrix", label: "Overzicht competenties" },
-              { id: "overview", label: "Overzicht trainingen" },
-            ].map((t) => {
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            {tabs.map((t) => {
               const active = tab === (t.id as any);
               return (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id as any)}
                   className={cn(
-                    "rounded-xl px-4 py-2 text-sm font-medium",
-                    active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    "py-4 px-1 border-b-2 font-medium text-sm transition-colors",
+                    active
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   )}
+                  aria-current={active ? "page" : undefined}
                 >
                   {t.label}
                 </button>
               );
             })}
-          </div>
+          </nav>
         </div>
-      </div>
-
-      <div className="mx-auto max-w-6xl px-5 py-6">
         {/* Filter bar */}
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+        <div className="rounded-lg border border-gray-200/80 bg-white p-5 shadow-sm">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
             <div className="md:col-span-7">
               <label className="block">
-                <div className="mb-1 text-xs font-medium text-slate-600">Vak (course_id) *</div>
+                <div className="mb-1 text-xs font-medium text-gray-600">Vak (course_id) *</div>
                 <div className="relative">
-                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                     <ExternalLink className="h-4 w-4" />
                   </div>
                   <select
                     value={selectedCourseId}
                     onChange={(e) => handleCourseChange(e.target.value)}
-                    className="w-full appearance-none rounded-xl border bg-white px-3 py-2 pl-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+                    className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Selecteer een vak</option>
                     {courses.map((c) => (
@@ -417,21 +423,21 @@ export default function SkillTrainingsPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
               </label>
             </div>
             <div className="md:col-span-5">
               <label className="block">
-                <div className="mb-1 text-xs font-medium text-slate-600">Klas (optioneel)</div>
+                <div className="mb-1 text-xs font-medium text-gray-600">Klas (optioneel)</div>
                 <div className="relative">
-                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                     <Users className="h-4 w-4" />
                   </div>
                   <select
                     value={selectedClass}
                     onChange={(e) => handleClassChange(e.target.value)}
-                    className="w-full appearance-none rounded-xl border bg-white px-3 py-2 pl-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+                    className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Alle klassen</option>
                     {availableClasses.map((c) => (
@@ -440,7 +446,7 @@ export default function SkillTrainingsPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
               </label>
             </div>
@@ -449,13 +455,13 @@ export default function SkillTrainingsPage() {
 
         {/* Bulk action bar (only for Overzicht trainingen) */}
         {tab === "overview" && selectedCourseId && (
-          <div className="mt-3 rounded-2xl border bg-white px-5 py-3 shadow-sm">
+          <div className="rounded-lg border border-gray-200/80 bg-white px-5 py-3 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-slate-600">
-                <span className="font-semibold text-slate-900">{filteredStudents.length}</span> leerlingen •{" "}
-                <span className="font-semibold text-slate-900">{trainings.length}</span> trainingen
-                <span className="mx-2 text-slate-300">•</span>
-                <span className={cn(!anyTrainingSelected && "text-slate-400")}>
+              <div className="text-sm text-gray-600">
+                <span className="font-semibold text-gray-900">{filteredStudents.length}</span> leerlingen •{" "}
+                <span className="font-semibold text-gray-900">{trainings.length}</span> trainingen
+                <span className="mx-2 text-gray-300">•</span>
+                <span className={cn(!anyTrainingSelected && "text-gray-400")}>
                   Bulk: vink trainingen (kolommen) aan en kies status
                 </span>
               </div>
@@ -463,7 +469,7 @@ export default function SkillTrainingsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => toggleSelectAllTrainings(!allTrainingsSelected)}
-                  className="rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm bg-white text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm bg-white text-gray-700 hover:bg-gray-50"
                 >
                   {allTrainingsSelected ? "Alle trainingen uit" : "Alle trainingen aan"}
                 </button>
@@ -474,10 +480,10 @@ export default function SkillTrainingsPage() {
                     disabled={!anyTrainingSelected}
                     onClick={() => bulkSetStatus(st)}
                     className={cn(
-                      "rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition",
+                      "rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm transition",
                       !anyTrainingSelected
-                        ? "cursor-not-allowed bg-slate-50 text-slate-400"
-                        : "bg-white text-slate-700 hover:bg-slate-50"
+                        ? "cursor-not-allowed bg-gray-50 text-gray-400"
+                        : "bg-white text-gray-700 hover:bg-gray-50"
                     )}
                   >
                     {STATUS_META[st].label}
@@ -488,8 +494,8 @@ export default function SkillTrainingsPage() {
                   disabled={!anyTrainingSelected}
                   onClick={() => setSelectedTrainings({})}
                   className={cn(
-                    "rounded-xl px-3 py-2 text-sm font-semibold",
-                    !anyTrainingSelected ? "cursor-not-allowed text-slate-400" : "text-slate-600 hover:text-slate-900"
+                    "rounded-lg px-3 py-2 text-sm font-medium",
+                    !anyTrainingSelected ? "cursor-not-allowed text-gray-400" : "text-gray-600 hover:text-gray-900"
                   )}
                 >
                   Selectie wissen
@@ -501,18 +507,18 @@ export default function SkillTrainingsPage() {
 
         {/* Empty state if no course selected */}
         {!selectedCourseId ? (
-          <div className="mt-6 rounded-2xl border bg-white p-10 text-center shadow-sm">
+          <div className="rounded-lg border border-gray-200/80 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto max-w-md">
-              <div className="text-lg font-semibold text-slate-900">Selecteer eerst een vak</div>
-              <div className="mt-2 text-sm text-slate-600">Zonder vak (course_id) kunnen we geen leerlingen en trainingen tonen.</div>
+              <div className="text-lg font-semibold text-gray-900">Selecteer eerst een vak</div>
+              <div className="mt-2 text-sm text-gray-600">Zonder vak (course_id) kunnen we geen leerlingen en trainingen tonen.</div>
             </div>
           </div>
         ) : loadingProgress ? (
-          <div className="mt-6 rounded-2xl border bg-white p-10 text-center shadow-sm">
+          <div className="rounded-lg border border-gray-200/80 bg-white p-10 text-center shadow-sm">
             <Loading />
           </div>
         ) : (
-          <div className="mt-6 rounded-2xl border bg-white shadow-sm">
+          <div className="rounded-lg border border-gray-200/80 bg-white shadow-sm">
             {tab === "matrix" ? (
               <MatrixView students={filteredStudents} groupedTrainings={groupedTrainings} progressData={progressData} />
             ) : (
@@ -529,7 +535,7 @@ export default function SkillTrainingsPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -543,11 +549,11 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-[980px] w-full">
-        <thead className="bg-slate-50">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Leerling</th>
+            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">Leerling</th>
             {groupedTrainings.map((group: any) => (
-              <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold text-slate-600">
+              <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold text-gray-600">
                 {group.name}
               </th>
             ))}
@@ -555,8 +561,8 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
         </thead>
         <tbody>
           {students.map((s: any) => (
-            <tr key={s.student_id} className="border-t hover:bg-slate-50/60">
-              <td className="px-5 py-3 font-medium text-slate-900">{s.student_name}</td>
+            <tr key={s.student_id} className="border-t hover:bg-gray-50/60">
+              <td className="px-5 py-3 font-medium text-gray-900">{s.student_name}</td>
               {groupedTrainings.map((group: any) => {
                 const total = group.trainings.length;
                 const done = group.trainings.filter((t: any) => {
@@ -566,10 +572,10 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
                 const pct = total ? Math.round((done / total) * 100) : 0;
                 return (
                   <td key={group.id} className="px-5 py-3">
-                    <div className="h-2 w-full rounded-full bg-slate-100">
-                      <div className="h-2 rounded-full bg-slate-900" style={{ width: `${pct}%` }} />
+                    <div className="h-2 w-full rounded-full bg-gray-100">
+                      <div className="h-2 rounded-full bg-blue-600" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 text-xs text-gray-500">
                       {done}/{total}
                     </div>
                   </td>
@@ -638,15 +644,15 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
               <tr>
                 <th
                   className={cn(
-                    "sticky left-0 top-0 z-30 min-w-[260px] w-auto border-b bg-slate-50 px-5 py-3",
-                    "shadow-[1px_0_0_0_rgba(226,232,240,1)]"
+                    "sticky left-0 top-0 z-30 min-w-[260px] w-auto border-b border-gray-200 bg-gray-50 px-5 py-3",
+                    "shadow-[1px_0_0_0_rgba(229,231,235,1)]"
                   )}
                 />
                 {spans.map((g: any) => (
                   <th
                     key={g.id}
                     colSpan={g.span}
-                    className="sticky top-0 z-20 border-b border-l bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-700"
+                    className="sticky top-0 z-20 border-b border-l border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold text-gray-700"
                   >
                     {g.name}
                   </th>
@@ -657,19 +663,19 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
               <tr>
                 <th
                   className={cn(
-                    "sticky left-0 top-[44px] z-30 border-b bg-slate-100 px-5 py-3 text-left",
-                    "shadow-[1px_0_0_0_rgba(226,232,240,1)]"
+                    "sticky left-0 top-[44px] z-30 border-b border-gray-200 bg-gray-100 px-5 py-3 text-left",
+                    "shadow-[1px_0_0_0_rgba(229,231,235,1)]"
                   )}
                 >
-                  <div className="text-xs font-semibold text-slate-700">Leerlingen</div>
+                  <div className="text-xs font-semibold text-gray-700">Leerlingen</div>
                 </th>
 
                 {flatTrainings.map((t: any) => (
                   <th
                     key={t.id}
                     className={cn(
-                      "sticky top-[44px] z-20 border-b border-l bg-slate-100 px-4 py-3 text-left",
-                      selectedTrainings?.[t.id] && "bg-slate-200/60"
+                      "sticky top-[44px] z-20 border-b border-l border-gray-200 bg-gray-100 px-4 py-3 text-left",
+                      selectedTrainings?.[t.id] && "bg-gray-200/60"
                     )}
                   >
                     <div className="flex items-start gap-2">
@@ -677,11 +683,11 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                         type="checkbox"
                         checked={!!selectedTrainings?.[t.id]}
                         onChange={(e) => onToggleTraining(String(t.id), e.target.checked)}
-                        className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300"
                         title="Selecteer kolom voor bulk"
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold text-slate-800" title={t.title}>
+                        <div className="text-xs font-semibold text-gray-800" title={t.title}>
                           {t.title}
                         </div>
                         <div className="mt-1">
@@ -689,7 +695,7 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                             href={t.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-700"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-gray-700"
                             title="Open training"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
@@ -705,25 +711,25 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
 
             <tbody>
               {students.map((s: any) => (
-                <tr key={s.student_id} className="hover:bg-slate-50/60">
+                <tr key={s.student_id} className="hover:bg-gray-50/60">
                   <td
                     className={cn(
-                      "sticky left-0 z-10 min-w-[260px] w-auto border-b bg-white px-5 py-3",
-                      "shadow-[1px_0_0_0_rgba(226,232,240,1)]"
+                      "sticky left-0 z-10 min-w-[260px] w-auto border-b border-gray-200 bg-white px-5 py-3",
+                      "shadow-[1px_0_0_0_rgba(229,231,235,1)]"
                     )}
                   >
                     <div className="min-w-0">
-                      <div className="font-medium text-slate-900">{s.student_name}</div>
+                      <div className="font-medium text-gray-900">{s.student_name}</div>
                     </div>
                   </td>
 
                   {flatTrainings.map((t: any) => {
                     const st: SkillTrainingStatus = getStatus(s.student_id, t.id);
                     return (
-                      <td key={`${s.student_id}:${t.id}`} className="border-b border-l bg-white px-4 py-3">
+                      <td key={`${s.student_id}:${t.id}`} className="border-b border-l border-gray-200 bg-white px-4 py-3">
                         <button
                           onClick={() => onCycle(s.student_id, t.id, st)}
-                          className="w-full rounded-xl border bg-white px-3 py-2 text-left shadow-sm transition hover:bg-slate-50"
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:bg-gray-50"
                           title="Klik om status te wijzigen"
                         >
                           <StatusPill status={st} />
