@@ -18,4 +18,5 @@ export * from "./client.dto";
 export * from "./omza.dto";
 export * from "./competency-monitor.dto";
 export * from "./academic-year.dto";
+export * from "./skill-training.dto";
 export * from "./task.dto";

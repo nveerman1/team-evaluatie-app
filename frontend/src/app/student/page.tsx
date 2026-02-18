@@ -18,8 +18,10 @@ import { SubmissionDashboardCard } from "@/components/student/dashboard/Submissi
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
+import { SkillTrainingTab } from "@/components/student/dashboard/SkillTrainingTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Dumbbell } from "lucide-react";
 
 function StudentDashboardContent() {
   const { dashboard, loading, error } = useStudentDashboard();
@@ -159,6 +161,12 @@ function StudentDashboardContent() {
                 className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
               >
                 <Clock className="mr-2 h-4 w-4" /> 3de Blok
+              </TabsTrigger>
+              <TabsTrigger
+                value="trainingen"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Dumbbell className="mr-2 h-4 w-4" /> Trainingen
               </TabsTrigger>
             </TabsList>
 
@@ -328,6 +336,11 @@ function StudentDashboardContent() {
             {/* ATTENDANCE / 3DE BLOK */}
             <TabsContent value="attendance" className="mt-6 space-y-4">
               <AttendanceTab />
+            </TabsContent>
+
+            {/* TRAININGEN */}
+            <TabsContent value="trainingen" className="mt-6 space-y-4">
+              <SkillTrainingTab />
             </TabsContent>
           </Tabs>
         </div>

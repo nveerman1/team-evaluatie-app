@@ -18,6 +18,7 @@ import {
   UsersRound,
   Clock,
   FileCheck,
+  Dumbbell,
 } from "lucide-react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -104,6 +105,7 @@ export default function TeacherLayout({
                 <NavItem href="/teacher/projectplans" label="Projectplan" icon={FileCheck} />
                 <NavItem href="/teacher/evaluations" label="Peerevaluaties" icon={Users} />
                 <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
+                <NavItem href="/teacher/skill-trainings" label="Trainingen" icon={Dumbbell} />
                 <NavItem href="/teacher/project-notes" label="Projectaantekeningen" icon={FileEdit} />
                 <NavItem href="/teacher/clients" label="Opdrachtgevers" icon={Building2} />
                 <NavItem href="/teacher/3de-blok" label="3de Blok (RFID)" icon={Clock} />
