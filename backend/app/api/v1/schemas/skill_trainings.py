@@ -92,8 +92,8 @@ class TeacherProgressMatrixResponse(BaseModel):
 
 class BulkProgressUpdate(BaseModel):
     """Schema for bulk progress update (teacher only)"""
-    student_ids: List[int] = Field(..., max_length=100, description="Max 100 students per bulk update")
-    training_ids: List[int] = Field(..., max_length=50, description="Max 50 trainings per bulk update")
+    student_ids: List[int] = Field(..., max_items=100, description="Max 100 students per bulk update")
+    training_ids: List[int] = Field(..., max_items=50, description="Max 50 trainings per bulk update")
     status: SkillTrainingStatus
 
 
