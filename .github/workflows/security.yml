@@ -20,7 +20,7 @@ jobs:
       - name: OSV scan pnpm-lock.yaml
         run: |
           docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.3.1 \
-            scan -L /src/frontend/pnpm-lock.yaml
+            scan -L /src/pnpm-lock.yaml
 
   backend_sbom_scan:
     name: Backend SBOM scan (CycloneDX -> OSV)
