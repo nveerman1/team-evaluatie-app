@@ -80,7 +80,7 @@ export interface SkillTrainingProgress {
   updated_by_user_id: number;
 }
 
-export interface StudentProgressRow {
+export interface SkillTrainingStudentProgressRow {
   student_id: number;
   student_name: string;
   class_name?: string;
@@ -89,7 +89,7 @@ export interface StudentProgressRow {
 
 export interface TeacherProgressMatrixResponse {
   trainings: SkillTraining[];
-  students: StudentProgressRow[];
+  students: SkillTrainingStudentProgressRow[];
 }
 
 export interface BulkProgressUpdate {

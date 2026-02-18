@@ -34,7 +34,9 @@ import {
 
 type PeriodFilter = "week" | "maand" | "alles";
 
-interface AttendanceTabProps {}
+interface AttendanceTabProps {
+  searchQuery?: string;
+}
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);

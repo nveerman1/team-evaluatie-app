@@ -84,7 +84,7 @@ export function SkillTrainingTab() {
         const query = searchQuery.toLowerCase();
         if (
           !training.training.title.toLowerCase().includes(query) &&
-          !training.training.competency_category_name.toLowerCase().includes(query)
+          !training.training.competency_category_name?.toLowerCase().includes(query)
         ) {
           return false;
         }
@@ -116,7 +116,7 @@ export function SkillTrainingTab() {
       const catName = training.training.competency_category_name;
 
       if (!categories.has(catId)) {
-        categories.set(catId, { name: catName, total: 0, done: 0 });
+        categories.set(catId, { name: catName || "Onbekend", total: 0, done: 0 });
       }
 
       const cat = categories.get(catId)!;
