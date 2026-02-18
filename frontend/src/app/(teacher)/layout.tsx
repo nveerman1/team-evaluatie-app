@@ -91,24 +91,33 @@ export default function TeacherLayout({
                 <NavItem href="/teacher" label="Dashboard" icon={LayoutDashboard} />
                 <NavItem href="/teacher/calendar" label="Kalender" icon={Calendar} />
                 <NavItem href="/teacher/overview" label="Overzicht" icon={FileText} />
+                <NavItem href="/teacher/clients" label="Opdrachtgevers" icon={Building2} />
               </div>
             </div>
 
-            {/* PROJECTTOOLS Section */}
+            {/* PROJECTEN Section */}
             <div>
               <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                Projecttools
+                Projecten
               </div>
               <div className="space-y-1">
                 <NavItem href="/teacher/projects" label="Projecten" icon={Layers} />
-                <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" icon={CheckSquare} />
                 <NavItem href="/teacher/projectplans" label="Projectplan" icon={FileCheck} />
-                <NavItem href="/teacher/evaluations" label="Peerevaluaties" icon={Users} />
-                <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
-                <NavItem href="/teacher/skill-trainings" label="Trainingen" icon={Dumbbell} />
                 <NavItem href="/teacher/project-notes" label="Projectaantekeningen" icon={FileEdit} />
-                <NavItem href="/teacher/clients" label="Opdrachtgevers" icon={Building2} />
+                <NavItem href="/teacher/evaluations" label="Peerevaluaties" icon={Users} />
+                <NavItem href="/teacher/project-assessments" label="Projectbeoordelingen" icon={CheckSquare} />
                 <NavItem href="/teacher/3de-blok" label="3de Blok (RFID)" icon={Clock} />
+              </div>
+            </div>
+
+            {/* VAARDIGHEDEN Section */}
+            <div>
+              <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                Vaardigheden
+              </div>
+              <div className="space-y-1">
+                <NavItem href="/teacher/skill-trainings" label="Trainingen" icon={Dumbbell} />
+                <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
               </div>
             </div>
 

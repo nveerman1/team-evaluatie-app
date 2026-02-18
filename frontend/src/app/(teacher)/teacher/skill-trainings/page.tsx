@@ -5,7 +5,7 @@ import { skillTrainingService, courseService, competencyService, listLearningObj
 import type {
   SkillTraining,
   SkillTrainingCreate,
-  Course,
+  CourseLite,
   CompetencyCategory,
   LearningObjectiveDto,
   TeacherProgressMatrixResponse,
@@ -27,7 +27,7 @@ function cn(...classes: (string | false | null | undefined)[]) {
 
 export default function SkillTrainingsPage() {
   const [trainings, setTrainings] = useState<SkillTraining[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<CourseLite[]>([]);
   const [categories, setCategories] = useState<CompetencyCategory[]>([]);
   const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
   const [loading, setLoading] = useState(true);
