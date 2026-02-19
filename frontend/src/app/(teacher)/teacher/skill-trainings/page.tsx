@@ -10,6 +10,7 @@ import type {
   LearningObjectiveDto,
   TeacherProgressMatrixResponse,
   SkillTrainingStatus,
+  SkillTrainingStudentProgressRow,
 } from "@/dtos";
 import { STATUS_META } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
@@ -791,7 +792,7 @@ interface OverviewTableProps {
   progressData: TeacherProgressMatrixResponse | null;
   onCycle: (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => void;
   selectedTrainings: Record<string, boolean>;
-  onToggleTraining: (trainingId: number) => void;
+  onToggleTraining: (trainingId: string, next: boolean) => void;
 }
 
 // Overview Table Component

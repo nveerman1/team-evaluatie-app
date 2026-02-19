@@ -85,7 +85,7 @@ jobs:
           ignore-unfixed: true
           format: table
           exit-code: 1
-          version: v0.68.2
+          version: v0.69.1
 
       - name: Trivy scan frontend
         uses: aquasecurity/trivy-action@0.33.1
@@ -96,7 +96,7 @@ jobs:
           ignore-unfixed: true
           format: table
           exit-code: 1
-          version: v0.68.2
+          version: v0.69.1
 
       - name: Build nginx custom image
         run: docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
@@ -110,6 +110,6 @@ jobs:
           ignore-unfixed: true
           format: table
           exit-code: 1
-          version: v0.68.2
+          version: v0.69.1
 
   

@@ -13,3 +13,10 @@ CVE-2025-64756
 CVE-2026-23745
 CVE-2026-23950
 CVE-2026-24842
+CVE-2026-26960
+
+# minimatch bundled inside npm's own node_modules (not our application code).
+# All npm@11.x versions ship minimatch@^10.1.1 with internal lockfile pinned to 10.1.2.
+# No npm release ships minimatch@>=10.2.1 yet. npm is a package manager and is not
+# invoked at runtime by the Next.js production server. Our app's own minimatch is 10.2.2.
+CVE-2026-26996

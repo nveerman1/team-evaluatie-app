@@ -64,6 +64,33 @@ RUN \
         npm run build; \
     fi
 
+# Strip devDependencies from all package.json files in the standalone output.
+# Production packages (next.js, typescript, etc.) embed devDependencies in their
+# package.json files. Trivy's node-pkg scanner traces through them and reports
+# false positives for packages that are not actually installed (e.g. minimatch@9.0.5
+# via typescript -> @typescript-eslint/utils -> minimatch). Removing devDependencies
+# from the standalone node_modules package.json files prevents these false positives.
+RUN node -e " \
+  const fs = require('fs'), path = require('path'); \
+  function strip(dir) { \
+    if (!fs.existsSync(dir)) return; \
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) { \
+      const full = path.join(dir, entry.name); \
+      if (entry.isDirectory()) { strip(full); } \
+      else if (entry.name === 'package.json') { \
+        try { \
+          const p = JSON.parse(fs.readFileSync(full, 'utf8')); \
+          if (p.devDependencies || p.pnpm || p.overrides) { \
+            delete p.devDependencies; delete p.pnpm; delete p.overrides; \
+            fs.writeFileSync(full, JSON.stringify(p, null, 2)); \
+          } \
+        } catch(e) { console.error('strip failed:', full, e.message); } \
+      } \
+    } \
+  } \
+  strip('.next/standalone'); \
+"
+
 # -----------------------------------------------------------------------------
 # Stage 3: Runner - Production runtime
 # -----------------------------------------------------------------------------
@@ -77,6 +104,10 @@ ENV NODE_ENV=production \
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
+
+# Upgrade npm to v11+ to replace the bundled minimatch@9.x (CVE-2026-26996)
+# that ships with Node.js 20's default npm@10. npm@11.6.1+ bundles minimatch@10.x.
+RUN npm install -g npm@11.10.0
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public

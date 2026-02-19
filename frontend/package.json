@@ -49,13 +49,15 @@
       "js-yaml": "4.1.1",
       "tar": "7.5.8",
       "cross-spawn": "7.0.5",
-      "glob": "10.5.0"
+      "glob": "10.5.0",
+      "minimatch": ">=10.2.1"
     }
   },
   "overrides": {
     "js-yaml": "4.1.1",
     "tar": "7.5.8",
     "cross-spawn": "7.0.5",
-    "glob": "10.5.0"
+    "glob": "10.5.0",
+    "minimatch": ">=10.2.1"
   }
 }
