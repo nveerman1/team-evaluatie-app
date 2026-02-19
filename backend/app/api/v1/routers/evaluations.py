@@ -28,7 +28,6 @@ from app.infra.db.models import (
     Project,
     ProjectTeam,
     ProjectTeamMember,
-    TeacherCourse,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -194,12 +193,12 @@ def create_evaluation(
 
     db.commit()
     db.refresh(ev)
-    
+
     logger.info(
         f"Created evaluation '{ev.title}' (ID: {ev.id}) for course {course.id} "
         f"by user {user.id} ({user.role})"
     )
-    
+
     return _to_out(ev)
 
 
@@ -288,11 +287,11 @@ def list_evaluations(
         stmt = stmt.where(Evaluation.course_id == course_id)
     if evaluation_type:
         stmt = stmt.where(Evaluation.evaluation_type == evaluation_type)
-    
+
     # Deduplicate by project_id at application level
     # First, get ALL matching evaluations (without pagination)
     all_rows = db.execute(stmt.order_by(Evaluation.id.desc())).scalars().all()
-    
+
     # Deduplicate: keep only the first (most recent) evaluation for each project_id
     seen_projects = set()
     deduplicated = []
@@ -304,12 +303,12 @@ def list_evaluations(
         elif ev.project_id not in seen_projects:
             seen_projects.add(ev.project_id)
             deduplicated.append(ev)
-    
+
     # Apply pagination after deduplication
     start_idx = (page - 1) * limit
     end_idx = start_idx + limit
     paginated_results = deduplicated[start_idx:end_idx]
-    
+
     return [_to_out(ev) for ev in paginated_results]
 
 
@@ -1218,7 +1217,7 @@ def get_my_peer_feedback_results(
                 meta_group_grade = grade_record.meta.get("group_grade")
                 if meta_group_grade is not None:
                     group_grade = float(meta_group_grade)
-                
+
                 # Get SPR (Self-Peer Ratio) from meta field
                 meta_spr = grade_record.meta.get("spr")
                 if meta_spr is not None:

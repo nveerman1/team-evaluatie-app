@@ -6,7 +6,6 @@ This prevents the duplicate "Team X" evaluations bug.
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
 
 from app.infra.db.base import Base
 from app.infra.db.models import (
@@ -32,9 +31,9 @@ def db_session():
     Base.metadata.create_all(engine)
     TestingSessionLocal = sessionmaker(bind=engine)
     session = TestingSessionLocal()
-    
+
     yield session
-    
+
     session.close()
 
 
@@ -47,7 +46,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
     school = School(name="Test School")
     db_session.add(school)
     db_session.commit()
-    
+
     teacher = User(
         school_id=school.id,
         email="teacher@test.com",
@@ -56,7 +55,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
     )
     db_session.add(teacher)
     db_session.commit()
-    
+
     # Create 4 students
     students = []
     for i in range(4):
@@ -69,14 +68,14 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
         db_session.add(student)
         students.append(student)
     db_session.commit()
-    
+
     course = Course(
         school_id=school.id,
         name="Test Course",
     )
     db_session.add(course)
     db_session.commit()
-    
+
     project = Project(
         school_id=school.id,
         course_id=course.id,
@@ -86,7 +85,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
     )
     db_session.add(project)
     db_session.commit()
-    
+
     # Create 2 teams for the project
     teams = []
     for team_num in range(1, 3):
@@ -99,7 +98,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
         db_session.add(team)
         teams.append(team)
     db_session.commit()
-    
+
     # Assign students to teams
     for i, student in enumerate(students):
         team_idx = i % 2  # Alternate between team 0 and team 1
@@ -110,7 +109,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
         )
         db_session.add(member)
     db_session.commit()
-    
+
     # Create rubric for evaluation
     rubric = Rubric(
         school_id=school.id,
@@ -119,7 +118,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
     )
     db_session.add(rubric)
     db_session.commit()
-    
+
     criterion = RubricCriterion(
         school_id=school.id,
         rubric_id=rubric.id,
@@ -131,7 +130,7 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
     )
     db_session.add(criterion)
     db_session.commit()
-    
+
     # ACT: Create evaluation for the project
     # This should create ONE evaluation, not one per team
     evaluation = Evaluation(
@@ -146,23 +145,24 @@ def test_create_evaluation_creates_single_evaluation_per_project(db_session):
     )
     db_session.add(evaluation)
     db_session.commit()
-    
+
     # ASSERT: Check that only ONE evaluation was created
-    all_evaluations = db_session.query(Evaluation).filter(
-        Evaluation.project_id == project.id
-    ).all()
-    
+    all_evaluations = (
+        db_session.query(Evaluation).filter(Evaluation.project_id == project.id).all()
+    )
+
     assert len(all_evaluations) == 1, (
         f"Expected 1 evaluation for project, but found {len(all_evaluations)}. "
         f"Evaluations: {[e.title for e in all_evaluations]}"
     )
-    
+
     # Check that the evaluation title does NOT contain "Team X"
     created_eval = all_evaluations[0]
-    assert "Team" not in created_eval.title or created_eval.title == f"Peer Evaluatie - {project.title}", (
-        f"Evaluation title should not contain team suffix. Got: {created_eval.title}"
-    )
-    
+    assert (
+        "Team" not in created_eval.title
+        or created_eval.title == f"Peer Evaluatie - {project.title}"
+    ), f"Evaluation title should not contain team suffix. Got: {created_eval.title}"
+
     # Check that project_team_id is NULL (project-level)
     assert created_eval.project_team_id is None, (
         "Evaluation should be project-level (project_team_id=NULL), "
@@ -179,7 +179,7 @@ def test_allocations_include_all_teams(db_session):
     school = School(name="Test School")
     db_session.add(school)
     db_session.commit()
-    
+
     teacher = User(
         school_id=school.id,
         email="teacher@test.com",
@@ -188,7 +188,7 @@ def test_allocations_include_all_teams(db_session):
     )
     db_session.add(teacher)
     db_session.commit()
-    
+
     students = []
     for i in range(4):
         student = User(
@@ -200,14 +200,14 @@ def test_allocations_include_all_teams(db_session):
         db_session.add(student)
         students.append(student)
     db_session.commit()
-    
+
     course = Course(
         school_id=school.id,
         name="Test Course",
     )
     db_session.add(course)
     db_session.commit()
-    
+
     project = Project(
         school_id=school.id,
         course_id=course.id,
@@ -217,7 +217,7 @@ def test_allocations_include_all_teams(db_session):
     )
     db_session.add(project)
     db_session.commit()
-    
+
     # Create 2 teams
     teams = []
     for team_num in range(1, 3):
@@ -230,7 +230,7 @@ def test_allocations_include_all_teams(db_session):
         db_session.add(team)
         teams.append(team)
     db_session.commit()
-    
+
     # Assign 2 students to each team
     for i, student in enumerate(students):
         team_idx = i % 2
@@ -241,7 +241,7 @@ def test_allocations_include_all_teams(db_session):
         )
         db_session.add(member)
     db_session.commit()
-    
+
     # Create rubric
     rubric = Rubric(
         school_id=school.id,
@@ -250,7 +250,7 @@ def test_allocations_include_all_teams(db_session):
     )
     db_session.add(rubric)
     db_session.commit()
-    
+
     # Create evaluation
     evaluation = Evaluation(
         school_id=school.id,
@@ -264,14 +264,16 @@ def test_allocations_include_all_teams(db_session):
     )
     db_session.add(evaluation)
     db_session.commit()
-    
+
     # ACT: Create allocations for students within their teams
     # Each student reviews other students in their team only
     for team in teams:
-        team_members = db_session.query(ProjectTeamMember).filter(
-            ProjectTeamMember.project_team_id == team.id
-        ).all()
-        
+        team_members = (
+            db_session.query(ProjectTeamMember)
+            .filter(ProjectTeamMember.project_team_id == team.id)
+            .all()
+        )
+
         for reviewer in team_members:
             for reviewee in team_members:
                 if reviewer.user_id != reviewee.user_id:
@@ -284,23 +286,25 @@ def test_allocations_include_all_teams(db_session):
                     )
                     db_session.add(allocation)
     db_session.commit()
-    
+
     # ASSERT: Check that allocations exist for all teams
-    all_allocations = db_session.query(Allocation).filter(
-        Allocation.evaluation_id == evaluation.id
-    ).all()
-    
+    all_allocations = (
+        db_session.query(Allocation)
+        .filter(Allocation.evaluation_id == evaluation.id)
+        .all()
+    )
+
     # With 2 teams of 2 students each:
     # Team 1: Student 0 -> Student 2, Student 2 -> Student 0 (2 allocations)
     # Team 2: Student 1 -> Student 3, Student 3 -> Student 1 (2 allocations)
     # Total: 4 allocations
-    assert len(all_allocations) == 4, (
-        f"Expected 4 allocations (2 per team), but found {len(all_allocations)}"
-    )
-    
+    assert (
+        len(all_allocations) == 4
+    ), f"Expected 4 allocations (2 per team), but found {len(all_allocations)}"
+
     # Verify that students from different teams do NOT review each other
     reviewer_reviewee_pairs = [(a.reviewer_id, a.reviewee_id) for a in all_allocations]
-    
+
     # Student 0 and 2 are in team 1, students 1 and 3 are in team 2
     # Student 0 should NOT review students 1 or 3
     assert (students[0].id, students[1].id) not in reviewer_reviewee_pairs
@@ -315,7 +319,7 @@ def test_evaluation_title_format(db_session):
     school = School(name="Test School")
     db_session.add(school)
     db_session.commit()
-    
+
     teacher = User(
         school_id=school.id,
         email="teacher@test.com",
@@ -324,14 +328,14 @@ def test_evaluation_title_format(db_session):
     )
     db_session.add(teacher)
     db_session.commit()
-    
+
     course = Course(
         school_id=school.id,
         name="Test Course",
     )
     db_session.add(course)
     db_session.commit()
-    
+
     project = Project(
         school_id=school.id,
         course_id=course.id,
@@ -341,7 +345,7 @@ def test_evaluation_title_format(db_session):
     )
     db_session.add(project)
     db_session.commit()
-    
+
     rubric = Rubric(
         school_id=school.id,
         title="Peer Rubric",
@@ -349,7 +353,7 @@ def test_evaluation_title_format(db_session):
     )
     db_session.add(rubric)
     db_session.commit()
-    
+
     # Create evaluation
     evaluation = Evaluation(
         school_id=school.id,
@@ -363,12 +367,13 @@ def test_evaluation_title_format(db_session):
     )
     db_session.add(evaluation)
     db_session.commit()
-    
+
     # ASSERT: Title should be exactly "Peer Evaluatie - Mobile App Development"
     assert evaluation.title == "Peer Evaluatie - Mobile App Development"
-    
+
     # ASSERT: Title should NOT contain "Team" followed by a number
     import re
-    assert not re.search(r"Team \d+", evaluation.title), (
-        f"Evaluation title should not contain 'Team X' pattern. Got: {evaluation.title}"
-    )
+
+    assert not re.search(
+        r"Team \d+", evaluation.title
+    ), f"Evaluation title should not contain 'Team X' pattern. Got: {evaluation.title}"

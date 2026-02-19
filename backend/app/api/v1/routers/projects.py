@@ -56,7 +56,6 @@ from app.infra.services.archive_guards import (
     require_course_year_not_archived,
     require_project_year_not_archived,
 )
-from app.infra.services.project_team_service import ProjectTeamService
 from app.infra.services.task_generation_service import TaskGenerationService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -367,17 +366,15 @@ def get_running_projects_overview(
         if project.id:
             # Get project teams for this project
             from app.infra.db.models import ProjectTeamMember
-            
+
             project_teams = (
-                db.query(ProjectTeam)
-                .filter(ProjectTeam.project_id == project.id)
-                .all()
+                db.query(ProjectTeam).filter(ProjectTeam.project_id == project.id).all()
             )
             if project_teams:
                 # Get first team's info (or aggregate if multiple)
                 first_team = project_teams[0]
                 team_number = first_team.team_number
-                
+
                 # Get team members
                 members = (
                     db.query(ProjectTeamMember)
@@ -1024,15 +1021,13 @@ def wizard_create_project(
             status="draft",
             metadata_json={
                 "deadline": (
-                    pa_config.deadline.isoformat()
-                    if pa_config.deadline
-                    else None
+                    pa_config.deadline.isoformat() if pa_config.deadline else None
                 ),
             },
         )
         db.add(assessment)
         db.flush()
-        
+
         # Create child rows for ALL teams in the project
         for pt in project_teams:
             pat = ProjectAssessmentTeam(
@@ -1055,9 +1050,7 @@ def wizard_create_project(
                     "version": assessment.version,
                     "status": assessment.status,
                     "deadline": (
-                        pa_config.deadline.isoformat()
-                        if pa_config.deadline
-                        else None
+                        pa_config.deadline.isoformat() if pa_config.deadline else None
                     ),
                 },
             )
@@ -1333,7 +1326,7 @@ def _enrich_subproject(
         if project:
             # Get project team with this team number
             from app.infra.db.models import ProjectTeamMember
-            
+
             project_team = (
                 db.query(ProjectTeam)
                 .filter(

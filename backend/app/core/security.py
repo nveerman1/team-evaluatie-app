@@ -75,7 +75,9 @@ def decode_access_token(token: str) -> Optional[Dict[str, object]]:
         return None
 
 
-def decode_access_token_and_check_expiry(token: str) -> Tuple[Optional[Dict[str, object]], bool]:
+def decode_access_token_and_check_expiry(
+    token: str,
+) -> Tuple[Optional[Dict[str, object]], bool]:
     """
     Decode the JWT and indicate whether it failed due to expiry.
 

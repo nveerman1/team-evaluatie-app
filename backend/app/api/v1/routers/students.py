@@ -82,16 +82,19 @@ def list_students(
         val = f"%{class_or_course}%"
         class_match = User.class_name.ilike(val)
         # Also match on course name via CourseEnrollment
-        course_match = select(CourseEnrollment.student_id).join(
-            Course, CourseEnrollment.course_id == Course.id
-        ).where(
-            and_(
-                CourseEnrollment.student_id == User.id,
-                CourseEnrollment.active.is_(True),
-                Course.school_id == current_user.school_id,
-                Course.name.ilike(val),
+        course_match = (
+            select(CourseEnrollment.student_id)
+            .join(Course, CourseEnrollment.course_id == Course.id)
+            .where(
+                and_(
+                    CourseEnrollment.student_id == User.id,
+                    CourseEnrollment.active.is_(True),
+                    Course.school_id == current_user.school_id,
+                    Course.name.ilike(val),
+                )
             )
-        ).exists()
+            .exists()
+        )
         stmt = stmt.where(or_(class_match, course_match))
 
     if class_name:
@@ -104,7 +107,7 @@ def list_students(
     user_ids = [u.id for u in users]
     course_name_map = {}
     user_to_course = {}
-    
+
     if user_ids:
         # Get active enrollments
         enrollments = (
@@ -117,17 +120,20 @@ def list_students(
             )
             .all()
         )
-        
+
         for enrollment, course_name in enrollments:
             # Use first active enrollment for each student
             if enrollment.student_id not in user_to_course:
-                user_to_course[enrollment.student_id] = (enrollment.course_id, course_name)
+                user_to_course[enrollment.student_id] = (
+                    enrollment.course_id,
+                    course_name,
+                )
 
     out = []
     for u in users:
         cn = getattr(u, "class_name", None)
         course_id, course_name = user_to_course.get(u.id, (None, None))
-        
+
         out.append(
             _to_out_row(
                 u=u,
@@ -178,16 +184,12 @@ def create_student(
         c = db.get(Course, payload.course_id)
         if not c:
             raise HTTPException(status_code=404, detail="Course not found")
-        
+
         # Create enrollment
-        enrollment = CourseEnrollment(
-            course_id=c.id,
-            student_id=u.id,
-            active=True
-        )
+        enrollment = CourseEnrollment(course_id=c.id, student_id=u.id, active=True)
         db.add(enrollment)
         db.commit()
-        
+
         course_id = c.id
         course_name = c.name
 
@@ -241,17 +243,16 @@ def update_student(
         c = db.get(Course, payload.course_id)
         if not c:
             raise HTTPException(status_code=404, detail="Course not found")
-        
+
         # Find existing enrollment
         enrollment = (
             db.query(CourseEnrollment)
             .filter(
-                CourseEnrollment.student_id == u.id,
-                CourseEnrollment.course_id == c.id
+                CourseEnrollment.student_id == u.id, CourseEnrollment.course_id == c.id
             )
             .first()
         )
-        
+
         if enrollment:
             # Reactivate if inactive
             if not enrollment.active:
@@ -259,14 +260,10 @@ def update_student(
                 db.commit()
         else:
             # Create new enrollment
-            enrollment = CourseEnrollment(
-                course_id=c.id,
-                student_id=u.id,
-                active=True
-            )
+            enrollment = CourseEnrollment(course_id=c.id, student_id=u.id, active=True)
             db.add(enrollment)
             db.commit()
-        
+
         course_id = c.id
         course_name = c.name
 
@@ -282,9 +279,7 @@ def export_students_csv(
     current_user=Depends(get_current_user),
 ):
     items = list_students(db=db, current_user=current_user, limit=10_000)
-    lines = [
-        "id,name,email,class,course_id,course_name,status"
-    ]
+    lines = ["id,name,email,class,course_id,course_name,status"]
     for s in items:
         lines.append(
             f"{s.id},{s.name},{s.email},{s.class_name or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"
@@ -317,31 +312,34 @@ def list_teams(db: Session = Depends(get_db), current_user=Depends(get_current_u
     Used by the project assessment creation UI.
     """
     from app.core.rbac import require_role
+
     require_role(current_user, ["teacher", "admin"])
-    
+
     teams = (
         db.query(ProjectTeam)
         .join(Project, ProjectTeam.project_id == Project.id)
         .filter(
             ProjectTeam.school_id == current_user.school_id,
-            Project.school_id == current_user.school_id
+            Project.school_id == current_user.school_id,
         )
         .order_by(ProjectTeam.team_number.asc())
         .all()
     )
-    
+
     # Return teams in Group-compatible format
     result = []
     for team in teams:
         project = db.query(Project).filter(Project.id == team.project_id).first()
-        result.append({
-            "id": team.id,
-            "school_id": team.school_id,
-            "course_id": project.course_id if project else None,
-            "name": team.display_name_at_time or f"Team {team.team_number}",
-            "team_number": team.team_number,
-            "created_at": team.created_at.isoformat() if team.created_at else None,
-            "updated_at": team.updated_at.isoformat() if team.updated_at else None,
-        })
-    
+        result.append(
+            {
+                "id": team.id,
+                "school_id": team.school_id,
+                "course_id": project.course_id if project else None,
+                "name": team.display_name_at_time or f"Team {team.team_number}",
+                "team_number": team.team_number,
+                "created_at": team.created_at.isoformat() if team.created_at else None,
+                "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+            }
+        )
+
     return result

@@ -1,7 +1,16 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, Boolean, Integer, Text, Date, UniqueConstraint, Index
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    Boolean,
+    Integer,
+    Text,
+    Date,
+    UniqueConstraint,
+    Index,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, id_pk, tenant_fk
 

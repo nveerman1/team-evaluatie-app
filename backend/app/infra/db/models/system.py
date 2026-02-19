@@ -5,7 +5,6 @@ from sqlalchemy import (
     String,
     Integer,
     ForeignKey,
-    Boolean,
     JSON,
     UniqueConstraint,
     Index,

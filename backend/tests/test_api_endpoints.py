@@ -26,7 +26,9 @@ class TestCourseStudentsEndpoints:
         )
 
         # Mock students query
-        db.query.return_value.join.return_value.join.return_value.filter.return_value.distinct.return_value.order_by.return_value.all.return_value = []
+        db.query.return_value.join.return_value.join.return_value.filter.return_value.distinct.return_value.order_by.return_value.all.return_value = (
+            []
+        )
 
         with patch("app.api.v1.routers.courses.require_course_access"):
             result = list_course_students(course_id=1, db=db, user=user)

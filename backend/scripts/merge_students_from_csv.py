@@ -44,23 +44,37 @@ def main() -> None:
     if not args.dsn:
         raise SystemExit("Missing --dsn or DATABASE_URL")
 
-    cfg = Config(dsn=args.dsn, csv_path=args.csv, school_id=args.school_id, dry_run=args.dry_run)
+    cfg = Config(
+        dsn=args.dsn, csv_path=args.csv, school_id=args.school_id, dry_run=args.dry_run
+    )
     engine = get_engine(cfg.dsn)
 
     with engine.begin() as conn:
-        users = conn.execute(
-            text("""
+        users = (
+            conn.execute(
+                text("""
                 SELECT id, email, name, class_name, archived
                 FROM users
                 WHERE school_id = :sid AND role = 'student'
             """),
-            {"sid": cfg.school_id},
-        ).mappings().all()
+                {"sid": cfg.school_id},
+            )
+            .mappings()
+            .all()
+        )
 
     by_email = {u["email"].casefold(): dict(u) for u in users if u["email"]}
-    by_nameclass = {key_name_class(u["name"], u["class_name"] or ""): dict(u) for u in users}
+    by_nameclass = {
+        key_name_class(u["name"], u["class_name"] or ""): dict(u) for u in users
+    }
 
-    actions = {"email_match_update": 0, "nameclass_promote": 0, "create_new": 0, "merge_move": 0, "skipped": 0}
+    actions = {
+        "email_match_update": 0,
+        "nameclass_promote": 0,
+        "create_new": 0,
+        "merge_move": 0,
+        "skipped": 0,
+    }
 
     def log(msg: str) -> None:
         print(msg)
@@ -69,7 +83,9 @@ def main() -> None:
         reader = csv.DictReader(f, delimiter=";")
         required = {"name", "class", "email"}
         if not required.issubset(set(reader.fieldnames or [])):
-            raise SystemExit(f"CSV must have columns: {sorted(required)}. Found: {reader.fieldnames}")
+            raise SystemExit(
+                f"CSV must have columns: {sorted(required)}. Found: {reader.fieldnames}"
+            )
         rows = list(reader)
 
     with engine.begin() as conn:
@@ -108,21 +124,34 @@ def main() -> None:
                                     class_name = COALESCE(:class_name, class_name)
                                 WHERE id = :id
                             """),
-                            {"id": uid, "name": updates.get("name"), "class_name": updates.get("class_name")},
+                            {
+                                "id": uid,
+                                "name": updates.get("name"),
+                                "class_name": updates.get("class_name"),
+                            },
                         )
 
                 # Merge placeholder with same name+class into this email user
-                if existing_nameclass_user and int(existing_nameclass_user["id"]) != uid:
+                if (
+                    existing_nameclass_user
+                    and int(existing_nameclass_user["id"]) != uid
+                ):
                     placeholder_id = int(existing_nameclass_user["id"])
-                    log(f"[MERGE] Move data from placeholder user_id={placeholder_id} -> real user_id={uid} (name+class match)")
+                    log(
+                        f"[MERGE] Move data from placeholder user_id={placeholder_id} -> real user_id={uid} (name+class match)"
+                    )
                     actions["merge_move"] += 1
                     if not cfg.dry_run:
                         conn.execute(
-                            text("UPDATE attendance_events SET user_id=:to_id WHERE user_id=:from_id"),
+                            text(
+                                "UPDATE attendance_events SET user_id=:to_id WHERE user_id=:from_id"
+                            ),
                             {"to_id": uid, "from_id": placeholder_id},
                         )
                         conn.execute(
-                            text("UPDATE rfid_cards SET user_id=:to_id WHERE user_id=:from_id"),
+                            text(
+                                "UPDATE rfid_cards SET user_id=:to_id WHERE user_id=:from_id"
+                            ),
                             {"to_id": uid, "from_id": placeholder_id},
                         )
                         conn.execute(
@@ -135,10 +164,15 @@ def main() -> None:
             if existing_nameclass_user:
                 uid = int(existing_nameclass_user["id"])
                 old_email = existing_nameclass_user.get("email")
-                log(f"[PROMOTE] user_id={uid} {name} ({class_name}) email: {old_email} -> {email}")
+                log(
+                    f"[PROMOTE] user_id={uid} {name} ({class_name}) email: {old_email} -> {email}"
+                )
                 actions["nameclass_promote"] += 1
                 if not cfg.dry_run:
-                    conn.execute(text("UPDATE users SET email=:email WHERE id=:id"), {"id": uid, "email": email})
+                    conn.execute(
+                        text("UPDATE users SET email=:email WHERE id=:id"),
+                        {"id": uid, "email": email},
+                    )
                 continue
 
             # Case 3: create new
@@ -150,7 +184,12 @@ def main() -> None:
                         INSERT INTO users (school_id, email, name, role, auth_provider, password_hash, archived, class_name)
                         VALUES (:sid, :email, :name, 'student', 'import', NULL, false, :class_name)
                     """),
-                    {"sid": cfg.school_id, "email": email, "name": name, "class_name": class_name},
+                    {
+                        "sid": cfg.school_id,
+                        "email": email,
+                        "name": name,
+                        "class_name": class_name,
+                    },
                 )
 
     print("\nSummary:", actions)

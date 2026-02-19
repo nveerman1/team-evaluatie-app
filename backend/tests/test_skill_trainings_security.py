@@ -21,7 +21,7 @@ def test_teacher_cannot_access_other_teacher_course_progress(
     """
     Test that Teacher A cannot access progress matrix for
     a course taught by Teacher B.
-    
+
     Critical: Prevents cross-teacher data access.
     """
     pass
@@ -36,7 +36,7 @@ def test_bulk_update_validates_array_size_limits(
     Test that bulk update enforces limits:
     - Max 100 students
     - Max 50 trainings
-    
+
     Critical: Prevents DoS via large payloads.
     """
     pass
@@ -50,7 +50,7 @@ def test_bulk_update_validates_student_enrollment(
     """
     Test that bulk update verifies all students are enrolled
     in the specified course before allowing updates.
-    
+
     Critical: Prevents creating orphaned progress records.
     """
     pass
@@ -64,7 +64,7 @@ def test_bulk_update_validates_training_existence(
     """
     Test that bulk update verifies all trainings exist
     and belong to the school.
-    
+
     Critical: Prevents creating invalid progress records.
     """
     pass
@@ -78,7 +78,7 @@ def test_student_cannot_modify_teacher_feedback(
     """
     Test that students cannot update their own progress
     if it's marked as 'completed' or 'mastered' by teacher.
-    
+
     Critical: Prevents students from overriding teacher assessments.
     """
     pass
@@ -92,7 +92,7 @@ def test_student_status_restricted_to_allowed_values(
     """
     Test that students can only set status to:
     - none, planned, in_progress, submitted
-    
+
     Cannot set: completed, mastered (teacher-only)
     """
     pass

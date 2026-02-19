@@ -25,10 +25,10 @@ CATEGORY_NAME_TO_ABBREV = {
 def get_category_abbrev(category_name: str) -> str:
     """
     Convert full category name to abbreviation for frontend compatibility.
-    
+
     Args:
         category_name: Full Dutch category name (e.g., "Organiseren")
-        
+
     Returns:
         Single-letter abbreviation (e.g., "O")
     """

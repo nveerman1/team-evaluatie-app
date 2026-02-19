@@ -285,7 +285,9 @@ def compute_weighted_omza_scores_batch(
                     weight_map.get(crit_id, 1.0) for _, crit_id in peer_data
                 )
                 if weight_sum > 0:
-                    results_batch[reviewee_id][cat_name]["peer"] = weighted_sum / weight_sum
+                    results_batch[reviewee_id][cat_name]["peer"] = (
+                        weighted_sum / weight_sum
+                    )
 
             # Calculate self weighted average
             self_data = student_scores[reviewee_id][cat_name]["self"]
@@ -297,6 +299,8 @@ def compute_weighted_omza_scores_batch(
                     weight_map.get(crit_id, 1.0) for _, crit_id in self_data
                 )
                 if weight_sum > 0:
-                    results_batch[reviewee_id][cat_name]["self"] = weighted_sum / weight_sum
+                    results_batch[reviewee_id][cat_name]["self"] = (
+                        weighted_sum / weight_sum
+                    )
 
     return results_batch

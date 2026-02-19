@@ -13,7 +13,13 @@ from typing import List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.infra.db.models import User, Course, Evaluation, TeacherCourse, CourseEnrollment
+from app.infra.db.models import (
+    User,
+    Course,
+    Evaluation,
+    TeacherCourse,
+    CourseEnrollment,
+)
 
 
 class RBACError(HTTPException):

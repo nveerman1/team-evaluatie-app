@@ -440,92 +440,88 @@ def get_project_external_status(
     # Use project teams as the source of truth
     if project_teams:
         for project_team in project_teams:
-                # Skip teams without team_number as external invitations use team_number for identification
-                if project_team.team_number is None:
-                    continue
+            # Skip teams without team_number as external invitations use team_number for identification
+            if project_team.team_number is None:
+                continue
 
-                # Get team members from project_team_members
-                team_members_records = (
-                    db.query(User)
-                    .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+            # Get team members from project_team_members
+            team_members_records = (
+                db.query(User)
+                .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+                .filter(
+                    ProjectTeamMember.project_team_id == project_team.id,
+                    ProjectTeamMember.school_id == user.school_id,
+                )
+                .all()
+            )
+
+            # Build list of member names
+            member_names = ", ".join([u.name or u.email for u in team_members_records])
+            team_name = f"Team {project_team.team_number}"
+
+            # Get external link if exists for this team
+            # Filter by assessment_id if provided, otherwise by project_id + team_number
+            if assessment_id:
+                # Filter by specific assessment and team_number
+                link = (
+                    db.query(ProjectTeamExternal)
                     .filter(
-                        ProjectTeamMember.project_team_id == project_team.id,
-                        ProjectTeamMember.school_id == user.school_id,
+                        ProjectTeamExternal.assessment_id == assessment_id,
+                        ProjectTeamExternal.team_number == project_team.team_number,
+                        ProjectTeamExternal.school_id == user.school_id,
                     )
-                    .all()
+                    .first()
+                )
+            else:
+                # Match by project_id + team_number
+                link = (
+                    db.query(ProjectTeamExternal)
+                    .filter(
+                        ProjectTeamExternal.project_id == project_id,
+                        ProjectTeamExternal.team_number == project_team.team_number,
+                        ProjectTeamExternal.school_id == user.school_id,
+                    )
+                    .first()
                 )
 
-                # Build list of member names
-                member_names = ", ".join([u.name or u.email for u in team_members_records])
-                team_name = f"Team {project_team.team_number}"
+            # Use project_team_id from link if it exists, otherwise use project_team.id
+            response_team_id = link.project_team_id if link else project_team.id
 
-                # Get external link if exists for this team
-                # Filter by assessment_id if provided, otherwise by project_id + team_number
-                if assessment_id:
-                    # Filter by specific assessment and team_number
-                    link = (
-                        db.query(ProjectTeamExternal)
-                        .filter(
-                            ProjectTeamExternal.assessment_id == assessment_id,
-                            ProjectTeamExternal.team_number == project_team.team_number,
-                            ProjectTeamExternal.school_id == user.school_id,
-                        )
-                        .first()
+            # Include all teams that have team_number
+            if link:
+                evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
+                status_list.append(
+                    ExternalAssessmentStatus(
+                        team_id=response_team_id,
+                        team_number=project_team.team_number,
+                        team_name=team_name,
+                        members=member_names,
+                        external_evaluator=(
+                            ExternalEvaluatorOut.model_validate(evaluator)
+                            if evaluator
+                            else None
+                        ),
+                        status=link.status,
+                        invitation_sent=(link.status != "NOT_INVITED"),
+                        submitted_at=link.submitted_at,
+                        updated_at=link.updated_at,
                     )
-                else:
-                    # Match by project_id + team_number
-                    link = (
-                        db.query(ProjectTeamExternal)
-                        .filter(
-                            ProjectTeamExternal.project_id == project_id,
-                            ProjectTeamExternal.team_number == project_team.team_number,
-                            ProjectTeamExternal.school_id == user.school_id,
-                        )
-                        .first()
-                    )
-
-                # Use project_team_id from link if it exists, otherwise use project_team.id
-                response_team_id = (
-                    link.project_team_id
-                    if link
-                    else project_team.id
                 )
-
-                # Include all teams that have team_number
-                if link:
-                    evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
-                    status_list.append(
-                        ExternalAssessmentStatus(
-                            team_id=response_team_id,
-                            team_number=project_team.team_number,
-                            team_name=team_name,
-                            members=member_names,
-                            external_evaluator=(
-                                ExternalEvaluatorOut.model_validate(evaluator)
-                                if evaluator
-                                else None
-                            ),
-                            status=link.status,
-                            invitation_sent=(link.status != "NOT_INVITED"),
-                            submitted_at=link.submitted_at,
-                            updated_at=link.updated_at,
-                        )
+            else:
+                # Team exists but has no external invitation yet
+                status_list.append(
+                    ExternalAssessmentStatus(
+                        team_id=response_team_id,
+                        team_number=project_team.team_number,
+                        team_name=team_name,
+                        members=member_names,
+                        external_evaluator=None,
+                        status="NOT_INVITED",
+                        invitation_sent=False,
+                        submitted_at=None,
+                        updated_at=None,
                     )
-                else:
-                    # Team exists but has no external invitation yet
-                    status_list.append(
-                        ExternalAssessmentStatus(
-                            team_id=response_team_id,
-                            team_number=project_team.team_number,
-                            team_name=team_name,
-                            members=member_names,
-                            external_evaluator=None,
-                            status="NOT_INVITED",
-                            invitation_sent=False,
-                            submitted_at=None,
-                            updated_at=None,
-                        )
-                    )
+                )
     else:
         # Fallback: No project teams exist yet, get teams from external invitations
         # This ensures external invitations show up even if project teams haven't been created
@@ -713,7 +709,9 @@ def get_external_advisory_detail(
         general_comment = assessment.metadata_json.get("general_comment")
 
     # Construct team name - use "Team X" format when team_number is provided
-    team_display_name = f"Team {team_number}" if team_number is not None else f"Team {team_number}"
+    team_display_name = (
+        f"Team {team_number}" if team_number is not None else f"Team {team_number}"
+    )
 
     return ExternalAdvisoryDetail(
         team_id=project_team_id,

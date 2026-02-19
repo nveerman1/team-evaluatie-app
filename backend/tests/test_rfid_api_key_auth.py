@@ -30,7 +30,12 @@ class TestRFIDAPIKeyAuth:
         """Test that /scan endpoint returns 401 with invalid API key"""
         # Mock the settings property to return valid keys
         from app.core.config import settings
-        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["valid-key-1", "valid-key-2"])):
+
+        with patch.object(
+            type(settings),
+            "RFID_API_KEYS",
+            property(lambda self: ["valid-key-1", "valid-key-2"]),
+        ):
             response = client.post(
                 "/api/v1/attendance/scan",
                 json={"uid": "1234567890"},
@@ -43,7 +48,10 @@ class TestRFIDAPIKeyAuth:
         """Test that /scan endpoint accepts valid API key but returns not_found for unknown UID"""
         # Mock the settings property to return valid keys
         from app.core.config import settings
-        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-api-key-123"])):
+
+        with patch.object(
+            type(settings), "RFID_API_KEYS", property(lambda self: ["test-api-key-123"])
+        ):
             response = client.post(
                 "/api/v1/attendance/scan",
                 json={"uid": "unknown-uid"},
@@ -58,6 +66,7 @@ class TestRFIDAPIKeyAuth:
         """Test that /scan endpoint returns 503 when RFID_API_KEYS is not configured"""
         # Mock the settings property to return empty list
         from app.core.config import settings
+
         with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: [])):
             response = client.post(
                 "/api/v1/attendance/scan",
@@ -71,7 +80,12 @@ class TestRFIDAPIKeyAuth:
         """Test that any of multiple valid API keys work"""
         # Mock the settings property to return multiple valid keys
         from app.core.config import settings
-        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["key1", "key2", "key3"])):
+
+        with patch.object(
+            type(settings),
+            "RFID_API_KEYS",
+            property(lambda self: ["key1", "key2", "key3"]),
+        ):
             # Test with second key
             response = client.post(
                 "/api/v1/attendance/scan",
@@ -79,7 +93,7 @@ class TestRFIDAPIKeyAuth:
                 headers={"X-API-Key": "key2"},
             )
             assert response.status_code == 200
-            
+
             # Test with third key
             response = client.post(
                 "/api/v1/attendance/scan",
@@ -98,7 +112,10 @@ class TestRFIDScanCSRFExemption:
         This simulates the real-world scenario: Raspberry Pi RFID scanner using API key auth.
         """
         from app.core.config import settings
-        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])):
+
+        with patch.object(
+            type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])
+        ):
             # No Origin or Referer headers - should still work (CSRF exempt)
             response = client.post(
                 "/api/v1/attendance/scan",
@@ -116,7 +133,10 @@ class TestRFIDScanCSRFExemption:
         they cannot exploit it without a valid API key.
         """
         from app.core.config import settings
-        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])):
+
+        with patch.object(
+            type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])
+        ):
             # Evil origin header - should still work because CSRF is exempt
             response = client.post(
                 "/api/v1/attendance/scan",
@@ -136,7 +156,10 @@ class TestRFIDScanCSRFExemption:
         CSRF exemption does NOT bypass API key authentication.
         """
         from app.core.config import settings
-        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])):
+
+        with patch.object(
+            type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])
+        ):
             # Valid origin but no API key - should fail
             response = client.post(
                 "/api/v1/attendance/scan",
@@ -145,5 +168,3 @@ class TestRFIDScanCSRFExemption:
             )
             assert response.status_code == 401
             assert "API key required" in response.json()["detail"]
-
-

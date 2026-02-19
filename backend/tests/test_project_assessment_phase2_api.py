@@ -8,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timezone
 
 from app.main import app
 from app.api.v1.deps import get_db
@@ -21,7 +20,6 @@ from app.infra.db.models import (
     Project,
     Rubric,
     ProjectTeam,
-    ProjectTeamMember,
     ProjectAssessment,
 )
 
@@ -34,24 +32,24 @@ def test_db():
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
     )
-    
+
     # For SQLite, we need to enable foreign keys
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=OFF")  # Disable FK checks for test setup
         cursor.close()
-    
+
     # Create ALL tables - SQLite will convert ARRAY to TEXT automatically
     # This avoids foreign key dependency issues
     Base.metadata.create_all(engine)
-    
+
     # Use sessionmaker for proper session management
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = TestingSessionLocal()
-    
+
     yield db
-    
+
     db.close()
     engine.dispose()
 
@@ -59,16 +57,18 @@ def test_db():
 @pytest.fixture
 def client(test_db, test_teacher):
     """Create a test client with database and auth overrides"""
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
-    
+
     def override_get_current_user():
         return test_teacher
-    
+
     from app.api.v1.deps import get_current_user
+
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
     # Set base_url to avoid CSRF validation in tests
@@ -117,7 +117,7 @@ def test_course(test_db, test_school, test_teacher):
     )
     test_db.add(course)
     test_db.commit()
-    
+
     # Link teacher to course for RBAC
     teacher_course = TeacherCourse(
         school_id=test_school.id,
@@ -128,7 +128,7 @@ def test_course(test_db, test_school, test_teacher):
     )
     test_db.add(teacher_course)
     test_db.commit()
-    
+
     return course
 
 
@@ -182,7 +182,13 @@ def test_project_team(test_db, test_school, test_project):
 
 
 def test_create_assessment_with_project_team_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
+    client,
+    test_db,
+    test_school,
+    test_teacher,
+    test_project,
+    test_rubric,
+    test_project_team,
 ):
     """Test creating a project assessment with project_team_id"""
     response = client.post(
@@ -194,24 +200,34 @@ def test_create_assessment_with_project_team_id(
             "title": "Test Assessment",
             "version": "eind",
         },
-        headers={"Origin": "http://testserver"}  # Add Origin header to pass CSRF validation
+        headers={
+            "Origin": "http://testserver"
+        },  # Add Origin header to pass CSRF validation
     )
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["project_team_id"] == test_project_team.id
     assert data["title"] == "Test Assessment"
-    
+
     # Verify in database
-    assessment = test_db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == data["id"]
-    ).first()
+    assessment = (
+        test_db.query(ProjectAssessment)
+        .filter(ProjectAssessment.id == data["id"])
+        .first()
+    )
     assert assessment is not None
     assert assessment.project_team_id == test_project_team.id
 
 
 def test_list_assessments_by_project_team_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
+    client,
+    test_db,
+    test_school,
+    test_teacher,
+    test_project,
+    test_rubric,
+    test_project_team,
 ):
     """Test listing assessments filtered by project_team_id"""
     # Create test assessments
@@ -235,12 +251,12 @@ def test_list_assessments_by_project_team_id(
     )
     test_db.add_all([assessment1, assessment2])
     test_db.commit()
-    
+
     # Test filtering by project_team_id
     response = client.get(
         f"/api/v1/project-assessments?project_team_id={test_project_team.id}"
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 2
@@ -248,7 +264,13 @@ def test_list_assessments_by_project_team_id(
 
 
 def test_assessment_response_includes_project_team_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
+    client,
+    test_db,
+    test_school,
+    test_teacher,
+    test_project,
+    test_rubric,
+    test_project_team,
 ):
     """Test that assessment responses include project_team_id"""
     # Create test assessment
@@ -263,9 +285,9 @@ def test_assessment_response_includes_project_team_id(
     )
     test_db.add(assessment)
     test_db.commit()
-    
+
     response = client.get("/api/v1/project-assessments")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert len(data["items"]) == 1

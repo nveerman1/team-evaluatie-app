@@ -1,7 +1,15 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, Boolean, Text, DateTime, UniqueConstraint, Index
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    Boolean,
+    Text,
+    DateTime,
+    UniqueConstraint,
+    Index,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import sqlalchemy as sa
 from .base import Base, id_pk, tenant_fk
@@ -181,11 +189,16 @@ class ProjectPlanSection(Base):
     )
 
     # Relationships
-    project_plan_team: Mapped["ProjectPlanTeam"] = relationship(back_populates="sections")
+    project_plan_team: Mapped["ProjectPlanTeam"] = relationship(
+        back_populates="sections"
+    )
 
     __table_args__ = (
         UniqueConstraint(
-            "school_id", "project_plan_team_id", "key", name="uq_project_plan_team_section_key"
+            "school_id",
+            "project_plan_team_id",
+            "key",
+            name="uq_project_plan_team_section_key",
         ),
         Index("ix_pps_project_plan_team", "project_plan_team_id"),
         Index("ix_pps_key", "key"),

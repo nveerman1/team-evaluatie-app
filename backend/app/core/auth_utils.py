@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 def normalize_email(email: str | None) -> str:
     """
     Normalize an email address for authentication + user lookup.

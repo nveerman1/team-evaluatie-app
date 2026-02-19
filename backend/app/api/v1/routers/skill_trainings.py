@@ -8,7 +8,6 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -41,34 +40,28 @@ router = APIRouter(prefix="/skill-trainings", tags=["skill-trainings"])
 # ============ Helper Functions ============
 
 
-def _verify_teacher_course_access(
-    db: Session, 
-    user: User, 
-    course_id: int
-) -> None:
+def _verify_teacher_course_access(db: Session, user: User, course_id: int) -> None:
     """
     Verify that a teacher has access to the given course.
     Admins have access to all courses in their school.
     Teachers must be explicitly assigned to the course via TeacherCourse.
-    
+
     Raises HTTPException(403) if access is denied.
     """
     if user.role == "admin":
         # Admins can access all courses in their school
         course = db.execute(
             select(Course).where(
-                Course.id == course_id,
-                Course.school_id == user.school_id
+                Course.id == course_id, Course.school_id == user.school_id
             )
         ).scalar_one_or_none()
-        
+
         if not course:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
             )
         return
-    
+
     if user.role == "teacher":
         # Teachers must be assigned to the course
         teacher_course = db.execute(
@@ -76,21 +69,20 @@ def _verify_teacher_course_access(
                 TeacherCourse.course_id == course_id,
                 TeacherCourse.teacher_id == user.id,
                 TeacherCourse.school_id == user.school_id,
-                TeacherCourse.is_active == True
+                TeacherCourse.is_active == True,
             )
         ).scalar_one_or_none()
-        
+
         if not teacher_course:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have access to this course"
+                detail="You do not have access to this course",
             )
         return
-    
+
     # Students and other roles should not call this function
     raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Insufficient permissions"
+        status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
     )
 
 
@@ -106,8 +98,12 @@ def _to_skill_training_out(training: SkillTraining) -> SkillTrainingOut:
         level=training.level,
         est_minutes=training.est_minutes,
         is_active=training.is_active,
-        competency_category_name=training.competency_category.name if training.competency_category else None,
-        learning_objective_title=training.learning_objective.title if training.learning_objective else None,
+        competency_category_name=(
+            training.competency_category.name if training.competency_category else None
+        ),
+        learning_objective_title=(
+            training.learning_objective.title if training.learning_objective else None
+        ),
         created_at=training.created_at,
         updated_at=training.updated_at,
     )
@@ -124,39 +120,37 @@ def list_trainings(
 ):
     """
     List all skill trainings for the current user's school.
-    
+
     - Teacher/Admin: Can view all trainings
     - Student: Can view active trainings only
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     # Base query scoped to school with eager loading
-    query = select(SkillTraining).where(
-        SkillTraining.school_id == user.school_id
-    ).options(
-        joinedload(SkillTraining.competency_category),
-        joinedload(SkillTraining.learning_objective)
+    query = (
+        select(SkillTraining)
+        .where(SkillTraining.school_id == user.school_id)
+        .options(
+            joinedload(SkillTraining.competency_category),
+            joinedload(SkillTraining.learning_objective),
+        )
     )
-    
+
     # Students can only see active trainings
     if user.role == "student":
         query = query.where(SkillTraining.is_active == True)
     elif is_active is not None:
         # Teachers/admins can filter by is_active
         query = query.where(SkillTraining.is_active == is_active)
-    
+
     # Order by category and title
-    query = query.order_by(
-        SkillTraining.competency_category_id,
-        SkillTraining.title
-    )
-    
+    query = query.order_by(SkillTraining.competency_category_id, SkillTraining.title)
+
     trainings = db.execute(query).scalars().all()
-    
+
     return [_to_skill_training_out(t) for t in trainings]
 
 
@@ -168,39 +162,38 @@ def create_training(
 ):
     """
     Create a new skill training.
-    
+
     - Teacher/Admin only
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     # Check role
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can create trainings"
+            detail="Only teachers and admins can create trainings",
         )
-    
+
     # Verify competency category exists and belongs to school
     category = db.get(CompetencyCategory, payload.competency_category_id)
     if not category or category.school_id != user.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Competency category not found"
+            detail="Competency category not found",
         )
-    
+
     # Verify learning objective exists and belongs to school (if provided)
     if payload.learning_objective_id:
         objective = db.get(LearningObjective, payload.learning_objective_id)
         if not objective or objective.school_id != user.school_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Learning objective not found"
+                detail="Learning objective not found",
             )
-    
+
     # Create training
     training = SkillTraining(
         school_id=user.school_id,
@@ -212,21 +205,21 @@ def create_training(
         est_minutes=payload.est_minutes,
         is_active=payload.is_active,
     )
-    
+
     db.add(training)
     db.commit()
     db.refresh(training)
-    
+
     # Eager load relationships for output
     training = db.execute(
         select(SkillTraining)
         .where(SkillTraining.id == training.id)
         .options(
             joinedload(SkillTraining.competency_category),
-            joinedload(SkillTraining.learning_objective)
+            joinedload(SkillTraining.learning_objective),
         )
     ).scalar_one()
-    
+
     return _to_skill_training_out(training)
 
 
@@ -239,66 +232,64 @@ def update_training(
 ):
     """
     Update a skill training.
-    
+
     - Teacher/Admin only
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     # Check role
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can update trainings"
+            detail="Only teachers and admins can update trainings",
         )
-    
+
     # Get training
     training = db.get(SkillTraining, training_id)
     if not training or training.school_id != user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Training not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Training not found"
         )
-    
+
     # Verify competency category if being updated
     if payload.competency_category_id is not None:
         category = db.get(CompetencyCategory, payload.competency_category_id)
         if not category or category.school_id != user.school_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Competency category not found"
+                detail="Competency category not found",
             )
-    
+
     # Verify learning objective if being updated
     if payload.learning_objective_id is not None:
         objective = db.get(LearningObjective, payload.learning_objective_id)
         if not objective or objective.school_id != user.school_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Learning objective not found"
+                detail="Learning objective not found",
             )
-    
+
     # Update fields
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(training, field, value)
-    
+
     db.commit()
     db.refresh(training)
-    
+
     # Eager load relationships for output
     training = db.execute(
         select(SkillTraining)
         .where(SkillTraining.id == training.id)
         .options(
             joinedload(SkillTraining.competency_category),
-            joinedload(SkillTraining.learning_objective)
+            joinedload(SkillTraining.learning_objective),
         )
     ).scalar_one()
-    
+
     return _to_skill_training_out(training)
 
 
@@ -314,94 +305,98 @@ def get_progress_matrix(
 ):
     """
     Get progress matrix for a course.
-    
+
     Returns all active trainings and all students in the course with their progress.
-    
+
     - Teacher/Admin only
     - Teachers can only access courses they are assigned to
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     # Check role
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can view progress"
+            detail="Only teachers and admins can view progress",
         )
-    
+
     # Verify teacher has access to this course
     _verify_teacher_course_access(db, user, course_id)
-    
+
     # Get all active trainings for school
-    trainings_query = select(SkillTraining).where(
-        SkillTraining.school_id == user.school_id,
-        SkillTraining.is_active == True
-    ).options(
-        joinedload(SkillTraining.competency_category),
-        joinedload(SkillTraining.learning_objective)
-    ).order_by(
-        SkillTraining.competency_category_id,
-        SkillTraining.title
+    trainings_query = (
+        select(SkillTraining)
+        .where(
+            SkillTraining.school_id == user.school_id, SkillTraining.is_active == True
+        )
+        .options(
+            joinedload(SkillTraining.competency_category),
+            joinedload(SkillTraining.learning_objective),
+        )
+        .order_by(SkillTraining.competency_category_id, SkillTraining.title)
     )
-    
+
     trainings = db.execute(trainings_query).scalars().all()
-    
+
     # Get all students enrolled in the course
-    enrollments_query = select(CourseEnrollment).where(
-        CourseEnrollment.course_id == course_id,
-        CourseEnrollment.active == True
-    ).options(joinedload(CourseEnrollment.student))
-    
+    enrollments_query = (
+        select(CourseEnrollment)
+        .where(CourseEnrollment.course_id == course_id, CourseEnrollment.active == True)
+        .options(joinedload(CourseEnrollment.student))
+    )
+
     enrollments = db.execute(enrollments_query).scalars().all()
-    
+
     # Filter by class_name if provided
     if class_name:
         enrollments = [e for e in enrollments if e.student.class_name == class_name]
-    
+
     # Get all progress records for these students and this course
     student_ids = [e.student_id for e in enrollments]
-    
+
     progress_query = select(SkillTrainingProgress).where(
         SkillTrainingProgress.course_id == course_id,
-        SkillTrainingProgress.student_id.in_(student_ids)
+        SkillTrainingProgress.student_id.in_(student_ids),
     )
-    
+
     progress_records = db.execute(progress_query).scalars().all()
-    
+
     # Build progress map: student_id -> training_id -> status
     progress_map = {}
     for p in progress_records:
         if p.student_id not in progress_map:
             progress_map[p.student_id] = {}
         progress_map[p.student_id][p.training_id] = p.status
-    
+
     # Build student rows
     students = []
     for enrollment in enrollments:
         student = enrollment.student
         student_progress = progress_map.get(student.id, {})
-        
-        students.append(StudentProgressRow(
-            student_id=student.id,
-            student_name=student.name,
-            class_name=student.class_name,
-            progress=student_progress
-        ))
-    
+
+        students.append(
+            StudentProgressRow(
+                student_id=student.id,
+                student_name=student.name,
+                class_name=student.class_name,
+                progress=student_progress,
+            )
+        )
+
     # Sort students by name
     students.sort(key=lambda s: s.student_name)
-    
+
     return TeacherProgressMatrixResponse(
-        trainings=[_to_skill_training_out(t) for t in trainings],
-        students=students
+        trainings=[_to_skill_training_out(t) for t in trainings], students=students
     )
 
 
-@router.patch("/progress/{student_id}/{training_id}", response_model=SkillTrainingProgressOut)
+@router.patch(
+    "/progress/{student_id}/{training_id}", response_model=SkillTrainingProgressOut
+)
 def update_single_progress(
     student_id: int = Path(..., description="Student ID"),
     training_id: int = Path(..., description="Training ID"),
@@ -413,66 +408,63 @@ def update_single_progress(
 ):
     """
     Update a single student's progress for a training.
-    
+
     - Teacher/Admin only
     - Teachers can only update progress for students in courses they teach
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     # Check role
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can update progress"
+            detail="Only teachers and admins can update progress",
         )
-    
+
     # Verify teacher has access to this course
     _verify_teacher_course_access(db, user, course_id)
-    
+
     # Verify student exists and belongs to school
     student = db.get(User, student_id)
     if not student or student.school_id != user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
         )
-    
+
     # Verify student is enrolled in the course
     enrollment = db.execute(
         select(CourseEnrollment).where(
             CourseEnrollment.student_id == student_id,
             CourseEnrollment.course_id == course_id,
-            CourseEnrollment.active == True
+            CourseEnrollment.active == True,
         )
     ).scalar_one_or_none()
-    
+
     if not enrollment:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Student is not enrolled in this course"
+            detail="Student is not enrolled in this course",
         )
-    
+
     # Verify training exists and belongs to school
     training = db.get(SkillTraining, training_id)
     if not training or training.school_id != user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Training not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Training not found"
         )
-    
+
     # Get or create progress record
     progress = db.execute(
         select(SkillTrainingProgress).where(
             SkillTrainingProgress.student_id == student_id,
             SkillTrainingProgress.training_id == training_id,
-            SkillTrainingProgress.course_id == course_id
+            SkillTrainingProgress.course_id == course_id,
         )
     ).scalar_one_or_none()
-    
+
     if progress:
         # Update existing
         progress.status = status
@@ -487,13 +479,13 @@ def update_single_progress(
             training_id=training_id,
             status=status,
             note=note,
-            updated_by_user_id=user.id
+            updated_by_user_id=user.id,
         )
         db.add(progress)
-    
+
     db.commit()
     db.refresh(progress)
-    
+
     return SkillTrainingProgressOut.model_validate(progress)
 
 
@@ -506,85 +498,96 @@ def bulk_update_progress(
 ):
     """
     Bulk update progress for multiple students and trainings.
-    
+
     - Teacher/Admin only
     - Teachers can only update progress for students in courses they teach
     - Validates all students and trainings exist before updating
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     # Check role
     if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can update progress"
+            detail="Only teachers and admins can update progress",
         )
-    
+
     # Verify teacher has access to this course
     _verify_teacher_course_access(db, user, course_id)
-    
+
     # Validate payload limits (additional validation on top of Pydantic)
     if len(payload.student_ids) > 100:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum 100 students per bulk update"
+            detail="Maximum 100 students per bulk update",
         )
-    
+
     if len(payload.training_ids) > 50:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum 50 trainings per bulk update"
+            detail="Maximum 50 trainings per bulk update",
         )
-    
+
     # Validate all students exist and belong to school
-    students = db.execute(
-        select(User).where(
-            User.id.in_(payload.student_ids),
-            User.school_id == user.school_id,
-            User.role == "student"
+    students = (
+        db.execute(
+            select(User).where(
+                User.id.in_(payload.student_ids),
+                User.school_id == user.school_id,
+                User.role == "student",
+            )
         )
-    ).scalars().all()
-    
+        .scalars()
+        .all()
+    )
+
     if len(students) != len(payload.student_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="One or more student IDs are invalid"
+            detail="One or more student IDs are invalid",
         )
-    
+
     # Validate all students are enrolled in the course
-    enrollments = db.execute(
-        select(CourseEnrollment).where(
-            CourseEnrollment.student_id.in_(payload.student_ids),
-            CourseEnrollment.course_id == course_id,
-            CourseEnrollment.active == True
+    enrollments = (
+        db.execute(
+            select(CourseEnrollment).where(
+                CourseEnrollment.student_id.in_(payload.student_ids),
+                CourseEnrollment.course_id == course_id,
+                CourseEnrollment.active == True,
+            )
         )
-    ).scalars().all()
-    
+        .scalars()
+        .all()
+    )
+
     enrolled_student_ids = {e.student_id for e in enrollments}
     if len(enrolled_student_ids) != len(payload.student_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="One or more students are not enrolled in this course"
+            detail="One or more students are not enrolled in this course",
         )
-    
+
     # Validate all trainings exist and belong to school
-    trainings = db.execute(
-        select(SkillTraining).where(
-            SkillTraining.id.in_(payload.training_ids),
-            SkillTraining.school_id == user.school_id
+    trainings = (
+        db.execute(
+            select(SkillTraining).where(
+                SkillTraining.id.in_(payload.training_ids),
+                SkillTraining.school_id == user.school_id,
+            )
         )
-    ).scalars().all()
-    
+        .scalars()
+        .all()
+    )
+
     if len(trainings) != len(payload.training_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="One or more training IDs are invalid"
+            detail="One or more training IDs are invalid",
         )
-    
+
     # All validations passed - proceed with bulk update
     for student_id in payload.student_ids:
         for training_id in payload.training_ids:
@@ -593,10 +596,10 @@ def bulk_update_progress(
                 select(SkillTrainingProgress).where(
                     SkillTrainingProgress.student_id == student_id,
                     SkillTrainingProgress.training_id == training_id,
-                    SkillTrainingProgress.course_id == course_id
+                    SkillTrainingProgress.course_id == course_id,
                 )
             ).scalar_one_or_none()
-            
+
             if progress:
                 # Update existing
                 progress.status = payload.status
@@ -609,12 +612,12 @@ def bulk_update_progress(
                     student_id=student_id,
                     training_id=training_id,
                     status=payload.status,
-                    updated_by_user_id=user.id
+                    updated_by_user_id=user.id,
                 )
                 db.add(progress)
-    
+
     db.commit()
-    
+
     return None
 
 
@@ -628,77 +631,84 @@ def get_my_trainings(
 ):
     """
     Get all trainings with the student's progress.
-    
+
     - Student only
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     if user.role != "student":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint is for students only"
+            detail="This endpoint is for students only",
         )
-    
+
     # Get student's courses
-    enrollments = db.execute(
-        select(CourseEnrollment).where(
-            CourseEnrollment.student_id == user.id,
-            CourseEnrollment.active == True
+    enrollments = (
+        db.execute(
+            select(CourseEnrollment).where(
+                CourseEnrollment.student_id == user.id, CourseEnrollment.active == True
+            )
         )
-    ).scalars().all()
-    
+        .scalars()
+        .all()
+    )
+
     if not enrollments:
         # Student not enrolled in any course
         return StudentTrainingListResponse(items=[])
-    
+
     # Use first active enrollment for now (could be extended to support multiple courses)
     course_id = enrollments[0].course_id
-    
+
     # Get all active trainings
-    trainings_query = select(SkillTraining).where(
-        SkillTraining.school_id == user.school_id,
-        SkillTraining.is_active == True
-    ).options(
-        joinedload(SkillTraining.competency_category),
-        joinedload(SkillTraining.learning_objective)
-    ).order_by(
-        SkillTraining.competency_category_id,
-        SkillTraining.title
+    trainings_query = (
+        select(SkillTraining)
+        .where(
+            SkillTraining.school_id == user.school_id, SkillTraining.is_active == True
+        )
+        .options(
+            joinedload(SkillTraining.competency_category),
+            joinedload(SkillTraining.learning_objective),
+        )
+        .order_by(SkillTraining.competency_category_id, SkillTraining.title)
     )
-    
+
     trainings = db.execute(trainings_query).scalars().all()
-    
+
     # Get student's progress
     progress_query = select(SkillTrainingProgress).where(
         SkillTrainingProgress.student_id == user.id,
-        SkillTrainingProgress.course_id == course_id
+        SkillTrainingProgress.course_id == course_id,
     )
-    
+
     progress_records = db.execute(progress_query).scalars().all()
-    
+
     # Build progress map
     progress_map = {p.training_id: p for p in progress_records}
-    
+
     # Build items
     items = []
     for training in trainings:
         progress = progress_map.get(training.id)
-        
-        items.append(StudentTrainingItem(
-            training=_to_skill_training_out(training),
-            status=progress.status if progress else "none",
-            note=progress.note if progress else None,
-            updated_at=progress.updated_at if progress else None
-        ))
-    
+
+        items.append(
+            StudentTrainingItem(
+                training=_to_skill_training_out(training),
+                status=progress.status if progress else "none",
+                note=progress.note if progress else None,
+                updated_at=progress.updated_at if progress else None,
+            )
+        )
+
     return StudentTrainingListResponse(items=items)
 
 
-@router.patch("/me/skill-trainings/{training_id}", response_model=SkillTrainingProgressOut)
+@router.patch(
+    "/me/skill-trainings/{training_id}", response_model=SkillTrainingProgressOut
+)
 def update_my_status(
     training_id: int = Path(..., description="Training ID"),
     payload: StudentStatusUpdate = ...,
@@ -707,70 +717,71 @@ def update_my_status(
 ):
     """
     Update the student's own status for a training.
-    
+
     - Student only
     - Can only set status to: none, planned, in_progress, submitted
     - Cannot update if current status is completed or mastered
     """
     if not user or not user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
-    
+
     if user.role != "student":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint is for students only"
+            detail="This endpoint is for students only",
         )
-    
+
     # Validate status is allowed for students
     if payload.status not in STUDENT_ALLOWED_STATUSES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Students can only set status to: {', '.join(STUDENT_ALLOWED_STATUSES)}"
+            detail=f"Students can only set status to: {', '.join(STUDENT_ALLOWED_STATUSES)}",
         )
-    
+
     # Verify training exists and belongs to school
     training = db.get(SkillTraining, training_id)
     if not training or training.school_id != user.school_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Training not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Training not found"
         )
-    
+
     # Get student's course
-    enrollment = db.execute(
-        select(CourseEnrollment).where(
-            CourseEnrollment.student_id == user.id,
-            CourseEnrollment.active == True
+    enrollment = (
+        db.execute(
+            select(CourseEnrollment).where(
+                CourseEnrollment.student_id == user.id, CourseEnrollment.active == True
+            )
         )
-    ).scalars().first()
-    
+        .scalars()
+        .first()
+    )
+
     if not enrollment:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Student not enrolled in any active course"
+            detail="Student not enrolled in any active course",
         )
-    
+
     course_id = enrollment.course_id
-    
+
     # Get or create progress record
     progress = db.execute(
         select(SkillTrainingProgress).where(
             SkillTrainingProgress.student_id == user.id,
             SkillTrainingProgress.training_id == training_id,
-            SkillTrainingProgress.course_id == course_id
+            SkillTrainingProgress.course_id == course_id,
         )
     ).scalar_one_or_none()
-    
+
     # Check if current status is locked (completed/mastered)
     if progress and progress.status in ("completed", "mastered"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot update status once it has been marked as completed or mastered by teacher"
+            detail="Cannot update status once it has been marked as completed or mastered by teacher",
         )
-    
+
     if progress:
         # Update existing
         progress.status = payload.status
@@ -785,11 +796,11 @@ def update_my_status(
             training_id=training_id,
             status=payload.status,
             note=payload.note,
-            updated_by_user_id=user.id
+            updated_by_user_id=user.id,
         )
         db.add(progress)
-    
+
     db.commit()
     db.refresh(progress)
-    
+
     return SkillTrainingProgressOut.model_validate(progress)

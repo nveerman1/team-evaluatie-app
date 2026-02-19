@@ -7,10 +7,11 @@ from datetime import datetime
 from typing import Optional, List, Dict, Literal
 from pydantic import BaseModel, Field
 
-
 # ============ Status Type ============
 
-SkillTrainingStatus = Literal["none", "planned", "in_progress", "submitted", "completed", "mastered"]
+SkillTrainingStatus = Literal[
+    "none", "planned", "in_progress", "submitted", "completed", "mastered"
+]
 
 # Statuses that students are allowed to set
 STUDENT_ALLOWED_STATUSES = {"none", "planned", "in_progress", "submitted"}
@@ -31,11 +32,13 @@ class SkillTrainingBase(BaseModel):
 
 class SkillTrainingCreate(SkillTrainingBase):
     """Schema for creating a new skill training (teacher/admin only)"""
+
     pass
 
 
 class SkillTrainingUpdate(BaseModel):
     """Schema for updating a skill training (teacher/admin only, all fields optional)"""
+
     title: Optional[str] = Field(None, max_length=200)
     url: Optional[str] = Field(None, max_length=500)
     competency_category_id: Optional[int] = None
@@ -47,6 +50,7 @@ class SkillTrainingUpdate(BaseModel):
 
 class SkillTrainingOut(SkillTrainingBase):
     """Schema for skill training output with computed fields"""
+
     id: int
     school_id: int
     competency_category_name: Optional[str] = None
@@ -63,6 +67,7 @@ class SkillTrainingOut(SkillTrainingBase):
 
 class SkillTrainingProgressOut(BaseModel):
     """Schema for skill training progress output"""
+
     id: int
     student_id: int
     training_id: int
@@ -78,6 +83,7 @@ class SkillTrainingProgressOut(BaseModel):
 
 class StudentProgressRow(BaseModel):
     """Schema for a single student's progress across all trainings (matrix view)"""
+
     student_id: int
     student_name: str
     class_name: Optional[str] = None
@@ -86,19 +92,26 @@ class StudentProgressRow(BaseModel):
 
 class TeacherProgressMatrixResponse(BaseModel):
     """Schema for teacher progress matrix view response"""
+
     trainings: List[SkillTrainingOut]
     students: List[StudentProgressRow]
 
 
 class BulkProgressUpdate(BaseModel):
     """Schema for bulk progress update (teacher only)"""
-    student_ids: List[int] = Field(..., max_items=100, description="Max 100 students per bulk update")
-    training_ids: List[int] = Field(..., max_items=50, description="Max 50 trainings per bulk update")
+
+    student_ids: List[int] = Field(
+        ..., max_items=100, description="Max 100 students per bulk update"
+    )
+    training_ids: List[int] = Field(
+        ..., max_items=50, description="Max 50 trainings per bulk update"
+    )
     status: SkillTrainingStatus
 
 
 class StudentTrainingItem(BaseModel):
     """Schema for a single training item with student's progress"""
+
     training: SkillTrainingOut
     status: SkillTrainingStatus
     note: Optional[str] = None
@@ -107,10 +120,12 @@ class StudentTrainingItem(BaseModel):
 
 class StudentTrainingListResponse(BaseModel):
     """Schema for student's training list response"""
+
     items: List[StudentTrainingItem]
 
 
 class StudentStatusUpdate(BaseModel):
     """Schema for student updating their own status"""
+
     status: SkillTrainingStatus
     note: Optional[str] = Field(None, max_length=2000)

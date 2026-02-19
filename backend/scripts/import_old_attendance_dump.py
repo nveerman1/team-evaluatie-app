@@ -11,7 +11,6 @@ from typing import Any, Iterator, List, Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
-
 # ---------------------------
 # Config
 # ---------------------------
@@ -190,7 +189,6 @@ def _parse_mysql_tuple(tup: str) -> List[Any]:
 # ---------------------------
 
 
-
 def norm(s: Any) -> str:
     if s is None:
         return ""
@@ -250,13 +248,11 @@ def load_existing_users(engine: Engine, school_id: int) -> dict[tuple[str, str],
     with engine.begin() as conn:
         rows = (
             conn.execute(
-                text(
-                    """
+                text("""
                 SELECT id, name, class_name
                 FROM users
                 WHERE school_id = :sid AND role = 'student'
-            """
-                ),
+            """),
                 {"sid": school_id},
             )
             .mappings()
@@ -285,8 +281,7 @@ def upsert_user_and_rfid(
 
     # Create / fetch user by (school_id, email) uniqueness
     user_id = conn.execute(
-        text(
-            """
+        text("""
             INSERT INTO users (school_id, email, name, role, auth_provider, password_hash, archived, class_name)
             VALUES (:sid, :email, :name, 'student', 'import', NULL, false, :class_name)
             ON CONFLICT (school_id, email)
@@ -294,8 +289,7 @@ def upsert_user_and_rfid(
                 name = EXCLUDED.name,
                 class_name = COALESCE(EXCLUDED.class_name, users.class_name)
             RETURNING id
-        """
-        ),
+        """),
         {
             "sid": school_id,
             "email": email,
@@ -307,14 +301,12 @@ def upsert_user_and_rfid(
     if rfid_uid:
         # RFIDCard.uid is unique
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO rfid_cards (user_id, uid, label, is_active, created_by, created_at, updated_at)
                 VALUES (:uid_user, :rfid, NULL, true, NULL, NOW(), NOW())
                 ON CONFLICT (uid)
                 DO UPDATE SET user_id = EXCLUDED.user_id, is_active = true, updated_at = NOW()
-            """
-            ),
+            """),
             {"uid_user": int(user_id), "rfid": rfid_uid},
         )
 
@@ -344,8 +336,7 @@ def insert_attendance_event(
     check_in, check_out = ensure_check_order(check_in, check_out)
 
     conn.execute(
-        text(
-            """
+        text("""
             INSERT INTO attendance_events
                 (user_id, project_id, check_in, check_out, is_external, location, description,
                  approval_status, approved_by, approved_at, source, created_at, updated_at, created_by)
@@ -353,8 +344,7 @@ def insert_attendance_event(
                 (:user_id, NULL, :check_in, :check_out, :is_external, :location, :description,
                  :approval_status, NULL, :approved_at, :source, NOW(), NOW(), NULL)
             ON CONFLICT DO NOTHING
-        """
-        ),
+        """),
         {
             "user_id": user_id,
             "check_in": check_in,
@@ -436,13 +426,11 @@ def main():
                 # still ensure RFIDCard exists
                 uid = st["uid"]
                 conn.execute(
-                    text(
-                        """
+                    text("""
                         INSERT INTO rfid_cards (user_id, uid, label, is_active, created_by, created_at, updated_at)
                         VALUES (:user_id, :rfid, NULL, true, NULL, NOW(), NOW())
                         ON CONFLICT (uid) DO UPDATE SET user_id = EXCLUDED.user_id, is_active = true, updated_at = NOW()
-                    """
-                    ),
+                    """),
                     {"user_id": nameclass_to_userid[k], "rfid": uid},
                 )
                 continue

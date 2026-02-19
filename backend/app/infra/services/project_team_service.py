@@ -12,7 +12,6 @@ from app.infra.db.models import (
     Project,
     User,
     Evaluation,
-    ProjectAssessment,
     ProjectAssessmentTeam,
     ProjectNotesContext,
 )
@@ -354,7 +353,7 @@ class ProjectTeamService:
     ) -> List[ProjectTeamMember]:
         """
         DEPRECATED: Groups no longer exist after migration
-        
+
         This function is kept for backward compatibility but does nothing.
         Use add_members() directly to add members to project teams.
 

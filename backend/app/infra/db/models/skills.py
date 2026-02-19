@@ -1,7 +1,16 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime, date
-from sqlalchemy import String, ForeignKey, Boolean, Integer, Text, Date, DateTime, UniqueConstraint, Index
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    Boolean,
+    Text,
+    Date,
+    DateTime,
+    UniqueConstraint,
+    Index,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import sqlalchemy as sa
 from .base import Base, id_pk
@@ -82,6 +91,7 @@ class SkillTraining(Base):
     Vaardigheidstraining — door docent aangemaakt, verwijst naar externe URL
     op technasiummbh.nl/vaardigheden/
     """
+
     __tablename__ = "skill_trainings"
 
     id: Mapped[int] = id_pk()
@@ -94,13 +104,15 @@ class SkillTraining(Base):
     # FK to existing CompetencyCategory table (competency_categories)
     competency_category_id: Mapped[int] = mapped_column(
         ForeignKey("competency_categories.id", ondelete="RESTRICT"),
-        nullable=False, index=True
+        nullable=False,
+        index=True,
     )
 
     # FK to existing LearningObjective table (learning_objectives) - optional
     learning_objective_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("learning_objectives.id", ondelete="SET NULL"),
-        nullable=True, index=True
+        nullable=True,
+        index=True,
     )
 
     level: Mapped[Optional[str]] = mapped_column(String(20))  # "basis" | "plus"
@@ -111,8 +123,10 @@ class SkillTraining(Base):
         DateTime(timezone=True), server_default=sa.func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=sa.func.now(),
-        onupdate=sa.func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+        nullable=False,
     )
 
     # Relationships
@@ -134,6 +148,7 @@ class SkillTrainingProgress(Base):
     - Student mag zetten: none → planned → in_progress → submitted
     - Docent mag zetten: completed, mastered (en alle andere)
     """
+
     __tablename__ = "skill_training_progress"
 
     id: Mapped[int] = id_pk()
@@ -157,8 +172,10 @@ class SkillTrainingProgress(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=sa.func.now(),
-        onupdate=sa.func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+        nullable=False,
     )
     note: Mapped[Optional[str]] = mapped_column(Text)
 
@@ -171,8 +188,10 @@ class SkillTrainingProgress(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "student_id", "training_id", "course_id",
-            name="uq_skill_progress_student_training_course"
+            "student_id",
+            "training_id",
+            "course_id",
+            name="uq_skill_progress_student_training_course",
         ),
         Index("ix_skill_progress_student", "student_id"),
         Index("ix_skill_progress_training", "training_id"),

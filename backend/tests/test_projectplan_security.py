@@ -21,7 +21,7 @@ def test_student_cannot_modify_status_via_mass_assignment(
     """
     Test that students cannot modify status, locked, or teacher_note fields
     through mass assignment in the update endpoint.
-    
+
     Critical: Students should only be able to update title field.
     """
     # This test would need proper test setup
@@ -37,7 +37,7 @@ def test_student_cannot_modify_section_status(
     """
     Test that students cannot modify section status or teacher_note
     when updating section content.
-    
+
     Critical: Students should only be able to update text and client data.
     """
     pass
@@ -50,13 +50,13 @@ def test_invalid_status_transition_rejected(
 ):
     """
     Test that invalid status transitions are rejected.
-    
+
     Valid transitions:
     - concept → ingediend
     - ingediend → go/no-go/concept
     - go → no-go
     - no-go → concept/ingediend
-    
+
     Invalid transitions:
     - concept → go (must go through ingediend first)
     - concept → no-go
@@ -72,7 +72,7 @@ def test_teacher_must_be_assigned_to_course_to_update_projectplan(
     """
     Test that teachers can only update projectplans for courses
     they are assigned to via TeacherCourse relationship.
-    
+
     Critical: Prevents cross-course privilege escalation.
     """
     pass

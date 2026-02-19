@@ -36,7 +36,7 @@ def get_current_user(
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    
+
     # Normalize email for case-insensitive lookup
     normalized_email = normalize_email(sub)
     user = db.query(User).filter(User.email == normalized_email).first()

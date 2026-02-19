@@ -42,18 +42,18 @@ def resolve_course_id(
 ) -> Optional[int]:
     """
     Determine course_id for an evaluation
-    
+
     Args:
         db: Database session
         evaluation_id: Evaluation ID
         explicit_course_id: Explicitly provided course_id (takes priority)
-        
+
     Returns:
         course_id if found, None otherwise
     """
     if explicit_course_id is not None:
         return explicit_course_id
-    
+
     # Try to get course_id from evaluation
     try:
         ev = db.get(Evaluation, evaluation_id)
@@ -61,7 +61,7 @@ def resolve_course_id(
             return getattr(ev, "course_id")
     except Exception:
         pass
-    
+
     return None
 
 
@@ -84,11 +84,7 @@ def preview_grades(
     """
     course = resolve_course_id(db, evaluation_id, course_id)
 
-    # 1) Build team index 1..N within the course (legacy - not used with CourseEnrollment)
-    team_index_by_gid: Dict[int, int] = {}
-    # NOTE: Team indexing is now handled via ProjectTeam.team_number directly
-
-    # 2) Get ALL students in this course with active enrollment (and not archived)
+    # 1) Get ALL students in this course with active enrollment (and not archived)
     students: List[User] = []
     team_gid_by_uid: Dict[int, Optional[int]] = {}
     if HAS_MODELS and course is not None:

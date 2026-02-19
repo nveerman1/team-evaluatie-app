@@ -60,9 +60,7 @@ def cleanup_stuck_jobs(dry_run: bool = False, older_than_minutes: int = 10):
         print()
 
         for job in stuck_jobs:
-            age_minutes = (
-                datetime.now(UTC) - job.created_at
-            ).total_seconds() / 60
+            age_minutes = (datetime.now(UTC) - job.created_at).total_seconds() / 60
             print(f"  Job: {job.job_id}")
             print(f"    Student: {job.student_id}, Evaluation: {job.evaluation_id}")
             print(f"    Created: {job.created_at} ({age_minutes:.1f} minutes ago)")

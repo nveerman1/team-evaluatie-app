@@ -84,18 +84,53 @@ from app.db.seed_utils import (
     create_instance,
 )
 
-
 # ============================================================================
 # Constants
 # ============================================================================
 
 COMPETENCY_CATEGORIES = [
-    ("Samenwerken", "Effectief samenwerken met anderen in een team", "#3B82F6", "👥", 1),
-    ("Plannen & Organiseren", "Effectief plannen en organiseren van werk en tijd", "#22C55E", "📋", 2),
-    ("Creatief denken & probleemoplossen", "Innovatief denken en oplossingen vinden voor problemen", "#A855F7", "💡", 3),
-    ("Technische vaardigheden", "Beheersen van vakspecifieke kennis en vaardigheden", "#F97316", "🔧", 4),
-    ("Communicatie & Presenteren", "Effectief communiceren en presenteren van ideeën", "#EAB308", "💬", 5),
-    ("Reflectie & Professionele houding", "Zelfreflectie en professioneel gedrag", "#EC4899", "🤔", 6),
+    (
+        "Samenwerken",
+        "Effectief samenwerken met anderen in een team",
+        "#3B82F6",
+        "👥",
+        1,
+    ),
+    (
+        "Plannen & Organiseren",
+        "Effectief plannen en organiseren van werk en tijd",
+        "#22C55E",
+        "📋",
+        2,
+    ),
+    (
+        "Creatief denken & probleemoplossen",
+        "Innovatief denken en oplossingen vinden voor problemen",
+        "#A855F7",
+        "💡",
+        3,
+    ),
+    (
+        "Technische vaardigheden",
+        "Beheersen van vakspecifieke kennis en vaardigheden",
+        "#F97316",
+        "🔧",
+        4,
+    ),
+    (
+        "Communicatie & Presenteren",
+        "Effectief communiceren en presenteren van ideeën",
+        "#EAB308",
+        "💬",
+        5,
+    ),
+    (
+        "Reflectie & Professionele houding",
+        "Zelfreflectie en professioneel gedrag",
+        "#EC4899",
+        "🤔",
+        6,
+    ),
 ]
 
 BASE_CREDENTIALS = {
@@ -136,41 +171,45 @@ def print_warning(message: str):
 def seed_templates_for_school(school_id: int, subject_id: int):
     """
     Call the seed_templates.py script to seed all template data.
-    
+
     This ensures competencies, learning objectives, rubrics, etc. are created.
-    
+
     Args:
         school_id: School ID to seed templates for
         subject_id: Subject ID to use
     """
     print_section("SEEDING TEMPLATES")
-    print_info(f"Calling seed_templates.py for school {school_id}, subject {subject_id}...")
-    
+    print_info(
+        f"Calling seed_templates.py for school {school_id}, subject {subject_id}..."
+    )
+
     # Get the path to seed_templates.py
     seed_templates_path = Path(__file__).parent / "seed_templates.py"
-    
+
     try:
         # Call seed_templates.py as a subprocess
         result = subprocess.run(
             [
                 sys.executable,
                 str(seed_templates_path),
-                "--school-id", str(school_id),
-                "--subject-id", str(subject_id),
+                "--school-id",
+                str(school_id),
+                "--subject-id",
+                str(subject_id),
             ],
             capture_output=True,
             text=True,
             check=True,
         )
-        
+
         # Print output for visibility
         if result.stdout:
-            for line in result.stdout.split('\n'):
+            for line in result.stdout.split("\n"):
                 if line.strip():
                     print_info(line)
-        
+
         print_success("Templates seeded successfully")
-        
+
     except subprocess.CalledProcessError as e:
         print_warning(f"Template seeding failed: {e}")
         if e.stdout:
@@ -541,12 +580,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         is_active=True,
     )
     db.add(teacher_course)
-    
+
     # Also assign admin as a second teacher to the course (for smoke test)
-    admin = db.query(User).filter(
-        User.school_id == school.id, 
-        User.role == "admin"
-    ).first()
+    admin = (
+        db.query(User).filter(User.school_id == school.id, User.role == "admin").first()
+    )
     if admin:
         admin_teacher_course = create_instance(
             TeacherCourse,
@@ -610,7 +648,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     print("\n--- Creating Project Teams ---")
 
     students_per_team = 4  # Max 4 students per team
-    num_teams_per_project = (len(student_objs) + students_per_team - 1) // students_per_team  # Ceiling division
+    num_teams_per_project = (
+        len(student_objs) + students_per_team - 1
+    ) // students_per_team  # Ceiling division
 
     project_teams = []
 
@@ -657,7 +697,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         f"Created {len(project_teams)} project teams "
         f"({num_teams_per_project} per project, max {students_per_team} students each)"
     )
-    print_info(f"All {len(student_objs)} students are assigned to teams in each of the {len(projects)} projects")
+    print_info(
+        f"All {len(student_objs)} students are assigned to teams in each of the {len(projects)} projects"
+    )
 
     # 7. Create Rubrics with Criteria from Templates
     print("\n--- Creating Rubrics ---")
@@ -682,10 +724,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             WHERE school_id = :school_id AND subject_id = :subject_id
             ORDER BY omza_category, id
         """),
-        {"school_id": school.id, "subject_id": subject.id}
+        {"school_id": school.id, "subject_id": subject.id},
     )
     peer_templates = peer_template_query.fetchall()
-    
+
     if peer_templates:
         # Create criteria from templates (each row is a criterion, not a category)
         for i, (category, title, description) in enumerate(peer_templates):
@@ -753,13 +795,15 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 END,
                 id
         """),
-        {"school_id": school.id, "subject_id": subject.id}
+        {"school_id": school.id, "subject_id": subject.id},
     )
     project_templates = project_template_query.fetchall()
-    
+
     if project_templates:
         # Create criteria from templates (each row is a criterion, not a category)
-        for i, (category, title, description, level_descriptors) in enumerate(project_templates):
+        for i, (category, title, description, level_descriptors) in enumerate(
+            project_templates
+        ):
             criterion = create_instance(
                 RubricCriterion,
                 school_id=school.id,
@@ -780,11 +824,31 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         # Fallback: create minimal criteria if templates don't exist
         print_warning("No project templates found, creating basic criteria")
         project_criteria_data = [
-            {"name": "Oriënteren & analyseren", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
-            {"name": "Testen & evalueren", "category": "projectproces", "description": "Testen en verbeteren van het ontwerp"},
-            {"name": "Ontwerp", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
-            {"name": "Verslag", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
-            {"name": "Presentatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
+            {
+                "name": "Oriënteren & analyseren",
+                "category": "projectproces",
+                "description": "Planning, organisatie en aanpak van het project",
+            },
+            {
+                "name": "Testen & evalueren",
+                "category": "projectproces",
+                "description": "Testen en verbeteren van het ontwerp",
+            },
+            {
+                "name": "Ontwerp",
+                "category": "eindresultaat",
+                "description": "Kwaliteit en volledigheid van het eindproduct",
+            },
+            {
+                "name": "Verslag",
+                "category": "communicatie",
+                "description": "Kwaliteit van verslaglegging en documentatie",
+            },
+            {
+                "name": "Presentatie",
+                "category": "communicatie",
+                "description": "Presentatie en communicatie over het project",
+            },
         ]
         for i, criterion_data in enumerate(project_criteria_data):
             criterion = create_instance(
@@ -873,14 +937,18 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                             allocation_id=allocation.id,
                             criterion_id=criterion.id,
                             score=rand.randint(1, 5),
-                            comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                            comment=factory.feedback_comment(
+                                positive=rand.random() > 0.3
+                            ),
                             status="submitted",
                         )
                         db.add(score)
 
         db.commit()
 
-    print_success(f"Created {len(project_evaluations)} peer evaluations (one per project)")
+    print_success(
+        f"Created {len(project_evaluations)} peer evaluations (one per project)"
+    )
     print_info(f"Created {total_allocations} allocations with scores")
 
     # 9. Create Reflections for ALL Students
@@ -891,8 +959,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     for evaluation in project_evaluations:
         # Reuse the teams list filtered by project (avoid repeated filtering)
-        teams_in_project = [pt for pt in project_teams if pt.project_id == evaluation.project_id]
-        
+        teams_in_project = [
+            pt for pt in project_teams if pt.project_id == evaluation.project_id
+        ]
+
         # Get all team members across all teams in this project
         for pt in teams_in_project:
             team_members = (
@@ -987,10 +1057,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
             # Add reflection for one team member from first team
             if project_pts:
-                first_team_members = db.query(ProjectTeamMember).filter(
-                    ProjectTeamMember.project_team_id == project_pts[0].id
-                ).first()
-                
+                first_team_members = (
+                    db.query(ProjectTeamMember)
+                    .filter(ProjectTeamMember.project_team_id == project_pts[0].id)
+                    .first()
+                )
+
                 if first_team_members:
                     reflection_text = factory.reflection_text()
                     pa_reflection = create_instance(
@@ -1007,10 +1079,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
             # Create self-assessments for ALL students in ALL teams
             for pt in project_pts:
-                members = db.query(ProjectTeamMember).filter(
-                    ProjectTeamMember.project_team_id == pt.id
-                ).all()
-                
+                members = (
+                    db.query(ProjectTeamMember)
+                    .filter(ProjectTeamMember.project_team_id == pt.id)
+                    .all()
+                )
+
                 for member in members:
                     # Create self-assessment for this student
                     self_assessment = create_instance(
@@ -1025,7 +1099,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     db.commit()
                     db.refresh(self_assessment)
                     total_self_assessments += 1
-                    
+
                     # Add scores for ALL criteria
                     for criterion in project_criteria:
                         has_comment = rand.random() > 0.5
@@ -1035,19 +1109,27 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                             self_assessment_id=self_assessment.id,
                             criterion_id=criterion.id,
                             score=rand.randint(1, 5),
-                            comment=factory.feedback_comment(positive=rand.random() > 0.5) if has_comment else None,
+                            comment=(
+                                factory.feedback_comment(positive=rand.random() > 0.5)
+                                if has_comment
+                                else None
+                            ),
                         )
                         db.add(sa_score)
-                
+
                 db.commit()
 
-        print_success(f"Created {len(assessments)} project assessments for all projects")
+        print_success(
+            f"Created {len(assessments)} project assessments for all projects"
+        )
         print_info(f"Created {total_scores} teacher scores")
-        print_info(f"Created {total_self_assessments} self-assessments with scores for all students")
+        print_info(
+            f"Created {total_self_assessments} self-assessments with scores for all students"
+        )
 
     # 10a. Create External Evaluators and External Assessments
     print("\n--- Creating External Evaluators & Assessments ---")
-    
+
     # Create 2-3 external evaluators (like clients, company representatives)
     external_evaluators = []
     evaluator_names = [
@@ -1055,7 +1137,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         ("Mevr. Bakker", "s.bakker@innovate.nl", "Innovate Design"),
         ("Dhr. Jansen", "p.jansen@greentech.nl", "GreenTech Industries"),
     ]
-    
+
     for name, email, org in evaluator_names[:2]:  # Create 2 evaluators
         evaluator = create_instance(
             ExternalEvaluator,
@@ -1066,29 +1148,33 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
         db.add(evaluator)
         external_evaluators.append(evaluator)
-    
+
     db.commit()
     for evaluator in external_evaluators:
         db.refresh(evaluator)
-    
+
     print_success(f"Created {len(external_evaluators)} external evaluators")
-    
+
     # Create external assessments for each project (one external evaluator per project)
     external_assessments_count = 0
     external_scores_count = 0
-    
+
     if project_criteria and external_evaluators:
         for idx, project in enumerate(projects):
             # Use modulo to cycle through external evaluators if we have fewer than projects
             evaluator = external_evaluators[idx % len(external_evaluators)]
             project_pts = [pt for pt in project_teams if pt.project_id == project.id]
-            
+
             # Find the teacher assessment for this project
-            teacher_assessment = next((a for a in assessments if a.project_id == project.id), None)
+            teacher_assessment = next(
+                (a for a in assessments if a.project_id == project.id), None
+            )
             if not teacher_assessment:
-                print_warning(f"No teacher assessment found for project {project.id}, skipping external assessment")
+                print_warning(
+                    f"No teacher assessment found for project {project.id}, skipping external assessment"
+                )
                 continue
-            
+
             # Create external assessment
             external_assessment = create_instance(
                 ProjectAssessment,
@@ -1105,7 +1191,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             db.commit()
             db.refresh(external_assessment)
             external_assessments_count += 1
-            
+
             # Link teams to external assessment
             for pt in project_pts:
                 pat = create_instance(
@@ -1117,9 +1203,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     scores_count=len(project_criteria),
                 )
                 db.add(pat)
-            
+
             db.commit()
-            
+
             # Add external scores for each team
             for pt in project_pts:
                 for criterion in project_criteria:
@@ -1135,14 +1221,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     )
                     db.add(score)
                     external_scores_count += 1
-            
+
             db.commit()
-            
+
             # Create external team link for invitation tracking
             for pt in project_pts:
                 # Generate a unique token for external access
                 token = secrets.token_urlsafe(32)
-                
+
                 # Create ProjectTeamExternal to link evaluator to team
                 # NOTE: assessment_id should point to the TEACHER's assessment, not the external assessment
                 # This is because the external tab is accessed via /teacher/project-assessments/{teacher_assessment_id}/external
@@ -1161,19 +1247,19 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     submitted_at=datetime.now(UTC),
                 )
                 db.add(pte)
-            
+
             db.commit()
-        
+
         print_success(f"Created {external_assessments_count} external assessments")
         print_info(f"Created {external_scores_count} external scores")
 
     # 10b. Create Project Notes Context and Notes
     print("\n--- Creating Project Notes ---")
-    
+
     # Create a notes context for the second project
     project = projects[1]
     project_pts = [pt for pt in project_teams if pt.project_id == project.id]
-    
+
     notes_context = create_instance(
         ProjectNotesContext,
         school_id=school.id,
@@ -1190,40 +1276,47 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(notes_context)
     print_success(f"Project Notes Context: {notes_context.title}")
-    
+
     # Add various types of notes
     note_count = 0
-    
+
     # Project-level notes (2-3)
     for i in range(rand.randint(2, 3)):
         note = create_instance(
             ProjectNote,
             context_id=notes_context.id,
             note_type="project",
-            text=rand.choice([
-                "Project loopt goed, teams werken goed samen",
-                "Planning moet beter bijgehouden worden",
-                "Goede voortgang met prototypes",
-                "Extra aandacht nodig voor documentatie",
-            ]),
-            tags=rand.sample(["voortgang", "samenwerking", "planning", "kwaliteit"], rand.randint(1, 2)),
+            text=rand.choice(
+                [
+                    "Project loopt goed, teams werken goed samen",
+                    "Planning moet beter bijgehouden worden",
+                    "Goede voortgang met prototypes",
+                    "Extra aandacht nodig voor documentatie",
+                ]
+            ),
+            tags=rand.sample(
+                ["voortgang", "samenwerking", "planning", "kwaliteit"],
+                rand.randint(1, 2),
+            ),
             created_by=teacher.id,
         )
         db.add(note)
         note_count += 1
-    
+
     # Team-specific notes (1-2 per team) - Note: team_id would need Group model, skip for now
     # Instead create student-specific notes
-    
+
     # Student-specific notes (2-3 students)
     if project_pts:
         all_members = []
         for pt in project_pts:
-            members = db.query(ProjectTeamMember).filter(
-                ProjectTeamMember.project_team_id == pt.id
-            ).all()
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == pt.id)
+                .all()
+            )
             all_members.extend(members)
-        
+
         note_students = rand.sample(all_members, min(3, len(all_members)))
         for member in note_students:
             note = create_instance(
@@ -1231,21 +1324,32 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 context_id=notes_context.id,
                 note_type="student",
                 student_id=member.user_id,
-                text=rand.choice([
-                    "Toont goed initiatief in het team",
-                    "Kan beter communiceren met teamleden",
-                    "Sterke technische vaardigheden",
-                    "Heeft begeleiding nodig bij planning",
-                    "Goede presentatievaardigheden getoond",
-                ]),
-                tags=rand.sample(["competentie", "samenwerking", "technisch", "communicatie"], rand.randint(1, 2)),
-                omza_category=rand.choice(["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]) if rand.random() > 0.5 else None,
+                text=rand.choice(
+                    [
+                        "Toont goed initiatief in het team",
+                        "Kan beter communiceren met teamleden",
+                        "Sterke technische vaardigheden",
+                        "Heeft begeleiding nodig bij planning",
+                        "Goede presentatievaardigheden getoond",
+                    ]
+                ),
+                tags=rand.sample(
+                    ["competentie", "samenwerking", "technisch", "communicatie"],
+                    rand.randint(1, 2),
+                ),
+                omza_category=(
+                    rand.choice(
+                        ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
+                    )
+                    if rand.random() > 0.5
+                    else None
+                ),
                 is_competency_evidence=rand.random() > 0.7,
                 created_by=teacher.id,
             )
             db.add(note)
             note_count += 1
-    
+
     db.commit()
     print_info(f"Created {note_count} project notes")
 
@@ -1283,7 +1387,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .filter(CompetencyCategory.school_id == school.id)
         .all()
     )
-    
+
     # Get actual competencies (not just categories)
     # Competencies are created by migrations from templates
     competencies = (
@@ -1291,9 +1395,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .filter(Competency.school_id == school.id, Competency.active == True)
         .all()
     )
-    
+
     if not competencies:
-        print_warning("No competencies found - skipping competency self-scores, goals, and observations")
+        print_warning(
+            "No competencies found - skipping competency self-scores, goals, and observations"
+        )
         print_info("Run migrations to seed competencies from templates")
     else:
         # Add self-scores, goals, and observations for ALL students
@@ -1345,8 +1451,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                         user_id=student.id,
                         goal_id=goal.id,
                         text=factory.reflection_text(),
-                        goal_achieved=rand.choice([True, False]) if rand.random() > 0.2 else None,
-                        evidence=factory.feedback_comment(positive=True) if rand.random() > 0.3 else None,
+                        goal_achieved=(
+                            rand.choice([True, False]) if rand.random() > 0.2 else None
+                        ),
+                        evidence=(
+                            factory.feedback_comment(positive=True)
+                            if rand.random() > 0.3
+                            else None
+                        ),
                         submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
                     )
                     db.add(reflection)
@@ -1371,7 +1483,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         db.commit()
         print_success(f"Created competency data for all {len(student_objs)} students")
-        print_info(f"Created {total_self_scores} self-scores, {total_goals} goals, {total_reflections} reflections, {total_observations} teacher observations")
+        print_info(
+            f"Created {total_self_scores} self-scores, {total_goals} goals, {total_reflections} reflections, {total_observations} teacher observations"
+        )
 
     # 12. Create LearningObjectives
     print("\n--- Creating Learning Objectives ---")
@@ -1500,14 +1614,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             # Most events (80%) should have check-out times (closed events)
             # Some events (20%) remain open (no check-out yet)
             has_checkout = rand.random() < 0.8
-            
+
             # Check-out time is 2-8 hours after check-in
             if has_checkout:
                 hours_stayed = rand.uniform(2.0, 8.0)
                 check_out_time = ts + timedelta(hours=hours_stayed)
             else:
                 check_out_time = None
-            
+
             event = create_instance(
                 AttendanceEvent,
                 user_id=student.id,

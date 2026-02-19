@@ -182,7 +182,7 @@ def _set_user_course_enrollment(
         db.query(CourseEnrollment)
         .filter(
             CourseEnrollment.course_id == course.id,
-            CourseEnrollment.student_id == user_id
+            CourseEnrollment.student_id == user_id,
         )
         .first()
     )
@@ -194,9 +194,7 @@ def _set_user_course_enrollment(
     else:
         # Create new enrollment
         new_enrollment = CourseEnrollment(
-            course_id=course.id,
-            student_id=user_id,
-            active=True
+            course_id=course.id, student_id=user_id, active=True
         )
         db.add(new_enrollment)
 
@@ -596,15 +594,12 @@ def import_students_csv(
         text_stream = TextIOWrapper(file.file, encoding="utf-8")
         reader = csv.DictReader(text_stream)
     except (UnicodeDecodeError, csv.Error) as e:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"CSV kon niet gelezen worden: {e}"
-        )
+        raise HTTPException(status_code=400, detail=f"CSV kon niet gelezen worden: {e}")
     except Exception as e:
         logger.error(f"Unexpected error reading CSV file: {e}")
         raise HTTPException(
-            status_code=500, 
-            detail="Er is een onverwachte fout opgetreden bij het lezen van het CSV-bestand"
+            status_code=500,
+            detail="Er is een onverwachte fout opgetreden bij het lezen van het CSV-bestand",
         )
 
     created = 0
