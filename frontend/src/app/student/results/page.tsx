@@ -38,7 +38,13 @@ export default function PeerFeedbackResultsPage() {
   };
 
   const handleExportAll = () => {
-    alert("Export alle resultaten naar PDF – TODO: hooken aan jouw export endpoint");
+    // TODO: Implement PDF export functionality
+    // This feature requires backend endpoint implementation:
+    // - POST /api/v1/students/me/results/export
+    // - Generate PDF with all evaluation results
+    // - Include scores, feedback, and reflections
+    console.warn("Export functionality not yet implemented");
+    alert("Export functionaliteit is nog niet geïmplementeerd. Neem contact op met je docent voor een overzicht.");
   };
 
   const openDetails = (ev: EvaluationResult) => {

@@ -7,6 +7,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
+from app.api.v1.utils import get_teacher_course_ids
 from app.core.grading import score_to_grade as _score_to_grade
 from app.infra.db.models import (
     ProjectAssessment,
@@ -61,23 +62,6 @@ from app.api.v1.schemas.project_assessments import (
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
 
 
-def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
-    """Get all course IDs that a teacher is assigned to via teacher_courses"""
-    if user.role == "admin":
-        # Admins see everything, return empty list to indicate no filtering
-        return []
-    if user.role != "teacher":
-        return []
-    
-    course_ids_query = select(TeacherCourse.course_id).where(
-        TeacherCourse.school_id == user.school_id,
-        TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active.is_(True),
-    )
-    result = db.execute(course_ids_query).scalars().all()
-    return list(result)
-
-
 def _get_assessment_with_access_check(
     db: Session, assessment_id: int, user: User
 ) -> ProjectAssessment:
@@ -104,7 +88,7 @@ def _get_assessment_with_access_check(
         if pa.project_id:
             project = db.query(Project).filter(Project.id == pa.project_id).first()
             if project and project.course_id:
-                teacher_course_ids = _get_teacher_course_ids(db, user)
+                teacher_course_ids = get_teacher_course_ids(db, user)
                 if teacher_course_ids and project.course_id not in teacher_course_ids:
                     raise HTTPException(status_code=404, detail="Assessment not found")
     
@@ -257,7 +241,7 @@ def list_project_assessments(
         pass
     elif user.role == "teacher":
         # Teachers see assessments for courses they're assigned to
-        teacher_course_ids = _get_teacher_course_ids(db, user)
+        teacher_course_ids = get_teacher_course_ids(db, user)
         if teacher_course_ids:
             # Filter by projects in assigned courses
             stmt = stmt.where(
@@ -544,7 +528,7 @@ def get_project_assessment(
         # Teachers can view assessments for courses they're assigned to
         project = db.query(Project).filter(Project.id == pa.project_id).first()
         if project and project.course_id:
-            teacher_course_ids = _get_teacher_course_ids(db, user)
+            teacher_course_ids = get_teacher_course_ids(db, user)
             if teacher_course_ids and project.course_id not in teacher_course_ids:
                 raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     

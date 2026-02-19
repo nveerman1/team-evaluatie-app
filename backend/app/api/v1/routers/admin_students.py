@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import csv
+import logging
+from io import StringIO, TextIOWrapper
 from typing import List, Optional, Literal, Dict, Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File
 from fastapi import status as http_status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import or_, func, asc, desc, literal
 from sqlalchemy.orm import Session
-import csv
-from io import StringIO, TextIOWrapper
 
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.utils.csv_sanitization import sanitize_csv_value
@@ -22,6 +24,7 @@ from app.infra.db.models import (
 )
 
 router = APIRouter(prefix="/admin/students", tags=["admin-students"])
+logger = logging.getLogger(__name__)
 
 SortKey = Literal["name", "class_name", "team_number", "course_name"]
 Dir = Literal["asc", "desc"]
@@ -592,8 +595,17 @@ def import_students_csv(
     try:
         text_stream = TextIOWrapper(file.file, encoding="utf-8")
         reader = csv.DictReader(text_stream)
+    except (UnicodeDecodeError, csv.Error) as e:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"CSV kon niet gelezen worden: {e}"
+        )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"CSV kon niet gelezen worden: {e}")
+        logger.error(f"Unexpected error reading CSV file: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Er is een onverwachte fout opgetreden bij het lezen van het CSV-bestand"
+        )
 
     created = 0
     updated = 0

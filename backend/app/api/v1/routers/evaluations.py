@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, List, Dict, Any
 import io
 import csv
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session, aliased
 from starlette.responses import StreamingResponse
 
 from app.api.v1.deps import get_db, get_current_user
+from app.api.v1.utils import get_teacher_course_ids
 from app.infra.db.models import (
     Evaluation,
     Rubric,
@@ -36,23 +38,7 @@ from app.api.v1.schemas.evaluations import (
 )
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
-
-
-def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
-    """Get all course IDs that a teacher is assigned to via teacher_courses"""
-    if user.role == "admin":
-        # Admins see everything, return empty list to indicate no filtering
-        return []
-    if user.role != "teacher":
-        return []
-
-    course_ids_query = select(TeacherCourse.course_id).where(
-        TeacherCourse.school_id == user.school_id,
-        TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active.is_(True),
-    )
-    result = db.execute(course_ids_query).scalars().all()
-    return list(result)
+logger = logging.getLogger(__name__)
 
 
 def _extract_deadlines(settings: Any) -> Optional[Dict[str, Any]]:
@@ -208,6 +194,12 @@ def create_evaluation(
 
     db.commit()
     db.refresh(ev)
+    
+    logger.info(
+        f"Created evaluation '{ev.title}' (ID: {ev.id}) for course {course.id} "
+        f"by user {user.id} ({user.role})"
+    )
+    
     return _to_out(ev)
 
 
@@ -227,7 +219,7 @@ def get_evaluation(
 
     # If user is a teacher (not admin), verify they have access to the evaluation's course
     if user.role == "teacher" and ev.course_id:
-        teacher_course_ids = _get_teacher_course_ids(db, user)
+        teacher_course_ids = get_teacher_course_ids(db, user)
         if teacher_course_ids and ev.course_id not in teacher_course_ids:
             raise HTTPException(status_code=404, detail="Evaluation not found")
 
@@ -281,7 +273,7 @@ def list_evaluations(
 
     # If user is a teacher (not admin), only show evaluations for courses they're assigned to
     elif user.role == "teacher":
-        teacher_course_ids = _get_teacher_course_ids(db, user)
+        teacher_course_ids = get_teacher_course_ids(db, user)
         if teacher_course_ids:
             stmt = stmt.where(Evaluation.course_id.in_(teacher_course_ids))
         else:

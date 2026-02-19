@@ -12,6 +12,7 @@ from collections import defaultdict, Counter
 
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
+from app.core.constants import MAX_REASONABLE_GCF, get_category_abbrev
 from app.infra.db.models import (
     User,
     Course,
@@ -65,30 +66,6 @@ from app.api.v1.schemas.overview import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Grade calculation constants
-# GCF (Group Correction Factor) typically ranges from 0.5 to 1.5 in normal cases
-# We set the warning threshold higher (2.0) to allow for exceptional cases
-# while still logging potentially incorrect values for review
-MAX_REASONABLE_GCF = 2.0
-
-# Mapping from full Dutch category names to short abbreviations
-# This ensures frontend compatibility
-CATEGORY_NAME_TO_ABBREV = {
-    "Organiseren": "O",
-    "Meedoen": "M",
-    "Zelfvertrouwen": "Z",
-    "Autonomie": "A",
-    # Fallback: first letter uppercase
-}
-
-
-def get_category_abbrev(category_name: str) -> str:
-    """Convert full category name to abbreviation for frontend compatibility"""
-    return CATEGORY_NAME_TO_ABBREV.get(
-        category_name, category_name[0].upper() if category_name else ""
-    )
-
 
 router = APIRouter(prefix="/overview", tags=["overview"])
 
