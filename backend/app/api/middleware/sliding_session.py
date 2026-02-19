@@ -2,7 +2,7 @@
 
 On each authenticated request the current ``access_token`` cookie is
 inspected.  When the remaining lifetime is below
-``SESSION_RENEWAL_THRESHOLD_MINUTES`` a fresh token is issued and a new
+``SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES`` a fresh token is issued and a new
 ``Set-Cookie`` header is appended to the response.
 
 Effect: the session acts as an *inactivity* timer.  As long as the user
@@ -10,6 +10,11 @@ keeps making requests within the ``ACCESS_TOKEN_EXPIRE_MINUTES`` window the
 session rolls forward and never expires.  Only when the user is idle for
 longer than ``ACCESS_TOKEN_EXPIRE_MINUTES`` minutes will the token expire and
 the next request return 401.
+
+Absolute max session: token renewal is blocked once the session start time
+(``ss`` claim, preserved across renewals) is older than ``SESSION_MAX_HOURS``.
+After that the token can still be used until its own ``exp``, but a new one
+will not be issued.
 """
 
 from __future__ import annotations
@@ -59,10 +64,30 @@ class SlidingSessionMiddleware(BaseHTTPMiddleware):
         now = datetime.now(timezone.utc)
         remaining = expire_time - now
 
-        threshold = timedelta(minutes=settings.SESSION_RENEWAL_THRESHOLD_MINUTES)
+        threshold = timedelta(minutes=settings.SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES)
         if remaining > threshold:
             # Token still has plenty of time left — no renewal needed.
             return response
+
+        # Recover the original session start time from the ss claim so that
+        # the absolute max-session duration is preserved across renewals.
+        session_start: datetime | None = None
+        ss_raw = payload.get("ss")
+        if ss_raw is not None:
+            try:
+                session_start = datetime.fromtimestamp(float(ss_raw), tz=timezone.utc)
+            except (TypeError, ValueError, OSError):
+                pass
+
+        # Enforce absolute maximum session duration.
+        if session_start is not None:
+            max_session_age = timedelta(hours=settings.SESSION_MAX_HOURS)
+            if now - session_start >= max_session_age:
+                logger.debug(
+                    "Sliding session: max session age reached — "
+                    "not renewing, token will expire naturally"
+                )
+                return response
 
         # Token is within the renewal window; issue a fresh one.
         sub = payload.get("sub")
@@ -72,7 +97,12 @@ class SlidingSessionMiddleware(BaseHTTPMiddleware):
         role = payload.get("role")
         school_id = payload.get("school_id")
 
-        new_token = create_access_token(sub=sub, role=role, school_id=school_id)
+        new_token = create_access_token(
+            sub=sub,
+            role=role,
+            school_id=school_id,
+            session_start=session_start,
+        )
 
         # Build the Set-Cookie header value to match the cookie attributes used
         # during login (see app/api/v1/routers/auth.py).

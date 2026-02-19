@@ -28,13 +28,28 @@ export class ApiAuthError extends Error {
  * Clear local authentication state and redirect to the login page.
  * Called on any 401 Unauthorized response so that stale sessions
  * are cleaned up immediately, regardless of which HTTP client was used.
+ *
+ * - Preserves the current path+query as `returnTo=` so the user is sent
+ *   back after re-authentication.
+ * - Guards against race conditions: if multiple concurrent requests all
+ *   receive a 401, only the first one triggers the redirect.
  */
 function handleAuthenticationFailure(): void {
   if (typeof window === "undefined") return;
+  // Prevent duplicate redirects from concurrent 401 responses.
+  // The flag is set only when we are actually navigating away, so it
+  // is cleared automatically when the login page loads in the new context.
+  if ((window as any).__AUTH_FAILURE_REDIRECT__) return;
+
   localStorage.removeItem("x_user_email");
   sessionStorage.removeItem("x_user_email");
-  if (window.location.pathname !== "/") {
-    window.location.href = "/";
+
+  const current = window.location.pathname + window.location.search;
+  if (current !== "/") {
+    // Mark redirect in-flight so concurrent 401s don't race.
+    (window as any).__AUTH_FAILURE_REDIRECT__ = true;
+    const returnTo = encodeURIComponent(current);
+    window.location.href = `/?returnTo=${returnTo}`;
   }
 }
 
