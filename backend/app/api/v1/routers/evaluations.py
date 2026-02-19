@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, List, Dict, Any
 import io
 import csv
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -37,6 +38,7 @@ from app.api.v1.schemas.evaluations import (
 )
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
+logger = logging.getLogger(__name__)
 
 
 def _extract_deadlines(settings: Any) -> Optional[Dict[str, Any]]:
@@ -192,6 +194,12 @@ def create_evaluation(
 
     db.commit()
     db.refresh(ev)
+    
+    logger.info(
+        f"Created evaluation '{ev.title}' (ID: {ev.id}) for course {course.id} "
+        f"by user {user.id} ({user.role})"
+    )
+    
     return _to_out(ev)
 
 

@@ -710,10 +710,23 @@ export default function SkillTrainingsPage() {
   );
 }
 
+// Component prop interfaces
+interface GroupedTraining {
+  id: number;
+  name: string;
+  trainings: SkillTraining[];
+}
+
+interface MatrixViewProps {
+  students: SkillTrainingStudentProgressRow[];
+  groupedTrainings: GroupedTraining[];
+  progressData: TeacherProgressMatrixResponse | null;
+}
+
 // Matrix View Component
-function MatrixView({ students, groupedTrainings, progressData }: any) {
+function MatrixView({ students, groupedTrainings, progressData }: MatrixViewProps) {
   const getStatus = (studentId: number, trainingId: number): SkillTrainingStatus => {
-    const student = students.find((s: any) => s.student_id === studentId);
+    const student = students.find((s) => s.student_id === studentId);
     return (student?.progress[trainingId] || "none") as SkillTrainingStatus;
   };
 
@@ -723,7 +736,7 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
         <thead className="bg-gray-50">
           <tr>
             <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Leerling</th>
-            {groupedTrainings.map((group: any) => (
+            {groupedTrainings.map((group) => (
               <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {group.name}
               </th>
@@ -731,12 +744,12 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
           </tr>
         </thead>
         <tbody>
-          {students.map((s: any) => (
+          {students.map((s) => (
             <tr key={s.student_id} className="border-t hover:bg-gray-50/60">
               <td className="px-5 py-3 text-sm font-bold text-slate-900">{s.student_name}</td>
-              {groupedTrainings.map((group: any) => {
+              {groupedTrainings.map((group) => {
                 const total = group.trainings.length;
-                const done = group.trainings.filter((t: any) => {
+                const done = group.trainings.filter((t) => {
                   const st = getStatus(s.student_id, t.id);
                   return st === "completed" || st === "mastered";
                 }).length;
@@ -760,10 +773,31 @@ function MatrixView({ students, groupedTrainings, progressData }: any) {
   );
 }
 
+interface FlatTraining extends SkillTraining {
+  groupId: number;
+  groupName: string;
+}
+
+interface GroupSpan {
+  id: number;
+  name: string;
+  span: number;
+}
+
+interface OverviewTableProps {
+  students: SkillTrainingStudentProgressRow[];
+  groupedTrainings: GroupedTraining[];
+  trainings: SkillTraining[];
+  progressData: TeacherProgressMatrixResponse | null;
+  onCycle: (studentId: number, trainingId: number) => void;
+  selectedTrainings: Record<string, boolean>;
+  onToggleTraining: (trainingId: number) => void;
+}
+
 // Overview Table Component
-function OverviewTable({ students, groupedTrainings, trainings, progressData, onCycle, selectedTrainings, onToggleTraining }: any) {
+function OverviewTable({ students, groupedTrainings, trainings, progressData, onCycle, selectedTrainings, onToggleTraining }: OverviewTableProps) {
   const flatTrainings = useMemo(() => {
-    const cols: any[] = [];
+    const cols: FlatTraining[] = [];
     for (const g of groupedTrainings) {
       for (const t of g.trainings) {
         cols.push({ groupId: g.id, groupName: g.name, ...t });
@@ -772,8 +806,8 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
     return cols;
   }, [groupedTrainings]);
 
-  const spans = useMemo(() => {
-    return groupedTrainings.map((g: any) => ({
+  const spans = useMemo((): GroupSpan[] => {
+    return groupedTrainings.map((g) => ({
       id: g.id,
       name: g.name,
       span: Math.max(1, g.trainings.length),
@@ -781,7 +815,7 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
   }, [groupedTrainings]);
 
   const getStatus = (studentId: number, trainingId: number): SkillTrainingStatus => {
-    const student = students.find((s: any) => s.student_id === studentId);
+    const student = students.find((s) => s.student_id === studentId);
     return (student?.progress[trainingId] || "none") as SkillTrainingStatus;
   };
 
