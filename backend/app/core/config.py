@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     # Security / JWT
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"  # overschrijven via env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # Sliding session: renew the token when remaining lifetime is below this
+    # threshold (in minutes). Defaults to half of ACCESS_TOKEN_EXPIRE_MINUTES.
+    # Effect: users are only logged out after ACCESS_TOKEN_EXPIRE_MINUTES of
+    # *inactivity* rather than a fixed time from login.
+    SESSION_RENEWAL_THRESHOLD_MINUTES: int = 30
     JWT_ALGORITHM: str = "HS256"
 
     # Dev-login Control
