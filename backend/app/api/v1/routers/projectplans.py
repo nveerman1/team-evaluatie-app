@@ -8,6 +8,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.deps import get_db, get_current_user
+from app.api.v1.utils import get_teacher_course_ids
 from app.infra.db.models import (
     ProjectPlan,
     ProjectPlanTeam,
@@ -56,22 +57,6 @@ SECTION_NAMES = {
 }
 
 
-def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
-    """Get all course IDs that a teacher is assigned to via teacher_courses"""
-    if user.role == "admin":
-        return []
-    if user.role != "teacher":
-        return []
-    
-    course_ids_query = select(TeacherCourse.course_id).where(
-        TeacherCourse.school_id == user.school_id,
-        TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active.is_(True),
-    )
-    result = db.execute(course_ids_query).scalars().all()
-    return list(result)
-
-
 def _get_projectplan_with_access_check(
     db: Session, projectplan_id: int, user: User
 ) -> ProjectPlan:
@@ -96,7 +81,7 @@ def _get_projectplan_with_access_check(
         if pp.project_id:
             project = db.query(Project).filter(Project.id == pp.project_id).first()
             if project and project.course_id:
-                teacher_course_ids = _get_teacher_course_ids(db, user)
+                teacher_course_ids = get_teacher_course_ids(db, user)
                 if teacher_course_ids and project.course_id not in teacher_course_ids:
                     raise HTTPException(status_code=404, detail="ProjectPlan not found")
     
@@ -189,7 +174,7 @@ def create_projectplan(
         raise HTTPException(status_code=404, detail="Project not found")
     
     if user.role == "teacher":
-        teacher_course_ids = _get_teacher_course_ids(db, user)
+        teacher_course_ids = get_teacher_course_ids(db, user)
         if teacher_course_ids and project.course_id not in teacher_course_ids:
             raise HTTPException(status_code=403, detail="Access denied to this project")
     
@@ -285,7 +270,7 @@ def list_projectplans(
     if user.role == "admin":
         pass
     elif user.role == "teacher":
-        teacher_course_ids = _get_teacher_course_ids(db, user)
+        teacher_course_ids = get_teacher_course_ids(db, user)
         if teacher_course_ids:
             stmt = stmt.where(
                 ProjectPlan.project_id.in_(
