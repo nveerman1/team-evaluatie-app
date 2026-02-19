@@ -10,6 +10,7 @@ import type {
   LearningObjectiveDto,
   TeacherProgressMatrixResponse,
   SkillTrainingStatus,
+  SkillTrainingStudentProgressRow,
 } from "@/dtos";
 import { STATUS_META } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
