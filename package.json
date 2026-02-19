@@ -3,5 +3,10 @@
 		"eslint-config-next": "16.1.6",
 		"next": "16.1.6",
 		"tar": "^7.5.8"
+	},
+	"pnpm": {
+		"overrides": {
+			"ajv": ">=8.18.0"
+		}
 	}
 }

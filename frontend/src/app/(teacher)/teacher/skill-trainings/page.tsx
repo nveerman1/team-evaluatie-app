@@ -791,7 +791,7 @@ interface OverviewTableProps {
   progressData: TeacherProgressMatrixResponse | null;
   onCycle: (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => void;
   selectedTrainings: Record<string, boolean>;
-  onToggleTraining: (trainingId: number) => void;
+  onToggleTraining: (trainingId: string, next: boolean) => void;
 }
 
 // Overview Table Component
