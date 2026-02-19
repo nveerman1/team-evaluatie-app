@@ -105,6 +105,10 @@ ENV NODE_ENV=production \
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Upgrade npm to v11+ to replace the bundled minimatch@9.x (CVE-2026-26996)
+# that ships with Node.js 20's default npm@10. npm@11.6.1+ bundles minimatch@10.x.
+RUN npm install -g npm@11.10.0
+
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
