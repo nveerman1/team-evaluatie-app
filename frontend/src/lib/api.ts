@@ -24,6 +24,20 @@ export class ApiAuthError extends Error {
   }
 }
 
+/**
+ * Clear local authentication state and redirect to the login page.
+ * Called on any 401 Unauthorized response so that stale sessions
+ * are cleaned up immediately, regardless of which HTTP client was used.
+ */
+function handleAuthenticationFailure(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("x_user_email");
+  sessionStorage.removeItem("x_user_email");
+  if (window.location.pathname !== "/") {
+    window.location.href = "/";
+  }
+}
+
 // Base URL configuration:
 // - In production: defaults to "/api/v1" (relative path, nginx proxies to backend)
 // - In development: defaults to "/api/v1" (Next.js rewrites proxy to backend)
@@ -109,6 +123,11 @@ instance.interceptors.response.use(
       const originalMessage =
         (err.response?.data as any)?.detail || err.message || "Auth error";
 
+      // On 401: clear local auth state and redirect to login
+      if (status === 401) {
+        handleAuthenticationFailure();
+      }
+
       // Niet dubbel loggen; gooi een nette ApiAuthError
       throw new ApiAuthError(status, friendlyMessage, originalMessage);
     }
@@ -183,6 +202,11 @@ export async function fetchWithErrorHandling(url: string, options?: RequestInit)
 
       // Log to console for debugging
       console.error('[FETCH ERROR]', errorInfo);
+
+      // On 401: clear local auth state and redirect to login
+      if (response.status === 401) {
+        handleAuthenticationFailure();
+      }
 
       // Throw error with details
       throw new Error(

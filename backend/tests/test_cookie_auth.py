@@ -121,6 +121,31 @@ class TestCookieAuthentication:
         assert response.status_code == 401
         assert "invalid" in response.json()["detail"].lower()
 
+    def test_auth_me_with_expired_token_returns_401(self, client, test_user, monkeypatch):
+        """Test that an expired JWT token returns HTTP 401 (not 403 or 500)"""
+        import jwt
+        from datetime import datetime, timedelta, timezone
+
+        # Production mode is required to use cookie/bearer-only auth.
+        # In development mode the X-User-Email header could bypass token validation.
+        monkeypatch.setattr(settings, "NODE_ENV", "production")
+
+        # Create a token that is already expired (exp in the past)
+        expired_payload = {
+            "sub": test_user.email,
+            "role": test_user.role,
+            "school_id": test_user.school_id,
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=1),
+        }
+        expired_token = jwt.encode(
+            expired_payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        )
+
+        response = client.get(
+            "/api/v1/auth/me", cookies={"access_token": expired_token}
+        )
+        assert response.status_code == 401
+
     def test_auth_me_with_inactive_user(self, client, test_user, monkeypatch):
         """Test /auth/me endpoint with archived user"""
         # Set NODE_ENV to production
