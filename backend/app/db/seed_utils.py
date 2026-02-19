@@ -24,11 +24,11 @@ class DeterministicRandom:
 
     def __init__(self, seed: Optional[int] = None):
         self.seed = seed if seed is not None else 42
-        self._rng = random.Random(self.seed)
+        self._rng = random.Random(self.seed)  # nosec B311
 
     def reset(self):
         """Reset the random generator to initial seed"""
-        self._rng = random.Random(self.seed)
+        self._rng = random.Random(self.seed)  # nosec B311
 
     def randint(self, a: int, b: int) -> int:
         """Return random integer in range [a, b]"""

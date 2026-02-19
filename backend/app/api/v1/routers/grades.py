@@ -59,7 +59,7 @@ def resolve_course_id(
         ev = db.get(Evaluation, evaluation_id)
         if ev is not None and hasattr(ev, "course_id"):
             return getattr(ev, "course_id")
-    except Exception:
+    except Exception:  # nosec B110
         pass
 
     return None

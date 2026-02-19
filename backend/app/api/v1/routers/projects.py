@@ -230,7 +230,7 @@ def get_running_projects_kpi(
                         and deadline.replace(tzinfo=None) <= thirty_days_ahead
                     ):
                         upcoming_moments += 1
-                except Exception:
+                except Exception:  # nosec B110
                     pass
 
     return RunningProjectKPIOut(
@@ -313,7 +313,7 @@ def get_running_projects_overview(
             query = query.join(Project.course).filter(
                 func.extract("year", Project.start_date) == year_start
             )
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
     # Filter by status (already filtered to active, but can add more granular status filtering)
@@ -404,7 +404,7 @@ def get_running_projects_overview(
                     )
                     if deadline.replace(tzinfo=None) >= datetime.utcnow():
                         upcoming_evals.append((deadline, ev))
-                except Exception:
+                except Exception:  # nosec B110
                     pass
 
         if upcoming_evals:
