@@ -64,16 +64,31 @@ RUN \
         npm run build; \
     fi
 
-# Strip devDependencies from standalone package.json to prevent Trivy from
-# reporting false positives for build-only transitive dependencies (e.g. minimatch
-# pulled in by eslint-config-next) that are not present in the production image.
+# Strip devDependencies from all package.json files in the standalone output.
+# Production packages (next.js, typescript, etc.) embed devDependencies in their
+# package.json files. Trivy's node-pkg scanner traces through them and reports
+# false positives for packages that are not actually installed (e.g. minimatch@9.0.5
+# via typescript -> @typescript-eslint/utils -> minimatch). Removing devDependencies
+# from the standalone node_modules package.json files prevents these false positives.
 RUN node -e " \
-  const fs = require('fs'); \
-  const p = JSON.parse(fs.readFileSync('.next/standalone/package.json', 'utf8')); \
-  delete p.devDependencies; \
-  delete p.pnpm; \
-  delete p.overrides; \
-  fs.writeFileSync('.next/standalone/package.json', JSON.stringify(p, null, 2)); \
+  const fs = require('fs'), path = require('path'); \
+  function strip(dir) { \
+    if (!fs.existsSync(dir)) return; \
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) { \
+      const full = path.join(dir, entry.name); \
+      if (entry.isDirectory()) { strip(full); } \
+      else if (entry.name === 'package.json') { \
+        try { \
+          const p = JSON.parse(fs.readFileSync(full, 'utf8')); \
+          if (p.devDependencies || p.pnpm || p.overrides) { \
+            delete p.devDependencies; delete p.pnpm; delete p.overrides; \
+            fs.writeFileSync(full, JSON.stringify(p, null, 2)); \
+          } \
+        } catch(e) { console.error('strip failed:', full, e.message); } \
+      } \
+    } \
+  } \
+  strip('.next/standalone'); \
 "
 
 # -----------------------------------------------------------------------------
