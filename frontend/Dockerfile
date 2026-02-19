@@ -64,6 +64,18 @@ RUN \
         npm run build; \
     fi
 
+# Strip devDependencies from standalone package.json to prevent Trivy from
+# reporting false positives for build-only transitive dependencies (e.g. minimatch
+# pulled in by eslint-config-next) that are not present in the production image.
+RUN node -e " \
+  const fs = require('fs'); \
+  const p = JSON.parse(fs.readFileSync('.next/standalone/package.json', 'utf8')); \
+  delete p.devDependencies; \
+  delete p.pnpm; \
+  delete p.overrides; \
+  fs.writeFileSync('.next/standalone/package.json', JSON.stringify(p, null, 2)); \
+"
+
 # -----------------------------------------------------------------------------
 # Stage 3: Runner - Production runtime
 # -----------------------------------------------------------------------------
