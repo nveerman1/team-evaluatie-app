@@ -184,9 +184,9 @@ def azure_callback(
         value=jwt_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,  # SECURITY: Require HTTPS in production
-        max_age=604800,
+        max_age=settings.COOKIE_MAX_AGE,
         path="/",
-        samesite="lax",
+        samesite=settings.COOKIE_SAMESITE.lower(),
     )
 
     # Only set domain if configured (prod); on localhost omit Domain entirely
@@ -311,9 +311,9 @@ def dev_login(
         value=jwt_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,  # SECURITY: Require HTTPS in production
-        max_age=604800,
+        max_age=settings.COOKIE_MAX_AGE,
         path="/",
-        samesite="lax",
+        samesite=settings.COOKIE_SAMESITE.lower(),
     )
 
     # Only set domain if configured (prod); on localhost omit Domain entirely

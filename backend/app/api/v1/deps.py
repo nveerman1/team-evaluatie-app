@@ -6,7 +6,7 @@ from app.infra.db.session import SessionLocal
 from app.infra.db.models import User
 from app.core.config import settings
 from app.core.auth_utils import normalize_email
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token_and_check_expiry
 import logging
 
 logger = logging.getLogger(__name__)
@@ -99,11 +99,12 @@ async def get_current_user_dev(
         )
 
     # Decode and validate JWT
-    payload = decode_access_token(token)
+    payload, is_expired = decode_access_token_and_check_expiry(token)
     if not payload:
+        detail = "Session expired" if is_expired else "Invalid or expired token"
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail=detail,
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -190,11 +191,12 @@ async def get_current_user_prod(
         )
 
     # Decode and validate JWT
-    payload = decode_access_token(token)
+    payload, is_expired = decode_access_token_and_check_expiry(token)
     if not payload:
+        detail = "Session expired" if is_expired else "Invalid or expired token"
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail=detail,
             headers={"WWW-Authenticate": "Bearer"},
         )
 

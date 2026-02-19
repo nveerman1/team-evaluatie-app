@@ -4,6 +4,7 @@ from app.core.config import settings
 from fastapi import APIRouter
 from app.api.middleware.security_headers import SecurityHeadersMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
+from app.api.middleware.sliding_session import SlidingSessionMiddleware
 import logging
 
 from app.api.v1.routers import rubrics as rubrics_router
@@ -75,6 +76,10 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # Rate limiting (apply before CORS)
 app.add_middleware(RateLimitMiddleware)
+
+# Sliding session: renew the JWT cookie on each successful authenticated
+# request so that the session only expires after inactivity.
+app.add_middleware(SlidingSessionMiddleware)
 
 # CORS configuration
 app.add_middleware(

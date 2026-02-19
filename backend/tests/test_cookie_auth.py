@@ -121,6 +121,34 @@ class TestCookieAuthentication:
         assert response.status_code == 401
         assert "invalid" in response.json()["detail"].lower()
 
+    def test_auth_me_with_expired_token_returns_401_session_expired(
+        self, client, test_user, monkeypatch
+    ):
+        """Expired JWT token returns HTTP 401 with 'Session expired' detail."""
+        import jwt
+        from datetime import datetime, timedelta, timezone
+
+        # Production mode is required to use cookie/bearer-only auth.
+        # In development mode the X-User-Email header could bypass token validation.
+        monkeypatch.setattr(settings, "NODE_ENV", "production")
+
+        # Create a token that is already expired (exp in the past)
+        expired_payload = {
+            "sub": test_user.email,
+            "role": test_user.role,
+            "school_id": test_user.school_id,
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=1),
+        }
+        expired_token = jwt.encode(
+            expired_payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        )
+
+        response = client.get(
+            "/api/v1/auth/me", cookies={"access_token": expired_token}
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Session expired"
+
     def test_auth_me_with_inactive_user(self, client, test_user, monkeypatch):
         """Test /auth/me endpoint with archived user"""
         # Set NODE_ENV to production
@@ -320,3 +348,152 @@ class TestSchoolIDValidation:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestSlidingSession:
+    """Test sliding session token renewal."""
+
+    def test_token_renewed_when_near_expiry(self, client, test_user, monkeypatch):
+        """When the token is within SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES, the
+        middleware should set a fresh access_token cookie on the response."""
+        import jwt as pyjwt
+        from datetime import datetime, timedelta, timezone
+
+        # Make threshold very short (1 min) and create a token whose remaining
+        # lifetime is less than that threshold (i.e., 30 seconds).
+        monkeypatch.setattr(settings, "SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES", 1)
+
+        now = datetime.now(timezone.utc)
+        near_expiry_payload = {
+            "sub": test_user.email,
+            "role": test_user.role,
+            "school_id": test_user.school_id,
+            # Expires 30 seconds from now — within the 1-minute threshold
+            "exp": now + timedelta(seconds=30),
+            "ss": now.timestamp(),
+        }
+        near_expiry_token = pyjwt.encode(
+            near_expiry_payload,
+            settings.SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM,
+        )
+
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
+            mock_db = MagicMock()
+            mock_session.return_value = mock_db
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
+
+            response = client.get(
+                "/api/v1/auth/me",
+                cookies={"access_token": near_expiry_token},
+            )
+
+        assert response.status_code == 200
+
+        # The middleware must have set a new Set-Cookie header
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "access_token=" in set_cookie
+        assert "HttpOnly" in set_cookie
+
+        # The new token must be different from the old (fresh expiry)
+        new_token = set_cookie.split("access_token=")[1].split(";")[0].strip()
+        assert new_token != near_expiry_token
+
+        # The new token should be valid and decode correctly
+        new_payload = pyjwt.decode(
+            new_token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        )
+        assert new_payload["sub"] == test_user.email
+        # session_start (ss) must be preserved across renewal
+        assert abs(new_payload["ss"] - near_expiry_payload["ss"]) < 2
+
+    def test_token_not_renewed_when_fresh(self, client, test_user, monkeypatch):
+        """A token with plenty of lifetime left should NOT be renewed."""
+        monkeypatch.setattr(settings, "SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES", 15)
+
+        # Fresh token — has ACCESS_TOKEN_EXPIRE_MINUTES (default 60) of lifetime
+        fresh_token = create_access_token(
+            sub=test_user.email,
+            role=test_user.role,
+            school_id=test_user.school_id,
+        )
+
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
+            mock_db = MagicMock()
+            mock_session.return_value = mock_db
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
+
+            response = client.get(
+                "/api/v1/auth/me",
+                cookies={"access_token": fresh_token},
+            )
+
+        assert response.status_code == 200
+
+        # No Set-Cookie renewal header expected for a fresh token
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "access_token=" not in set_cookie
+
+    def test_no_renewal_on_401_response(self, client, monkeypatch):
+        """Error responses must not trigger token renewal."""
+        monkeypatch.setattr(settings, "SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES", 1)
+
+        # Invalid token — will produce a 401
+        response = client.get(
+            "/api/v1/auth/me",
+            cookies={"access_token": "invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "access_token=" not in set_cookie
+
+    def test_token_not_renewed_when_max_session_exceeded(
+        self, client, test_user, monkeypatch
+    ):
+        """Token is NOT renewed once SESSION_MAX_HOURS has elapsed since session start."""
+        import jwt as pyjwt
+        from datetime import datetime, timedelta, timezone
+
+        monkeypatch.setattr(settings, "SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES", 1)
+        monkeypatch.setattr(settings, "SESSION_MAX_HOURS", 1)
+
+        now = datetime.now(timezone.utc)
+        # Session started 2 hours ago — exceeds the 1-hour max
+        session_start_old = now - timedelta(hours=2)
+
+        near_expiry_old_session_payload = {
+            "sub": test_user.email,
+            "role": test_user.role,
+            "school_id": test_user.school_id,
+            "exp": now + timedelta(seconds=30),
+            "ss": session_start_old.timestamp(),
+        }
+        old_session_token = pyjwt.encode(
+            near_expiry_old_session_payload,
+            settings.SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM,
+        )
+
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
+            mock_db = MagicMock()
+            mock_session.return_value = mock_db
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
+
+            response = client.get(
+                "/api/v1/auth/me",
+                cookies={"access_token": old_session_token},
+            )
+
+        assert response.status_code == 200
+
+        # Middleware must NOT renew when session has exceeded max age
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "access_token=" not in set_cookie

@@ -16,6 +16,14 @@ class Settings(BaseSettings):
     # Security / JWT
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"  # overschrijven via env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # Sliding session: renew the access token when the remaining lifetime
+    # falls below this threshold (minutes). Env var: SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES.
+    # Default: 15 minutes — renew when less than 15 min of a 60-min token remain.
+    SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES: int = 15
+    # Absolute maximum session duration (hours). The token is NOT renewed once
+    # the original session start (ss claim) is older than this value.
+    # Env var: SESSION_MAX_HOURS. Default: 12 hours.
+    SESSION_MAX_HOURS: int = 12
     JWT_ALGORITHM: str = "HS256"
 
     # Dev-login Control
