@@ -789,7 +789,7 @@ interface OverviewTableProps {
   groupedTrainings: GroupedTraining[];
   trainings: SkillTraining[];
   progressData: TeacherProgressMatrixResponse | null;
-  onCycle: (studentId: number, trainingId: number) => void;
+  onCycle: (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => void;
   selectedTrainings: Record<string, boolean>;
   onToggleTraining: (trainingId: number) => void;
 }
