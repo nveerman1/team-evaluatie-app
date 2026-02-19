@@ -7,6 +7,7 @@ import {
   ReminderListResponse,
 } from "@/dtos/client.dto";
 import { useDebounce } from "./useDebounce";
+import { getErrorMessage, logError } from "@/utils/errorHandling";
 
 /**
  * Custom hook for fetching and managing clients with debounced search
@@ -40,8 +41,10 @@ export function useClients(params?: {
           search: debouncedSearch,
         });
         setData(result);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch clients");
+      } catch (err) {
+        const message = getErrorMessage(err);
+        setError(message);
+        logError(err, "useClients.fetchClients");
       } finally {
         setLoading(false);
       }
@@ -79,8 +82,10 @@ export function useClient(clientId: number | null) {
       try {
         const result = await clientService.getClient(clientId);
         setData(result);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch client");
+      } catch (err) {
+        const message = getErrorMessage(err);
+        setError(message);
+        logError(err, "useClients");
       } finally {
         setLoading(false);
       }
@@ -108,8 +113,10 @@ export function useClientLogs(clientId: number | null) {
     try {
       const result = await clientService.getClientLog(clientId);
       setData(result);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch logs");
+    } catch (err) {
+      const message = getErrorMessage(err);
+      setError(message);
+      logError(err, "useClients.getClientLog");
     } finally {
       setLoading(false);
     }
@@ -136,8 +143,10 @@ export function useReminders(daysAhead?: number) {
     try {
       const result = await clientService.getUpcomingReminders(daysAhead);
       setData(result);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch reminders");
+    } catch (err) {
+      const message = getErrorMessage(err);
+      setError(message);
+      logError(err, "useClients.getUpcomingReminders");
     } finally {
       setLoading(false);
     }
