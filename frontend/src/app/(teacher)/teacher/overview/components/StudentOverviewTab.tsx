@@ -9,6 +9,7 @@ import { EvaluationHeatmapSection } from "./student-overview/EvaluationHeatmapSe
 import { OMZATrendSection } from "./student-overview/OMZATrendSection";
 import { CompetencyProfileSection } from "./student-overview/CompetencyProfileSection";
 import { LearningObjectivesSection } from "./student-overview/LearningObjectivesSection";
+import { SkillTrainingsSection } from "./student-overview/SkillTrainingsSection";
 import { ReflectionsSection } from "./student-overview/ReflectionsSection";
 import { FeedbackSidePanel } from "./student-overview/FeedbackSidePanel";
 
@@ -370,7 +371,13 @@ export default function StudentOverviewTab() {
         courseId={filters.selectedCourseId} 
       />
 
-      {/* F) Reflections */}
+      {/* F) Skill Trainings */}
+      <SkillTrainingsSection
+        studentId={filters.selectedStudentId}
+        courseId={filters.selectedCourseId}
+      />
+
+      {/* G) Reflections */}
       <ReflectionsSection 
         studentId={filters.selectedStudentId} 
         courseId={filters.selectedCourseId} 
