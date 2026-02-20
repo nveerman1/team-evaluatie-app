@@ -2234,7 +2234,8 @@ def get_peer_evaluation_dashboard(
                 continue
 
             most_recent_eval = max(
-                evals_with_dates, key=lambda e: (e.closed_at or e.created_at).replace(tzinfo=None)
+                evals_with_dates,
+                key=lambda e: (e.closed_at or e.created_at).replace(tzinfo=None),
             )
             eval_date = most_recent_eval.closed_at or most_recent_eval.created_at
             if hasattr(eval_date, "tzinfo") and eval_date.tzinfo is not None:
