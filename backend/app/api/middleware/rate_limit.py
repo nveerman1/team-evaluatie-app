@@ -11,7 +11,6 @@ from app.infra.services.rate_limiter import RateLimiter
 from app.core.security import decode_access_token
 from app.core.auth_utils import normalize_email
 from app.core.config import settings
-from sqlalchemy.orm import Session
 from app.infra.db.session import SessionLocal
 from app.infra.db.models import User
 
@@ -95,15 +94,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _should_skip_rate_limit(self, request: Request) -> bool:
         """
         Check if request should skip rate limiting.
-        
+
         Args:
             request: HTTP request
-            
+
         Returns:
             True if rate limiting should be skipped
         """
         path = request.url.path
-        
+
         # Always skip docs and health endpoints
         skip_paths = [
             "/docs",
@@ -113,66 +112,66 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ]
         if any(path.startswith(skip_path) for skip_path in skip_paths):
             return True
-        
+
         # Exempt authenticated teacher scoring endpoints from rate limiting
         # Teachers need to make many rapid updates when filling in scores
         should_exempt = self._is_authenticated_teacher_scoring(request)
         if should_exempt:
             logger.info(f"Rate limiting EXEMPTED for path: {path}")
         return should_exempt
-    
+
     def _is_authenticated_teacher_scoring(self, request: Request) -> bool:
         """
         Check if request is from authenticated teacher accessing scoring endpoints.
-        
+
         Args:
             request: HTTP request
-            
+
         Returns:
             True if authenticated teacher/admin accessing scoring endpoints
         """
         path = request.url.path
-        
+
         # Check if it's a scoring endpoint that teachers use interactively
         # Use precise regex patterns to match only intended scoring endpoints
         # Pattern 1: /api/v1/project-assessments/{id}/scores[/*]
         # Pattern 2: /api/v1/evaluations/{id}/grades[/*]
         scoring_patterns = [
-            r'^/api/v1/project-assessments/\d+/scores(?:/.*)?$',
-            r'^/api/v1/evaluations/\d+/grades(?:/.*)?$',
+            r"^/api/v1/project-assessments/\d+/scores(?:/.*)?$",
+            r"^/api/v1/evaluations/\d+/grades(?:/.*)?$",
         ]
-        
+
         is_scoring_endpoint = any(
             re.match(pattern, path) for pattern in scoring_patterns
         )
-        
+
         if not is_scoring_endpoint:
             return False
-        
+
         # Log that we found a scoring endpoint
         logger.info(f"Scoring endpoint detected: {path}")
-        
+
         # Get user role from authentication token
         user_role = self._get_user_role_from_token(request)
         logger.info(f"User role extracted from token: {user_role}")
-        
+
         if user_role in ("teacher", "admin"):
             logger.info(f"Rate limiting exempted for {user_role} on {path}")
             return True
-        
+
         logger.warning(f"Rate limiting NOT exempted for role={user_role} on {path}")
         return False
-    
+
     def _get_user_role_from_token(self, request: Request) -> Optional[str]:
         """
         Extract user role from authentication token in request.
-        
+
         This method decodes the JWT token from cookies or Authorization header
         and extracts the role claim directly from the token payload.
-        
+
         Args:
             request: HTTP request
-            
+
         Returns:
             User role string or None if not authenticated
         """
@@ -187,54 +186,68 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     try:
                         # Normalize email for case-insensitive lookup
                         normalized_email = normalize_email(x_user_email)
-                        user = db.query(User).filter(User.email == normalized_email).first()
+                        user = (
+                            db.query(User)
+                            .filter(User.email == normalized_email)
+                            .first()
+                        )
                         if user and not user.archived:
-                            logger.info(f"User found via X-User-Email: role={user.role}")
+                            logger.info(
+                                f"User found via X-User-Email: role={user.role}"
+                            )
                             return user.role
                         else:
-                            logger.warning(f"User not found or archived for email: {x_user_email}")
+                            logger.warning(
+                                f"User not found or archived for email: {x_user_email}"
+                            )
                     finally:
                         db.close()
                 except Exception as e:
                     logger.error(f"Error getting user from X-User-Email: {e}")
-        
+
         # Try to get token from cookie (preferred method in production)
         token = request.cookies.get("access_token")
         if token:
             logger.info(f"Token found in cookie: {token[:20]}...")
-        
+
         # Fallback to Authorization header
         if not token:
             auth_header = request.headers.get("authorization", "")
             if auth_header.startswith("Bearer "):
                 token = auth_header[7:]  # Remove "Bearer " prefix
                 logger.info(f"Token found in Authorization header: {token[:20]}...")
-        
+
         if not token:
             logger.warning("No authentication token found in request")
             return None
-        
+
         # Decode JWT token and extract role claim
         try:
             payload = decode_access_token(token)
             if not payload:
                 logger.warning("Failed to decode JWT token")
                 return None
-            
-            logger.info(f"JWT token decoded successfully. Payload keys: {list(payload.keys())}")
-            
+
+            logger.info(
+                f"JWT token decoded successfully. Payload keys: {list(payload.keys())}"
+            )
+
             # Get role directly from token payload (no database query needed)
             role = payload.get("role")
             if role:
                 logger.info(f"Role found in JWT token: {role}")
                 return role
             else:
-                logger.warning(f"No 'role' claim in JWT token. Available claims: {list(payload.keys())}")
-                
+                logger.warning(
+                    f"No 'role' claim in JWT token. Available claims: {list(payload.keys())}"
+                )
+
         except Exception as e:
-            logger.error(f"Error decoding token for rate limit check: {e}", exc_info=True)
+            logger.error(
+                f"Error decoding token for rate limit check: {e}", exc_info=True
+            )
             return None
-        
+
         return None
 
     def _get_user_identifier(self, request: Request) -> str:

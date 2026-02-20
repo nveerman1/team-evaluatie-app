@@ -27,7 +27,9 @@ class AttendanceEvent(Base):
 
     # Check-in/out times
     check_in: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    check_out: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    check_out: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # External work fields
     is_external: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -41,7 +43,9 @@ class AttendanceEvent(Base):
     approved_by: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Source tracking
     source: Mapped[str] = mapped_column(
@@ -51,13 +55,13 @@ class AttendanceEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     created_by: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True

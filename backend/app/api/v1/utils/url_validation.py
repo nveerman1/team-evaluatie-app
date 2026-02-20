@@ -9,7 +9,6 @@ import ipaddress
 from urllib.parse import urlparse
 from typing import Tuple
 
-
 ALLOWED_HOSTS = [
     "sharepoint.com",
     "1drv.ms",  # OneDrive short URLs

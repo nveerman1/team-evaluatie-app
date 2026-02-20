@@ -71,8 +71,7 @@ def backfill_project_teams(db: Session) -> None:
     print("\n[1/6] Finding distinct project-group combinations from evaluations...")
 
     # Query evaluations with project_id and derive group_id from allocations
-    eval_query = text(
-        """
+    eval_query = text("""
         SELECT DISTINCT 
             e.id as eval_id,
             e.project_id,
@@ -89,8 +88,7 @@ def backfill_project_teams(db: Session) -> None:
           AND e.project_team_id IS NULL
         GROUP BY e.id, e.project_id, e.school_id, g.id, g.name
         HAVING g.id IS NOT NULL
-    """
-    )
+    """)
 
     eval_combinations = db.execute(eval_query).fetchall()
     print(f"  Found {len(eval_combinations)} evaluation-group combinations")
@@ -100,8 +98,7 @@ def backfill_project_teams(db: Session) -> None:
         "\n[2/6] Finding distinct project-group combinations from project assessments..."
     )
 
-    assessment_query = text(
-        """
+    assessment_query = text("""
         SELECT DISTINCT
             pa.id as assessment_id,
             p.id as project_id,
@@ -115,8 +112,7 @@ def backfill_project_teams(db: Session) -> None:
         WHERE pa.project_team_id IS NULL
         GROUP BY pa.id, p.id, pa.school_id, pa.group_id, g.name
         HAVING p.id IS NOT NULL
-    """
-    )
+    """)
 
     assessment_combinations = db.execute(assessment_query).fetchall()
     print(f"  Found {len(assessment_combinations)} assessment-group combinations")
@@ -182,13 +178,11 @@ def backfill_project_teams(db: Session) -> None:
 
         # ========== Step 4: Populate project_team_members ==========
         # Get group members from the group at the time
-        members_query = text(
-            """
+        members_query = text("""
             SELECT DISTINCT gm.user_id, gm.role_in_team
             FROM group_members gm
             WHERE gm.group_id = :group_id AND gm.active = true
-        """
-        )
+        """)
         members = db.execute(members_query, {"group_id": group_id}).fetchall()
 
         # If no group members found, try to infer from evaluation allocations
@@ -196,13 +190,11 @@ def backfill_project_teams(db: Session) -> None:
             stats["inference_count"] += 1
             # Only query if we have eval_ids
             if len(combo["eval_ids"]) > 0:
-                inference_query = text(
-                    """
+                inference_query = text("""
                     SELECT DISTINCT a.reviewee_id as user_id
                     FROM allocations a
                     WHERE a.evaluation_id IN :eval_ids
-                """
-                )
+                """)
                 members = [
                     {"user_id": row.user_id, "role_in_team": None}
                     for row in db.execute(
@@ -273,15 +265,13 @@ def backfill_project_teams(db: Session) -> None:
     print("\n[6/6] Linking project_notes_contexts to project_teams...")
 
     # Try to link based on project_id and evaluation_id
-    notes_query = text(
-        """
+    notes_query = text("""
         SELECT pnc.id, e.project_team_id
         FROM project_notes_contexts pnc
         JOIN evaluations e ON e.id = pnc.evaluation_id
         WHERE pnc.project_team_id IS NULL
           AND e.project_team_id IS NOT NULL
-    """
-    )
+    """)
 
     notes_to_link = db.execute(notes_query).fetchall()
     for row in notes_to_link:

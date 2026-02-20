@@ -60,7 +60,7 @@ def seed_external_assessment_test():
         print("\n" + "=" * 70)
         print("1. SCHOOL SETUP")
         print("=" * 70)
-        
+
         school = db.query(School).filter(School.id == 1).first()
         if not school:
             school = School(id=1, name="Test School")
@@ -71,11 +71,12 @@ def seed_external_assessment_test():
             print(f"✓ Using existing School: {school.name} (ID: {school.id})")
 
         # Create admin user if not exists
-        admin = db.query(User).filter(
-            User.school_id == school.id,
-            User.email == "admin@test.school"
-        ).first()
-        
+        admin = (
+            db.query(User)
+            .filter(User.school_id == school.id, User.email == "admin@test.school")
+            .first()
+        )
+
         if not admin:
             admin = User(
                 school_id=school.id,
@@ -92,11 +93,12 @@ def seed_external_assessment_test():
             print(f"✓ Using existing Admin: {admin.name} (ID: {admin.id})")
 
         # Create teacher user
-        teacher = db.query(User).filter(
-            User.school_id == school.id,
-            User.email == "teacher@test.school"
-        ).first()
-        
+        teacher = (
+            db.query(User)
+            .filter(User.school_id == school.id, User.email == "teacher@test.school")
+            .first()
+        )
+
         if not teacher:
             teacher = User(
                 school_id=school.id,
@@ -132,10 +134,11 @@ def seed_external_assessment_test():
         for name, email, class_name in student_data:
             # Use IDs 2-6 as requested, regardless of whether teacher already took ID 2
             # We'll check by email to avoid duplicate students
-            student = db.query(User).filter(
-                User.email == email,
-                User.school_id == school.id
-            ).first()
+            student = (
+                db.query(User)
+                .filter(User.email == email, User.school_id == school.id)
+                .first()
+            )
             if not student:
                 student = User(
                     school_id=school.id,
@@ -160,11 +163,12 @@ def seed_external_assessment_test():
         print("3. SUBJECT & ACADEMIC YEAR SETUP")
         print("=" * 70)
 
-        subject = db.query(Subject).filter(
-            Subject.school_id == school.id,
-            Subject.code == "O&O"
-        ).first()
-        
+        subject = (
+            db.query(Subject)
+            .filter(Subject.school_id == school.id, Subject.code == "O&O")
+            .first()
+        )
+
         if not subject:
             subject = Subject(
                 school_id=school.id,
@@ -179,11 +183,14 @@ def seed_external_assessment_test():
         else:
             print(f"✓ Using existing Subject: {subject.name} (ID: {subject.id})")
 
-        academic_year = db.query(AcademicYear).filter(
-            AcademicYear.school_id == school.id,
-            AcademicYear.label == "2025-2026"
-        ).first()
-        
+        academic_year = (
+            db.query(AcademicYear)
+            .filter(
+                AcademicYear.school_id == school.id, AcademicYear.label == "2025-2026"
+            )
+            .first()
+        )
+
         if not academic_year:
             academic_year = AcademicYear(
                 school_id=school.id,
@@ -194,9 +201,13 @@ def seed_external_assessment_test():
             )
             db.add(academic_year)
             db.flush()
-            print(f"✓ Created Academic Year: {academic_year.label} (ID: {academic_year.id})")
+            print(
+                f"✓ Created Academic Year: {academic_year.label} (ID: {academic_year.id})"
+            )
         else:
-            print(f"✓ Using existing Academic Year: {academic_year.label} (ID: {academic_year.id})")
+            print(
+                f"✓ Using existing Academic Year: {academic_year.label} (ID: {academic_year.id})"
+            )
 
         # ============================================================
         # 4. Course (ID 1)
@@ -239,11 +250,12 @@ def seed_external_assessment_test():
 
         groups = []
         for team_number, group_name, group_students in group_configs:
-            group = db.query(Group).filter(
-                Group.course_id == course.id,
-                Group.team_number == team_number
-            ).first()
-            
+            group = (
+                db.query(Group)
+                .filter(Group.course_id == course.id, Group.team_number == team_number)
+                .first()
+            )
+
             if not group:
                 group = Group(
                     school_id=school.id,
@@ -253,17 +265,25 @@ def seed_external_assessment_test():
                 )
                 db.add(group)
                 db.flush()
-                print(f"✓ Created Group: {group_name} (ID: {group.id}, Team: {team_number})")
+                print(
+                    f"✓ Created Group: {group_name} (ID: {group.id}, Team: {team_number})"
+                )
             else:
-                print(f"✓ Using existing Group: {group.name} (ID: {group.id}, Team: {team_number})")
+                print(
+                    f"✓ Using existing Group: {group.name} (ID: {group.id}, Team: {team_number})"
+                )
 
             # Add members to group
             for student in group_students:
-                existing_member = db.query(GroupMember).filter(
-                    GroupMember.group_id == group.id,
-                    GroupMember.user_id == student.id
-                ).first()
-                
+                existing_member = (
+                    db.query(GroupMember)
+                    .filter(
+                        GroupMember.group_id == group.id,
+                        GroupMember.user_id == student.id,
+                    )
+                    .first()
+                )
+
                 if not existing_member:
                     member = GroupMember(
                         school_id=school.id,
@@ -272,7 +292,7 @@ def seed_external_assessment_test():
                     )
                     db.add(member)
                     print(f"  ✓ Added {student.name} to {group_name}")
-            
+
             groups.append(group)
 
         db.flush()
@@ -315,11 +335,15 @@ def seed_external_assessment_test():
         project_teams = []
         for group in groups:
             # Check if project team already exists
-            project_team = db.query(ProjectTeam).filter(
-                ProjectTeam.project_id == project.id,
-                ProjectTeam.team_number == group.team_number
-            ).first()
-            
+            project_team = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.project_id == project.id,
+                    ProjectTeam.team_number == group.team_number,
+                )
+                .first()
+            )
+
             if not project_team:
                 project_team = ProjectTeam(
                     school_id=school.id,
@@ -331,21 +355,29 @@ def seed_external_assessment_test():
                 )
                 db.add(project_team)
                 db.flush()
-                print(f"✓ Created ProjectTeam: Team {group.team_number} (ID: {project_team.id})")
+                print(
+                    f"✓ Created ProjectTeam: Team {group.team_number} (ID: {project_team.id})"
+                )
             else:
-                print(f"✓ Using existing ProjectTeam: Team {group.team_number} (ID: {project_team.id})")
+                print(
+                    f"✓ Using existing ProjectTeam: Team {group.team_number} (ID: {project_team.id})"
+                )
 
             # Add team members
-            group_members = db.query(GroupMember).filter(
-                GroupMember.group_id == group.id
-            ).all()
-            
+            group_members = (
+                db.query(GroupMember).filter(GroupMember.group_id == group.id).all()
+            )
+
             for gm in group_members:
-                existing_ptm = db.query(ProjectTeamMember).filter(
-                    ProjectTeamMember.project_team_id == project_team.id,
-                    ProjectTeamMember.user_id == gm.user_id
-                ).first()
-                
+                existing_ptm = (
+                    db.query(ProjectTeamMember)
+                    .filter(
+                        ProjectTeamMember.project_team_id == project_team.id,
+                        ProjectTeamMember.user_id == gm.user_id,
+                    )
+                    .first()
+                )
+
                 if not existing_ptm:
                     ptm = ProjectTeamMember(
                         school_id=school.id,
@@ -355,7 +387,7 @@ def seed_external_assessment_test():
                     db.add(ptm)
                     user = db.query(User).filter(User.id == gm.user_id).first()
                     print(f"  ✓ Added {user.name} to ProjectTeam {group.team_number}")
-            
+
             project_teams.append(project_team)
 
         db.flush()
@@ -442,11 +474,15 @@ def seed_external_assessment_test():
         ]
 
         for crit_data in criteria_data:
-            existing_crit = db.query(RubricCriterion).filter(
-                RubricCriterion.rubric_id == rubric.id,
-                RubricCriterion.name == crit_data["name"]
-            ).first()
-            
+            existing_crit = (
+                db.query(RubricCriterion)
+                .filter(
+                    RubricCriterion.rubric_id == rubric.id,
+                    RubricCriterion.name == crit_data["name"],
+                )
+                .first()
+            )
+
             if not existing_crit:
                 criterion = RubricCriterion(
                     school_id=school.id,
@@ -458,8 +494,12 @@ def seed_external_assessment_test():
                     order=crit_data["order"],
                 )
                 db.add(criterion)
-                visibility = "visible" if crit_data["visible_to_external"] else "not visible"
-                print(f"  ✓ Added criterion: {crit_data['name']} ({visibility} to externals)")
+                visibility = (
+                    "visible" if crit_data["visible_to_external"] else "not visible"
+                )
+                print(
+                    f"  ✓ Added criterion: {crit_data['name']} ({visibility} to externals)"
+                )
 
         db.flush()
 
@@ -471,11 +511,15 @@ def seed_external_assessment_test():
         print("=" * 70)
 
         # Create assessment for first group/team
-        assessment = db.query(ProjectAssessment).filter(
-            ProjectAssessment.project_id == project.id,
-            ProjectAssessment.role == "TEACHER"
-        ).first()
-        
+        assessment = (
+            db.query(ProjectAssessment)
+            .filter(
+                ProjectAssessment.project_id == project.id,
+                ProjectAssessment.role == "TEACHER",
+            )
+            .first()
+        )
+
         if not assessment:
             assessment = ProjectAssessment(
                 school_id=school.id,
@@ -492,9 +536,13 @@ def seed_external_assessment_test():
             )
             db.add(assessment)
             db.flush()
-            print(f"✓ Created ProjectAssessment: {assessment.title} (ID: {assessment.id})")
+            print(
+                f"✓ Created ProjectAssessment: {assessment.title} (ID: {assessment.id})"
+            )
         else:
-            print(f"✓ Using existing ProjectAssessment: {assessment.title} (ID: {assessment.id})")
+            print(
+                f"✓ Using existing ProjectAssessment: {assessment.title} (ID: {assessment.id})"
+            )
 
         # ============================================================
         # 10. ExternalEvaluators
@@ -518,11 +566,15 @@ def seed_external_assessment_test():
 
         evaluators = []
         for eval_data in evaluator_data:
-            evaluator = db.query(ExternalEvaluator).filter(
-                ExternalEvaluator.school_id == school.id,
-                ExternalEvaluator.email == eval_data["email"]
-            ).first()
-            
+            evaluator = (
+                db.query(ExternalEvaluator)
+                .filter(
+                    ExternalEvaluator.school_id == school.id,
+                    ExternalEvaluator.email == eval_data["email"],
+                )
+                .first()
+            )
+
             if not evaluator:
                 evaluator = ExternalEvaluator(
                     school_id=school.id,
@@ -532,10 +584,14 @@ def seed_external_assessment_test():
                 )
                 db.add(evaluator)
                 db.flush()
-                print(f"✓ Created External Evaluator: {eval_data['name']} ({eval_data['email']})")
+                print(
+                    f"✓ Created External Evaluator: {eval_data['name']} ({eval_data['email']})"
+                )
             else:
-                print(f"✓ Using existing External Evaluator: {evaluator.name} ({evaluator.email})")
-            
+                print(
+                    f"✓ Using existing External Evaluator: {evaluator.name} ({evaluator.email})"
+                )
+
             evaluators.append(evaluator)
 
         # ============================================================
@@ -548,13 +604,17 @@ def seed_external_assessment_test():
         # Link evaluators to teams
         for idx, group in enumerate(groups):
             evaluator = evaluators[idx % len(evaluators)]
-            
-            existing_link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.group_id == group.id,
-                ProjectTeamExternal.assessment_id == assessment.id,
-                ProjectTeamExternal.team_number == group.team_number
-            ).first()
-            
+
+            existing_link = (
+                db.query(ProjectTeamExternal)
+                .filter(
+                    ProjectTeamExternal.group_id == group.id,
+                    ProjectTeamExternal.assessment_id == assessment.id,
+                    ProjectTeamExternal.team_number == group.team_number,
+                )
+                .first()
+            )
+
             if not existing_link:
                 token = generate_external_token()
                 link = ProjectTeamExternal(
@@ -570,7 +630,9 @@ def seed_external_assessment_test():
                     invited_at=datetime.now(),
                 )
                 db.add(link)
-                print(f"✓ Linked {evaluator.name} to {group.name} (Team {group.team_number})")
+                print(
+                    f"✓ Linked {evaluator.name} to {group.name} (Team {group.team_number})"
+                )
                 print(f"  Token: {token[:20]}...")
             else:
                 print(f"✓ Link already exists: {evaluator.name} -> {group.name}")
@@ -586,23 +648,31 @@ def seed_external_assessment_test():
         print("=" * 70)
 
         # Get visible criteria for external evaluators
-        visible_criteria = db.query(RubricCriterion).filter(
-            RubricCriterion.rubric_id == rubric.id,
-            RubricCriterion.visible_to_external.is_(True)
-        ).all()
+        visible_criteria = (
+            db.query(RubricCriterion)
+            .filter(
+                RubricCriterion.rubric_id == rubric.id,
+                RubricCriterion.visible_to_external.is_(True),
+            )
+            .all()
+        )
 
         # Create external assessments for each team
         for idx, group in enumerate(groups):
             evaluator = evaluators[idx % len(evaluators)]
             project_team = project_teams[idx]
-            
+
             # Check if external assessment already exists
-            existing_external_assessment = db.query(ProjectAssessment).filter(
-                ProjectAssessment.group_id == group.id,
-                ProjectAssessment.external_evaluator_id == evaluator.id,
-                ProjectAssessment.role == "EXTERNAL"
-            ).first()
-            
+            existing_external_assessment = (
+                db.query(ProjectAssessment)
+                .filter(
+                    ProjectAssessment.group_id == group.id,
+                    ProjectAssessment.external_evaluator_id == evaluator.id,
+                    ProjectAssessment.role == "EXTERNAL",
+                )
+                .first()
+            )
+
             if not existing_external_assessment:
                 # Create external assessment
                 external_assessment = ProjectAssessment(
@@ -622,14 +692,17 @@ def seed_external_assessment_test():
                 )
                 db.add(external_assessment)
                 db.flush()
-                print(f"\n✓ Created External Assessment for {group.name} by {evaluator.name}")
-                
+                print(
+                    f"\n✓ Created External Assessment for {group.name} by {evaluator.name}"
+                )
+
                 # Create scores for each visible criterion
                 for criterion in visible_criteria:
                     # Generate realistic scores (3-5 range for external assessments)
                     import random
+
                     score_value = random.choice([3, 3, 4, 4, 4, 5])
-                    
+
                     # Comments for different scores
                     comments = {
                         3: [
@@ -648,9 +721,9 @@ def seed_external_assessment_test():
                             "Indrukwekkend resultaat, goed gedaan!",
                         ],
                     }
-                    
+
                     comment = random.choice(comments.get(score_value, [""]))
-                    
+
                     score = ProjectAssessmentScore(
                         school_id=school.id,
                         assessment_id=external_assessment.id,
@@ -662,18 +735,22 @@ def seed_external_assessment_test():
                     )
                     db.add(score)
                     print(f"  ✓ Added score for '{criterion.name}': {score_value}/5")
-                
+
                 # Update the ProjectTeamExternal status to SUBMITTED
-                link = db.query(ProjectTeamExternal).filter(
-                    ProjectTeamExternal.group_id == group.id,
-                    ProjectTeamExternal.external_evaluator_id == evaluator.id,
-                    ProjectTeamExternal.assessment_id == assessment.id
-                ).first()
-                
+                link = (
+                    db.query(ProjectTeamExternal)
+                    .filter(
+                        ProjectTeamExternal.group_id == group.id,
+                        ProjectTeamExternal.external_evaluator_id == evaluator.id,
+                        ProjectTeamExternal.assessment_id == assessment.id,
+                    )
+                    .first()
+                )
+
                 if link:
                     link.status = "SUBMITTED"
                     link.submitted_at = datetime.now()
-                    print(f"  ✓ Updated link status to SUBMITTED")
+                    print("  ✓ Updated link status to SUBMITTED")
             else:
                 print(f"✓ External Assessment already exists for {group.name}")
 
@@ -689,24 +766,25 @@ def seed_external_assessment_test():
         print(f"  • Project ID: {project.id}")
         print(f"  • Rubric ID: {rubric.id} (scope='project')")
         print(f"  • ProjectAssessment ID: {assessment.id} (Teacher)")
-        print(f"  • Students: 5 students (IDs are auto-generated)")
+        print("  • Students: 5 students (IDs are auto-generated)")
         print(f"  • Groups: {len(groups)} teams")
         print(f"  • External Evaluators: {len(evaluators)}")
         print(f"  • External Assessments: {len(groups)} (with scores)")
         print("\n🔗 Test URL:")
-        print(f"  http://localhost:3000/teacher/project-assessments/1/external")
+        print("  http://localhost:3000/teacher/project-assessments/1/external")
         print("\n👤 Login credentials:")
-        print(f"  Teacher: teacher@test.school / test123")
-        print(f"  Admin: admin@test.school / test123")
+        print("  Teacher: teacher@test.school / test123")
+        print("  Admin: admin@test.school / test123")
         print("\n📊 External Assessment Details:")
-        print(f"  • Each team has completed external assessment")
-        print(f"  • Scores range from 3-5 on visible criteria")
-        print(f"  • Status: SUBMITTED (completed)")
+        print("  • Each team has completed external assessment")
+        print("  • Scores range from 3-5 on visible criteria")
+        print("  • Status: SUBMITTED (completed)")
         print("=" * 70)
 
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         db.rollback()
         raise

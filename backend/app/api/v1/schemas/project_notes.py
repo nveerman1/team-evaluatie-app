@@ -10,7 +10,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 
-
 # ========== ProjectNotesContext Schemas ==========
 
 

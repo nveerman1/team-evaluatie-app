@@ -4,12 +4,12 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from enum import Enum
 
-
 # ---------- Enums ----------
 
 
 class ProjectPlanStatus(str, Enum):
     """Status of a project plan (visibility control)"""
+
     DRAFT = "draft"
     OPEN = "open"
     PUBLISHED = "published"
@@ -18,6 +18,7 @@ class ProjectPlanStatus(str, Enum):
 
 class PlanStatus(str, Enum):
     """Status of a project plan team instance"""
+
     CONCEPT = "concept"
     INGEDIEND = "ingediend"
     GO = "go"
@@ -26,6 +27,7 @@ class PlanStatus(str, Enum):
 
 class SectionKey(str, Enum):
     """8 sections in a project plan"""
+
     CLIENT = "client"
     PROBLEM = "problem"
     GOAL = "goal"
@@ -38,6 +40,7 @@ class SectionKey(str, Enum):
 
 class SectionStatus(str, Enum):
     """Status of an individual section"""
+
     EMPTY = "empty"
     DRAFT = "draft"
     SUBMITTED = "submitted"
@@ -50,6 +53,7 @@ class SectionStatus(str, Enum):
 
 class ClientData(BaseModel):
     """Client information for the client section"""
+
     organisation: Optional[str] = Field(None, max_length=500)
     contact: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=320)  # RFC 5321 max email length
@@ -62,6 +66,7 @@ class ClientData(BaseModel):
 
 class ProjectPlanSectionBase(BaseModel):
     """Base schema for project plan sections"""
+
     key: SectionKey
     status: SectionStatus
     text: Optional[str] = None
@@ -71,6 +76,7 @@ class ProjectPlanSectionBase(BaseModel):
 
 class ProjectPlanSectionOut(ProjectPlanSectionBase):
     """Output schema for project plan sections"""
+
     id: int
     created_at: datetime
     updated_at: datetime
@@ -81,6 +87,7 @@ class ProjectPlanSectionOut(ProjectPlanSectionBase):
 
 class ProjectPlanSectionUpdate(BaseModel):
     """Update schema for project plan sections (teacher/admin only)"""
+
     text: Optional[str] = Field(None, max_length=10000)
     client: Optional[ClientData] = None
     status: Optional[SectionStatus] = None
@@ -89,6 +96,7 @@ class ProjectPlanSectionUpdate(BaseModel):
 
 class ProjectPlanSectionStudentUpdate(BaseModel):
     """Update schema for project plan sections (student only - restricted fields)"""
+
     text: Optional[str] = Field(None, max_length=10000)
     client: Optional[ClientData] = None
 
@@ -98,6 +106,7 @@ class ProjectPlanSectionStudentUpdate(BaseModel):
 
 class ProjectPlanTeamBase(BaseModel):
     """Base schema for project plan teams"""
+
     title: Optional[str] = None
     status: PlanStatus
     locked: bool
@@ -105,6 +114,7 @@ class ProjectPlanTeamBase(BaseModel):
 
 class ProjectPlanTeamOut(ProjectPlanTeamBase):
     """Output schema for project plan teams"""
+
     id: int
     project_team_id: int
     team_number: Optional[int] = None
@@ -120,6 +130,7 @@ class ProjectPlanTeamOut(ProjectPlanTeamBase):
 
 class ProjectPlanTeamUpdate(BaseModel):
     """Update schema for project plan teams (teacher/admin only)"""
+
     title: Optional[str] = Field(None, max_length=500)
     status: Optional[PlanStatus] = None
     locked: Optional[bool] = None
@@ -128,6 +139,7 @@ class ProjectPlanTeamUpdate(BaseModel):
 
 class ProjectPlanTeamStudentUpdate(BaseModel):
     """Update schema for project plan teams (student only - restricted fields)"""
+
     title: Optional[str] = Field(None, max_length=500)
 
 
@@ -136,6 +148,7 @@ class ProjectPlanTeamStudentUpdate(BaseModel):
 
 class ProjectPlanBase(BaseModel):
     """Base schema for project plans"""
+
     title: Optional[str] = None
     version: Optional[str] = None
     status: Optional[ProjectPlanStatus] = ProjectPlanStatus.DRAFT
@@ -143,11 +156,13 @@ class ProjectPlanBase(BaseModel):
 
 class ProjectPlanCreate(ProjectPlanBase):
     """Create schema for project plans"""
+
     project_id: int
 
 
 class ProjectPlanUpdate(BaseModel):
     """Update schema for project plans"""
+
     title: Optional[str] = Field(None, max_length=500)
     version: Optional[str] = Field(None, max_length=50)
     status: Optional[ProjectPlanStatus] = None
@@ -155,6 +170,7 @@ class ProjectPlanUpdate(BaseModel):
 
 class ProjectPlanOut(ProjectPlanBase):
     """Output schema for project plans"""
+
     id: int
     project_id: int
     school_id: int
@@ -167,6 +183,7 @@ class ProjectPlanOut(ProjectPlanBase):
 
 class ProjectPlanDetail(ProjectPlanOut):
     """Detailed project plan with teams"""
+
     project_name: str
     course_id: Optional[int] = None
     course_name: Optional[str] = None
@@ -176,6 +193,7 @@ class ProjectPlanDetail(ProjectPlanOut):
 
 class ProjectPlanListItem(BaseModel):
     """List item schema for project plans"""
+
     id: int
     title: Optional[str] = None
     version: Optional[str] = None
@@ -185,7 +203,9 @@ class ProjectPlanListItem(BaseModel):
     course_id: Optional[int] = None
     course_name: Optional[str] = None
     team_count: int
-    teams_summary: Dict[str, int] = Field(default_factory=dict)  # {concept: 2, ingediend: 1, go: 0, no_go: 1}
+    teams_summary: Dict[str, int] = Field(
+        default_factory=dict
+    )  # {concept: 2, ingediend: 1, go: 0, no_go: 1}
     created_at: datetime
     updated_at: datetime
 
@@ -195,6 +215,7 @@ class ProjectPlanListItem(BaseModel):
 
 class ProjectPlanListResponse(BaseModel):
     """Response schema for list endpoint"""
+
     items: List[ProjectPlanListItem]
     page: int
     limit: int
@@ -206,6 +227,7 @@ class ProjectPlanListResponse(BaseModel):
 
 class ProjectPlanTeamOverviewItem(BaseModel):
     """Team overview item for the overview tab"""
+
     id: int
     project_team_id: int
     team_number: Optional[int] = None

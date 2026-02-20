@@ -944,11 +944,16 @@ class ProjectPlanSection(Base):
     )
 
     # Relationships
-    project_plan_team: Mapped["ProjectPlanTeam"] = relationship(back_populates="sections")
+    project_plan_team: Mapped["ProjectPlanTeam"] = relationship(
+        back_populates="sections"
+    )
 
     __table_args__ = (
         UniqueConstraint(
-            "school_id", "project_plan_team_id", "key", name="uq_project_plan_team_section_key"
+            "school_id",
+            "project_plan_team_id",
+            "key",
+            name="uq_project_plan_team_section_key",
         ),
         Index("ix_pps_project_plan_team", "project_plan_team_id"),
         Index("ix_pps_key", "key"),
@@ -959,7 +964,7 @@ class ProjectPlanSection(Base):
 class ProjectAssessment(Base):
     """
     Project assessment per project, uses rubrics with scope='project'
-    
+
     Refactored: Owned by project_id, with multiple teams linked via project_assessment_teams
     """
 
@@ -1053,13 +1058,15 @@ class ProjectAssessmentTeam(Base):
     status: Mapped[str] = mapped_column(
         String(30), default="not_started", nullable=False
     )  # not_started|in_progress|completed
-    
+
     # Progress tracking
     scores_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_updated_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Relationships
-    project_assessment: Mapped["ProjectAssessment"] = relationship(back_populates="assessment_teams")
+    project_assessment: Mapped["ProjectAssessment"] = relationship(
+        back_populates="assessment_teams"
+    )
     project_team: Mapped["ProjectTeam"] = relationship()
 
     __table_args__ = (
@@ -3156,7 +3163,9 @@ class AttendanceEvent(Base):
 
     # Check-in/out times
     check_in: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    check_out: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    check_out: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # External work fields
     is_external: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -3170,7 +3179,9 @@ class AttendanceEvent(Base):
     approved_by: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Source tracking
     source: Mapped[str] = mapped_column(
@@ -3180,13 +3191,13 @@ class AttendanceEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     created_by: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -3356,6 +3367,7 @@ class SkillTraining(Base):
     Vaardigheidstraining — door docent aangemaakt, verwijst naar externe URL
     op technasiummbh.nl/vaardigheden/
     """
+
     __tablename__ = "skill_trainings"
 
     id: Mapped[int] = id_pk()
@@ -3368,13 +3380,15 @@ class SkillTraining(Base):
     # FK to existing CompetencyCategory table (competency_categories)
     competency_category_id: Mapped[int] = mapped_column(
         ForeignKey("competency_categories.id", ondelete="RESTRICT"),
-        nullable=False, index=True
+        nullable=False,
+        index=True,
     )
 
     # FK to existing LearningObjective table (learning_objectives) - optional
     learning_objective_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("learning_objectives.id", ondelete="SET NULL"),
-        nullable=True, index=True
+        nullable=True,
+        index=True,
     )
 
     level: Mapped[Optional[str]] = mapped_column(String(20))  # "basis" | "plus"
@@ -3385,8 +3399,10 @@ class SkillTraining(Base):
         DateTime(timezone=True), server_default=sa.func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=sa.func.now(),
-        onupdate=sa.func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+        nullable=False,
     )
 
     # Relationships
@@ -3408,6 +3424,7 @@ class SkillTrainingProgress(Base):
     - Student mag zetten: none → planned → in_progress → submitted
     - Docent mag zetten: completed, mastered (en alle andere)
     """
+
     __tablename__ = "skill_training_progress"
 
     id: Mapped[int] = id_pk()
@@ -3431,8 +3448,10 @@ class SkillTrainingProgress(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=sa.func.now(),
-        onupdate=sa.func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+        nullable=False,
     )
     note: Mapped[Optional[str]] = mapped_column(Text)
 
@@ -3445,8 +3464,10 @@ class SkillTrainingProgress(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "student_id", "training_id", "course_id",
-            name="uq_skill_progress_student_training_course"
+            "student_id",
+            "training_id",
+            "course_id",
+            name="uq_skill_progress_student_training_course",
         ),
         Index("ix_skill_progress_student", "student_id"),
         Index("ix_skill_progress_training", "training_id"),

@@ -4,8 +4,7 @@ Pydantic schemas for 3de Blok RFID Attendance module
 
 from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator, model_validator
-
+from pydantic import BaseModel, Field, model_validator
 
 # ============ Timezone Policy Configuration ============
 
@@ -21,38 +20,37 @@ NAIVE_DATETIME_ASSUMED_TZ = "UTC"
 def ensure_aware_utc(dt: Optional[datetime]) -> Optional[datetime]:
     """
     Ensure datetime is timezone-aware in UTC.
-    
+
     Policy: Naive datetimes are interpreted as UTC (see NAIVE_DATETIME_ASSUMED_TZ).
-    
+
     Args:
         dt: Datetime to normalize. Can be None.
-        
+
     Returns:
         Timezone-aware datetime in UTC, or None if input was None.
-        
+
     Raises:
         TypeError: If dt is not a datetime, None, or has invalid type.
-        
+
     Behavior:
         - If dt is None: returns None
         - If dt is naive: assumes UTC and adds timezone info
         - If dt is timezone-aware: converts to UTC
-        
+
     This prevents "can't compare offset-naive and offset-aware datetimes" errors.
     """
     if dt is None:
         return None
-    
+
     if not isinstance(dt, datetime):
         raise TypeError(
-            f"Expected datetime or None, got {type(dt).__name__}. "
-            f"Value: {dt!r}"
+            f"Expected datetime or None, got {type(dt).__name__}. " f"Value: {dt!r}"
         )
-    
+
     if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
         # Naive datetime - interpret as UTC per policy
         return dt.replace(tzinfo=timezone.utc)
-    
+
     # Already aware - ensure it's UTC
     return dt.astimezone(timezone.utc)
 
@@ -131,7 +129,7 @@ class AttendanceEventUpdate(BaseModel):
     def validate_check_out_after_check_in(self):
         """
         Validate that check_out is after check_in (cross-field validation).
-        
+
         Note: For partial updates, this only validates if both fields are present
         in the update payload. The backend must handle validation against existing
         DB values separately.

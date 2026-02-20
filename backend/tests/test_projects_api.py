@@ -34,7 +34,9 @@ class TestProjectsEndpoints:
         user.role = "student"  # Students cannot list projects
 
         with patch("app.api.v1.routers.projects.require_role") as mock_require:
-            mock_require.side_effect = HTTPException(status_code=403, detail="Access denied")
+            mock_require.side_effect = HTTPException(
+                status_code=403, detail="Access denied"
+            )
 
             with pytest.raises(HTTPException) as exc_info:
                 list_projects(db=db, user=user, page=1, per_page=20)
@@ -71,8 +73,14 @@ class TestProjectsEndpoints:
         db.query.return_value = query_mock
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.scope_query_by_school", return_value=query_mock):
-                with patch("app.api.v1.routers.projects.get_accessible_course_ids", return_value=[1, 2]):
+            with patch(
+                "app.api.v1.routers.projects.scope_query_by_school",
+                return_value=query_mock,
+            ):
+                with patch(
+                    "app.api.v1.routers.projects.get_accessible_course_ids",
+                    return_value=[1, 2],
+                ):
                     result = list_projects(db=db, user=user, page=1, per_page=20)
 
                     assert result.total == 1
@@ -102,10 +110,12 @@ class TestProjectsEndpoints:
         db.refresh = Mock()
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     create_project(payload=payload, db=db, user=user)
-                    
+
                     # Verify project was added and committed
                     db.add.assert_called()
                     db.commit.assert_called()
@@ -123,7 +133,9 @@ class TestProjectsEndpoints:
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=False):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=False
+            ):
                 with pytest.raises(HTTPException) as exc_info:
                     create_project(payload=payload, db=db, user=user)
 
@@ -145,7 +157,7 @@ class TestProjectsEndpoints:
         with patch("app.api.v1.routers.projects.require_role"):
             with pytest.raises(HTTPException) as exc_info:
                 get_project(project_id=99999, db=db, user=user)
-            
+
             assert exc_info.value.status_code == 404
 
     def test_update_project_success(self):
@@ -169,10 +181,12 @@ class TestProjectsEndpoints:
         payload = ProjectUpdate(title="New Title", status="active")
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     update_project(project_id=1, payload=payload, db=db, user=user)
-                    
+
                     db.commit.assert_called()
 
     def test_delete_project_hard_deletes_it(self):
@@ -194,10 +208,12 @@ class TestProjectsEndpoints:
         db.query.return_value = query_mock
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     delete_project(project_id=1, db=db, user=user)
-                    
+
                     # Verify project was hard deleted (db.delete called)
                     db.delete.assert_called_once_with(mock_project)
                     db.commit.assert_called()
@@ -223,13 +239,19 @@ class TestWizardEndpoint:
         def query_side_effect(model):
             query_mock = Mock()
             query_mock.filter = Mock(return_value=query_mock)
-            
+
             if model == Rubric:
                 # Return peer rubric for peer scope, project rubric for project scope
-                query_mock.first = Mock(side_effect=[mock_peer_rubric, mock_peer_rubric, mock_project_rubric])
+                query_mock.first = Mock(
+                    side_effect=[
+                        mock_peer_rubric,
+                        mock_peer_rubric,
+                        mock_project_rubric,
+                    ]
+                )
             else:
                 query_mock.first = Mock(return_value=None)
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -254,7 +276,9 @@ class TestWizardEndpoint:
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     # Just verify the function doesn't crash with proper mocking
                     try:
@@ -281,7 +305,9 @@ class TestWizardEndpoint:
         )
 
         with patch("app.api.v1.routers.projects.require_role") as mock_require:
-            mock_require.side_effect = HTTPException(status_code=403, detail="Access denied")
+            mock_require.side_effect = HTTPException(
+                status_code=403, detail="Access denied"
+            )
 
             with pytest.raises(HTTPException) as exc_info:
                 wizard_create_project(payload=payload, db=db, user=user)

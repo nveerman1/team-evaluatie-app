@@ -30,7 +30,6 @@ from app.infra.db.models import (
 )
 from pydantic import BaseModel
 
-
 # ============ Constants ============
 
 # Maximum length for reflection snippet in the growth page

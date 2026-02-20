@@ -348,7 +348,7 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            
+
             # User stored with lowercase email
             test_user.email = "teacher@example.com"
             mock_db.query.return_value.filter.return_value.first.return_value = (
@@ -374,7 +374,7 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            
+
             # User stored with lowercase email
             test_user.email = "l316student@school.nl"
             mock_db.query.return_value.filter.return_value.first.return_value = (
@@ -390,4 +390,3 @@ class TestDevLoginEndpoint:
             # Should succeed (find user with normalized email)
             assert response.status_code in [302, 303, 307]
             assert "access_token" in response.cookies
-

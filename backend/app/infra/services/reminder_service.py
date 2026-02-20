@@ -82,7 +82,9 @@ class ReminderService:
                     .filter(ProjectTeam.id == assessment.project_team_id)
                     .first()
                 )
-            class_name = project_team.display_name_at_time if project_team else "Unknown"
+            class_name = (
+                project_team.display_name_at_time if project_team else "Unknown"
+            )
 
             # Generate reminders based on project version/phase
             version = assessment.version or ""

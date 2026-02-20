@@ -3,7 +3,6 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-
 # ---------- Project Assessment ----------
 
 
@@ -374,7 +373,9 @@ class SelfAssessmentStatistics(BaseModel):
 
     total_students: int
     completed_assessments: int
-    average_per_criterion: Dict[str, float]  # criterion_name -> average across all students
+    average_per_criterion: Dict[
+        str, float
+    ]  # criterion_name -> average across all students
     average_grade: Optional[float] = None
 
 

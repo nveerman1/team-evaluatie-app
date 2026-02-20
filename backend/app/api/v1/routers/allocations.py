@@ -199,9 +199,13 @@ def auto_allocate(
     target_group_ids: List[int] = []
     if payload.group_ids:
         # Legacy group_ids parameter - now ignored, log warning
-        logger.warning(f"group_ids parameter is deprecated and ignored: {payload.group_ids}")
+        logger.warning(
+            f"group_ids parameter is deprecated and ignored: {payload.group_ids}"
+        )
     elif payload.group_id:
-        logger.warning(f"group_id parameter is deprecated and ignored: {payload.group_id}")
+        logger.warning(
+            f"group_id parameter is deprecated and ignored: {payload.group_id}"
+        )
 
     # Helper function to create allocations within a set of user IDs
     def allocate_within(ids: List[int]):
@@ -233,7 +237,7 @@ def auto_allocate(
         members = _select_members_for_course(
             db, school_id=school_id, course_id=ev.course_id
         )
-        
+
         if len(members) == 0:
             raise HTTPException(400, "No students found in this course")
         if len(members) < 2 and (
@@ -270,7 +274,9 @@ def auto_allocate(
         if len(members) < 2 and (
             payload.peers_per_student is None or payload.peers_per_student > 0
         ):
-            raise HTTPException(400, "Too few team members (minimum 2 for peer evaluation)")
+            raise HTTPException(
+                400, "Too few team members (minimum 2 for peer evaluation)"
+            )
 
         allocate_within(members)
 
@@ -296,7 +302,7 @@ def my_allocations(
     Als er nog geen self-allocation bestaat maar de student hoort bij de course,
     wordt de self-allocation aangemaakt.
     Ook worden peer-allocations automatisch aangemaakt voor alle teamgenoten.
-    
+
     Teammate determination:
     - If evaluation has project_id: Uses ProjectTeam and ProjectTeamMember (new system)
     - Otherwise: Falls back to legacy User.team_number and Groups
@@ -320,7 +326,10 @@ def my_allocations(
             # Find the project team that this user belongs to
             user_project_team = (
                 db.query(ProjectTeam)
-                .join(ProjectTeamMember, ProjectTeamMember.project_team_id == ProjectTeam.id)
+                .join(
+                    ProjectTeamMember,
+                    ProjectTeamMember.project_team_id == ProjectTeam.id,
+                )
                 .filter(
                     ProjectTeam.project_id == ev.project_id,
                     ProjectTeam.school_id == school_id,
@@ -328,7 +337,7 @@ def my_allocations(
                 )
                 .first()
             )
-            
+
             if user_project_team:
                 # Get all members of this project team
                 team_member_ids = (

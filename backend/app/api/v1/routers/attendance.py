@@ -76,9 +76,9 @@ def rfid_scan(
 ):
     """
     RFID scan endpoint for Raspberry Pi
-    
+
     Authentication: Requires X-API-Key header
-    
+
     Handles check-in/check-out logic:
     - If no open session: create new check-in
     - If open session exists: close it (check-out)
@@ -125,9 +125,7 @@ def rfid_scan(
             # Ensure both datetimes are timezone-aware for duration calculation
             check_in_aware = ensure_aware_utc(open_session.check_in)
             check_out_aware = ensure_aware_utc(open_session.check_out)
-            duration_seconds = int(
-                (check_out_aware - check_in_aware).total_seconds()
-            )
+            duration_seconds = int((check_out_aware - check_in_aware).total_seconds())
 
             return RFIDScanResponse(
                 status="ok",
@@ -291,7 +289,11 @@ def list_attendance_events(
         events_out.append(AttendanceEventOut(**event_dict))
 
     return AttendanceEventListOut(
-        events=events_out, total=total, page=page, per_page=per_page, total_pages=total_pages
+        events=events_out,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
     )
 
 
@@ -328,7 +330,7 @@ def update_attendance_event(
 
     # Apply updates
     update_data = update.model_dump(exclude_unset=True)
-    
+
     # Additional validation for partial updates: validate against existing DB values
     # If only check_out is being updated, validate against existing check_in
     if "check_out" in update_data and "check_in" not in update_data:
@@ -339,9 +341,9 @@ def update_attendance_event(
             if check_out_aware <= check_in_aware:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="check_out must be after check_in"
+                    detail="check_out must be after check_in",
                 )
-    
+
     # If only check_in is being updated, validate against existing check_out
     if "check_in" in update_data and "check_out" not in update_data:
         new_check_in = update_data["check_in"]
@@ -351,9 +353,9 @@ def update_attendance_event(
             if check_out_aware <= check_in_aware:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="check_out must be after check_in"
+                    detail="check_out must be after check_in",
                 )
-    
+
     for field, value in update_data.items():
         setattr(event, field, value)
 
@@ -494,9 +496,7 @@ def create_external_work(
     # Ensure both datetimes are timezone-aware for duration calculation
     check_in_aware = ensure_aware_utc(new_event.check_in)
     check_out_aware = ensure_aware_utc(new_event.check_out)
-    event_out.duration_seconds = int(
-        (check_out_aware - check_in_aware).total_seconds()
-    )
+    event_out.duration_seconds = int((check_out_aware - check_in_aware).total_seconds())
 
     return event_out
 
@@ -664,8 +664,7 @@ def get_my_attendance(
         project = (
             db.query(Project)
             .filter(
-                Project.id == project_id, 
-                Project.school_id == current_user.school_id
+                Project.id == project_id, Project.school_id == current_user.school_id
             )
             .first()
         )
@@ -677,9 +676,7 @@ def get_my_attendance(
     # Calculate totals - build base queries
     school_query = db.query(
         func.sum(
-            func.extract(
-                "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
-            )
+            func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
         )
     ).filter(
         AttendanceEvent.user_id == current_user.id,
@@ -689,9 +686,7 @@ def get_my_attendance(
 
     external_approved_query = db.query(
         func.sum(
-            func.extract(
-                "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
-            )
+            func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
         )
     ).filter(
         AttendanceEvent.user_id == current_user.id,
@@ -702,9 +697,7 @@ def get_my_attendance(
 
     external_pending_query = db.query(
         func.sum(
-            func.extract(
-                "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
-            )
+            func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
         )
     ).filter(
         AttendanceEvent.user_id == current_user.id,
@@ -716,8 +709,12 @@ def get_my_attendance(
     # Apply project date range filter if project is provided
     if project:
         school_query = apply_project_date_filter(school_query, project)
-        external_approved_query = apply_project_date_filter(external_approved_query, project)
-        external_pending_query = apply_project_date_filter(external_pending_query, project)
+        external_approved_query = apply_project_date_filter(
+            external_approved_query, project
+        )
+        external_pending_query = apply_project_date_filter(
+            external_pending_query, project
+        )
 
     school_seconds = school_query.scalar() or 0
     external_approved_seconds = external_approved_query.scalar() or 0
@@ -913,10 +910,10 @@ def get_attendance_overview(
     """
     Get attendance overview for all students (teacher/admin only)
     Returns totals per student, sorted by lesson blocks (descending)
-    
+
     When project_id is provided, only counts events within the project's date range
     When course_id is provided, filters to students enrolled in that course
-    
+
     Note: Pagination happens after computing all aggregations to maintain
     correct global ranking. For large datasets, consider using a materialized view.
     """
@@ -976,9 +973,6 @@ def get_attendance_overview(
                 User.email.ilike(search_pattern),
             )
         )
-
-    # Get total count before pagination
-    total_students = query.count()
 
     # Fetch all students (we need to compute aggregations for ranking)
     # Note: For large datasets, this should be optimized with a materialized view
@@ -1092,7 +1086,9 @@ def get_attendance_overview(
 def list_students_with_cards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    q: Optional[str] = Query(None, description="Search by name, email, class, or card UID"),
+    q: Optional[str] = Query(
+        None, description="Search by name, email, class, or card UID"
+    ),
     page: int = Query(1, ge=1),
     per_page: int = Query(30, ge=1, le=50),
 ):
@@ -1116,10 +1112,12 @@ def list_students_with_cards(
     if q:
         search_pattern = f"%{q}%"
         # Search in user fields or join to search by card UID
-        subquery = db.query(RFIDCard.user_id).filter(
-            RFIDCard.uid.ilike(search_pattern)
-        ).subquery()
-        
+        subquery = (
+            db.query(RFIDCard.user_id)
+            .filter(RFIDCard.uid.ilike(search_pattern))
+            .subquery()
+        )
+
         query = query.filter(
             or_(
                 User.name.ilike(search_pattern),
@@ -1135,7 +1133,9 @@ def list_students_with_cards(
 
     # Apply pagination
     offset = (page - 1) * per_page
-    students = query.order_by(User.class_name, User.name).offset(offset).limit(per_page).all()
+    students = (
+        query.order_by(User.class_name, User.name).offset(offset).limit(per_page).all()
+    )
 
     # Get RFID cards for all students
     result = []
@@ -1275,7 +1275,7 @@ def get_my_projects(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only students, teachers, and admins can view projects",
         )
-    
+
     # For students, get projects from their enrolled courses
     if current_user.role == "student":
         # Get course IDs the student is enrolled in
@@ -1287,12 +1287,12 @@ def get_my_projects(
             )
             .all()
         )
-        
+
         course_ids = [course_id[0] for course_id in enrolled_course_ids]
-        
+
         if not course_ids:
             return []
-        
+
         # Get projects from these courses
         query = db.query(Project).filter(
             Project.school_id == current_user.school_id,
@@ -1305,15 +1305,15 @@ def get_my_projects(
             Project.school_id == current_user.school_id,
             Project.status.in_(["concept", "active", "completed"]),
         )
-    
+
     # Load all projects - this is acceptable as students typically have access to
     # a limited number of projects (usually 10-30) through their course enrollments
     projects = query.order_by(Project.start_date.desc().nulls_last()).all()
-    
+
     logger.info(
         f"Fetching projects for user {current_user.id} (role: {current_user.role}): found {len(projects)} projects"
     )
-    
+
     return [
         {
             "id": p.id,

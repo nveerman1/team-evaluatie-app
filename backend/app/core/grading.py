@@ -7,7 +7,6 @@ Contains the curved grade mapping function used across the application.
 from __future__ import annotations
 import os
 
-
 # Configurable exponent for curved grade mapping
 # α ≈ 0.85 makes 3/5 → 6.0 on a 1–5 rubric scale
 GRADE_CURVE_EXPONENT = float(os.getenv("GRADE_CURVE_EXPONENT", "0.85"))

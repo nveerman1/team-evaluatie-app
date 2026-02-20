@@ -187,7 +187,7 @@ class Reflection(Base):
 class ProjectAssessment(Base):
     """
     Project assessment per project, uses rubrics with scope='project'
-    
+
     Refactored: Owned by project_id, with multiple teams linked via project_assessment_teams
     """
 
@@ -281,13 +281,15 @@ class ProjectAssessmentTeam(Base):
     status: Mapped[str] = mapped_column(
         String(30), default="not_started", nullable=False
     )  # not_started|in_progress|completed
-    
+
     # Progress tracking
     scores_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_updated_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Relationships
-    project_assessment: Mapped["ProjectAssessment"] = relationship(back_populates="assessment_teams")
+    project_assessment: Mapped["ProjectAssessment"] = relationship(
+        back_populates="assessment_teams"
+    )
     project_team: Mapped["ProjectTeam"] = relationship()
 
     __table_args__ = (

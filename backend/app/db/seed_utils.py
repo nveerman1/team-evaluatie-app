@@ -16,44 +16,44 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 import sqlalchemy as sa
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class DeterministicRandom:
     """Wrapper around random with deterministic seeding"""
-    
+
     def __init__(self, seed: Optional[int] = None):
         self.seed = seed if seed is not None else 42
-        self._rng = random.Random(self.seed)
-    
+        self._rng = random.Random(self.seed)  # nosec B311
+
     def reset(self):
         """Reset the random generator to initial seed"""
-        self._rng = random.Random(self.seed)
-    
+        self._rng = random.Random(self.seed)  # nosec B311
+
     def randint(self, a: int, b: int) -> int:
         """Return random integer in range [a, b]"""
         return self._rng.randint(a, b)
-    
+
     def uniform(self, a: float, b: float) -> float:
         """Return random float in range [a, b)"""
         return self._rng.uniform(a, b)
-    
+
     def choice(self, seq: List[Any]) -> Any:
         """Choose random element from sequence"""
         return self._rng.choice(seq)
-    
+
     def choices(self, population: List[Any], k: int) -> List[Any]:
         """Choose k elements from population with replacement"""
         return self._rng.choices(population, k=k)
-    
+
     def sample(self, population: List[Any], k: int) -> List[Any]:
         """Choose k unique elements from population without replacement"""
         return self._rng.sample(population, k=k)
-    
+
     def shuffle(self, seq: List[Any]) -> None:
         """Shuffle sequence in-place"""
         self._rng.shuffle(seq)
-    
+
     def random(self) -> float:
         """Return random float in [0.0, 1.0)"""
         return self._rng.random()
@@ -61,46 +61,50 @@ class DeterministicRandom:
 
 class TimestampGenerator:
     """Generate realistic timestamps spread over last N weeks"""
-    
+
     def __init__(self, weeks: int = 8, rand: Optional[DeterministicRandom] = None):
         self.weeks = weeks
         self.rand = rand if rand is not None else DeterministicRandom()
         self.now = datetime.now(timezone.utc)
         self.start = self.now - timedelta(weeks=weeks)
-    
-    def random_timestamp(self, days_ago_min: int = 0, days_ago_max: Optional[int] = None) -> datetime:
+
+    def random_timestamp(
+        self, days_ago_min: int = 0, days_ago_max: Optional[int] = None
+    ) -> datetime:
         """Generate random timestamp within specified day range"""
         if days_ago_max is None:
             days_ago_max = self.weeks * 7
-        
+
         # Calculate timestamp range
         max_ts = self.now - timedelta(days=days_ago_min)
         min_ts = self.now - timedelta(days=days_ago_max)
-        
+
         # Generate random timestamp
         delta_seconds = (max_ts - min_ts).total_seconds()
         random_seconds = self.rand.random() * delta_seconds
         return min_ts + timedelta(seconds=random_seconds)
-    
-    def timestamp_sequence(self, count: int, days_ago_min: int = 0, days_ago_max: Optional[int] = None) -> List[datetime]:
+
+    def timestamp_sequence(
+        self, count: int, days_ago_min: int = 0, days_ago_max: Optional[int] = None
+    ) -> List[datetime]:
         """Generate sequence of increasing timestamps"""
         if days_ago_max is None:
             days_ago_max = self.weeks * 7
-        
+
         if count == 0:
             return []
         if count == 1:
             return [self.random_timestamp(days_ago_min, days_ago_max)]
-        
+
         timestamps = []
         for i in range(count):
             # Spread timestamps evenly across the range
             progress = i / (count - 1)
             days_ago = days_ago_max - (progress * (days_ago_max - days_ago_min))
-            
+
             ts = self.now - timedelta(days=days_ago)
             timestamps.append(ts)
-        
+
         # Add small random jitter after ensuring base ordering
         # Jitter is small enough to not break the overall sequence
         jittered = []
@@ -111,13 +115,13 @@ class TimestampGenerator:
                 max_jitter_seconds = gap_seconds * 0.1
             else:
                 max_jitter_seconds = 3600  # 1 hour for last timestamp
-            
+
             jitter_seconds = self.rand.uniform(-max_jitter_seconds, max_jitter_seconds)
             jittered_ts = ts + timedelta(seconds=jitter_seconds)
             jittered.append(jittered_ts)
-        
+
         return sorted(jittered)
-    
+
     def recent_timestamp(self, days_ago_max: int = 7) -> datetime:
         """Generate recent timestamp within last N days"""
         return self.random_timestamp(days_ago_min=0, days_ago_max=days_ago_max)
@@ -125,24 +129,24 @@ class TimestampGenerator:
 
 class UpsertHelper:
     """Helper for safe upsert operations"""
-    
+
     def __init__(self, db: Session):
         self.db = db
-    
+
     def get_or_create(
         self,
         model_class: Type[T],
         lookup_fields: Dict[str, Any],
-        create_fields: Optional[Dict[str, Any]] = None
+        create_fields: Optional[Dict[str, Any]] = None,
     ) -> tuple[T, bool]:
         """
         Get existing record or create new one
-        
+
         Args:
             model_class: SQLAlchemy model class
             lookup_fields: Fields to search for existing record
             create_fields: Additional fields to set when creating (optional)
-        
+
         Returns:
             Tuple of (instance, created) where created is True if new record
         """
@@ -150,64 +154,64 @@ class UpsertHelper:
         stmt = select(model_class)
         for key, value in lookup_fields.items():
             stmt = stmt.where(getattr(model_class, key) == value)
-        
+
         existing = self.db.execute(stmt).scalar_one_or_none()
-        
+
         if existing:
             return existing, False
-        
+
         # Create new
         fields = {**lookup_fields}
         if create_fields:
             fields.update(create_fields)
-        
+
         instance = model_class(**fields)
         self.db.add(instance)
         return instance, True
-    
+
     def upsert(
         self,
         model_class: Type[T],
         lookup_fields: Dict[str, Any],
-        update_fields: Optional[Dict[str, Any]] = None
+        update_fields: Optional[Dict[str, Any]] = None,
     ) -> T:
         """
         Update existing record or create new one
-        
+
         Args:
             model_class: SQLAlchemy model class
             lookup_fields: Fields to search for existing record
             update_fields: Fields to update/set
-        
+
         Returns:
             The instance (existing or new)
         """
         instance, created = self.get_or_create(model_class, lookup_fields)
-        
+
         if not created and update_fields:
             for key, value in update_fields.items():
                 setattr(instance, key, value)
         elif created and update_fields:
             for key, value in update_fields.items():
                 setattr(instance, key, value)
-        
+
         return instance
 
 
 def create_instance(model_class: Type[T], **kwargs) -> T:
     """
     Create a model instance, filtering kwargs to only valid mapped attributes.
-    
+
     This prevents "invalid keyword argument" errors when model schemas drift
     from seed data. Invalid fields are silently dropped.
-    
+
     Args:
         model_class: SQLAlchemy model class
         **kwargs: Keyword arguments to pass to model constructor
-    
+
     Returns:
         Model instance with only valid kwargs applied
-    
+
     Example:
         user = create_instance(User, name="John", invalid_field="value")
         # Only 'name' is passed to User(), 'invalid_field' is filtered out
@@ -215,131 +219,231 @@ def create_instance(model_class: Type[T], **kwargs) -> T:
     # Get all valid column and relationship keys from the model
     mapper = sa.inspect(model_class)
     valid_keys = set()
-    
+
     # Add column keys
     for column in mapper.columns:
         valid_keys.add(column.key)
-    
+
     # Add relationship keys
     for rel in mapper.relationships:
         valid_keys.add(rel.key)
-    
+
     # Filter kwargs to only valid keys
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
-    
+
     # Log dropped fields for debugging (optional, could be removed in production)
     dropped = set(kwargs.keys()) - valid_keys
     if dropped:
         # Silent drop - only uncomment for debugging
         # print(f"[create_instance] Dropped invalid fields for {model_class.__name__}: {dropped}")
         pass
-    
+
     return model_class(**filtered_kwargs)
 
 
 class DataFactory:
     """Generate realistic test data"""
-    
+
     def __init__(self, rand: Optional[DeterministicRandom] = None):
         self.rand = rand if rand is not None else DeterministicRandom()
-    
+
     def student_name(self) -> str:
         """Generate Dutch student name"""
         first_names = [
-            "Emma", "Sophie", "Julia", "Anna", "Lisa", "Fleur", "Eva", "Mila", "Saar", "Lotte",
-            "Daan", "Lucas", "Sem", "Finn", "Luuk", "Lars", "Bram", "Tim", "Tom", "Thijs",
-            "Noah", "Levi", "Max", "Sam", "Jesse", "Milan", "Stijn", "Ruben", "Nick", "Jasper"
+            "Emma",
+            "Sophie",
+            "Julia",
+            "Anna",
+            "Lisa",
+            "Fleur",
+            "Eva",
+            "Mila",
+            "Saar",
+            "Lotte",
+            "Daan",
+            "Lucas",
+            "Sem",
+            "Finn",
+            "Luuk",
+            "Lars",
+            "Bram",
+            "Tim",
+            "Tom",
+            "Thijs",
+            "Noah",
+            "Levi",
+            "Max",
+            "Sam",
+            "Jesse",
+            "Milan",
+            "Stijn",
+            "Ruben",
+            "Nick",
+            "Jasper",
         ]
         last_names = [
-            "de Jong", "Jansen", "de Vries", "van den Berg", "van Dijk", "Bakker", "Janssen",
-            "Visser", "Smit", "Meijer", "de Boer", "Mulder", "de Groot", "Bos", "Vos",
-            "Peters", "Hendriks", "van Leeuwen", "Dekker", "Brouwer", "de Wit", "Dijkstra",
-            "Smits", "de Graaf", "van der Meer", "van der Linden", "Kok", "Jacobs"
+            "de Jong",
+            "Jansen",
+            "de Vries",
+            "van den Berg",
+            "van Dijk",
+            "Bakker",
+            "Janssen",
+            "Visser",
+            "Smit",
+            "Meijer",
+            "de Boer",
+            "Mulder",
+            "de Groot",
+            "Bos",
+            "Vos",
+            "Peters",
+            "Hendriks",
+            "van Leeuwen",
+            "Dekker",
+            "Brouwer",
+            "de Wit",
+            "Dijkstra",
+            "Smits",
+            "de Graaf",
+            "van der Meer",
+            "van der Linden",
+            "Kok",
+            "Jacobs",
         ]
         return f"{self.rand.choice(first_names)} {self.rand.choice(last_names)}"
-    
+
     def teacher_name(self) -> str:
         """Generate Dutch teacher name"""
         titles = ["Dhr.", "Mevr."]
         last_names = [
-            "Vermeulen", "Scholten", "de Haan", "van Beek", "Willems", "van Vliet",
-            "Hoekstra", "Maas", "Verhoeven", "Koster", "van Dam", "Prins", "Blom"
+            "Vermeulen",
+            "Scholten",
+            "de Haan",
+            "van Beek",
+            "Willems",
+            "van Vliet",
+            "Hoekstra",
+            "Maas",
+            "Verhoeven",
+            "Koster",
+            "van Dam",
+            "Prins",
+            "Blom",
         ]
         return f"{self.rand.choice(titles)} {self.rand.choice(last_names)}"
-    
+
     def email(self, name: str, domain: str = "school.nl") -> str:
         """Generate email from name"""
         # Remove titles and dots
         clean_name = name.replace("Dhr. ", "").replace("Mevr. ", "").replace(".", "")
         parts = clean_name.lower().split()
-        
+
         # Use first letter of first name + last name
         if len(parts) >= 2:
             username = f"{parts[0][0]}{parts[-1]}"
         else:
             username = parts[0]
-        
+
         # Remove spaces and special chars
         username = username.replace(" ", "").replace("'", "")
-        
+
         return f"{username}@{domain}"
-    
+
     def project_title(self) -> str:
         """Generate project title"""
         themes = [
-            "Duurzame Energie", "Smart City", "Gezonde School", "Circulaire Economie",
-            "Robotica", "Virtual Reality", "Klimaatverandering", "Waterbeheer",
-            "Mobiliteit van de Toekomst", "Kunstmatige Intelligentie", "3D Printen",
-            "Groene Gebouwen", "Voedselproductie", "Afvalverwerking"
+            "Duurzame Energie",
+            "Smart City",
+            "Gezonde School",
+            "Circulaire Economie",
+            "Robotica",
+            "Virtual Reality",
+            "Klimaatverandering",
+            "Waterbeheer",
+            "Mobiliteit van de Toekomst",
+            "Kunstmatige Intelligentie",
+            "3D Printen",
+            "Groene Gebouwen",
+            "Voedselproductie",
+            "Afvalverwerking",
         ]
         return self.rand.choice(themes)
-    
+
     def team_name(self, team_number: int) -> str:
         """Generate team name"""
         names = [
-            "Team Alpha", "Team Beta", "Team Gamma", "Team Delta", "Team Epsilon",
-            "Team Zeta"
+            "Team Alpha",
+            "Team Beta",
+            "Team Gamma",
+            "Team Delta",
+            "Team Epsilon",
+            "Team Zeta",
         ]
         if team_number <= len(names):
             return names[team_number - 1]
         return f"Team {team_number}"
-    
+
     def rubric_title(self, scope: str = "peer") -> str:
         """Generate rubric title"""
         if scope == "peer":
             titles = [
-                "Peer Evaluatie - Samenwerking", "Peer Evaluatie - Teamrollen",
-                "Peer Evaluatie - Communicatie", "OMZA Peer Rubric"
+                "Peer Evaluatie - Samenwerking",
+                "Peer Evaluatie - Teamrollen",
+                "Peer Evaluatie - Communicatie",
+                "OMZA Peer Rubric",
             ]
         else:
             titles = [
-                "Project Beoordeling - Proces", "Project Beoordeling - Resultaat",
-                "Project Beoordeling - Presentatie", "Eindproject Rubric"
+                "Project Beoordeling - Proces",
+                "Project Beoordeling - Resultaat",
+                "Project Beoordeling - Presentatie",
+                "Eindproject Rubric",
             ]
         return self.rand.choice(titles)
-    
+
     def criterion_name(self, category: str = "generic") -> str:
         """Generate criterion name"""
         peer_criteria = {
             "Organiseren": ["Planning", "Structuur", "Tijdmanagement", "Overzicht"],
             "Meedoen": ["Participatie", "Betrokkenheid", "Initiatief", "Inzet"],
-            "Zelfvertrouwen": ["Presentatie", "Feedback geven", "Standpunt innemen", "Besluitvorming"],
-            "Autonomie": ["Zelfsturing", "Verantwoordelijkheid", "Probleemoplossing", "Leervermogen"]
+            "Zelfvertrouwen": [
+                "Presentatie",
+                "Feedback geven",
+                "Standpunt innemen",
+                "Besluitvorming",
+            ],
+            "Autonomie": [
+                "Zelfsturing",
+                "Verantwoordelijkheid",
+                "Probleemoplossing",
+                "Leervermogen",
+            ],
         }
-        
+
         project_criteria = {
             "projectproces": ["Onderzoek", "Iteratie", "Planning", "Samenwerking"],
-            "eindresultaat": ["Functionaliteit", "Kwaliteit", "Innovatie", "Documentatie"],
-            "communicatie": ["Presentatie", "Verantwoording", "Reflectie", "Feedback verwerken"]
+            "eindresultaat": [
+                "Functionaliteit",
+                "Kwaliteit",
+                "Innovatie",
+                "Documentatie",
+            ],
+            "communicatie": [
+                "Presentatie",
+                "Verantwoording",
+                "Reflectie",
+                "Feedback verwerken",
+            ],
         }
-        
+
         if category in peer_criteria:
             return self.rand.choice(peer_criteria[category])
         elif category in project_criteria:
             return self.rand.choice(project_criteria[category])
         else:
             return f"Criterium {self.rand.randint(1, 10)}"
-    
+
     def feedback_comment(self, positive: bool = True) -> str:
         """Generate feedback comment"""
         if positive:
@@ -361,24 +465,22 @@ class DataFactory:
                 "Taken blijven soms liggen, meer verantwoordelijkheid nemen.",
             ]
         return self.rand.choice(comments)
-    
+
     def reflection_text(self) -> str:
         """Generate reflection text"""
         templates = [
             "Deze evaluatie heeft me geholpen om bewuster te worden van mijn rol in het team. "
             "Ik realiseer me dat ik sterker ben in organisatie dan ik dacht, maar dat ik nog kan groeien "
             "in het delen van mijn ideeën tijdens teamoverleggen.",
-            
             "Het was interessant om te zien hoe mijn teamgenoten mijn bijdrage waarderen. "
             "De feedback over mijn communicatie neem ik ter harte. Ik ga proberen om vaker "
             "mijn mening te geven en niet af te wachten wat anderen zeggen.",
-            
             "Ik ben blij met de positieve feedback over mijn inzet en probleemoplossend vermogen. "
             "Het punt over planning is terecht - ik moet beter vooruitkijken en niet alles op het laatste moment doen. "
             "Volgende keer ga ik een duidelijker planning maken en die ook bijhouden.",
         ]
         return self.rand.choice(templates)
-    
+
     def competency_goal(self) -> str:
         """Generate competency goal text"""
         goals = [
@@ -390,7 +492,7 @@ class DataFactory:
             "Ik ga werken aan mijn presentatievaardigheden en zelfvertrouwen.",
         ]
         return self.rand.choice(goals)
-    
+
     def project_description(self, title: str) -> str:
         """Generate project description"""
         return (
@@ -398,12 +500,20 @@ class DataFactory:
             f"Ze doorlopen het volledige ontwerpproces: onderzoek, ontwerp, prototyping en testen. "
             f"Het eindresultaat wordt gepresenteerd aan opdrachtgevers en medestudenten."
         )
-    
+
     def client_organization(self) -> str:
         """Generate client organization name"""
         types = ["Gemeente", "Stichting", "Bedrijf", "Vereniging", "School"]
         names = [
-            "Groen", "Energie", "Zorg", "Sport", "Cultuur", "Techniek",
-            "Innovatie", "Duurzaamheid", "Jeugd", "Ouderen"
+            "Groen",
+            "Energie",
+            "Zorg",
+            "Sport",
+            "Cultuur",
+            "Techniek",
+            "Innovatie",
+            "Duurzaamheid",
+            "Jeugd",
+            "Ouderen",
         ]
         return f"{self.rand.choice(types)} {self.rand.choice(names)}"

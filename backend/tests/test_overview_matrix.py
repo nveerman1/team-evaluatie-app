@@ -3,7 +3,7 @@ Tests for overview matrix endpoint
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from datetime import datetime, timezone
 from fastapi import HTTPException
 
@@ -11,11 +11,8 @@ from app.infra.db.models import (
     User,
     Course,
     ProjectAssessment,
-    ProjectAssessmentTeam,
     ProjectTeam,
-    ProjectTeamMember,
     Project,
-    CourseEnrollment,
 )
 from app.api.v1.routers.overview import get_overview_matrix
 
@@ -28,13 +25,13 @@ class TestOverviewMatrix:
         db = Mock()
         current_user = Mock(spec=User)
         current_user.school_id = 1
-        
+
         # Mock empty course query (course not found)
         mock_query = Mock()
         db.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.first.return_value = None
-        
+
         with pytest.raises(HTTPException) as exc_info:
             get_overview_matrix(
                 course_id=999,
@@ -45,9 +42,9 @@ class TestOverviewMatrix:
                 sort_by=None,
                 sort_order="asc",
                 db=db,
-                current_user=current_user
+                current_user=current_user,
             )
-        
+
         assert exc_info.value.status_code == 404
         assert "Course 999 not found" in str(exc_info.value.detail)
 
@@ -56,7 +53,7 @@ class TestOverviewMatrix:
         db = Mock()
         current_user = Mock(spec=User)
         current_user.school_id = 1
-        
+
         # Setup mock to return empty results for all queries
         mock_query = Mock()
         db.query.return_value = mock_query
@@ -66,7 +63,7 @@ class TestOverviewMatrix:
         mock_query.distinct.return_value = mock_query
         mock_query.join.return_value = mock_query
         mock_query.outerjoin.return_value = mock_query
-        
+
         result = get_overview_matrix(
             course_id=None,
             class_name=None,
@@ -76,9 +73,9 @@ class TestOverviewMatrix:
             sort_by=None,
             sort_order="asc",
             db=db,
-            current_user=current_user
+            current_user=current_user,
         )
-        
+
         assert result.total_students == 0
         assert len(result.columns) == 0
         assert len(result.rows) == 0
@@ -88,12 +85,12 @@ class TestOverviewMatrix:
         db = Mock()
         current_user = Mock(spec=User)
         current_user.school_id = 1
-        
+
         # Create mock course
         course = Mock(spec=Course)
         course.id = 1
         course.school_id = 1
-        
+
         # Create mock project assessment and team
         assessment = Mock(spec=ProjectAssessment)
         assessment.id = 1
@@ -103,15 +100,15 @@ class TestOverviewMatrix:
         assessment.teacher_id = 1
         assessment.rubric_id = None
         assessment.is_advisory = False
-        
+
         project = Mock(spec=Project)
         project.id = 1
         project.course_id = 1
-        
+
         team = Mock(spec=ProjectTeam)
         team.id = 1
         team.project_id = 1
-        
+
         # Mock student user
         student = Mock(spec=User)
         student.id = 100
@@ -120,23 +117,23 @@ class TestOverviewMatrix:
         student.archived = False
         student.role = "student"
         student.team_number = 1
-        
+
         teacher = Mock(spec=User)
         teacher.id = 1
         teacher.name = "Test Teacher"
-        
+
         # Setup complex query chain
         query_counter = {"count": 0}
-        
+
         def query_side_effect(*args, **kwargs):
             mock_query = Mock()
             mock_query.filter.return_value = mock_query
             mock_query.join.return_value = mock_query
             mock_query.outerjoin.return_value = mock_query
             mock_query.distinct.return_value = mock_query
-            
+
             query_counter["count"] += 1
-            
+
             # First query: course validation
             if query_counter["count"] == 1:
                 mock_query.first.return_value = course
@@ -156,11 +153,11 @@ class TestOverviewMatrix:
             else:
                 mock_query.all.return_value = []
                 mock_query.first.return_value = None
-            
+
             return mock_query
-        
+
         db.query.side_effect = query_side_effect
-        
+
         # Call the endpoint - should not raise AttributeError anymore
         try:
             result = get_overview_matrix(
@@ -172,12 +169,12 @@ class TestOverviewMatrix:
                 sort_by=None,
                 sort_order="asc",
                 db=db,
-                current_user=current_user
+                current_user=current_user,
             )
             # Verify result structure is valid
-            assert hasattr(result, 'columns')
-            assert hasattr(result, 'rows')
-            assert hasattr(result, 'total_students')
+            assert hasattr(result, "columns")
+            assert hasattr(result, "rows")
+            assert hasattr(result, "total_students")
             assert result.total_students == 1
             assert len(result.rows) == 1
         except AttributeError as e:
@@ -189,24 +186,24 @@ class TestOverviewMatrix:
         db = Mock()
         current_user = Mock(spec=User)
         current_user.school_id = 1
-        
+
         # Create mock course
         course = Mock(spec=Course)
         course.id = 1
         course.school_id = 1
-        
+
         # Setup query chain to return valid data structure
         query_counter = {"count": 0}
-        
+
         def query_side_effect(*args, **kwargs):
             mock_query = Mock()
             mock_query.filter.return_value = mock_query
             mock_query.join.return_value = mock_query
             mock_query.outerjoin.return_value = mock_query
             mock_query.distinct.return_value = mock_query
-            
+
             query_counter["count"] += 1
-            
+
             # Course validation
             if query_counter["count"] == 1:
                 mock_query.first.return_value = course
@@ -214,11 +211,11 @@ class TestOverviewMatrix:
             else:
                 mock_query.all.return_value = []
                 mock_query.first.return_value = None
-            
+
             return mock_query
-        
+
         db.query.side_effect = query_side_effect
-        
+
         result = get_overview_matrix(
             course_id=1,
             class_name=None,
@@ -228,11 +225,11 @@ class TestOverviewMatrix:
             sort_by=None,
             sort_order="asc",
             db=db,
-            current_user=current_user
+            current_user=current_user,
         )
-        
+
         # Should return valid response structure even with no evaluations
-        assert hasattr(result, 'columns')
-        assert hasattr(result, 'rows')
-        assert hasattr(result, 'total_students')
-        assert hasattr(result, 'column_averages')
+        assert hasattr(result, "columns")
+        assert hasattr(result, "rows")
+        assert hasattr(result, "total_students")
+        assert hasattr(result, "column_averages")

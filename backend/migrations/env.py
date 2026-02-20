@@ -5,7 +5,6 @@ from alembic import context
 import os
 import sys
 
-
 # zorg dat 'app' importeerbaar is
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(BASE_DIR)

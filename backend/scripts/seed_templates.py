@@ -52,55 +52,54 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-import sqlalchemy as sa
 from sqlalchemy import create_engine, text
 
 
 def load_json(name: str) -> dict:
     """
     Load JSON from backend/data/templates/<name>.
-    
+
     Args:
         name: Name of the JSON file to load
-        
+
     Returns:
         Parsed JSON data as dictionary
     """
     # Navigate from: scripts/ -> backend/ -> data/templates/
     base_dir = Path(__file__).resolve().parent.parent
     path = base_dir / "data" / "templates" / name
-    
+
     if not path.exists():
         raise FileNotFoundError(f"Template file not found: {path}")
-    
+
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def get_or_create_subject(conn, school_id: int, create_if_missing: bool = False) -> Optional[int]:
+def get_or_create_subject(
+    conn, school_id: int, create_if_missing: bool = False
+) -> Optional[int]:
     """
     Get or create the default "O&O" (Onderzoek & Ontwerpen) subject for a school.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to get/create subject for
         create_if_missing: If True, create the subject if it doesn't exist
-        
+
     Returns:
         The subject_id for the O&O subject, or None if not found and not created
-        
+
     Raises:
         ValueError: If subject doesn't exist and create_if_missing is False
     """
     # Try to find existing O&O subject
     result = conn.execute(
-        text(
-            """
+        text("""
             SELECT id FROM subjects
             WHERE school_id = :school_id
             AND code = :code
-        """
-        ),
+        """),
         {"school_id": school_id, "code": "O&O"},
     )
     row = result.fetchone()
@@ -118,14 +117,12 @@ def get_or_create_subject(conn, school_id: int, create_if_missing: bool = False)
     # Create new O&O subject
     print(f"  ℹ Creating new O&O subject for school {school_id}...")
     result = conn.execute(
-        text(
-            """
+        text("""
             INSERT INTO subjects (school_id, code, name, is_active, created_at, updated_at)
             VALUES (:school_id, :code, :name, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (school_id, code) DO NOTHING
             RETURNING id
-        """
-        ),
+        """),
         {"school_id": school_id, "code": "O&O", "name": "Onderzoek & Ontwerpen"},
     )
     row = result.fetchone()
@@ -136,13 +133,11 @@ def get_or_create_subject(conn, school_id: int, create_if_missing: bool = False)
 
     # If ON CONFLICT prevented insertion, query again
     result = conn.execute(
-        text(
-            """
+        text("""
             SELECT id FROM subjects
             WHERE school_id = :school_id
             AND code = :code
-        """
-        ),
+        """),
         {"school_id": school_id, "code": "O&O"},
     )
     return result.scalar_one()
@@ -153,18 +148,18 @@ def resolve_learning_objective_ids(
 ) -> list[int]:
     """
     Resolve learning objective codes to IDs.
-    
+
     Handles various formats:
     - "OB2.1" -> metadata_json->>'code' = 'OB2.1'
     - "A1" -> domain="A", metadata_json->>'code'="1"
     - "24" -> metadata_json->>'code'="24"
-    
+
     Args:
         conn: Database connection
         school_id: School ID
         subject_id: Subject ID
         lo_codes: List of learning objective codes to resolve
-        
+
     Returns:
         List of resolved learning objective IDs
     """
@@ -175,15 +170,13 @@ def resolve_learning_objective_ids(
 
         # Try exact match first (for codes like "OB2.1")
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM learning_objectives
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND is_template = TRUE
                   AND metadata_json->>'code' = :code
-            """
-            ),
+            """),
             {"school_id": school_id, "subject_id": subject_id, "code": lo_code_str},
         )
         row = result.fetchone()
@@ -201,16 +194,14 @@ def resolve_learning_objective_ids(
             code_value = lo_code_str[1:]
 
             result = conn.execute(
-                text(
-                    """
+                text("""
                     SELECT id FROM learning_objectives
                     WHERE school_id = :school_id
                       AND subject_id = :subject_id
                       AND is_template = TRUE
                       AND metadata_json->>'code' = :code
                       AND domain = :domain
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -225,13 +216,15 @@ def resolve_learning_objective_ids(
     return ids
 
 
-def seed_learning_objectives(conn, school_id: int, subject_id: int, dry_run: bool = False):
+def seed_learning_objectives(
+    conn, school_id: int, subject_id: int, dry_run: bool = False
+):
     """
     Seed learning objectives from JSON files.
-    
+
     Loads both onderbouw and bovenbouw learning objectives and inserts them
     as templates for the specified school and subject.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -239,20 +232,19 @@ def seed_learning_objectives(conn, school_id: int, subject_id: int, dry_run: boo
         dry_run: If True, only print what would be done
     """
     print("\n📚 Seeding Learning Objectives...")
-    
+
     # Load JSON files
     onderbouw = load_json("learning_objectives_onderbouw.json")
     bovenbouw = load_json("learning_objectives_bovenbouw.json")
     objectives = onderbouw + bovenbouw
-    
+
     inserted_count = 0
     skipped_count = 0
-    
+
     for obj in objectives:
         # Check if objective already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM learning_objectives
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
@@ -260,8 +252,7 @@ def seed_learning_objectives(conn, school_id: int, subject_id: int, dry_run: boo
                   AND domain = :domain
                   AND title = :title
                   AND phase = :phase
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -270,17 +261,16 @@ def seed_learning_objectives(conn, school_id: int, subject_id: int, dry_run: boo
                 "phase": obj["phase"],
             },
         )
-        
+
         if result.fetchone():
             skipped_count += 1
             continue
-        
+
         metadata = {"code": obj.get("code")}
-        
+
         if not dry_run:
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO learning_objectives (
                         school_id,
                         subject_id,
@@ -311,8 +301,7 @@ def seed_learning_objectives(conn, school_id: int, subject_id: int, dry_run: boo
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -324,18 +313,20 @@ def seed_learning_objectives(conn, school_id: int, subject_id: int, dry_run: boo
                     "metadata_json": json.dumps(metadata),
                 },
             )
-        
+
         inserted_count += 1
-    
+
     print(f"  ✓ Inserted {inserted_count} learning objectives")
     if skipped_count > 0:
         print(f"  ℹ Skipped {skipped_count} existing learning objectives")
 
 
-def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bool = False):
+def seed_competency_templates(
+    conn, school_id: int, subject_id: int, dry_run: bool = False
+):
     """
     Seed competency templates, categories, and rubric levels from JSON.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -343,11 +334,11 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
         dry_run: If True, only print what would be done
     """
     print("\n🎯 Seeding Competency Templates...")
-    
+
     data = load_json("competencies.json")
     categories = data.get("categories", [])
     competencies = data.get("competencies", [])
-    
+
     # Default labels for scale
     default_scale_labels = {
         "1": "Beginner",
@@ -356,37 +347,34 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
         "4": "Gevorderd",
         "5": "Expert",
     }
-    
+
     # Track category mappings
     category_ids: dict[str, int] = {}
-    
+
     # Seed categories
     inserted_categories = 0
     skipped_categories = 0
-    
+
     for cat in categories:
         # Check if category already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM competency_categories
                 WHERE school_id = :school_id
                   AND name = :name
-            """
-            ),
+            """),
             {"school_id": school_id, "name": cat["name"]},
         )
         row = result.fetchone()
-        
+
         if row:
             category_ids[cat["key"]] = row[0]
             skipped_categories += 1
             continue
-        
+
         if not dry_run:
             result = conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO competency_categories (
                         school_id,
                         name,
@@ -404,8 +392,7 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
                         :order_index
                     )
                     RETURNING id
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "name": cat["name"],
@@ -419,32 +406,30 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
             category_ids[cat["key"]] = category_id
         else:
             category_ids[cat["key"]] = -1  # Placeholder for dry run
-        
+
         inserted_categories += 1
-    
+
     print(f"  ✓ Inserted {inserted_categories} competency categories")
     if skipped_categories > 0:
         print(f"  ℹ Skipped {skipped_categories} existing categories")
-    
+
     # Seed competencies
     inserted_competencies = 0
     skipped_competencies = 0
-    
+
     for comp in competencies:
         category_key = comp["category_key"]
         category_id = category_ids.get(category_key)
-        
+
         # Check if competency already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM competencies
                 WHERE school_id = :school_id
                   AND category_id = :category_id
                   AND name = :name
                   AND is_template = TRUE
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "category_id": category_id,
@@ -452,16 +437,15 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
             },
         )
         row = result.fetchone()
-        
+
         if row:
             skipped_competencies += 1
             continue
-        
+
         if not dry_run:
             # Insert competency
             result = conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO competencies (
                         school_id,
                         category_id,
@@ -501,8 +485,7 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
                         CURRENT_TIMESTAMP
                     )
                     RETURNING id
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "category_id": category_id,
@@ -516,16 +499,15 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
                 },
             )
             competency_id = result.scalar_one()
-            
+
             # Insert rubric levels
             levels = comp.get("levels", {})
             for level_str, desc in levels.items():
                 level = int(level_str)
                 label = default_scale_labels.get(level_str, f"Level {level}")
-                
+
                 conn.execute(
-                    text(
-                        """
+                    text("""
                         INSERT INTO competency_rubric_levels (
                             school_id,
                             competency_id,
@@ -540,8 +522,7 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
                             :label,
                             :description
                         )
-                    """
-                    ),
+                    """),
                     {
                         "school_id": school_id,
                         "competency_id": competency_id,
@@ -550,18 +531,20 @@ def seed_competency_templates(conn, school_id: int, subject_id: int, dry_run: bo
                         "description": desc,
                     },
                 )
-        
+
         inserted_competencies += 1
-    
+
     print(f"  ✓ Inserted {inserted_competencies} competency templates")
     if skipped_competencies > 0:
         print(f"  ℹ Skipped {skipped_competencies} existing competencies")
 
 
-def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int, dry_run: bool = False):
+def seed_peer_evaluation_templates(
+    conn, school_id: int, subject_id: int, dry_run: bool = False
+):
     """
     Seed peer evaluation criterion templates from peer_criteria.json.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -569,13 +552,13 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int, dry_ru
         dry_run: If True, only print what would be done
     """
     print("\n👥 Seeding Peer Evaluation Criteria Templates...")
-    
+
     data = load_json("peer_criteria.json")
     criteria = data.get("criteria", [])
-    
+
     inserted_count = 0
     skipped_count = 0
-    
+
     for crit in criteria:
         omza_category = crit["omza_category"]
         title = crit["title"]
@@ -583,18 +566,16 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int, dry_ru
         target_level = crit.get("target_level")
         level_descriptors = crit.get("level_descriptors", {})
         lo_codes = crit.get("learning_objective_codes", [])
-        
+
         # Check if template already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM peer_evaluation_criterion_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND omza_category = :omza_category
                   AND title = :title
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -602,20 +583,19 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int, dry_ru
                 "title": title,
             },
         )
-        
+
         if result.fetchone():
             skipped_count += 1
             continue
-        
+
         # Resolve learning objective IDs
         learning_objective_ids = resolve_learning_objective_ids(
             conn, school_id, subject_id, lo_codes
         )
-        
+
         if not dry_run:
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO peer_evaluation_criterion_templates (
                         school_id,
                         subject_id,
@@ -640,8 +620,7 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int, dry_ru
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -649,23 +628,27 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int, dry_ru
                     "title": title,
                     "description": description,
                     "target_level": target_level,
-                    "level_descriptors": json.dumps(level_descriptors, ensure_ascii=False),
+                    "level_descriptors": json.dumps(
+                        level_descriptors, ensure_ascii=False
+                    ),
                     "learning_objective_ids": json.dumps(learning_objective_ids),
                 },
             )
-        
+
         inserted_count += 1
-    
+
     print(f"  ✓ Inserted {inserted_count} peer evaluation criterion templates")
     if skipped_count > 0:
         print(f"  ℹ Skipped {skipped_count} existing templates")
 
 
-def seed_project_assessment_templates(conn, school_id: int, subject_id: int, dry_run: bool = False):
+def seed_project_assessment_templates(
+    conn, school_id: int, subject_id: int, dry_run: bool = False
+):
     """
     Seed project assessment criterion templates from
     project_assessment_criteria_vwo_bovenbouw.json.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -673,13 +656,13 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int, dry
         dry_run: If True, only print what would be done
     """
     print("\n📋 Seeding Project Assessment Criteria Templates...")
-    
+
     data = load_json("project_assessment_criteria_vwo_bovenbouw.json")
     criteria = data.get("project_assessment_criteria", [])
-    
+
     inserted_count = 0
     skipped_count = 0
-    
+
     for crit in criteria:
         category = crit["category"]
         title = crit["title"]
@@ -687,19 +670,17 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int, dry
         target_level = crit.get("target_level", "bovenbouw")
         level_descriptors = crit.get("level_descriptors", {})
         lo_codes = crit.get("learning_objectives", [])
-        
+
         # Check if template already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM project_assessment_criterion_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND category = :category
                   AND title = :title
                   AND target_level = :target_level
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -708,20 +689,19 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int, dry
                 "target_level": target_level,
             },
         )
-        
+
         if result.fetchone():
             skipped_count += 1
             continue
-        
+
         # Resolve learning objective IDs
         learning_objective_ids = resolve_learning_objective_ids(
             conn, school_id, subject_id, lo_codes
         )
-        
+
         if not dry_run:
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO project_assessment_criterion_templates (
                         school_id,
                         subject_id,
@@ -746,8 +726,7 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int, dry
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -755,24 +734,28 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int, dry
                     "title": title,
                     "description": description,
                     "target_level": target_level,
-                    "level_descriptors": json.dumps(level_descriptors, ensure_ascii=False),
+                    "level_descriptors": json.dumps(
+                        level_descriptors, ensure_ascii=False
+                    ),
                     "learning_objective_ids": json.dumps(learning_objective_ids),
                 },
             )
-        
+
         inserted_count += 1
-    
+
     print(f"  ✓ Inserted {inserted_count} project assessment criterion templates")
     if skipped_count > 0:
         print(f"  ℹ Skipped {skipped_count} existing templates")
 
 
-def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run: bool = False):
+def seed_project_rubric_templates(
+    conn, school_id: int, subject_id: int, dry_run: bool = False
+):
     """
     Seed default project rubric templates.
-    
+
     Creates basic rubrics for different levels (onderbouw, havo_bovenbouw, vwo_bovenbouw).
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -780,7 +763,7 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
         dry_run: If True, only print what would be done
     """
     print("\n📊 Seeding Project Rubric Templates...")
-    
+
     rubrics = [
         {
             "name": "Standaard Projectrubric Onderbouw",
@@ -892,22 +875,20 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
             ],
         },
     ]
-    
+
     inserted_rubrics = 0
     skipped_rubrics = 0
-    
+
     for rubric in rubrics:
         # Check if rubric already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM project_rubric_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND name = :name
                   AND level = :level
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -916,16 +897,15 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
             },
         )
         existing = result.fetchone()
-        
+
         if existing:
             skipped_rubrics += 1
             continue
-        
+
         if not dry_run:
             # Insert rubric
             result = conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO project_rubric_templates (
                         school_id,
                         subject_id,
@@ -943,8 +923,7 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
                         CURRENT_TIMESTAMP
                     )
                     RETURNING id
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -953,12 +932,11 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
                 },
             )
             rubric_id = result.scalar_one()
-            
+
             # Insert criteria for this rubric
             for criterion in rubric["criteria"]:
                 conn.execute(
-                    text(
-                        """
+                    text("""
                         INSERT INTO project_rubric_criterion_templates (
                             school_id,
                             rubric_template_id,
@@ -981,8 +959,7 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
                             CURRENT_TIMESTAMP,
                             CURRENT_TIMESTAMP
                         )
-                    """
-                    ),
+                    """),
                     {
                         "school_id": school_id,
                         "rubric_template_id": rubric_id,
@@ -995,9 +972,9 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
                         ),
                     },
                 )
-        
+
         inserted_rubrics += 1
-    
+
     print(f"  ✓ Inserted {inserted_rubrics} project rubric templates")
     if skipped_rubrics > 0:
         print(f"  ℹ Skipped {skipped_rubrics} existing rubrics")
@@ -1006,9 +983,9 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int, dry_run
 def seed_mail_templates(conn, school_id: int, subject_id: int, dry_run: bool = False):
     """
     Seed default mail templates.
-    
+
     Creates basic email templates for common scenarios.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -1016,7 +993,7 @@ def seed_mail_templates(conn, school_id: int, subject_id: int, dry_run: bool = F
         dry_run: If True, only print what would be done
     """
     print("\n📧 Seeding Mail Templates...")
-    
+
     templates = [
         {
             "name": "Start Opdrachtgever",
@@ -1082,36 +1059,33 @@ Met vriendelijke groet,
 Het projectteam""",
         },
     ]
-    
+
     inserted_count = 0
     skipped_count = 0
-    
+
     for template in templates:
         # Check if template already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM mail_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND type = :type
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
                 "type": template["type"],
             },
         )
-        
+
         if result.fetchone():
             skipped_count += 1
             continue
-        
+
         if not dry_run:
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO mail_templates (
                         school_id,
                         subject_id,
@@ -1136,8 +1110,7 @@ Het projectteam""",
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -1148,9 +1121,9 @@ Het projectteam""",
                     "variables_allowed": json.dumps({}),
                 },
             )
-        
+
         inserted_count += 1
-    
+
     print(f"  ✓ Inserted {inserted_count} mail templates")
     if skipped_count > 0:
         print(f"  ℹ Skipped {skipped_count} existing templates")
@@ -1159,9 +1132,9 @@ Het projectteam""",
 def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool = False):
     """
     Seed default standard remarks (Standaardopmerkingen).
-    
+
     Creates basic feedback remarks for quick use.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -1169,7 +1142,7 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool =
         dry_run: If True, only print what would be done
     """
     print("\n💬 Seeding Standard Remarks (Standaardopmerkingen)...")
-    
+
     remarks = [
         # Peer evaluation remarks
         {
@@ -1212,22 +1185,20 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool =
             "text": "Meer structuur aanbrengen",
         },
     ]
-    
+
     inserted_count = 0
     skipped_count = 0
-    
+
     for idx, remark in enumerate(remarks):
         # Check if remark already exists
         result = conn.execute(
-            text(
-                """
+            text("""
                 SELECT id FROM standard_remarks
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND type = :type
                   AND text = :text
-            """
-            ),
+            """),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -1235,15 +1206,14 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool =
                 "text": remark["text"],
             },
         )
-        
+
         if result.fetchone():
             skipped_count += 1
             continue
-        
+
         if not dry_run:
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO standard_remarks (
                         school_id,
                         subject_id,
@@ -1264,8 +1234,7 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool =
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """
-                ),
+                """),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -1275,9 +1244,9 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool =
                     "order": idx,
                 },
             )
-        
+
         inserted_count += 1
-    
+
     print(f"  ✓ Inserted {inserted_count} standard remarks")
     if skipped_count > 0:
         print(f"  ℹ Skipped {skipped_count} existing remarks")
@@ -1286,7 +1255,7 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int, dry_run: bool =
 def seed_all_templates(conn, school_id: int, subject_id: int, dry_run: bool = False):
     """
     Seed all template types for a specific school and subject.
-    
+
     Args:
         conn: Database connection
         school_id: School ID to seed for
@@ -1296,7 +1265,7 @@ def seed_all_templates(conn, school_id: int, subject_id: int, dry_run: bool = Fa
     print(f"\n{'='*60}")
     print(f"Seeding templates for school_id={school_id}, subject_id={subject_id}")
     print(f"{'='*60}")
-    
+
     # Seed in dependency order: learning objectives first, then everything else
     seed_learning_objectives(conn, school_id, subject_id, dry_run)
     seed_competency_templates(conn, school_id, subject_id, dry_run)
@@ -1305,7 +1274,7 @@ def seed_all_templates(conn, school_id: int, subject_id: int, dry_run: bool = Fa
     seed_project_rubric_templates(conn, school_id, subject_id, dry_run)
     seed_mail_templates(conn, school_id, subject_id, dry_run)
     seed_standard_remarks(conn, school_id, subject_id, dry_run)
-    
+
     print(f"\n{'='*60}")
     print("✅ Template seeding complete!")
     print(f"{'='*60}\n")
@@ -1318,7 +1287,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    
+
     parser.add_argument(
         "--school-id",
         type=int,
@@ -1344,25 +1313,25 @@ def main():
         action="store_true",
         help="Show what would be done without making changes",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Validate arguments
     if not args.all_schools and not args.school_id:
         parser.error("Either --school-id or --all-schools is required")
-    
+
     if args.school_id and args.all_schools:
         parser.error("Cannot specify both --school-id and --all-schools")
-    
+
     # Load environment variables from .env file
     load_dotenv()
-    
+
     # Get database URL from environment
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         print("❌ Error: DATABASE_URL environment variable not set", file=sys.stderr)
         sys.exit(1)
-    
+
     # Connect to database
     try:
         engine = create_engine(database_url)
@@ -1371,24 +1340,24 @@ def main():
     except Exception as e:
         print(f"❌ Error connecting to database: {e}", file=sys.stderr)
         sys.exit(1)
-    
+
     try:
         if args.dry_run:
             print("\n⚠️  DRY RUN MODE - No changes will be made\n")
-        
+
         # Get list of schools to process
         if args.all_schools:
             result = conn.execute(text("SELECT id FROM schools ORDER BY id"))
             school_ids = [row[0] for row in result.fetchall()]
-            
+
             if not school_ids:
                 print("❌ No schools found in database", file=sys.stderr)
                 sys.exit(1)
-            
+
             print(f"Found {len(school_ids)} school(s) to process: {school_ids}")
         else:
             school_ids = [args.school_id]
-        
+
         # Process each school
         for school_id in school_ids:
             # Determine subject_id to use
@@ -1404,24 +1373,24 @@ def main():
                 except ValueError as e:
                     print(f"❌ Error: {e}", file=sys.stderr)
                     sys.exit(1)
-            
+
             # Seed all templates
             seed_all_templates(conn, school_id, subject_id, args.dry_run)
-        
+
         # Commit changes if not dry run
         if not args.dry_run:
             conn.commit()
             print("✓ Changes committed to database")
         else:
             print("\n⚠️  DRY RUN COMPLETE - No changes were made")
-        
+
     except Exception as e:
         print(f"\n❌ Error during seeding: {e}", file=sys.stderr)
         if not args.dry_run:
             conn.rollback()
             print("✓ Changes rolled back")
         sys.exit(1)
-    
+
     finally:
         conn.close()
 

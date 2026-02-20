@@ -1,9 +1,8 @@
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime
 from sqlalchemy import (
     String,
-    Integer,
     ForeignKey,
     Boolean,
     UniqueConstraint,

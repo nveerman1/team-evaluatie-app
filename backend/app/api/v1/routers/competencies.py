@@ -367,7 +367,9 @@ def list_competencies(
         )
         .where(
             Competency.school_id == current_user.school_id,
-            Competency.is_template.is_(True),  # Only templates for backward compatibility
+            Competency.is_template.is_(
+                True
+            ),  # Only templates for backward compatibility
         )
     )
     if active_only:
@@ -623,7 +625,7 @@ def list_windows(
 ):
     """
     List all competency windows.
-    
+
     Access control:
     - Students: see windows for courses they're enrolled in
     - Teachers: see windows for courses they're assigned to
@@ -652,7 +654,7 @@ def list_windows(
         else:
             # Student has no courses, filter to impossible condition
             query = query.where(CompetencyWindow.id == -1)
-    
+
     # If user is a teacher (not admin), only show windows for courses they're assigned to
     elif current_user.role == "teacher":
         teacher_course_ids = _get_user_course_ids(db, current_user)
@@ -701,13 +703,13 @@ def get_window(
     window = db.get(CompetencyWindow, window_id)
     if not window or window.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Window not found")
-    
+
     # If user is a teacher (not admin), verify they have access to the window's course
     if current_user.role == "teacher" and window.course_id:
         teacher_course_ids = _get_user_course_ids(db, current_user)
         if teacher_course_ids and window.course_id not in teacher_course_ids:
             raise HTTPException(status_code=404, detail="Window not found")
-    
+
     return window
 
 
@@ -1286,7 +1288,9 @@ def create_reflection(
     # Verify the goal exists and belongs to the user
     goal = db.get(CompetencyGoal, data.goal_id)
     if not goal or goal.user_id != current_user.id or goal.window_id != data.window_id:
-        raise HTTPException(status_code=404, detail="Goal not found or does not belong to you")
+        raise HTTPException(
+            status_code=404, detail="Goal not found or does not belong to you"
+        )
 
     # Check if reflection already exists for this goal
     existing = db.execute(
@@ -1343,13 +1347,17 @@ def create_reflections_bulk(
 
     # Verify all goals exist and belong to the user
     goal_ids = [r.goal_id for r in data.reflections]
-    goals = db.execute(
-        select(CompetencyGoal).where(
-            CompetencyGoal.id.in_(goal_ids),
-            CompetencyGoal.user_id == current_user.id,
-            CompetencyGoal.window_id == data.window_id,
+    goals = (
+        db.execute(
+            select(CompetencyGoal).where(
+                CompetencyGoal.id.in_(goal_ids),
+                CompetencyGoal.user_id == current_user.id,
+                CompetencyGoal.window_id == data.window_id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     if len(goals) != len(goal_ids):
         raise HTTPException(status_code=400, detail="Invalid goals specified")
@@ -1390,7 +1398,7 @@ def create_reflections_bulk(
     db.commit()
     for r in results:
         db.refresh(r)
-    
+
     return results
 
 
@@ -1580,12 +1588,16 @@ def get_my_window_overview(
     )
 
     # Get reflections (now returns a list)
-    reflections = db.execute(
-        select(CompetencyReflection).where(
-            CompetencyReflection.window_id == window_id,
-            CompetencyReflection.user_id == current_user.id,
+    reflections = (
+        db.execute(
+            select(CompetencyReflection).where(
+                CompetencyReflection.window_id == window_id,
+                CompetencyReflection.user_id == current_user.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     return StudentCompetencyOverview(
         window_id=window_id,
@@ -1765,12 +1777,16 @@ def get_student_window_overview(
     )
 
     # Get reflections (now returns a list)
-    reflections = db.execute(
-        select(CompetencyReflection).where(
-            CompetencyReflection.window_id == window_id,
-            CompetencyReflection.user_id == user_id,
+    reflections = (
+        db.execute(
+            select(CompetencyReflection).where(
+                CompetencyReflection.window_id == window_id,
+                CompetencyReflection.user_id == user_id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     return StudentCompetencyOverview(
         window_id=window_id,
@@ -1906,7 +1922,9 @@ def get_class_heatmap(
     )
 
 
-@router.get("/student/{student_id}/historical-scores", response_model=StudentHistoricalScores)
+@router.get(
+    "/student/{student_id}/historical-scores", response_model=StudentHistoricalScores
+)
 def get_student_historical_scores(
     student_id: int,
     course_id: Optional[int] = Query(None),
@@ -1931,45 +1949,63 @@ def get_student_historical_scores(
     )
     if course_id:
         windows_query = windows_query.where(CompetencyWindow.course_id == course_id)
-    
+
     windows_query = windows_query.order_by(CompetencyWindow.start_date.desc())
     windows = db.execute(windows_query).scalars().all()
 
     # Get all categories for this school
-    categories = db.execute(
-        select(CompetencyCategory).where(
-            CompetencyCategory.school_id == current_user.school_id
-        ).order_by(CompetencyCategory.order_index)
-    ).scalars().all()
+    categories = (
+        db.execute(
+            select(CompetencyCategory)
+            .where(CompetencyCategory.school_id == current_user.school_id)
+            .order_by(CompetencyCategory.order_index)
+        )
+        .scalars()
+        .all()
+    )
 
     scans = []
     for window in windows:
         # Get selected competencies for this window
-        selected_competency_ids = (window.settings or {}).get("selected_competency_ids", [])
-        
+        selected_competency_ids = (window.settings or {}).get(
+            "selected_competency_ids", []
+        )
+
         if selected_competency_ids:
-            competencies = db.execute(
-                select(Competency).where(
-                    Competency.school_id == current_user.school_id,
-                    Competency.active,
-                    Competency.id.in_(selected_competency_ids),
+            competencies = (
+                db.execute(
+                    select(Competency).where(
+                        Competency.school_id == current_user.school_id,
+                        Competency.active,
+                        Competency.id.in_(selected_competency_ids),
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
         else:
-            competencies = db.execute(
-                select(Competency).where(
-                    Competency.school_id == current_user.school_id,
-                    Competency.active,
+            competencies = (
+                db.execute(
+                    select(Competency).where(
+                        Competency.school_id == current_user.school_id,
+                        Competency.active,
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
         # Get self scores for this student in this window
-        self_scores = db.execute(
-            select(CompetencySelfScore).where(
-                CompetencySelfScore.window_id == window.id,
-                CompetencySelfScore.user_id == student_id,
+        self_scores = (
+            db.execute(
+                select(CompetencySelfScore).where(
+                    CompetencySelfScore.window_id == window.id,
+                    CompetencySelfScore.user_id == student_id,
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         # Build score map by competency
         comp_scores = {score.competency_id: float(score.score) for score in self_scores}
@@ -1990,8 +2026,7 @@ def get_student_historical_scores(
 
         # Build scan score with all categories (including None for missing)
         scan_category_scores = {
-            cat.id: category_averages.get(cat.id)
-            for cat in categories
+            cat.id: category_averages.get(cat.id) for cat in categories
         }
 
         scans.append(
@@ -2083,14 +2118,10 @@ def get_window_goals(
                 success_criteria=goal.success_criteria,
                 competency_id=competency_id,
                 competency_name=(
-                    competency_map.get(competency_id)
-                    if competency_id
-                    else None
+                    competency_map.get(competency_id) if competency_id else None
                 ),
                 category_name=(
-                    category_map.get(competency_id)
-                    if competency_id
-                    else None
+                    category_map.get(competency_id) if competency_id else None
                 ),
                 status=goal.status,
                 submitted_at=goal.submitted_at,
