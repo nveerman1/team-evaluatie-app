@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.deps import get_db, get_current_user
@@ -641,7 +642,10 @@ def update_team_status(
             # Feature B: Auto-create Subproject on GO status
             project_team = (
                 db.query(ProjectTeam)
-                .filter(ProjectTeam.id == team.project_team_id)
+                .filter(
+                    ProjectTeam.id == team.project_team_id,
+                    ProjectTeam.school_id == user.school_id,
+                )
                 .first()
             )
             if project_team:
@@ -820,12 +824,16 @@ def suggest_client(
     org_query = client_section.client_organisation.strip()
     email_query = client_section.client_email
 
+    # Escape ILIKE wildcards so user-entered % or _ don't produce overly broad matches.
+    # Backslash must be escaped first to avoid double-escaping the escape character.
+    org_query_safe = org_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
     # Search by organization name (case-insensitive, partial match)
     candidates = (
         db.query(Client)
         .filter(
             Client.school_id == user.school_id,
-            Client.organization.ilike(f"%{org_query}%"),
+            Client.organization.ilike(f"%{org_query_safe}%"),
         )
         .limit(10)
         .all()
@@ -975,7 +983,15 @@ def link_client(
         db.add(new_client)
         db.flush()
         client_section.client_id = new_client.id
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail=f"Er bestaat al een opdrachtgever met naam '{client_section.client_organisation}'. "
+                "Gebruik action='match_existing' om deze te koppelen.",
+            )
         logger.info(
             f"Created new Client {new_client.id} ('{new_client.organization}') "
             f"and linked to section {client_section.id} by user {user.id}"
@@ -1123,73 +1139,7 @@ def list_my_projectplans(
                             )
                             continue  # Skip if no ProjectPlanTeam record exists
 
-                        # Get team members
-                        members = (
-                            db.query(User)
-                            .join(
-                                ProjectTeamMember, ProjectTeamMember.user_id == User.id
-                            )
-                            .filter(
-                                ProjectTeamMember.project_team_id == project_team.id,
-                                ProjectTeamMember.school_id == user.school_id,
-                            )
-                            .all()
-                        )
-                        member_names = [m.name for m in members]
-
-                        # Get sections
-                        sections = (
-                            db.query(ProjectPlanSection)
-                            .filter(
-                                ProjectPlanSection.project_plan_team_id == ppt.id,
-                                ProjectPlanSection.school_id == user.school_id,
-                            )
-                            .all()
-                        )
-
-                        sections_data = []
-                        for s in sections:
-                            # Build client data if this is the client section
-                            client_data = None
-                            if s.key == "client":
-                                client_data = ClientData(
-                                    organisation=s.client_organisation,
-                                    contact=s.client_contact,
-                                    email=s.client_email,
-                                    phone=s.client_phone,
-                                    description=s.client_description,
-                                )
-
-                            sections_data.append(
-                                ProjectPlanSectionOut(
-                                    id=s.id,
-                                    project_plan_team_id=s.project_plan_team_id,
-                                    key=s.key,
-                                    status=s.status,
-                                    text=s.text,
-                                    client=client_data,
-                                    teacher_note=s.teacher_note,
-                                    created_at=s.created_at,
-                                    updated_at=s.updated_at,
-                                )
-                            )
-
-                        teams_data.append(
-                            ProjectPlanTeamOut(
-                                id=ppt.id,
-                                project_plan_id=ppt.project_plan_id,
-                                project_team_id=ppt.project_team_id,
-                                status=ppt.status,
-                                title=ppt.title,
-                                global_teacher_note=ppt.global_teacher_note,
-                                locked=ppt.locked,
-                                team_number=project_team.team_number,
-                                team_members=member_names,
-                                sections=sections_data,
-                                created_at=ppt.created_at,
-                                updated_at=ppt.updated_at,
-                            )
-                        )
+                        teams_data.append(_team_to_out(ppt, db))
                     except Exception as e:
                         logger.error(
                             f"Error processing team {project_team.id} for projectplan {pp.id}: {e}",
