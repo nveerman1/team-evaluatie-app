@@ -273,9 +273,9 @@ class TestSortOrderValidation:
         """Valid sort_order values 'asc' and 'desc' must not return 422."""
         response = client.get(f"/overview/matrix?sort_order={sort_order}")
         # 200 (success) or any non-422 status is acceptable here
-        assert response.status_code != 422, (
-            f"sort_order='{sort_order}' should be accepted but got 422"
-        )
+        assert (
+            response.status_code != 422
+        ), f"sort_order='{sort_order}' should be accepted but got 422"
 
     def test_invalid_sort_order_rejected(self, client):
         """An invalid sort_order value must return HTTP 422 Unprocessable Entity."""
