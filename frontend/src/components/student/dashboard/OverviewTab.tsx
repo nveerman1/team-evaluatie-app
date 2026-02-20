@@ -35,7 +35,9 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { gradesService } from "@/services";
+import { gradesService, skillTrainingService } from "@/services";
+import type { StudentTrainingItem, SkillTrainingStatus } from "@/dtos";
+import { STATUS_META } from "@/dtos/skill-training.dto";
 import { useStudentCompetencyScans, useStudentCompetencyRadar } from "@/hooks/student/useStudentCompetencyRadar";
 
 type OverviewTabProps = {
@@ -73,6 +75,21 @@ export function OverviewTab({
   const [expandedEvaluations, setExpandedEvaluations] = React.useState<Set<string>>(new Set());
   const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
   const [enrichedEvaluations, setEnrichedEvaluations] = React.useState<EvaluationResult[]>(peerResults);
+  const [skillTrainings, setSkillTrainings] = React.useState<StudentTrainingItem[]>([]);
+
+  // Fetch student's own skill trainings
+  React.useEffect(() => {
+    async function fetchSkillTrainings() {
+      try {
+        const response = await skillTrainingService.getMyTrainings();
+        const visibleStatuses: SkillTrainingStatus[] = ["planned", "in_progress", "submitted", "completed", "mastered"];
+        setSkillTrainings(response.items.filter((item) => visibleStatuses.includes(item.status)));
+      } catch {
+        // If we can't fetch trainings, leave empty
+      }
+    }
+    fetchSkillTrainings();
+  }, []);
   
   // Fetch scan list and radar data using new hooks
   const { data: scanList, isLoading: scansLoading, isError: scansError } = useStudentCompetencyScans();
@@ -841,7 +858,52 @@ export function OverviewTab({
         </CardContent>
       </Card>
 
-      {/* 5) Reflections - Full Width Table with Expand */}
+      {/* 5) Skill Trainings - Full Width Table */}
+      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Vaardigheidstrainingen</CardTitle>
+          <p className="text-sm text-slate-600">Overzicht van jouw vaardigheidstrainingen en hun status.</p>
+        </CardHeader>
+        <CardContent>
+          {skillTrainings.length === 0 ? (
+            <p className="text-slate-500 text-center py-4">Geen vaardigheidstrainingen gevonden.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <th className="px-4 py-3">Training</th>
+                    <th className="px-4 py-3">Competentie</th>
+                    <th className="px-4 py-3">Leerdoel</th>
+                    <th className="px-4 py-3">Niveau</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {skillTrainings.map((item) => {
+                    const meta = STATUS_META[item.status];
+                    return (
+                      <tr key={item.training.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-slate-900">{item.training.title}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.training.competency_category_name || "—"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.training.learning_objective_title || "—"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.training.level || "—"}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${meta.colorClass}`}>
+                            {meta.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 6) Reflections - Full Width Table with Expand */}
       <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Reflecties</CardTitle>
