@@ -664,8 +664,7 @@ def update_team_status(
                     )
                     client_id = client_section.client_id if client_section else None
                     subproject_title = (
-                        team.title
-                        or f"Deelproject Team {project_team.team_number}"
+                        team.title or f"Deelproject Team {project_team.team_number}"
                     )
                     subproject = Subproject(
                         school_id=user.school_id,
@@ -826,7 +825,9 @@ def suggest_client(
 
     # Escape ILIKE wildcards so user-entered % or _ don't produce overly broad matches.
     # Backslash must be escaped first to avoid double-escaping the escape character.
-    org_query_safe = org_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    org_query_safe = (
+        org_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
 
     # Search by organization name (case-insensitive, partial match)
     candidates = (
@@ -853,7 +854,12 @@ def suggest_client(
         else:
             score = 0.7
         # Boost score for non-exact matches when email also matches
-        if score < 1.0 and email_query and c.email and c.email.lower() == email_query.lower():
+        if (
+            score < 1.0
+            and email_query
+            and c.email
+            and c.email.lower() == email_query.lower()
+        ):
             score = min(1.0, score + 0.1)
         results.append(
             SuggestClientItem(

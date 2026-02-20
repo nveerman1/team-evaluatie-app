@@ -52,7 +52,5 @@ def downgrade() -> None:
     """Reverse the migration."""
     op.drop_constraint("uq_client_school_org", "clients", type_="unique")
     op.drop_index("ix_pps_client_id", table_name="project_plan_sections")
-    op.drop_constraint(
-        "fk_pps_client_id", "project_plan_sections", type_="foreignkey"
-    )
+    op.drop_constraint("fk_pps_client_id", "project_plan_sections", type_="foreignkey")
     op.drop_column("project_plan_sections", "client_id")

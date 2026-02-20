@@ -30,10 +30,10 @@ from app.api.v1.routers.projectplans import (
 )
 from fastapi import HTTPException
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_user(role: str = "teacher", school_id: int = 1) -> Mock:
     u = Mock(spec=User)
@@ -139,9 +139,7 @@ class TestSuggestClient:
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=_make_pp(),
         ):
-            result = suggest_client(
-                projectplan_id=1, team_id=2, db=db, user=user
-            )
+            result = suggest_client(projectplan_id=1, team_id=2, db=db, user=user)
 
         assert result == []
 
@@ -164,9 +162,7 @@ class TestSuggestClient:
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=_make_pp(),
         ):
-            result = suggest_client(
-                projectplan_id=1, team_id=2, db=db, user=user
-            )
+            result = suggest_client(projectplan_id=1, team_id=2, db=db, user=user)
 
         assert len(result) == 1
         assert result[0].match_score == 1.0
@@ -191,9 +187,7 @@ class TestSuggestClient:
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=_make_pp(),
         ):
-            result = suggest_client(
-                projectplan_id=1, team_id=2, db=db, user=user
-            )
+            result = suggest_client(projectplan_id=1, team_id=2, db=db, user=user)
 
         assert len(result) == 1
         assert result[0].match_score < 1.0
@@ -224,9 +218,7 @@ class TestSuggestClient:
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=_make_pp(),
         ):
-            result = suggest_client(
-                projectplan_id=1, team_id=2, db=db, user=user
-            )
+            result = suggest_client(projectplan_id=1, team_id=2, db=db, user=user)
 
         # Both are partial matches (startswith-type). client_with_email should rank higher
         assert result[0].id == client_with_email.id
@@ -453,9 +445,7 @@ class TestUpdateTeamStatusSubproject:
         with patch(
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=pp,
-        ), patch(
-            "app.api.v1.routers.projectplans._team_to_out", return_value=Mock()
-        ):
+        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
@@ -492,9 +482,7 @@ class TestUpdateTeamStatusSubproject:
         with patch(
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=pp,
-        ), patch(
-            "app.api.v1.routers.projectplans._team_to_out", return_value=Mock()
-        ):
+        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
@@ -524,9 +512,7 @@ class TestUpdateTeamStatusSubproject:
         with patch(
             "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
             return_value=pp,
-        ), patch(
-            "app.api.v1.routers.projectplans._team_to_out", return_value=Mock()
-        ):
+        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
