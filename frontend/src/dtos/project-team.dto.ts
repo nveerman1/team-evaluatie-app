@@ -11,6 +11,7 @@ export type ProjectTeam = {
   display_name_at_time: string;
   team_number: number | null;
   version: number;
+  members: ProjectTeamMember[];
   member_count: number;
   is_locked: boolean;
   created_at: string;

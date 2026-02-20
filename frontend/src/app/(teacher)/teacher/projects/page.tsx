@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Tabs } from "@/components/Tabs";
 import { projectService } from "@/services/project.service";
 import { clientService } from "@/services/client.service";
-import { courseService } from "@/services/course.service";
+import { projectTeamService } from "@/services/project-team.service";
 import { listMailTemplates } from "@/services/mail-template.service";
 import { useCourses } from "@/hooks";
 import { Loading } from "@/components";
@@ -14,7 +14,8 @@ import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 import type { MailTemplateDto } from "@/dtos/mail-template.dto";
 import type { RunningProjectItem, Subproject } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
-import type { Course, CourseStudent } from "@/dtos/course.dto";
+import type { Course } from "@/dtos/course.dto";
+import type { ProjectTeam as ProjectTeamDto } from "@/dtos/project-team.dto";
 
 // Default fallback templates when no templates are available from API
 const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
@@ -53,12 +54,6 @@ interface ProjectWithLevel extends RunningProjectItem {
   client_count?: number;
   // Subprojects for bovenbouw choice projects (from API)
   subprojects?: Subproject[];
-}
-
-// Team type for course teams
-interface CourseTeam {
-  team_number: number;
-  members: CourseStudent[];
 }
 
 // Helper function for building mailto links
@@ -152,6 +147,7 @@ interface SubprojectData {
 function SubprojectModal({
   isOpen,
   projectTitle,
+  projectId,
   courseId,
   onSave,
   onCancel,
@@ -159,6 +155,7 @@ function SubprojectModal({
 }: {
   isOpen: boolean;
   projectTitle: string;
+  projectId?: number;
   courseId?: number;
   onSave: (subproject: SubprojectData) => void | Promise<void>;
   onCancel: () => void;
@@ -169,7 +166,7 @@ function SubprojectModal({
   const [selectedTeamNumber, setSelectedTeamNumber] = useState<number | null>(null);
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
-  const [teams, setTeams] = useState<CourseTeam[]>([]);
+  const [teams, setTeams] = useState<ProjectTeamDto[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
 
   // Fetch clients when modal opens
@@ -187,36 +184,20 @@ function SubprojectModal({
     }
   }, [isOpen]);
 
-  // Fetch teams from course when modal opens
+  // Fetch teams from project when modal opens
   useEffect(() => {
-    if (isOpen && courseId) {
+    if (isOpen && projectId) {
       setLoadingTeams(true);
-      courseService.getCourseStudents(courseId)
-        .then(students => {
-          // Group students by team_number
-          const teamMap = new Map<number, CourseStudent[]>();
-          students.forEach(student => {
-            if (student.team_number !== undefined && student.team_number !== null) {
-              if (!teamMap.has(student.team_number)) {
-                teamMap.set(student.team_number, []);
-              }
-              teamMap.get(student.team_number)!.push(student);
-            }
-          });
-          
-          // Convert to array and sort by team number
-          const teamsArray: CourseTeam[] = Array.from(teamMap.entries())
-            .map(([team_number, members]) => ({ team_number, members }))
-            .sort((a, b) => a.team_number - b.team_number);
-          
-          setTeams(teamsArray);
+      projectTeamService.listProjectTeams(projectId)
+        .then(response => {
+          setTeams(response.teams);
         })
         .catch(err => {
           console.error("Failed to load teams:", err);
         })
         .finally(() => setLoadingTeams(false));
     }
-  }, [isOpen, courseId]);
+  }, [isOpen, projectId]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -298,7 +279,7 @@ function SubprojectModal({
               <div className="text-sm text-gray-500">Teams laden...</div>
             ) : teams.length === 0 ? (
               <div className="text-sm text-gray-500 italic">
-                {courseId ? "Geen teams gevonden voor dit vak." : "Selecteer eerst een vak met teams."}
+                {projectId ? "Geen teams gevonden voor dit project." : "Geen project geselecteerd."}
               </div>
             ) : (
               <select
@@ -307,9 +288,9 @@ function SubprojectModal({
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Selecteer een team...</option>
-                {teams.map(team => (
-                  <option key={team.team_number} value={team.team_number}>
-                    Team {team.team_number} ({team.members.length} leden)
+                {teams.filter(team => team.team_number !== null).map(team => (
+                  <option key={team.id} value={team.team_number!}>
+                    {team.display_name_at_time} ({team.member_count} leden)
                   </option>
                 ))}
               </select>
@@ -321,7 +302,7 @@ function SubprojectModal({
             <div className="bg-blue-50 rounded-lg p-3">
               <div className="text-xs font-medium text-gray-700 mb-1">Teamleden</div>
               <div className="text-xs text-gray-600">
-                {selectedTeam.members.map(m => m.name).join(", ")}
+                {selectedTeam.members.filter(m => m.user_name).map(m => m.user_name).join(", ")}
               </div>
             </div>
           )}
@@ -1468,6 +1449,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
       <SubprojectModal
         isOpen={subprojectModalProject !== null}
         projectTitle={subprojectModalProject?.project_title || ""}
+        projectId={subprojectModalProject?.project_id}
         courseId={subprojectModalProject?.course_id}
         onSave={async (subprojectData) => {
           if (subprojectModalProject) {
