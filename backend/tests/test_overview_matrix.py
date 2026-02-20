@@ -3,9 +3,10 @@ Tests for overview matrix endpoint
 """
 
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from datetime import datetime, timezone
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
 from app.infra.db.models import (
     User,
@@ -14,7 +15,8 @@ from app.infra.db.models import (
     ProjectTeam,
     Project,
 )
-from app.api.v1.routers.overview import get_overview_matrix
+from app.api.v1.routers.overview import get_overview_matrix, router as overview_router
+from app.api.v1.deps import get_db, get_current_user
 
 
 class TestOverviewMatrix:
@@ -233,3 +235,52 @@ class TestOverviewMatrix:
         assert hasattr(result, "rows")
         assert hasattr(result, "total_students")
         assert hasattr(result, "column_averages")
+
+
+class TestSortOrderValidation:
+    """Test that the pattern= constraint on sort_order is enforced via HTTP."""
+
+    @pytest.fixture
+    def client(self):
+        """TestClient with dependency overrides (no real DB or auth needed)."""
+        app = FastAPI()
+
+        mock_user = Mock(spec=User)
+        mock_user.id = 1
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+        mock_user.archived = False
+
+        mock_db = MagicMock()
+        # Ensure all query chains return empty results so the endpoint completes
+        mock_q = MagicMock()
+        mock_db.query.return_value = mock_q
+        mock_q.filter.return_value = mock_q
+        mock_q.join.return_value = mock_q
+        mock_q.outerjoin.return_value = mock_q
+        mock_q.distinct.return_value = mock_q
+        mock_q.first.return_value = None
+        mock_q.all.return_value = []
+
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        app.include_router(overview_router)
+
+        return TestClient(app, raise_server_exceptions=False)
+
+    @pytest.mark.parametrize("sort_order", ["asc", "desc"])
+    def test_valid_sort_order_accepted(self, client, sort_order):
+        """Valid sort_order values 'asc' and 'desc' must not return 422."""
+        response = client.get(f"/overview/matrix?sort_order={sort_order}")
+        # 200 (success) or any non-422 status is acceptable here
+        assert response.status_code != 422, (
+            f"sort_order='{sort_order}' should be accepted but got 422"
+        )
+
+    def test_invalid_sort_order_rejected(self, client):
+        """An invalid sort_order value must return HTTP 422 Unprocessable Entity."""
+        response = client.get("/overview/matrix?sort_order=nope")
+        assert response.status_code == 422, (
+            "sort_order='nope' should be rejected with 422 but got "
+            f"{response.status_code}"
+        )

@@ -699,7 +699,7 @@ def get_overview_matrix(
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None),  # Column key to sort by
-    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1164,7 +1164,7 @@ def export_matrix_csv(
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None),
-    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
