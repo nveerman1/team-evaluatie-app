@@ -172,6 +172,11 @@ class ProjectPlanSection(Base):
     client_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     client_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Linked CMS Client (set when teacher matches/creates a Client record)
+    client_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     # Teacher feedback
     teacher_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
@@ -192,6 +197,7 @@ class ProjectPlanSection(Base):
     project_plan_team: Mapped["ProjectPlanTeam"] = relationship(
         back_populates="sections"
     )
+    linked_client: Mapped[Optional["Client"]] = relationship(foreign_keys=[client_id])
 
     __table_args__ = (
         UniqueConstraint(

@@ -78,6 +78,7 @@ class ProjectPlanSectionOut(ProjectPlanSectionBase):
     """Output schema for project plan sections"""
 
     id: int
+    client_id: Optional[int] = None  # Linked CMS Client ID (Feature A)
     created_at: datetime
     updated_at: datetime
 
@@ -243,3 +244,41 @@ class ProjectPlanTeamOverviewItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------- Client Linking Schemas (Feature A) ----------
+
+
+class LinkClientAction(str, Enum):
+    """Action for linking a client to a projectplan section"""
+
+    MATCH_EXISTING = "match_existing"
+    CREATE_NEW = "create_new"
+
+
+class LinkClientRequest(BaseModel):
+    """Request body for POST /projectplans/{id}/teams/{team_id}/link-client"""
+
+    action: LinkClientAction
+    client_id: Optional[int] = None  # Required when action=match_existing
+
+
+class SuggestClientItem(BaseModel):
+    """A single client suggestion with match confidence"""
+
+    id: int
+    organization: str
+    contact_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    match_score: float = Field(ge=0.0, le=1.0)
+
+
+class LinkedClientResponse(BaseModel):
+    """Response after linking a client to a projectplan section"""
+
+    client_id: int
+    organization: str
+    contact_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None

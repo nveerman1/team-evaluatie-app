@@ -64,6 +64,7 @@ class Client(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint("school_id", "organization", name="uq_client_school_org"),
         Index("ix_client_school_active", "school_id", "active"),
         Index("ix_client_organization", "organization"),
     )

@@ -17,6 +17,8 @@ from app.infra.db.models import (
     ProjectTeamMember,
     Course,
     User,
+    Subproject,
+    Client,
 )
 from app.api.v1.schemas.projectplans import (
     ProjectPlanCreate,
@@ -34,6 +36,10 @@ from app.api.v1.schemas.projectplans import (
     ProjectPlanSectionStudentUpdate,
     ClientData,
     SectionKey,
+    LinkClientRequest,
+    LinkClientAction,
+    SuggestClientItem,
+    LinkedClientResponse,
 )
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
@@ -109,6 +115,7 @@ def _section_to_out(section: ProjectPlanSection) -> ProjectPlanSectionOut:
         status=section.status,
         text=section.text,
         client=client_data,
+        client_id=section.client_id,
         teacher_note=section.teacher_note,
         created_at=section.created_at,
         updated_at=section.updated_at,
@@ -630,6 +637,44 @@ def update_team_status(
             for section in team.sections:
                 if section.status == "submitted":
                     section.status = "approved"
+
+            # Feature B: Auto-create Subproject on GO status
+            project_team = (
+                db.query(ProjectTeam)
+                .filter(ProjectTeam.id == team.project_team_id)
+                .first()
+            )
+            if project_team:
+                existing_subproject = (
+                    db.query(Subproject)
+                    .filter(
+                        Subproject.project_id == pp.project_id,
+                        Subproject.school_id == user.school_id,
+                        Subproject.team_number == project_team.team_number,
+                    )
+                    .first()
+                )
+                if not existing_subproject:
+                    client_section = next(
+                        (s for s in team.sections if s.key == "client"), None
+                    )
+                    client_id = client_section.client_id if client_section else None
+                    subproject_title = (
+                        team.title
+                        or f"Deelproject Team {project_team.team_number}"
+                    )
+                    subproject = Subproject(
+                        school_id=user.school_id,
+                        project_id=pp.project_id,
+                        client_id=client_id,
+                        title=subproject_title,
+                        team_number=project_team.team_number,
+                    )
+                    db.add(subproject)
+                    logger.info(
+                        f"Auto-created Subproject for project {pp.project_id} "
+                        f"team {project_team.team_number} on GO status"
+                    )
         elif payload.status == "no-go":
             team.locked = False
 
@@ -721,6 +766,227 @@ def update_section_feedback(
     )
 
     return _section_to_out(section)
+
+
+@router.get(
+    "/{projectplan_id}/teams/{team_id}/suggest-client",
+    response_model=List[SuggestClientItem],
+)
+def suggest_client(
+    projectplan_id: int,
+    team_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Suggest matching CMS Client records for a projectplan team's client section.
+
+    Reads the ClientData from the team's 'client' section and searches
+    for similar clients in the school's CMS (ILIKE on organization name,
+    optional email match). Returns candidates with a match score.
+    """
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403, detail="Alleen docenten en admins hebben toegang"
+        )
+
+    pp = _get_projectplan_with_access_check(db, projectplan_id, user)
+
+    team = (
+        db.query(ProjectPlanTeam)
+        .filter(
+            ProjectPlanTeam.id == team_id,
+            ProjectPlanTeam.project_plan_id == pp.id,
+            ProjectPlanTeam.school_id == user.school_id,
+        )
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    client_section = (
+        db.query(ProjectPlanSection)
+        .filter(
+            ProjectPlanSection.project_plan_team_id == team.id,
+            ProjectPlanSection.key == "client",
+            ProjectPlanSection.school_id == user.school_id,
+        )
+        .first()
+    )
+
+    if not client_section or not client_section.client_organisation:
+        return []
+
+    org_query = client_section.client_organisation.strip()
+    email_query = client_section.client_email
+
+    # Search by organization name (case-insensitive, partial match)
+    candidates = (
+        db.query(Client)
+        .filter(
+            Client.school_id == user.school_id,
+            Client.organization.ilike(f"%{org_query}%"),
+        )
+        .limit(10)
+        .all()
+    )
+
+    results = []
+    org_lower = org_query.lower()
+    for c in candidates:
+        candidate_org_lower = c.organization.lower()
+        # Compute a simple match score based on name similarity
+        if candidate_org_lower == org_lower:
+            score = 1.0
+        elif candidate_org_lower.startswith(org_lower) or org_lower.startswith(
+            candidate_org_lower
+        ):
+            score = 0.9
+        else:
+            score = 0.7
+        # Boost score for non-exact matches when email also matches
+        if score < 1.0 and email_query and c.email and c.email.lower() == email_query.lower():
+            score = min(1.0, score + 0.1)
+        results.append(
+            SuggestClientItem(
+                id=c.id,
+                organization=c.organization,
+                contact_name=c.contact_name,
+                email=c.email,
+                phone=c.phone,
+                match_score=score,
+            )
+        )
+
+    results.sort(key=lambda x: x.match_score, reverse=True)
+    return results
+
+
+@router.post(
+    "/{projectplan_id}/teams/{team_id}/link-client",
+    response_model=LinkedClientResponse,
+    status_code=status.HTTP_200_OK,
+)
+def link_client(
+    projectplan_id: int,
+    team_id: int,
+    payload: LinkClientRequest,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Link or create a CMS Client for a projectplan team's client section.
+
+    - action=match_existing: link to an existing Client (client_id required)
+    - action=create_new: create a new Client from the ClientData fields and link it
+
+    Teacher/admin only. Returns the linked client info.
+    """
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403, detail="Alleen docenten en admins hebben toegang"
+        )
+
+    pp = _get_projectplan_with_access_check(db, projectplan_id, user)
+
+    team = (
+        db.query(ProjectPlanTeam)
+        .filter(
+            ProjectPlanTeam.id == team_id,
+            ProjectPlanTeam.project_plan_id == pp.id,
+            ProjectPlanTeam.school_id == user.school_id,
+        )
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    client_section = (
+        db.query(ProjectPlanSection)
+        .filter(
+            ProjectPlanSection.project_plan_team_id == team.id,
+            ProjectPlanSection.key == "client",
+            ProjectPlanSection.school_id == user.school_id,
+        )
+        .first()
+    )
+    if not client_section:
+        raise HTTPException(status_code=404, detail="Client section not found")
+
+    if payload.action == LinkClientAction.MATCH_EXISTING:
+        if not payload.client_id:
+            raise HTTPException(
+                status_code=400,
+                detail="client_id is verplicht bij action='match_existing'",
+            )
+        existing_client = (
+            db.query(Client)
+            .filter(
+                Client.id == payload.client_id,
+                Client.school_id == user.school_id,
+            )
+            .first()
+        )
+        if not existing_client:
+            raise HTTPException(status_code=404, detail="Client not found")
+        client_section.client_id = existing_client.id
+        db.commit()
+        logger.info(
+            f"Linked existing Client {existing_client.id} to section {client_section.id} "
+            f"by user {user.id}"
+        )
+        return LinkedClientResponse(
+            client_id=existing_client.id,
+            organization=existing_client.organization,
+            contact_name=existing_client.contact_name,
+            email=existing_client.email,
+            phone=existing_client.phone,
+        )
+
+    else:  # CREATE_NEW
+        if not client_section.client_organisation:
+            raise HTTPException(
+                status_code=400,
+                detail="Organisatienaam ontbreekt in de opdrachtgever sectie",
+            )
+        # Check for exact duplicate
+        duplicate = (
+            db.query(Client)
+            .filter(
+                Client.school_id == user.school_id,
+                Client.organization == client_section.client_organisation,
+            )
+            .first()
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Er bestaat al een opdrachtgever met naam '{client_section.client_organisation}'. "
+                "Gebruik action='match_existing' om deze te koppelen.",
+            )
+        new_client = Client(
+            school_id=user.school_id,
+            organization=client_section.client_organisation,
+            contact_name=client_section.client_contact,
+            email=client_section.client_email,
+            phone=client_section.client_phone,
+            active=True,
+        )
+        db.add(new_client)
+        db.flush()
+        client_section.client_id = new_client.id
+        db.commit()
+        logger.info(
+            f"Created new Client {new_client.id} ('{new_client.organization}') "
+            f"and linked to section {client_section.id} by user {user.id}"
+        )
+        return LinkedClientResponse(
+            client_id=new_client.id,
+            organization=new_client.organization,
+            contact_name=new_client.contact_name,
+            email=new_client.email,
+            phone=new_client.phone,
+        )
 
 
 @router.delete("/{projectplan_id}", status_code=status.HTTP_204_NO_CONTENT)
