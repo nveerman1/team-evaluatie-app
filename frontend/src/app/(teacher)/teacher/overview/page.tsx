@@ -17,8 +17,11 @@ function OverviewPageContent() {
   // Initialize state from URL or defaults
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "totaal");
 
-  // Sync URL with active tab
+  // Sync URL with active tab - only replace when the URL doesn't already reflect the current tab
   useEffect(() => {
+    const currentTabInUrl = searchParams.get("tab") || "totaal";
+    if (currentTabInUrl === activeTab) return;
+
     const params = new URLSearchParams(searchParams.toString());
     if (activeTab !== "totaal") {
       params.set("tab", activeTab);
