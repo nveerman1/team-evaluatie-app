@@ -2,421 +2,252 @@
 
 # Team Evaluatie App
 
-Een multi-tenant webapplicatie voor peer evaluaties, projectbeoordelingen en competentiemonitoring met AI-powered feedback summaries.
+A production-ready multi-tenant web application for peer evaluations, project assessments, and competency monitoring — built for Technasium teachers and students.
 
-## Features
+## Table of Contents
 
-### Authentication & Security
-- **Multi-method Authentication**:
-  - **Azure AD (Office 365)**: Production authentication using Microsoft OAuth
-  - **Dev-login**: Development-only authentication (controlled via environment flags)
-- **Role-Based Access Control (RBAC)**: Admin, teacher and student rollen met granulaire toegangscontrole
-- **JWT with Claims**: Tokens include role and school_id for efficient authorization
-- **School-scoped Access**: All data isolated per school (multi-tenant)
-- **Audit logging**: Alle muterende acties worden gelogd voor compliance
+- [Project Overview](#project-overview)
+- [Architecture Overview](#architecture-overview)
+- [Quick Start (Local Development)](#quick-start-local-development)
+- [Production Deployment](#production-deployment)
+- [Security](#security)
+- [Development Workflow](#development-workflow)
+- [Documentation](#documentation)
+- [License](#license)
 
-#### Dev-login Configuration
+---
 
-Dev-login provides an easy way to test as different users in local development. It is **completely disabled in production** for security.
+## Project Overview
 
-**Backend** (in `.env`):
-```bash
-ENABLE_DEV_LOGIN=true  # Enable in development, false in production
+The Team Evaluatie App supports the full Technasium evaluation cycle:
+
+| Module | Description |
+|--------|-------------|
+| **Projects** | Project management with team rosters and assignments |
+| **Projectplans** (bovenbouw) | Structured project planning for upper secondary |
+| **Peer Evaluations** | Student-to-student assessments with GCF/OMZA scoring |
+| **Project Assessments** | Teacher-led project evaluations with rubrics |
+| **Competency Tracking** | Self-assessment and peer feedback on competencies |
+| **Skill Trainings** (Vaardigheidstrainingen) | Skill development exercises and tracking |
+| **Attendance** | RFID-based automatic attendance registration |
+
+**Key capabilities:**
+
+- Multi-tenant: fully isolated data per school
+- Role-based access: Admin, Teacher, Student
+- AI-powered feedback summaries (async, via Ollama)
+- Azure AD (Office 365) authentication in production
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Browser   │────▶│    Nginx     │────▶│  Next.js 15  │
+│             │     │ (rev. proxy) │     │  (frontend)  │
+└─────────────┘     └──────┬───────┘     └──────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │   FastAPI    │────▶│  PostgreSQL  │
+                    │  (backend)   │     │     16       │
+                    └──────┬───────┘     └──────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │   Redis 7    │
+                    │ (RQ worker)  │
+                    └──────────────┘
 ```
 
-**Frontend** (in `.env.local`):
-```bash
-NEXT_PUBLIC_ENABLE_DEV_LOGIN=true  # Show dev-login UI in development
-```
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 15 (App Router, TypeScript, Tailwind CSS) |
+| **Backend** | FastAPI + SQLAlchemy + Alembic |
+| **Database** | PostgreSQL 16 |
+| **Auth** | Azure AD (OAuth2/OIDC) + JWT with sliding sessions |
+| **Cache/Queue** | Redis 7 + RQ (async job processing) |
+| **Reverse Proxy** | Nginx |
+| **Deployment** | Docker Compose (prod + dev) |
+| **CI/CD** | GitHub Actions |
+| **Security scanning** | Trivy, Ruff, Black, OSV, Bandit, pip-audit |
 
-**Security Notes**:
-- In production, set both flags to `false` (or omit them)
-- The backend endpoint returns 404 when disabled (doesn't leak existence)
-- The frontend UI is hidden when disabled
-- Dev-login is blocked by nginx X-User-Email header stripping in production
+For detailed architecture documentation see [`docs/architecture/overview.md`](docs/architecture/overview.md).
 
-**Local Testing**:
-1. Start backend: `cd backend && uvicorn app.main:app --reload`
-2. Start frontend: `cd frontend && npm run dev`
-3. Navigate to http://localhost:3000
-4. Use dev-login with test emails:
-   - `admin@school.nl` → redirects to `/teacher`
-   - `docent@school.nl` → redirects to `/teacher`
-   - `student1@school.nl` → redirects to `/student`
+---
 
-See [docs/AZURE_AD_SETUP.md](docs/AZURE_AD_SETUP.md) for detailed authentication configuration.
-
-### Multi-Tenant & Multi-Course Architecture
-- **Multi-school support**: Volledig gescheiden data per school
-- **Multiple courses**: Ondersteuning voor O&O, XPLR, Biologie, Nederlands, Engels, etc.
-- **Teacher-course mapping**: Docenten worden expliciet gekoppeld aan vakken
-- **School-scoped data**: All queries automatically scoped to user's school
-
-### Evaluation Types
-- **Peer Evaluation**: Wederzijdse beoordelingen tussen studenten
-- **Project Assessment**: Teamprojectbeoordelingen door docenten
-- **Competency Monitor**: Competentiemeting met self-assessment en peer feedback
-
-### Project-Based Team Management
-- **Project-specific teams**: Team toewijzingen geïsoleerd per project
-- **Automatic allocation**: Evaluaties worden automatisch gevuld met alle projectteams
-- **Frozen rosters**: Historische teamsamenstelling bewaard voor gesloten evaluaties
-- **No global team numbers**: User.team_number gefaseerd uit - teams zijn project-specifiek
-- **Bulk operations**: Teams maken, auto-verdeel, CSV import/export
-- **Version control**: Team wijzigingen kunnen worden geversioneerd
-
-Zie [docs/architecture.md](docs/architecture.md#project-based-team-management) voor details.
-
-### Student Evaluatie Wizard
-- **Stap 1**: Zelfbeoordeling
-- **Stap 2**: Peer-reviews
-- **Stap 3**: Overzicht met GCF/OMZA scores en AI-samenvatting
-  - GCF (Group Contribution Factor) scores
-  - OMZA (categorie-gebaseerde scores)
-  - AI-gegenereerde samenvatting van peer-feedback
-  - Anonieme feedback quotes
-- **Stap 4**: Reflectie
-
-### AI Feedback Summaries
-Automatisch gegenereerde samenvattingen van peer-feedback met:
-- **Asynchrone verwerking** met RQ (Redis Queue) voor schaalbaarheid
-- **Robuuste worker** met automatische herstart bij verbindingsproblemen
-- Ollama voor lokale LLM verwerking
-- Volledige anonimisering van namen en PII
-- Caching voor efficiëntie
-- Fallback naar regel-gebaseerde summaries
-- Real-time status updates en polling
-- Retry mechanisme bij fouten
-
-📚 Zie [docs/ASYNC_SUMMARY_GENERATION.md](docs/ASYNC_SUMMARY_GENERATION.md) voor gedetailleerde setup instructies.
-
-📚 Voor worker troubleshooting en monitoring, zie de [Operations Guide](docs/OPERATIONS.md).
-
-### RFID Attendance System (3de Blok)
-Automatische aanwezigheidsregistratie met RFID-kaarten:
-- **API Key Authentication**: Beveiligde communicatie tussen Raspberry Pi scanners en backend
-- **Check-in/Check-out**: Automatische sessie tracking bij scannen
-- **Teacher Dashboard**: Overzicht van aanwezigheid per student, project en periode
-- **External Work Logging**: Studenten kunnen externe werkuren registreren
-- **Statistics & Reports**: Wekelijkse trends, dagelijkse patronen, en engagement metrics
-- **Raspberry Pi Support**: Kant-en-klare Python script voor MFRC522 RFID readers
-
-📚 Zie [docs/RFID_SCANNER_SETUP.md](docs/RFID_SCANNER_SETUP.md) voor complete RFID scanner setup en configuratie.
-
-### Database Seeding
-Comprehensive seeding system for development and testing:
-- **Base Seed**: Minimal, idempotent seed for required system records (school, users, subject, academic year)
-- **Demo Seed**: Complete realistic dataset with 24 students, 6 teams, 3 projects, evaluations, competency scans, etc.
-- **Deterministic**: Use `--seed` flag for reproducible test data
-- **Safe Reset**: `--reset` flag truncates tables in correct order respecting foreign keys
-
-```bash
-# Minimal seed (safe for production)
-python -m backend.scripts.seed --mode base
-
-# Full demo data (development/testing)
-python -m backend.scripts.seed --mode demo --reset --seed 42
-
-# Verify data integrity
-python -m backend.scripts.seed_smoke_test
-```
-
-📚 Zie [docs/SEEDING.md](docs/SEEDING.md) voor complete seeding documentatie.
-
-### Somtoday Integration (Planned)
-
-Voorbereiding voor integratie met Somtoday:
-- OAuth2 authenticatie
-- Import van klassen en studenten
-- Export van cijfers
-- Zie [docs/architecture.md](docs/architecture.md) voor details
-
-## Configuration
-
-### Backend CORS Settings
-
-The backend CORS (Cross-Origin Resource Sharing) configuration can be customized via environment variables. This is important for allowing the frontend to communicate with the backend API.
-
-**Default configuration:**
-- `http://localhost:3000`
-- `http://127.0.0.1:3000`
-
-**To configure for production or other environments:**
-
-Set the `CORS_ORIGINS` environment variable with a comma-separated list of allowed origins:
-
-```bash
-CORS_ORIGINS="http://localhost:3000,https://your-production-domain.com"
-```
-
-This setting is defined in `backend/app/core/config.py` and used in `backend/app/main.py`.
-
-**Common issues:**
-- If you see `[API NETWORK ERROR]` in the browser console, it may be due to CORS blocking the request
-- Ensure the frontend URL is included in `CORS_ORIGINS`
-- After changing CORS configuration, restart the backend server
-
-### AI Feedback Summary Settings
-
-For AI-powered feedback summaries, configure Ollama:
-
-```bash
-OLLAMA_BASE_URL=http://localhost:11434  # Default
-OLLAMA_MODEL=llama3.1                   # Default: llama3.1
-OLLAMA_TIMEOUT=10.0                     # Default: 10 seconds
-```
-
-See [docs/ASYNC_SUMMARY_GENERATION.md](docs/ASYNC_SUMMARY_GENERATION.md) for detailed setup instructions.
-
-## Getting Started
+## Quick Start (Local Development)
 
 ### Prerequisites
 
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 14+
-- Docker & Docker Compose (optional)
+- Docker & Docker Compose
+- Python 3.12+
+- Node.js LTS + pnpm
 
-### Quick Start
+### Steps
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/nveerman1/team-evaluatie-app.git
-   cd team-evaluatie-app
-   ```
+```bash
+# 1. Clone the repository
+git clone https://github.com/nveerman1/team-evaluatie-app.git
+cd team-evaluatie-app
 
-2. **Start the database**
-   ```bash
-   make up
-   # or: docker compose -f ops/docker/compose.dev.yml up -d
-   ```
+# 2. Copy environment configuration
+cp backend/.env.example backend/.env
 
-3. **Setup backend**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements-dev.txt
-   
-   # Run migrations
-   alembic upgrade head
-   
-   # Optional: Seed demo data
-   python scripts/seed_demo_data.py
-   
-   # Optional: Seed 3de Blok test data
-   python scripts/seed_3de_blok.py
-   
-   # Optional: Seed competency scans test data
-   python scripts/seed_competency_scans.py
-   
-   # Optional: Seed competency scans with self-scores (for course 1)
-   # Creates 6 scans: 3 with 10 competencies, 2 with ALL competencies + goals + reflections,
-   # 1 with extreme scores (very low, very high, and strong growth)
-   python scripts/seed_competency_scans_with_scores.py
-   
-   # Start backend
-   uvicorn app.main:app --reload
-   ```
+# 3. Start database and Redis
+docker compose -f ops/docker/compose.dev.yml up -d
 
-4. **Setup frontend**
-   ```bash
-   cd frontend
-   npm install  # or: pnpm install
-   npm run dev
-   ```
+# 4. Set up the backend
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements-dev.txt
+alembic upgrade head
 
-5. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+# 5. (Optional) Seed demo data
+python -m scripts.seed --mode demo --reset --seed 42
 
-### Demo Credentials
+# 6. Start the backend
+uvicorn app.main:app --reload
 
-**Development Mode Only (NODE_ENV=development):**
+# 7. In a new terminal, start the frontend
+cd frontend
+pnpm install
+pnpm dev
+```
 
-After running the seed script:
-- **Admin**: admin@demo.school / demo123
-- **Teacher**: teacher1@school1.demo / demo123
-- **Student**: student.4a.1@school1.demo / demo123
+**Access the application:**
 
-**Production Mode (NODE_ENV=production):**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Docs (Swagger): http://localhost:8000/docs
 
-Use Azure AD (Office 365) authentication. See [docs/AZURE_AD_SETUP.md](docs/AZURE_AD_SETUP.md) for configuration.
+**Dev login** (development only, disabled in production):
 
-## Documentation
+After seeding, use these email addresses on the dev-login screen:
+- `admin@school.nl` → admin dashboard
+- `docent@school.nl` → teacher view
+- `student1@school.nl` → student view
 
-### 📚 Core Documentation
+---
 
-- **[Architecture Overview](docs/architecture.md)** - Multi-tenant architecture, data model, and RBAC
-- **[Code Structure](docs/code_structure.md)** - Codebase organization and conventions
-- **[API Documentation](docs/api_docs.md)** - REST API reference with TypeScript/Python examples
-- **[Testing Guide](docs/testing.md)** - Testing strategies for backend and frontend
-- **[CI/CD Guide](docs/ci_cd.md)** - GitHub Actions workflows and automation
+## Production Deployment
 
-### 🚀 Deployment & Operations
+For complete VPS setup instructions (Docker Compose, Nginx, SSL/TLS, backups):
 
-- **[Deployment Guide](docs/deployment.md)** - All deployment methods (Docker, VPS, manual)
-- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Complete VPS setup guide
-- **[Operations Guide](docs/OPERATIONS.md)** - Day-to-day operations and maintenance
-- **[Rollback Procedures](docs/ROLLBACK.md)** - Emergency rollback guide
+➡️ **[`docs/deployment/production-deployment.md`](docs/deployment/production-deployment.md)**
 
-### 🔐 Security & Authentication
+Quick reference:
 
-- **[Security Guide](SECURITY.md)** - Security best practices and hardening
-- **[Security Checklist](SECURITY_CHECKLIST.md)** - Pre-deployment security checklist
-- **[Security Roadmap](SECURITY_ROADMAP.md)** - Security improvements roadmap
-- **[Azure AD Setup](docs/AZURE_AD_SETUP.md)** - Office 365 authentication configuration
+```bash
+# Configure production environment
+cp backend/.env.production.example backend/.env
 
-### 🛠️ Feature-Specific Documentation
+# Deploy with Docker Compose
+docker compose -f ops/docker/compose.prod.yml up -d
 
-- **[Seeding Guide](docs/SEEDING.md)** - Database seeding for development and testing
-- **[Async Summaries](docs/ASYNC_SUMMARY_GENERATION.md)** - AI feedback summary configuration
-- **[Redis Worker](docs/REDIS_WORKER_STABILITY.md)** - RQ worker troubleshooting
-- **[Cookie Authentication](docs/COOKIE_AUTHENTICATION.md)** - Session management
-- **[CSRF Quick Start](CSRF_QUICK_START.md)** - CSRF protection implementation
+# Run database migrations
+docker compose -f ops/docker/compose.prod.yml exec backend alembic upgrade head
+```
 
-### 🔍 Additional Resources
+---
 
-- **[Interactive API Docs](http://localhost:8000/docs)** - Swagger UI (when running locally)
-- **[Archive](docs/archive/)** - Historical documentation and implementation notes
+## Security
 
-## API Endpoints
+- **Authentication**: Azure AD (production) with JWT access tokens; dev-login disabled in production
+- **Sessions**: Sliding window renewal (`SESSION_RENEW_IF_EXPIRES_WITHIN_MINUTES`) + absolute limit (`SESSION_MAX_HOURS`)
+- **Authorization**: Role-based access control (Admin / Teacher / Student) with school-level multi-tenant isolation
+- **Input validation**: Pydantic schemas with strict validation on all API endpoints
+- **Security headers**: CSP, HSTS, X-Frame-Options, X-Content-Type-Options (managed by Nginx in production)
+- **CI scanning**: Bandit, pip-audit, Trivy, Ruff, Black run on every push
 
-### Quick Reference
+For detailed security documentation:
 
-- `/api/v1/auth/*` - Authentication (Azure AD, dev-login, JWT)
-- `/api/v1/courses` - Course management (CRUD, teacher assignment)
-- `/api/v1/projects` - Project and team management
-- `/api/v1/evaluations` - Evaluation lifecycle management
-- `/api/v1/scores` - Score submission and retrieval
-- `/api/v1/grades` - Grade calculation and publishing
-- `/api/v1/rubrics` - Rubric management
-- `/api/v1/users` - User management
-- `/api/v1/feedback-summary` - AI-powered feedback summaries
-- `/api/v1/integrations/somtoday/*` - Somtoday integration (placeholder)
+- [`docs/security/security-guide.md`](docs/security/security-guide.md) — Security best practices
+- [`docs/security/hardening.md`](docs/security/hardening.md) — Production hardening guide
+- [`docs/security/azure-ad-setup.md`](docs/security/azure-ad-setup.md) — Azure AD configuration
+- [`docs/security/session-management.md`](docs/security/session-management.md) — Cookie & session management
 
-For complete API documentation with request/response examples in TypeScript and Python, see **[API Documentation](docs/api_docs.md)**.
+---
 
-## Development
+## Development Workflow
 
 ### Running Tests
 
 ```bash
 cd backend
-
-# Run all tests
 pytest
-
-# Run with coverage
-pytest --cov=app --cov-report=html
-
-# Run specific test file
-pytest tests/test_job_enhancements.py -v
-
-# Run specific test class
-pytest tests/test_job_enhancements.py::TestJobProgressTracking -v
+pytest --cov=app --cov-report=html   # with coverage
 ```
 
-For comprehensive testing documentation, see **[Testing Guide](docs/testing.md)**.
-
-### Database Migrations
+### Database Migrations (Alembic)
 
 ```bash
 cd backend
-
-# Create a new migration
-alembic revision --autogenerate -m "description"
-
-# Apply migrations
+alembic revision --autogenerate -m "describe your change"
 alembic upgrade head
-
-# Rollback one migration
-alembic downgrade -1
+alembic downgrade -1   # rollback one step
 ```
+
+See [`docs/contributing/seeding.md`](docs/contributing/seeding.md) for database seeding instructions.
 
 ### Code Quality
 
 ```bash
 cd backend
-
-# Format code
-black .
-
-# Lint code
-ruff check .
-
-# Type checking
-mypy app
-
-# Security audit
-bandit -r app/
-pip-audit
+black .          # format
+ruff check .     # lint
+mypy app         # type check
+bandit -r app/   # security lint
 ```
 
-These checks run automatically in CI. See **[CI/CD Guide](docs/ci_cd.md)** for details.
+### Branch Strategy
 
-## Deployment
+- `main` — production-ready, protected
+- Feature branches → pull request → `main`
 
-### Production Deployment
+See [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md) for CI/CD pipeline details.
 
-Complete guide for deploying to a VPS with Docker Compose, Nginx, and SSL.
+---
 
-**Quick Start:**
+## Documentation
 
-```bash
-# 1. Setup VPS with Docker
-# 2. Clone repository
-git clone https://github.com/nveerman1/team-evaluatie-app.git
-cd team-evaluatie-app
+### 🏗️ Architecture
 
-# 3. Configure environment
-cp .env.prod.example .env.prod
-# Edit .env.prod with your settings
+- [`docs/architecture/overview.md`](docs/architecture/overview.md) — Multi-tenant architecture, data model, RBAC
+- [`docs/architecture/api-docs.md`](docs/architecture/api-docs.md) — REST API reference
+- [`docs/architecture/template-data.md`](docs/architecture/template-data.md) — Template data architecture
 
-# 4. Deploy
-docker compose -f ops/docker/compose.prod.yml up -d
+### 🚀 Deployment & Operations
 
-# 5. Setup SSL (after DNS is configured)
-docker compose -f ops/docker/compose.prod.yml run --rm certbot certonly ...
-```
+- [`docs/deployment/overview.md`](docs/deployment/overview.md) — Deployment methods
+- [`docs/deployment/production-deployment.md`](docs/deployment/production-deployment.md) — Complete VPS guide
+- [`docs/deployment/operations.md`](docs/deployment/operations.md) — Day-to-day operations
+- [`docs/deployment/rollback.md`](docs/deployment/rollback.md) — Emergency rollback procedures
+- [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md) — GitHub Actions workflows
 
-**📚 Deployment Documentation:**
+### 🔐 Security & Authentication
 
-- **[Deployment Overview](docs/deployment.md)** - All deployment methods and architectures
-- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Complete VPS setup guide
-- **[Operations Guide](docs/OPERATIONS.md)** - Day-to-day operations and maintenance
-- **[Rollback Procedures](docs/ROLLBACK.md)** - Emergency rollback guide
-- **[CI/CD Guide](docs/ci_cd.md)** - Automated deployment with GitHub Actions
+- [`docs/security/security-guide.md`](docs/security/security-guide.md) — Security overview & hardening
+- [`docs/security/azure-ad-setup.md`](docs/security/azure-ad-setup.md) — Office 365 authentication
+- [`docs/security/session-management.md`](docs/security/session-management.md) — JWT & cookie sessions
+- [`docs/security/hardening.md`](docs/security/hardening.md) — Production hardening checklist
 
-**Architecture:**
+### ✨ Features
 
-- **Frontend**: Next.js (standalone) behind Nginx
-- **Backend**: FastAPI with Gunicorn + Uvicorn workers
-- **Database**: PostgreSQL 16 with automated backups
-- **Cache/Queue**: Redis 7 for RQ worker jobs
-- **Reverse Proxy**: Nginx with SSL/TLS (Let's Encrypt)
-- **Container Orchestration**: Docker Compose
+- [`docs/features/competencies.md`](docs/features/competencies.md) — Competency tracking architecture
+- [`docs/features/async-summaries.md`](docs/features/async-summaries.md) — AI feedback summary setup
+- [`docs/features/attendance.md`](docs/features/attendance.md) — RFID attendance system
+- [`docs/features/cron-jobs.md`](docs/features/cron-jobs.md) — Scheduled tasks
 
-**Key Features:**
+### 🛠️ Contributing
 
-- ✅ Multi-stage Docker builds for optimal image size
-- ✅ Health checks and automatic restarts
-- ✅ Resource limits and monitoring
-- ✅ Automated database backups with rotation
-- ✅ SSL/HTTPS with auto-renewal (Certbot)
-- ✅ Security headers and rate limiting
-- ✅ Automated deployment scripts
-- ✅ GitHub Actions CI/CD pipeline
-- ✅ Comprehensive logging and monitoring
+- [`docs/contributing/testing.md`](docs/contributing/testing.md) — Testing guide
+- [`docs/contributing/seeding.md`](docs/contributing/seeding.md) — Database seeding
+- [`docs/contributing/styling-guide.md`](docs/contributing/styling-guide.md) — Frontend styling conventions
 
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Write tests (see [Testing Guide](docs/testing.md))
-4. Ensure all tests pass
-5. Submit a pull request
+---
 
 ## License
 
