@@ -11,7 +11,6 @@ import type {
   StudentTrainingItem,
   SkillTrainingStatus,
 } from "@/dtos";
-import { STUDENT_ALLOWED_STATUSES } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { studentStyles } from "@/styles/student-dashboard.styles";
 import { ExternalLink } from "lucide-react";
@@ -57,7 +56,7 @@ export default function GoalPage() {
     status: "in_progress",
   });
   const [allTrainings, setAllTrainings] = useState<StudentTrainingItem[]>([]);
-  const [trainingsLoading, setTrainingsLoading] = useState(false);
+  const [trainingsLoadFailed, setTrainingsLoadFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,10 +70,15 @@ export default function GoalPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [win, comps, goals] = await Promise.all([
+      const [win, comps, goals, trainingsResp] = await Promise.all([
         competencyService.getWindow(windowId),
         competencyService.getCompetencies(true),
         competencyService.getMyGoals(windowId),
+        skillTrainingService.getMyTrainings().catch((err) => {
+          console.error("Failed to load trainings:", err);
+          setTrainingsLoadFailed(true);
+          return { items: [] as StudentTrainingItem[] };
+        }),
       ]);
 
       setWindow(win);
@@ -87,22 +91,11 @@ export default function GoalPage() {
       
       setCompetencies(filteredComps);
       setExistingGoals(goals);
+      setAllTrainings(trainingsResp.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
-    }
-
-    // Laad vaardigheidstrainingen
-    try {
-      setTrainingsLoading(true);
-      const trainingsResp = await skillTrainingService.getMyTrainings();
-      setAllTrainings(trainingsResp.items);
-    } catch (err) {
-      console.error("Failed to load trainings:", err);
-      setAllTrainings([]);
-    } finally {
-      setTrainingsLoading(false);
     }
   };
 
@@ -147,8 +140,9 @@ export default function GoalPage() {
   };
 
   // Geselecteerde competentie opzoeken
-  const selectedCompetency = competencies.find(
-    (c) => c.id === formData.competency_id
+  const selectedCompetency = useMemo(
+    () => competencies.find((c) => c.id === formData.competency_id),
+    [competencies, formData.competency_id]
   );
 
   // Filter trainingen op de category_id van de geselecteerde competentie
@@ -163,14 +157,13 @@ export default function GoalPage() {
 
   // Samenvattingstelling
   const trainingSummary = useMemo(() => {
-    const total = filteredTrainings.length;
     const active = filteredTrainings.filter(
       (t) => t.status === "planned" || t.status === "in_progress" || t.status === "submitted"
     ).length;
     const done = filteredTrainings.filter(
       (t) => t.status === "completed" || t.status === "mastered"
     ).length;
-    return { total, active, done };
+    return { active, done };
   }, [filteredTrainings]);
 
   async function handleTrainingStatusChange(
@@ -314,7 +307,7 @@ export default function GoalPage() {
             <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
               Selecteer een competentie waarop je je wilt verbeteren
             </p>
-            {formData.competency_id && !trainingsLoading && filteredTrainings.length > 0 && (
+            {formData.competency_id && filteredTrainings.length > 0 && (
               <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
                 📚 {filteredTrainings.length} training{filteredTrainings.length !== 1 ? "en" : ""} beschikbaar — zie onder het formulier
               </div>
@@ -384,7 +377,7 @@ export default function GoalPage() {
                       )}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      Gebruik het dropdown-menu in de kolom &quot;Mijn planning&quot; om aan te geven welke trainingen je van plan bent te doen.
+                      Gebruik het dropdown-menu in de kolom &apos;Mijn planning&apos; om aan te geven welke trainingen je van plan bent te doen.
                     </p>
                   </div>
                   {filteredTrainings.length > 0 && (
@@ -406,8 +399,10 @@ export default function GoalPage() {
 
               {/* Tabel */}
               <div>
-                {trainingsLoading ? (
-                  <div className="text-sm text-slate-500 py-8 text-center">Trainingen laden...</div>
+                {trainingsLoadFailed ? (
+                  <div className="p-6 text-sm text-amber-700 text-center bg-amber-50 border-t border-amber-100">
+                    ⚠️ Trainingen konden niet worden geladen. Probeer de pagina te vernieuwen.
+                  </div>
                 ) : filteredTrainings.length === 0 ? (
                   <div className="p-6 text-sm text-slate-500 text-center">
                     Geen vaardigheidstrainingen beschikbaar voor deze competentiecategorie.
