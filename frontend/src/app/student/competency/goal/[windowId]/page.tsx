@@ -1,16 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { competencyService } from "@/services";
+import { competencyService, skillTrainingService } from "@/services";
 import type {
   CompetencyWindow,
   Competency,
   CompetencyGoal,
   CompetencyGoalCreate,
+  StudentTrainingItem,
+  SkillTrainingStatus,
 } from "@/dtos";
+import { STUDENT_ALLOWED_STATUSES } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { studentStyles } from "@/styles/student-dashboard.styles";
+import { ExternalLink } from "lucide-react";
+
+const STATUS_OPTIONS: { value: SkillTrainingStatus; label: string; description: string }[] = [
+  { value: "none", label: "Niet gestart", description: "Nog niet van plan" },
+  { value: "planned", label: "Gepland", description: "Ik ga deze doen" },
+  { value: "in_progress", label: "Bezig", description: "Ik ben hiermee bezig" },
+  { value: "submitted", label: "Ingeleverd", description: "Ik heb deze afgerond" },
+];
+
+const STATUS_COLORS: Record<SkillTrainingStatus, string> = {
+  none: "bg-slate-100 text-slate-700",
+  planned: "bg-blue-50 text-blue-700 border-blue-200",
+  in_progress: "bg-amber-50 text-amber-700 border-amber-200",
+  submitted: "bg-teal-50 text-teal-700 border-teal-200",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  mastered: "bg-violet-50 text-violet-700 border-violet-200",
+};
+
+const STATUS_LABELS: Record<SkillTrainingStatus, string> = {
+  none: "Niet gestart",
+  planned: "Gepland",
+  in_progress: "Bezig",
+  submitted: "Ingeleverd",
+  completed: "Voltooid (docent)",
+  mastered: "Beheerst (docent)",
+};
 
 export default function GoalPage() {
   const router = useRouter();
@@ -27,6 +56,8 @@ export default function GoalPage() {
     competency_id: undefined,
     status: "in_progress",
   });
+  const [allTrainings, setAllTrainings] = useState<StudentTrainingItem[]>([]);
+  const [trainingsLoading, setTrainingsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +91,18 @@ export default function GoalPage() {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
+    }
+
+    // Laad vaardigheidstrainingen
+    try {
+      setTrainingsLoading(true);
+      const trainingsResp = await skillTrainingService.getMyTrainings();
+      setAllTrainings(trainingsResp.items);
+    } catch (err) {
+      console.error("Failed to load trainings:", err);
+      setAllTrainings([]);
+    } finally {
+      setTrainingsLoading(false);
     }
   };
 
@@ -102,6 +145,59 @@ export default function GoalPage() {
       setSubmitting(false);
     }
   };
+
+  // Geselecteerde competentie opzoeken
+  const selectedCompetency = competencies.find(
+    (c) => c.id === formData.competency_id
+  );
+
+  // Filter trainingen op de category_id van de geselecteerde competentie
+  const filteredTrainings = useMemo(() => {
+    if (!selectedCompetency?.category_id) return [];
+    return allTrainings.filter(
+      (item) =>
+        item.training.competency_category_id === selectedCompetency.category_id &&
+        item.training.is_active
+    );
+  }, [allTrainings, selectedCompetency]);
+
+  // Samenvattingstelling
+  const trainingSummary = useMemo(() => {
+    const total = filteredTrainings.length;
+    const active = filteredTrainings.filter(
+      (t) => t.status === "planned" || t.status === "in_progress" || t.status === "submitted"
+    ).length;
+    const done = filteredTrainings.filter(
+      (t) => t.status === "completed" || t.status === "mastered"
+    ).length;
+    return { total, active, done };
+  }, [filteredTrainings]);
+
+  async function handleTrainingStatusChange(
+    item: StudentTrainingItem,
+    newStatus: SkillTrainingStatus
+  ) {
+    // Optimistic update
+    setAllTrainings((prev) =>
+      prev.map((t) =>
+        t.training.id === item.training.id ? { ...t, status: newStatus } : t
+      )
+    );
+
+    try {
+      await skillTrainingService.updateMyStatus(item.training.id, {
+        status: newStatus,
+      });
+    } catch (err) {
+      console.error("Failed to update training status:", err);
+      // Rollback bij fout
+      setAllTrainings((prev) =>
+        prev.map((t) =>
+          t.training.id === item.training.id ? { ...t, status: item.status } : t
+        )
+      );
+    }
+  }
 
   if (loading) return <Loading />;
   if (error && !window) return <ErrorMessage message={error} />;
@@ -218,6 +314,11 @@ export default function GoalPage() {
             <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
               Selecteer een competentie waarop je je wilt verbeteren
             </p>
+            {formData.competency_id && !trainingsLoading && filteredTrainings.length > 0 && (
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                📚 {filteredTrainings.length} training{filteredTrainings.length !== 1 ? "en" : ""} beschikbaar — zie onder het formulier
+              </div>
+            )}
           </div>
 
           {/* Goal Text */}
@@ -266,6 +367,116 @@ export default function GoalPage() {
               </ul>
             </div>
           </div>
+
+          {/* Vaardigheidstrainingen sectie */}
+          {formData.competency_id && (
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              {/* Sectie header */}
+              <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                      📚 Vaardigheidstrainingen
+                      {selectedCompetency?.category_name && (
+                        <span className="font-normal text-slate-500">
+                          — {selectedCompetency.category_name}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Gebruik het dropdown-menu in de kolom &quot;Mijn planning&quot; om aan te geven welke trainingen je van plan bent te doen.
+                    </p>
+                  </div>
+                  {filteredTrainings.length > 0 && (
+                    <div className="hidden sm:flex items-center gap-3 text-xs">
+                      {trainingSummary.active > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700">
+                          {trainingSummary.active} ingepland
+                        </span>
+                      )}
+                      {trainingSummary.done > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
+                          {trainingSummary.done} afgerond
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabel */}
+              <div>
+                {trainingsLoading ? (
+                  <div className="text-sm text-slate-500 py-8 text-center">Trainingen laden...</div>
+                ) : filteredTrainings.length === 0 ? (
+                  <div className="p-6 text-sm text-slate-500 text-center">
+                    Geen vaardigheidstrainingen beschikbaar voor deze competentiecategorie.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full w-full">
+                      <thead className="bg-white border-b border-slate-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Training</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Niveau</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tijd</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Mijn planning</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Link</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredTrainings.map((item) => {
+                          const isTeacherSet = item.status === "completed" || item.status === "mastered";
+                          return (
+                            <tr key={item.training.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-3">
+                                <span className="text-sm font-medium text-slate-900">{item.training.title}</span>
+                                {item.training.learning_objective_title && (
+                                  <div className="text-xs text-slate-500 mt-0.5">{item.training.learning_objective_title}</div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">{item.training.level || "–"}</td>
+                              <td className="px-4 py-3 text-sm text-slate-600">{item.training.est_minutes || "–"}</td>
+                              <td className="px-4 py-3">
+                                {isTeacherSet ? (
+                                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_COLORS[item.status]}`}>
+                                    {STATUS_LABELS[item.status]}
+                                  </span>
+                                ) : (
+                                  <select
+                                    value={item.status}
+                                    onChange={(e) => handleTrainingStatusChange(item, e.target.value as SkillTrainingStatus)}
+                                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer ${STATUS_COLORS[item.status]}`}
+                                  >
+                                    {STATUS_OPTIONS.map((opt) => (
+                                      <option key={opt.value} value={opt.value}>
+                                        {opt.label} — {opt.description}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <a
+                                  href={item.training.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  Open
+                                </a>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Messages */}
           {successMessage && (
