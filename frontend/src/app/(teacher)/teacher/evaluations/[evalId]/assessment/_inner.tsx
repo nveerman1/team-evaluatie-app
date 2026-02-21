@@ -6,7 +6,7 @@ import { useNumericEvalId } from "@/lib/id";
 import { omzaService } from "@/services/omza.service";
 import { gradesService } from "@/services/grades.service";
 import { evaluationService } from "@/services";
-import { OmzaDataResponse, StandardComment } from "@/dtos/omza.dto";
+import { StandardComment } from "@/dtos/omza.dto";
 import { GradePreviewItem } from "@/dtos/grades.dto";
 import {
   mapPeerScoreToIconLevel,
@@ -28,6 +28,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+function finalGrade(r: Row): number {
+  if (r.override != null) return round1(r.override);
+  if (r.rowGroupGrade != null) return round1(r.rowGroupGrade * r.gcf);
+  return round1(r.serverSuggested ?? 0);
+}
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
@@ -219,13 +225,13 @@ export default function CombinedAssessmentInner() {
   const maxNotesWidth = focusMode ? 1500 : 600;
 
   // Saving indicators
-  const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
 
   // Debounce refs
   const scoreTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const commentTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── data loading ─────────────────────────────────────────────────────────
 
@@ -392,7 +398,15 @@ export default function CombinedAssessmentInner() {
 
   const showToast = useCallback((message: string) => {
     setToast(message);
-    setTimeout(() => setToast(null), 3000);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  // Clear toast timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
   // ── OMZA score change ─────────────────────────────────────────────────────
@@ -405,12 +419,10 @@ export default function CombinedAssessmentInner() {
       if (scoreTimeouts.current[key]) clearTimeout(scoreTimeouts.current[key]);
       scoreTimeouts.current[key] = setTimeout(() => {
         if (evalIdNum == null) return;
-        setSavingScores((prev) => ({ ...prev, [key]: true }));
         omzaService
           .saveTeacherScore(evalIdNum, { student_id: studentId, category, score: level })
           .then(() => showToast("Docentscore opgeslagen"))
-          .catch((err) => showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`))
-          .finally(() => setSavingScores((prev) => ({ ...prev, [key]: false })));
+          .catch((err) => showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`));
       }, 500);
     },
     [evalIdNum, showToast],
@@ -517,12 +529,6 @@ export default function CombinedAssessmentInner() {
 
   // ── grade helpers ─────────────────────────────────────────────────────────
 
-  function finalGrade(r: Row): number {
-    if (r.override != null) return round1(r.override);
-    if (r.rowGroupGrade != null) return round1(r.rowGroupGrade * r.gcf);
-    return round1(r.serverSuggested ?? 0);
-  }
-
   function handleUpdateTeamGroupGrade(teamNumber: number | null | undefined, value: string) {
     if (teamNumber == null) return;
     setAutoSaveState("saving");
@@ -568,15 +574,21 @@ export default function CombinedAssessmentInner() {
   // ── derived data ──────────────────────────────────────────────────────────
 
   const teamOptions = useMemo(() => {
-    const set = new Set<number | string>();
-    rows.forEach((r) => set.add(r.teamNumber ?? "–"));
-    return Array.from(set);
+    const nums: number[] = [];
+    const strs: string[] = [];
+    rows.forEach((r) => {
+      if (r.teamNumber != null) nums.push(r.teamNumber);
+      else strs.push("–");
+    });
+    const uniqueNums = Array.from(new Set(nums)).sort((a, b) => a - b);
+    const hasBlank = strs.length > 0;
+    return [...uniqueNums, ...(hasBlank ? ["–"] : [])];
   }, [rows]);
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
     rows.forEach((r) => set.add(r.className ?? "–"));
-    return Array.from(set);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "nl"));
   }, [rows]);
 
   const filteredSorted = useMemo(() => {
@@ -770,6 +782,7 @@ export default function CombinedAssessmentInner() {
                           <th
                             key={cat}
                             className="px-2 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-14"
+                            title={CATEGORY_LABELS[cat] || cat}
                           >
                             {cat}
                           </th>
