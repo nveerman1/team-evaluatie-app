@@ -1,7 +1,7 @@
 """add_client_link_to_sections
 
 Revision ID: f3a9c1d2e4b6
-Revises: ca4111bca819
+Revises: f9a1b2c3d4e5
 Create Date: 2026-02-20 21:50:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "f3a9c1d2e4b6"
-down_revision = "ca4111bca819"
+down_revision = "f9a1b2c3d4e5"
 branch_labels = None
 depends_on = None
 
