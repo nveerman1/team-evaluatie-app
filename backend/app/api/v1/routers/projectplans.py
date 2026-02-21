@@ -160,6 +160,38 @@ def _team_to_out(team: ProjectPlanTeam, db: Session) -> ProjectPlanTeamOut:
     )
 
 
+def _ensure_client_project_link(db: Session, client_id: int, project_id: int) -> None:
+    """
+    Idempotently create a ClientProjectLink between *client_id* and *project_id*.
+
+    Called both from link_client (explicit linking action) and from
+    update_team_status (GO flow) so the project always appears under the
+    client at /teacher/clients/[id] regardless of when the client was linked.
+    """
+    existing = (
+        db.query(ClientProjectLink)
+        .filter(
+            ClientProjectLink.client_id == client_id,
+            ClientProjectLink.project_id == project_id,
+        )
+        .first()
+    )
+    if not existing:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        db.add(
+            ClientProjectLink(
+                client_id=client_id,
+                project_id=project_id,
+                role="main",
+                start_date=project.start_date if project else None,
+                end_date=project.end_date if project else None,
+            )
+        )
+        logger.info(
+            f"Created ClientProjectLink client={client_id} project={project_id}"
+        )
+
+
 # ---------- Teacher Endpoints ----------
 
 
@@ -652,7 +684,7 @@ def update_team_status(
                 if section.status == "submitted":
                     section.status = "approved"
 
-            # Feature B: Auto-create Subproject on GO status
+            # Feature B: Auto-create Subproject on GO status + sync ClientProjectLink
             project_team = (
                 db.query(ProjectTeam)
                 .filter(
@@ -661,6 +693,10 @@ def update_team_status(
                 )
                 .first()
             )
+            # Resolve client section once — used for both subproject and link
+            client_section = next((s for s in team.sections if s.key == "client"), None)
+            client_id = client_section.client_id if client_section else None
+
             if project_team:
                 existing_subproject = (
                     db.query(Subproject)
@@ -672,10 +708,6 @@ def update_team_status(
                     .first()
                 )
                 if not existing_subproject:
-                    client_section = next(
-                        (s for s in team.sections if s.key == "client"), None
-                    )
-                    client_id = client_section.client_id if client_section else None
                     subproject_title = (
                         team.title or f"Deelproject Team {project_team.team_number}"
                     )
@@ -691,6 +723,11 @@ def update_team_status(
                         f"Auto-created Subproject for project {pp.project_id} "
                         f"team {project_team.team_number} on GO status"
                     )
+
+            # Also ensure the project appears under the client in the CMS,
+            # even if the client was linked before _ensure_client_project_link existed.
+            if client_id:
+                _ensure_client_project_link(db, client_id, pp.project_id)
         elif new_status == "no-go":
             team.locked = False
 
@@ -940,31 +977,6 @@ def link_client(
     if not client_section:
         raise HTTPException(status_code=404, detail="Client section not found")
 
-    def _ensure_project_link(client_id: int) -> None:
-        """Create a ClientProjectLink between client and pp.project_id if absent."""
-        existing = (
-            db.query(ClientProjectLink)
-            .filter(
-                ClientProjectLink.client_id == client_id,
-                ClientProjectLink.project_id == pp.project_id,
-            )
-            .first()
-        )
-        if not existing:
-            project = db.query(Project).filter(Project.id == pp.project_id).first()
-            db.add(
-                ClientProjectLink(
-                    client_id=client_id,
-                    project_id=pp.project_id,
-                    role="main",
-                    start_date=project.start_date if project else None,
-                    end_date=project.end_date if project else None,
-                )
-            )
-            logger.info(
-                f"Created ClientProjectLink client={client_id} project={pp.project_id}"
-            )
-
     if payload.action == LinkClientAction.MATCH_EXISTING:
         if not payload.client_id:
             raise HTTPException(
@@ -982,7 +994,7 @@ def link_client(
         if not existing_client:
             raise HTTPException(status_code=404, detail="Client not found")
         client_section.client_id = existing_client.id
-        _ensure_project_link(existing_client.id)
+        _ensure_client_project_link(db, existing_client.id, pp.project_id)
         db.commit()
         logger.info(
             f"Linked existing Client {existing_client.id} to section {client_section.id} "
@@ -1028,7 +1040,7 @@ def link_client(
         db.add(new_client)
         db.flush()
         client_section.client_id = new_client.id
-        _ensure_project_link(new_client.id)
+        _ensure_client_project_link(db, new_client.id, pp.project_id)
         try:
             db.commit()
         except IntegrityError:

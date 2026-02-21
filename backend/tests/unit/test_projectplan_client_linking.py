@@ -426,6 +426,8 @@ class TestUpdateTeamStatusSubproject:
                 q.first.return_value = project_team
             elif model is Subproject:
                 q.first.return_value = existing_subproject
+            # ClientProjectLink → None (no existing link)
+            # Project → None (start/end date will be None, that's fine)
             return q
 
         db.query.side_effect = query_side_effect
@@ -457,14 +459,19 @@ class TestUpdateTeamStatusSubproject:
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
 
-        # Subproject should have been added to the session
-        db.add.assert_called_once()
-        added = db.add.call_args[0][0]
-        assert isinstance(added, Subproject)
-        assert added.project_id == 10
-        assert added.team_number == 3
-        assert added.client_id == 42
-        assert added.school_id == 1
+        added_objects = [c[0][0] for c in db.add.call_args_list]
+        added_types = [type(o).__name__ for o in added_objects]
+
+        # Subproject created
+        assert "Subproject" in added_types
+        sp = next(o for o in added_objects if isinstance(o, Subproject))
+        assert sp.project_id == 10
+        assert sp.team_number == 3
+        assert sp.client_id == 42
+        assert sp.school_id == 1
+
+        # ClientProjectLink also created (project appears at /teacher/clients/[id])
+        assert "ClientProjectLink" in added_types
 
     def test_go_status_does_not_duplicate_subproject(self):
         user = _make_user()
@@ -588,3 +595,45 @@ class TestUpdateTeamStatusSubproject:
 
         # Must be the plain string "go", not "PlanStatus.GO"
         assert ppt.status == "go"
+
+    def test_go_creates_client_project_link_for_already_linked_client(self):
+        """
+        When GO is granted and the client section already has a client_id
+        (linked in a previous session), a ClientProjectLink should still be
+        created so the project appears at /teacher/clients/[id].
+        """
+        user = _make_user()
+        pp = _make_pp(project_id=20)
+
+        # Section already has client_id set from a previous link action
+        client_s = self._make_section("client", "approved", client_id=99)
+        ppt = _make_ppt()
+        ppt.status = "ingediend"
+        ppt.sections = [client_s]
+
+        project_team = Mock(spec=ProjectTeam)
+        project_team.id = 5
+        project_team.team_number = 1
+        project_team.school_id = 1
+
+        db = self._build_db(pp, ppt, project_team, existing_subproject=None)
+
+        payload = ProjectPlanTeamUpdate(status="go")
+
+        with patch(
+            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+            return_value=pp,
+        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+            update_team_status(
+                projectplan_id=1, team_id=2, payload=payload, db=db, user=user
+            )
+
+        added_types = [type(c[0][0]).__name__ for c in db.add.call_args_list]
+        assert "ClientProjectLink" in added_types
+        link = next(
+            c[0][0]
+            for c in db.add.call_args_list
+            if isinstance(c[0][0], ClientProjectLink)
+        )
+        assert link.client_id == 99
+        assert link.project_id == 20
