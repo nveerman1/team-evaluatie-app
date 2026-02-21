@@ -12,7 +12,8 @@ import {
   SectionKey,
   SectionStatus,
   ProjectPlanSectionUpdate,
-  ProjectPlanTeamUpdate
+  ProjectPlanTeamUpdate,
+  SuggestClientItem,
 } from "@/dtos/projectplan.dto";
 import { Loading, ErrorMessage } from "@/components";
 
@@ -35,6 +36,11 @@ export default function ProjectPlanDetailPage() {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set());
   const [savingSection, setSavingSection] = useState<SectionKey | null>(null);
   const [savingTeam, setSavingTeam] = useState(false);
+
+  // Client linking state (Feature A)
+  const [clientSuggestions, setClientSuggestions] = useState<SuggestClientItem[]>([]);
+  const [loadingClientSuggestions, setLoadingClientSuggestions] = useState(false);
+  const [linkingClient, setLinkingClient] = useState(false);
   
   // Refs for section feedback textareas
   const feedbackRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
@@ -113,6 +119,49 @@ export default function ProjectPlanDetailPage() {
       setSelectedTeam(team || null);
     }
   }, [selectedTeamId, detail]);
+
+  // Load client suggestions when a team is selected (Feature A)
+  useEffect(() => {
+    if (!selectedTeamId || tab !== "projectplannen") {
+      setClientSuggestions([]);
+      return;
+    }
+    const clientSection = selectedTeam?.sections.find(s => s.key === SectionKey.CLIENT);
+    if (!clientSection?.client?.organisation || clientSection.client_id) {
+      setClientSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingClientSuggestions(true);
+    projectPlanService.suggestClient(projectPlanId, selectedTeamId)
+      .then(results => {
+        if (!cancelled) setClientSuggestions(results);
+      })
+      .catch(() => {
+        if (!cancelled) setClientSuggestions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingClientSuggestions(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedTeamId, selectedTeam, tab, projectPlanId]);
+
+  const handleLinkClient = async (action: 'match_existing' | 'create_new', clientId?: number) => {
+    if (!selectedTeamId) return;
+    setLinkingClient(true);
+    try {
+      await projectPlanService.linkClient(projectPlanId, selectedTeamId, {
+        action,
+        client_id: clientId,
+      });
+      await loadDetail();
+      setClientSuggestions([]);
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || e?.message || "Koppelen mislukt");
+    } finally {
+      setLinkingClient(false);
+    }
+  };
 
   const handleTabChange = (newTab: string) => {
     const url = new URL(window.location.href);
@@ -534,6 +583,69 @@ export default function ProjectPlanDetailPage() {
                                     <p className="text-gray-400 italic">Nog geen inhoud</p>
                                   )}
                                 </div>
+
+                                {/* Client linking banner (Feature A) */}
+                                {section.key === SectionKey.CLIENT && section.client?.organisation && (
+                                  <div className="mt-3">
+                                    {section.client_id ? (
+                                      <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+                                        <span>✓</span>
+                                        <span>Gekoppeld aan{" "}
+                                          <a
+                                            href={`/teacher/clients/${section.client_id}`}
+                                            className="font-medium underline hover:text-green-900"
+                                          >
+                                            {section.linked_organization ?? `opdrachtgever #${section.client_id}`}
+                                          </a>
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-3 text-sm">
+                                        <p className="font-medium text-amber-800 mb-2">Opdrachtgever koppelen aan CMS?</p>
+                                        {loadingClientSuggestions ? (
+                                          <p className="text-amber-600 text-xs">Zoeken naar overeenkomsten…</p>
+                                        ) : clientSuggestions.length > 0 ? (
+                                          <div className="space-y-2">
+                                            {clientSuggestions.slice(0, 3).map(s => (
+                                              <div key={s.id} className="flex items-center justify-between gap-2">
+                                                <span className="text-amber-900 text-xs truncate">
+                                                  {s.organization}
+                                                  {s.email && <span className="text-amber-600"> · {s.email}</span>}
+                                                  <span className="ml-1 text-amber-500">({Math.round(s.match_score * 100)}%)</span>
+                                                </span>
+                                                <button
+                                                  onClick={() => handleLinkClient('match_existing', s.id)}
+                                                  disabled={linkingClient}
+                                                  className="shrink-0 px-2 py-1 rounded bg-amber-600 text-white text-xs hover:bg-amber-700 disabled:opacity-50"
+                                                >
+                                                  Koppelen
+                                                </button>
+                                              </div>
+                                            ))}
+                                            <button
+                                              onClick={() => handleLinkClient('create_new')}
+                                              disabled={linkingClient}
+                                              className="mt-1 text-xs text-amber-700 underline hover:text-amber-900 disabled:opacity-50"
+                                            >
+                                              Toch als nieuwe opdrachtgever aanmaken
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-amber-700 text-xs">Geen overeenkomst gevonden.</span>
+                                            <button
+                                              onClick={() => handleLinkClient('create_new')}
+                                              disabled={linkingClient}
+                                              className="px-2 py-1 rounded bg-amber-600 text-white text-xs hover:bg-amber-700 disabled:opacity-50"
+                                            >
+                                              Nieuwe opdrachtgever aanmaken in CMS
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

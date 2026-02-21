@@ -47,6 +47,8 @@ export interface ProjectPlanSection {
   status: SectionStatus;
   text?: string;
   client?: ClientData;
+  client_id?: number | null;  // Linked CMS Client ID (Feature A)
+  linked_organization?: string | null;  // Name of the linked CMS client
   teacher_note?: string;
   created_at: string;
   updated_at: string;
@@ -147,4 +149,30 @@ export interface ProjectPlanTeamOverviewItem {
   sections_total: number;
   last_updated: string;
   global_teacher_note?: string;
+}
+
+// Feature A: Client linking types
+
+export type LinkClientAction = 'match_existing' | 'create_new';
+
+export interface LinkClientRequest {
+  action: LinkClientAction;
+  client_id?: number;
+}
+
+export interface SuggestClientItem {
+  id: number;
+  organization: string;
+  contact_name?: string;
+  email?: string;
+  phone?: string;
+  match_score: number;
+}
+
+export interface LinkedClientResponse {
+  client_id: number;
+  organization: string;
+  contact_name?: string;
+  email?: string;
+  phone?: string;
 }

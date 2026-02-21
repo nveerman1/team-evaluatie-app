@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.deps import get_db, get_current_user
@@ -17,6 +18,9 @@ from app.infra.db.models import (
     ProjectTeamMember,
     Course,
     User,
+    Subproject,
+    Client,
+    ClientProjectLink,
 )
 from app.api.v1.schemas.projectplans import (
     ProjectPlanCreate,
@@ -34,6 +38,10 @@ from app.api.v1.schemas.projectplans import (
     ProjectPlanSectionStudentUpdate,
     ClientData,
     SectionKey,
+    LinkClientRequest,
+    LinkClientAction,
+    SuggestClientItem,
+    LinkedClientResponse,
 )
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
@@ -109,6 +117,10 @@ def _section_to_out(section: ProjectPlanSection) -> ProjectPlanSectionOut:
         status=section.status,
         text=section.text,
         client=client_data,
+        client_id=section.client_id,
+        linked_organization=(
+            section.linked_client.organization if section.linked_client else None
+        ),
         teacher_note=section.teacher_note,
         created_at=section.created_at,
         updated_at=section.updated_at,
@@ -149,6 +161,38 @@ def _team_to_out(team: ProjectPlanTeam, db: Session) -> ProjectPlanTeamOut:
         created_at=team.created_at,
         updated_at=team.updated_at,
     )
+
+
+def _ensure_client_project_link(db: Session, client_id: int, project_id: int) -> None:
+    """
+    Idempotently create a ClientProjectLink between *client_id* and *project_id*.
+
+    Called both from link_client (explicit linking action) and from
+    update_team_status (GO flow) so the project always appears under the
+    client at /teacher/clients/[id] regardless of when the client was linked.
+    """
+    existing = (
+        db.query(ClientProjectLink)
+        .filter(
+            ClientProjectLink.client_id == client_id,
+            ClientProjectLink.project_id == project_id,
+        )
+        .first()
+    )
+    if not existing:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        db.add(
+            ClientProjectLink(
+                client_id=client_id,
+                project_id=project_id,
+                role="main",
+                start_date=project.start_date if project else None,
+                end_date=project.end_date if project else None,
+            )
+        )
+        logger.info(
+            f"Created ClientProjectLink client={client_id} project={project_id}"
+        )
 
 
 # ---------- Teacher Endpoints ----------
@@ -603,34 +647,91 @@ def update_team_status(
     old_status = team.status
 
     if payload.status is not None:
+        # Normalise to plain string so comparisons work across Python versions
+        # (Python 3.11 changed str(StrEnum) to return "ClassName.member" instead of value)
+        new_status = (
+            payload.status.value
+            if hasattr(payload.status, "value")
+            else str(payload.status)
+        )
+
         # Validate status transitions
         # Valid transitions: concept -> ingediend -> go/no-go
-        # Can always go back to concept from no-go
-        if payload.status != old_status:
+        # Teachers can also go directly from no-go to go (reconsidering)
+        if new_status != old_status:
             valid_transitions = {
                 "concept": ["ingediend"],
                 "ingediend": ["go", "no-go", "concept"],
                 "go": ["no-go"],  # Can revert from go to no-go
-                "no-go": ["concept", "ingediend"],  # Can restart process
+                "no-go": [
+                    "concept",
+                    "ingediend",
+                    "go",
+                ],  # Can restart or reverse decision
             }
 
             allowed_next_states = valid_transitions.get(old_status, [])
-            if payload.status not in allowed_next_states:
+            if new_status not in allowed_next_states:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Ongeldige status transitie van '{old_status}' naar '{payload.status}'",
+                    detail=f"Ongeldige status transitie van '{old_status}' naar '{new_status}'",
                 )
 
-        team.status = payload.status
+        team.status = new_status
 
         # Lock/unlock behavior based on status
-        if payload.status == "go":
+        if new_status == "go":
             team.locked = True
             # Auto-approve submitted sections
             for section in team.sections:
                 if section.status == "submitted":
                     section.status = "approved"
-        elif payload.status == "no-go":
+
+            # Feature B: Auto-create Subproject on GO status + sync ClientProjectLink
+            project_team = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.id == team.project_team_id,
+                    ProjectTeam.school_id == user.school_id,
+                )
+                .first()
+            )
+            # Resolve client section once — used for both subproject and link
+            client_section = next((s for s in team.sections if s.key == "client"), None)
+            client_id = client_section.client_id if client_section else None
+
+            if project_team:
+                existing_subproject = (
+                    db.query(Subproject)
+                    .filter(
+                        Subproject.project_id == pp.project_id,
+                        Subproject.school_id == user.school_id,
+                        Subproject.team_number == project_team.team_number,
+                    )
+                    .first()
+                )
+                if not existing_subproject:
+                    subproject_title = (
+                        team.title or f"Deelproject Team {project_team.team_number}"
+                    )
+                    subproject = Subproject(
+                        school_id=user.school_id,
+                        project_id=pp.project_id,
+                        client_id=client_id,
+                        title=subproject_title,
+                        team_number=project_team.team_number,
+                    )
+                    db.add(subproject)
+                    logger.info(
+                        f"Auto-created Subproject for project {pp.project_id} "
+                        f"team {project_team.team_number} on GO status"
+                    )
+
+            # Also ensure the project appears under the client in the CMS,
+            # even if the client was linked before _ensure_client_project_link existed.
+            if client_id:
+                _ensure_client_project_link(db, client_id, pp.project_id)
+        elif new_status == "no-go":
             team.locked = False
 
     if payload.locked is not None:
@@ -721,6 +822,248 @@ def update_section_feedback(
     )
 
     return _section_to_out(section)
+
+
+@router.get(
+    "/{projectplan_id}/teams/{team_id}/suggest-client",
+    response_model=List[SuggestClientItem],
+)
+def suggest_client(
+    projectplan_id: int,
+    team_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Suggest matching CMS Client records for a projectplan team's client section.
+
+    Reads the ClientData from the team's 'client' section and searches
+    for similar clients in the school's CMS (ILIKE on organization name,
+    optional email match). Returns candidates with a match score.
+    """
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403, detail="Alleen docenten en admins hebben toegang"
+        )
+
+    pp = _get_projectplan_with_access_check(db, projectplan_id, user)
+
+    team = (
+        db.query(ProjectPlanTeam)
+        .filter(
+            ProjectPlanTeam.id == team_id,
+            ProjectPlanTeam.project_plan_id == pp.id,
+            ProjectPlanTeam.school_id == user.school_id,
+        )
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    client_section = (
+        db.query(ProjectPlanSection)
+        .filter(
+            ProjectPlanSection.project_plan_team_id == team.id,
+            ProjectPlanSection.key == "client",
+            ProjectPlanSection.school_id == user.school_id,
+        )
+        .first()
+    )
+
+    if not client_section or not client_section.client_organisation:
+        return []
+
+    org_query = client_section.client_organisation.strip()
+    email_query = client_section.client_email
+
+    # Escape ILIKE wildcards so user-entered % or _ don't produce overly broad matches.
+    # Backslash must be escaped first to avoid double-escaping the escape character.
+    org_query_safe = (
+        org_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+
+    # Search by organization name (case-insensitive, partial match)
+    candidates = (
+        db.query(Client)
+        .filter(
+            Client.school_id == user.school_id,
+            Client.organization.ilike(f"%{org_query_safe}%"),
+        )
+        .limit(10)
+        .all()
+    )
+
+    results = []
+    org_lower = org_query.lower()
+    for c in candidates:
+        candidate_org_lower = c.organization.lower()
+        # Compute a simple match score based on name similarity
+        if candidate_org_lower == org_lower:
+            score = 1.0
+        elif candidate_org_lower.startswith(org_lower) or org_lower.startswith(
+            candidate_org_lower
+        ):
+            score = 0.9
+        else:
+            score = 0.7
+        # Boost score for non-exact matches when email also matches
+        if (
+            score < 1.0
+            and email_query
+            and c.email
+            and c.email.lower() == email_query.lower()
+        ):
+            score = min(1.0, score + 0.1)
+        results.append(
+            SuggestClientItem(
+                id=c.id,
+                organization=c.organization,
+                contact_name=c.contact_name,
+                email=c.email,
+                phone=c.phone,
+                match_score=score,
+            )
+        )
+
+    results.sort(key=lambda x: x.match_score, reverse=True)
+    return results
+
+
+@router.post(
+    "/{projectplan_id}/teams/{team_id}/link-client",
+    response_model=LinkedClientResponse,
+    status_code=status.HTTP_200_OK,
+)
+def link_client(
+    projectplan_id: int,
+    team_id: int,
+    payload: LinkClientRequest,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Link or create a CMS Client for a projectplan team's client section.
+
+    - action=match_existing: link to an existing Client (client_id required)
+    - action=create_new: create a new Client from the ClientData fields and link it
+
+    Teacher/admin only. Returns the linked client info.
+    """
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403, detail="Alleen docenten en admins hebben toegang"
+        )
+
+    pp = _get_projectplan_with_access_check(db, projectplan_id, user)
+
+    team = (
+        db.query(ProjectPlanTeam)
+        .filter(
+            ProjectPlanTeam.id == team_id,
+            ProjectPlanTeam.project_plan_id == pp.id,
+            ProjectPlanTeam.school_id == user.school_id,
+        )
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    client_section = (
+        db.query(ProjectPlanSection)
+        .filter(
+            ProjectPlanSection.project_plan_team_id == team.id,
+            ProjectPlanSection.key == "client",
+            ProjectPlanSection.school_id == user.school_id,
+        )
+        .first()
+    )
+    if not client_section:
+        raise HTTPException(status_code=404, detail="Client section not found")
+
+    if payload.action == LinkClientAction.MATCH_EXISTING:
+        if not payload.client_id:
+            raise HTTPException(
+                status_code=400,
+                detail="client_id is verplicht bij action='match_existing'",
+            )
+        existing_client = (
+            db.query(Client)
+            .filter(
+                Client.id == payload.client_id,
+                Client.school_id == user.school_id,
+            )
+            .first()
+        )
+        if not existing_client:
+            raise HTTPException(status_code=404, detail="Client not found")
+        client_section.client_id = existing_client.id
+        _ensure_client_project_link(db, existing_client.id, pp.project_id)
+        db.commit()
+        logger.info(
+            f"Linked existing Client {existing_client.id} to section {client_section.id} "
+            f"by user {user.id}"
+        )
+        return LinkedClientResponse(
+            client_id=existing_client.id,
+            organization=existing_client.organization,
+            contact_name=existing_client.contact_name,
+            email=existing_client.email,
+            phone=existing_client.phone,
+        )
+
+    else:  # CREATE_NEW
+        if not client_section.client_organisation:
+            raise HTTPException(
+                status_code=400,
+                detail="Organisatienaam ontbreekt in de opdrachtgever sectie",
+            )
+        # Check for exact duplicate
+        duplicate = (
+            db.query(Client)
+            .filter(
+                Client.school_id == user.school_id,
+                Client.organization == client_section.client_organisation,
+            )
+            .first()
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Er bestaat al een opdrachtgever met naam '{client_section.client_organisation}'. "
+                "Gebruik action='match_existing' om deze te koppelen.",
+            )
+        new_client = Client(
+            school_id=user.school_id,
+            organization=client_section.client_organisation,
+            contact_name=client_section.client_contact,
+            email=client_section.client_email,
+            phone=client_section.client_phone,
+            active=True,
+        )
+        db.add(new_client)
+        db.flush()
+        client_section.client_id = new_client.id
+        _ensure_client_project_link(db, new_client.id, pp.project_id)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail=f"Er bestaat al een opdrachtgever met naam '{client_section.client_organisation}'. "
+                "Gebruik action='match_existing' om deze te koppelen.",
+            )
+        logger.info(
+            f"Created new Client {new_client.id} ('{new_client.organization}') "
+            f"and linked to section {client_section.id} by user {user.id}"
+        )
+        return LinkedClientResponse(
+            client_id=new_client.id,
+            organization=new_client.organization,
+            contact_name=new_client.contact_name,
+            email=new_client.email,
+            phone=new_client.phone,
+        )
 
 
 @router.delete("/{projectplan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -857,73 +1200,7 @@ def list_my_projectplans(
                             )
                             continue  # Skip if no ProjectPlanTeam record exists
 
-                        # Get team members
-                        members = (
-                            db.query(User)
-                            .join(
-                                ProjectTeamMember, ProjectTeamMember.user_id == User.id
-                            )
-                            .filter(
-                                ProjectTeamMember.project_team_id == project_team.id,
-                                ProjectTeamMember.school_id == user.school_id,
-                            )
-                            .all()
-                        )
-                        member_names = [m.name for m in members]
-
-                        # Get sections
-                        sections = (
-                            db.query(ProjectPlanSection)
-                            .filter(
-                                ProjectPlanSection.project_plan_team_id == ppt.id,
-                                ProjectPlanSection.school_id == user.school_id,
-                            )
-                            .all()
-                        )
-
-                        sections_data = []
-                        for s in sections:
-                            # Build client data if this is the client section
-                            client_data = None
-                            if s.key == "client":
-                                client_data = ClientData(
-                                    organisation=s.client_organisation,
-                                    contact=s.client_contact,
-                                    email=s.client_email,
-                                    phone=s.client_phone,
-                                    description=s.client_description,
-                                )
-
-                            sections_data.append(
-                                ProjectPlanSectionOut(
-                                    id=s.id,
-                                    project_plan_team_id=s.project_plan_team_id,
-                                    key=s.key,
-                                    status=s.status,
-                                    text=s.text,
-                                    client=client_data,
-                                    teacher_note=s.teacher_note,
-                                    created_at=s.created_at,
-                                    updated_at=s.updated_at,
-                                )
-                            )
-
-                        teams_data.append(
-                            ProjectPlanTeamOut(
-                                id=ppt.id,
-                                project_plan_id=ppt.project_plan_id,
-                                project_team_id=ppt.project_team_id,
-                                status=ppt.status,
-                                title=ppt.title,
-                                global_teacher_note=ppt.global_teacher_note,
-                                locked=ppt.locked,
-                                team_number=project_team.team_number,
-                                team_members=member_names,
-                                sections=sections_data,
-                                created_at=ppt.created_at,
-                                updated_at=ppt.updated_at,
-                            )
-                        )
+                        teams_data.append(_team_to_out(ppt, db))
                     except Exception as e:
                         logger.error(
                             f"Error processing team {project_team.id} for projectplan {pp.id}: {e}",

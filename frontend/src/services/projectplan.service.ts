@@ -11,6 +11,9 @@ import {
   ProjectPlanSectionUpdate,
   ProjectPlanTeamOverviewItem,
   SectionKey,
+  LinkClientRequest,
+  SuggestClientItem,
+  LinkedClientResponse,
 } from '@/dtos/projectplan.dto';
 
 export const projectPlanService = {
@@ -102,6 +105,34 @@ export const projectPlanService = {
    */
   async deleteProjectPlan(id: number): Promise<void> {
     await api.delete(`/projectplans/${id}`);
+  },
+
+  /**
+   * Suggest matching CMS clients for a team's client section (teacher/admin)
+   */
+  async suggestClient(
+    projectPlanId: number,
+    teamId: number
+  ): Promise<SuggestClientItem[]> {
+    const { data } = await api.get(
+      `/projectplans/${projectPlanId}/teams/${teamId}/suggest-client`
+    );
+    return data;
+  },
+
+  /**
+   * Link or create a CMS client for a team's client section (teacher/admin)
+   */
+  async linkClient(
+    projectPlanId: number,
+    teamId: number,
+    payload: LinkClientRequest
+  ): Promise<LinkedClientResponse> {
+    const { data } = await api.post(
+      `/projectplans/${projectPlanId}/teams/${teamId}/link-client`,
+      payload
+    );
+    return data;
   },
 
   // ========== Student Endpoints ==========
