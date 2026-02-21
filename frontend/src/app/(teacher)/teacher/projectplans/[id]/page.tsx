@@ -590,7 +590,14 @@ export default function ProjectPlanDetailPage() {
                                     {section.client_id ? (
                                       <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
                                         <span>✓</span>
-                                        <span>Gekoppeld aan CMS opdrachtgever (ID: {section.client_id})</span>
+                                        <span>Gekoppeld aan{" "}
+                                          <a
+                                            href={`/teacher/clients/${section.client_id}`}
+                                            className="font-medium underline hover:text-green-900"
+                                          >
+                                            {section.linked_organization ?? `opdrachtgever #${section.client_id}`}
+                                          </a>
+                                        </span>
                                       </div>
                                     ) : (
                                       <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-3 text-sm">

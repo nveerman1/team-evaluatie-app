@@ -48,6 +48,7 @@ export interface ProjectPlanSection {
   text?: string;
   client?: ClientData;
   client_id?: number | null;  // Linked CMS Client ID (Feature A)
+  linked_organization?: string | null;  // Name of the linked CMS client
   teacher_note?: string;
   created_at: string;
   updated_at: string;

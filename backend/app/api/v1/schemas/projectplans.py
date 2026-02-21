@@ -79,6 +79,7 @@ class ProjectPlanSectionOut(ProjectPlanSectionBase):
 
     id: int
     client_id: Optional[int] = None  # Linked CMS Client ID (Feature A)
+    linked_organization: Optional[str] = None  # Name of the linked CMS client
     created_at: datetime
     updated_at: datetime
 

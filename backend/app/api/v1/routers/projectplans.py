@@ -118,6 +118,9 @@ def _section_to_out(section: ProjectPlanSection) -> ProjectPlanSectionOut:
         text=section.text,
         client=client_data,
         client_id=section.client_id,
+        linked_organization=(
+            section.linked_client.organization if section.linked_client else None
+        ),
         teacher_note=section.teacher_note,
         created_at=section.created_at,
         updated_at=section.updated_at,
