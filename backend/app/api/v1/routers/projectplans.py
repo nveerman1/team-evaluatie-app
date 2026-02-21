@@ -20,6 +20,7 @@ from app.infra.db.models import (
     User,
     Subproject,
     Client,
+    ClientProjectLink,
 )
 from app.api.v1.schemas.projectplans import (
     ProjectPlanCreate,
@@ -611,28 +612,40 @@ def update_team_status(
     old_status = team.status
 
     if payload.status is not None:
+        # Normalise to plain string so comparisons work across Python versions
+        # (Python 3.11 changed str(StrEnum) to return "ClassName.member" instead of value)
+        new_status = (
+            payload.status.value
+            if hasattr(payload.status, "value")
+            else str(payload.status)
+        )
+
         # Validate status transitions
         # Valid transitions: concept -> ingediend -> go/no-go
-        # Can always go back to concept from no-go
-        if payload.status != old_status:
+        # Teachers can also go directly from no-go to go (reconsidering)
+        if new_status != old_status:
             valid_transitions = {
                 "concept": ["ingediend"],
                 "ingediend": ["go", "no-go", "concept"],
                 "go": ["no-go"],  # Can revert from go to no-go
-                "no-go": ["concept", "ingediend"],  # Can restart process
+                "no-go": [
+                    "concept",
+                    "ingediend",
+                    "go",
+                ],  # Can restart or reverse decision
             }
 
             allowed_next_states = valid_transitions.get(old_status, [])
-            if payload.status not in allowed_next_states:
+            if new_status not in allowed_next_states:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Ongeldige status transitie van '{old_status}' naar '{payload.status}'",
+                    detail=f"Ongeldige status transitie van '{old_status}' naar '{new_status}'",
                 )
 
-        team.status = payload.status
+        team.status = new_status
 
         # Lock/unlock behavior based on status
-        if payload.status == "go":
+        if new_status == "go":
             team.locked = True
             # Auto-approve submitted sections
             for section in team.sections:
@@ -678,7 +691,7 @@ def update_team_status(
                         f"Auto-created Subproject for project {pp.project_id} "
                         f"team {project_team.team_number} on GO status"
                     )
-        elif payload.status == "no-go":
+        elif new_status == "no-go":
             team.locked = False
 
     if payload.locked is not None:
@@ -927,6 +940,31 @@ def link_client(
     if not client_section:
         raise HTTPException(status_code=404, detail="Client section not found")
 
+    def _ensure_project_link(client_id: int) -> None:
+        """Create a ClientProjectLink between client and pp.project_id if absent."""
+        existing = (
+            db.query(ClientProjectLink)
+            .filter(
+                ClientProjectLink.client_id == client_id,
+                ClientProjectLink.project_id == pp.project_id,
+            )
+            .first()
+        )
+        if not existing:
+            project = db.query(Project).filter(Project.id == pp.project_id).first()
+            db.add(
+                ClientProjectLink(
+                    client_id=client_id,
+                    project_id=pp.project_id,
+                    role="main",
+                    start_date=project.start_date if project else None,
+                    end_date=project.end_date if project else None,
+                )
+            )
+            logger.info(
+                f"Created ClientProjectLink client={client_id} project={pp.project_id}"
+            )
+
     if payload.action == LinkClientAction.MATCH_EXISTING:
         if not payload.client_id:
             raise HTTPException(
@@ -944,6 +982,7 @@ def link_client(
         if not existing_client:
             raise HTTPException(status_code=404, detail="Client not found")
         client_section.client_id = existing_client.id
+        _ensure_project_link(existing_client.id)
         db.commit()
         logger.info(
             f"Linked existing Client {existing_client.id} to section {client_section.id} "
@@ -989,6 +1028,7 @@ def link_client(
         db.add(new_client)
         db.flush()
         client_section.client_id = new_client.id
+        _ensure_project_link(new_client.id)
         try:
             db.commit()
         except IntegrityError:

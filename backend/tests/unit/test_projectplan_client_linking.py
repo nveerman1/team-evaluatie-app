@@ -11,10 +11,12 @@ import pytest
 
 from app.infra.db.models import (
     Client,
+    ClientProjectLink,
     ProjectPlan,
     ProjectPlanTeam,
     ProjectPlanSection,
     ProjectTeam,
+    Project,
     Subproject,
     User,
 )
@@ -273,6 +275,8 @@ class TestLinkClient:
                 q.first.return_value = client_section
             elif model is Client and existing_client:
                 q.first.return_value = existing_client
+            # ClientProjectLink → None (no existing link, so a new one will be created)
+            # Project → None (ok, start_date/end_date will be None)
             return q
 
         db.query.side_effect = query_side_effect
@@ -308,6 +312,9 @@ class TestLinkClient:
         assert result.client_id == 55
         assert section.client_id == 55
         db.commit.assert_called_once()
+        # A ClientProjectLink should have been added
+        added_types = [type(c[0][0]).__name__ for c in db.add.call_args_list]
+        assert "ClientProjectLink" in added_types
 
     def test_match_existing_missing_client_id_raises_400(self):
         db = _make_db()
@@ -519,3 +526,65 @@ class TestUpdateTeamStatusSubproject:
 
         added = db.add.call_args[0][0]
         assert "7" in added.title  # Should contain team number
+
+    def test_no_go_to_go_transition_is_allowed(self):
+        """Teachers can reverse a no-go decision directly to go."""
+        user = _make_user()
+        pp = _make_pp()
+
+        ppt = _make_ppt()
+        ppt.status = "no-go"
+        ppt.sections = []
+
+        project_team = Mock(spec=ProjectTeam)
+        project_team.id = 5
+        project_team.team_number = 2
+        project_team.school_id = 1
+
+        db = self._build_db(pp, ppt, project_team, existing_subproject=None)
+
+        payload = ProjectPlanTeamUpdate(status="go")
+
+        with patch(
+            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+            return_value=pp,
+        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+            # Should NOT raise an HTTPException
+            update_team_status(
+                projectplan_id=1, team_id=2, payload=payload, db=db, user=user
+            )
+
+        assert ppt.status == "go"
+        assert ppt.locked is True
+
+    def test_enum_value_stored_as_string(self):
+        """Status is stored as the plain string value, not 'PlanStatus.GO'."""
+        from app.api.v1.schemas.projectplans import PlanStatus
+
+        user = _make_user()
+        pp = _make_pp()
+
+        ppt = _make_ppt()
+        ppt.status = "ingediend"
+        ppt.sections = []
+
+        project_team = Mock(spec=ProjectTeam)
+        project_team.id = 5
+        project_team.team_number = 1
+        project_team.school_id = 1
+
+        db = self._build_db(pp, ppt, project_team, existing_subproject=None)
+
+        # Send enum value (as Pydantic would parse it from the request)
+        payload = ProjectPlanTeamUpdate(status=PlanStatus.GO)
+
+        with patch(
+            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+            return_value=pp,
+        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+            update_team_status(
+                projectplan_id=1, team_id=2, payload=payload, db=db, user=user
+            )
+
+        # Must be the plain string "go", not "PlanStatus.GO"
+        assert ppt.status == "go"
