@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * Middleware for route protection and role-based access control.
+ * Proxy for route protection and role-based access control.
  * 
- * This middleware:
+ * This proxy:
  * 1. Checks if user is authenticated (has access_token cookie)
  * 2. Redirects unauthenticated users to /login
  * 3. Preserves the intended destination as returnTo parameter
@@ -16,7 +16,7 @@ import type { NextRequest } from "next/server";
 // Login page path - centralized constant
 const LOGIN_PATH = "/";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   
   // Check for authentication cookie
@@ -45,7 +45,7 @@ export function middleware(request: NextRequest) {
 }
 
 /**
- * Configure which routes this middleware runs on
+ * Configure which routes this proxy runs on
  */
 export const config = {
   matcher: [
