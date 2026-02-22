@@ -1000,7 +1000,6 @@ export default function CombinedAssessmentInner() {
                                 <input
                                   type="text"
                                   className="w-20 text-right rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                  placeholder="bijv. 7.5"
                                   value={
                                     r.rowGroupGrade != null && !Number.isNaN(r.rowGroupGrade)
                                       ? r.rowGroupGrade.toFixed(1)
