@@ -245,6 +245,11 @@ export default function CombinedAssessmentInner() {
 
   const handleFocusModeToggle = useCallback(() => {
     if (!focusMode) {
+      // Initialise width synchronously so the grid column is correct on the
+      // very first render with focusMode=true (avoids a 0 px flash).
+      if (notesWidth === 0 && typeof window !== "undefined") {
+        setNotesWidth(Math.floor(window.innerWidth * 0.4));
+      }
       // Opening: restore stored view, fall back to feedback if notes but no project
       if (typeof window !== "undefined" && evalIdStr !== "—") {
         const stored = localStorage.getItem(
@@ -258,7 +263,7 @@ export default function CombinedAssessmentInner() {
     } else {
       setFocusMode(false);
     }
-  }, [focusMode, setFocusMode, evalIdStr, projectId]);
+  }, [focusMode, setFocusMode, evalIdStr, projectId, notesWidth]);
 
   // Saving indicators
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});

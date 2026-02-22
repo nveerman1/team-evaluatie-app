@@ -30,19 +30,22 @@ export function StudentFeedbackPanel({
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<FeedbackTypeFilter>("all");
 
-  // Load students from course
+  // Load students from course; reset selection when course changes
   useEffect(() => {
+    setSelectedStudentId(null);
     if (!courseId) {
       setStudents([]);
       return;
     }
+    let mounted = true;
     setStudentsLoading(true);
     setStudentsError(null);
     courseService
       .getCourseStudents(courseId)
-      .then((data) => setStudents(data))
-      .catch((err) => setStudentsError(err?.message || "Laden mislukt"))
-      .finally(() => setStudentsLoading(false));
+      .then((data) => { if (mounted) setStudents(data); })
+      .catch((err) => { if (mounted) setStudentsError(err?.message || "Laden mislukt"); })
+      .finally(() => { if (mounted) setStudentsLoading(false); });
+    return () => { mounted = false; };
   }, [courseId]);
 
   // Load aggregated feedback for this evaluation
@@ -157,6 +160,11 @@ export function StudentFeedbackPanel({
                 >
                   ‹
                 </button>
+                {selectedIndex >= 0 && (
+                  <span className="px-1.5 py-1 text-xs text-slate-500 tabular-nums whitespace-nowrap self-center">
+                    {selectedIndex + 1} / {students.length}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={goNext}
