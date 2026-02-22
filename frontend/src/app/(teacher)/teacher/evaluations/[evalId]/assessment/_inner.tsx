@@ -871,12 +871,14 @@ export default function CombinedAssessmentInner() {
                                 return (
                                   <td key={cat} className="px-2 py-3 align-middle">
                                     <div className="relative group flex justify-center">
-                                      <LevelSelector
-                                        value={teacherVal}
-                                        onChange={(level) =>
-                                          handleScoreChange(r.user_id, cat, level)
-                                        }
-                                      />
+                                      <div className="rounded-lg bg-slate-50 border border-slate-200 px-1.5 py-1">
+                                        <LevelSelector
+                                          value={teacherVal}
+                                          onChange={(level) =>
+                                            handleScoreChange(r.user_id, cat, level)
+                                          }
+                                        />
+                                      </div>
                                       {/* Tooltip */}
                                       <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                                         <div className="rounded-lg bg-gray-900 text-white text-[11px] px-2.5 py-2 shadow-lg whitespace-nowrap">
