@@ -112,8 +112,6 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
   const tabs = [
     { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalId}/dashboard` },
     { id: "assessment", label: "Beoordeling", href: `/teacher/evaluations/${evalId}/assessment` },
-    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalId}/omza` },
-    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalId}/grades` },
     { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalId}/feedback` },
     { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalId}/reflections` },
     { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalId}/settings` },
