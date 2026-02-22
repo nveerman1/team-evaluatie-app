@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { courseService } from "@/services/course.service";
 import { CourseStudent } from "@/dtos/course.dto";
 import { useAggregatedFeedback } from "@/hooks/useAggregatedFeedback";
@@ -27,7 +27,6 @@ export function StudentFeedbackPanel({
   const [students, setStudents] = useState<CourseStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [studentsError, setStudentsError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<FeedbackTypeFilter>("all");
 
@@ -51,41 +50,20 @@ export function StudentFeedbackPanel({
     evaluationId: evalId,
   });
 
-  // Filtered student list based on search query
-  const filteredStudents = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.class_name ?? "").toLowerCase().includes(q),
-    );
-  }, [students, search]);
-
-  // Index of selected student in filtered list (for prev/next)
+  // Index of selected student in list (for prev/next)
   const selectedIndex =
     selectedStudentId != null
-      ? filteredStudents.findIndex((s) => s.id === selectedStudentId)
+      ? students.findIndex((s) => s.id === selectedStudentId)
       : -1;
 
   const goPrev = useCallback(() => {
-    if (selectedIndex > 0) setSelectedStudentId(filteredStudents[selectedIndex - 1].id);
-  }, [selectedIndex, filteredStudents]);
+    if (selectedIndex > 0) setSelectedStudentId(students[selectedIndex - 1].id);
+  }, [selectedIndex, students]);
 
   const goNext = useCallback(() => {
-    if (selectedIndex < filteredStudents.length - 1)
-      setSelectedStudentId(filteredStudents[selectedIndex + 1].id);
-  }, [selectedIndex, filteredStudents]);
-
-  // When search changes, deselect student if not in filtered list
-  useEffect(() => {
-    if (
-      selectedStudentId != null &&
-      !filteredStudents.some((s) => s.id === selectedStudentId)
-    ) {
-      setSelectedStudentId(null);
-    }
-  }, [filteredStudents, selectedStudentId]);
+    if (selectedIndex < students.length - 1)
+      setSelectedStudentId(students[selectedIndex + 1].id);
+  }, [selectedIndex, students]);
 
   // Feedback received by the selected student, filtered by type
   const studentFeedback =
@@ -153,13 +131,6 @@ export function StudentFeedbackPanel({
             </p>
           ) : (
             <>
-              <input
-                type="text"
-                placeholder="Zoek leerling (naam/klas)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
               <div className="flex gap-1">
                 <select
                   value={selectedStudentId ?? ""}
@@ -170,7 +141,7 @@ export function StudentFeedbackPanel({
                   disabled={studentsLoading}
                 >
                   <option value="">— Kies leerling —</option>
-                  {filteredStudents.map((s) => (
+                  {students.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                       {s.class_name ? ` (${s.class_name})` : ""}
@@ -189,7 +160,7 @@ export function StudentFeedbackPanel({
                 <button
                   type="button"
                   onClick={goNext}
-                  disabled={selectedIndex < 0 || selectedIndex >= filteredStudents.length - 1}
+                  disabled={selectedIndex < 0 || selectedIndex >= students.length - 1}
                   className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-sm disabled:opacity-40 hover:bg-slate-50"
                   title="Volgende leerling"
                 >
