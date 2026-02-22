@@ -307,11 +307,6 @@ export default function GoalPage() {
             <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
               Selecteer een competentie waarop je je wilt verbeteren
             </p>
-            {formData.competency_id && filteredTrainings.length > 0 && (
-              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                📚 {filteredTrainings.length} training{filteredTrainings.length !== 1 ? "en" : ""} beschikbaar — zie onder het formulier
-              </div>
-            )}
           </div>
 
           {/* Goal Text */}
@@ -345,20 +340,6 @@ export default function GoalPage() {
               rows={3}
               className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-          </div>
-
-          {/* Tips */}
-          <div className="rounded-xl bg-indigo-50 p-4">
-            <h3 className="mb-2 text-sm font-semibold text-slate-900">
-              💡 Tips voor een goed leerdoel:
-            </h3>
-            <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
-              <li>Maak het specifiek en meetbaar</li>
-              <li>Zorg dat het realistisch en haalbaar is</li>
-              <li>Koppel het aan concrete acties</li>
-              <li>Denk na over hoe je je voortgang kunt meten</li>
-              </ul>
-            </div>
           </div>
 
           {/* Vaardigheidstrainingen sectie */}
@@ -472,6 +453,20 @@ export default function GoalPage() {
               </div>
             </div>
           )}
+
+          {/* Tips */}
+          <div className="rounded-xl bg-indigo-50 p-4">
+            <h3 className="mb-2 text-sm font-semibold text-slate-900">
+              💡 Tips voor een goed leerdoel:
+            </h3>
+            <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
+              <li>Maak het specifiek en meetbaar</li>
+              <li>Zorg dat het realistisch en haalbaar is</li>
+              <li>Koppel het aan concrete acties</li>
+              <li>Denk na over hoe je je voortgang kunt meten</li>
+              </ul>
+            </div>
+          </div>
 
           {/* Messages */}
           {successMessage && (
