@@ -64,7 +64,7 @@ const nextConfig: NextConfig = {
                   "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'", // Next.js 16+ requires unsafe-inline for bootstrap
                   "style-src 'self' 'unsafe-inline'", // Required for Next.js CSS-in-JS (Tailwind)
                   // TODO: Consider nonce-based CSP to remove unsafe-inline
-                  // This would require middleware to inject nonces into all inline scripts/styles
+                  // This would require proxy to inject nonces into all inline scripts/styles
                   "img-src 'self' data: blob: https:",
                   "font-src 'self' data:",
                   "connect-src 'self' https://app.technasiummbh.nl wss://app.technasiummbh.nl", // Production API + WebSockets
