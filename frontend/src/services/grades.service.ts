@@ -7,17 +7,19 @@ import {
 } from "@/dtos/grades.dto";
 
 export const gradesService = {
-  async listGrades(evaluationId: number, courseId?: number) {
+  async listGrades(evaluationId: number, signal?: AbortSignal, courseId?: number) {
     const q = new URLSearchParams({ evaluation_id: String(evaluationId) });
     if (courseId != null) q.set("course_id", String(courseId));
     const { data } = await api.get<PublishedGradeOut[]>(
       `/grades?${q.toString()}`,
+      { signal },
     );
     return data;
   },
 
   async previewGrades(
     evaluationId: number,
+    signal?: AbortSignal,
     groupGrade?: number | null,
     courseId?: number,
   ) {
@@ -26,6 +28,7 @@ export const gradesService = {
     if (courseId != null) q.set("course_id", String(courseId));
     const { data } = await api.get<GradePreviewResponse>(
       `/grades/preview?${q.toString()}`,
+      { signal },
     );
     return data;
   },

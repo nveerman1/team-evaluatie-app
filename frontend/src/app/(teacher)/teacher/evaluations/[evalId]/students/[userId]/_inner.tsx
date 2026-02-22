@@ -247,10 +247,10 @@ export default function StudentOverviewPageInner() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/teacher/evaluations/${evalId}/grades`}
+            href={`/teacher/evaluations/${evalId}/assessment`}
             className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
           >
-            ← Terug naar cijfers
+            ← Terug naar beoordeling
           </Link>
         </div>
       </header>

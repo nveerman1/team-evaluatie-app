@@ -69,8 +69,8 @@ export const evaluationService = {
   /**
    * Haal één evaluatie op
    */
-  async getEvaluation(id: number): Promise<Evaluation> {
-    const { data } = await api.get<Evaluation>(`/evaluations/${id}`);
+  async getEvaluation(id: number, signal?: AbortSignal): Promise<Evaluation> {
+    const { data } = await api.get<Evaluation>(`/evaluations/${id}`, { signal });
     return data;
   },
 
