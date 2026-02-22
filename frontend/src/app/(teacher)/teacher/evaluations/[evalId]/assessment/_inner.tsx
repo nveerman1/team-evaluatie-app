@@ -14,6 +14,7 @@ import {
   ICON_DESCRIPTIONS,
 } from "@/utils/omza.utils";
 import { ProjectNotesPanel } from "@/components/teacher/omza/ProjectNotesPanel";
+import { StudentFeedbackPanel } from "@/components/teacher/assessment/StudentFeedbackPanel";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
 import { useEvaluationFocusMode } from "../layout";
 import { Loading, ErrorMessage } from "@/components";
@@ -188,6 +189,7 @@ type Row = {
 };
 
 type SortKey = "team" | "name" | "class" | "final";
+type FocusView = "notes" | "feedback";
 
 // ── main component ────────────────────────────────────────────────────────────
 
@@ -200,6 +202,7 @@ export default function CombinedAssessmentInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<number | null>(null);
+  const [courseId, setCourseId] = useState<number | null>(null);
 
   const [teacherScores, setTeacherScores] = useState<Record<string, number | null>>({});
   const [teacherComments, setTeacherComments] = useState<Record<string, string>>({});
@@ -223,6 +226,44 @@ export default function CombinedAssessmentInner() {
   const [notesWidth, setNotesWidth] = useState(0);
   const { setSidebarCollapsed } = useTeacherLayout();
   const maxNotesWidth = focusMode ? 1500 : 600;
+
+  // Focus view: 'notes' or 'feedback', persisted per evalId in localStorage
+  const [focusView, setFocusViewRaw] = useState<FocusView>("feedback");
+
+  const setFocusView = useCallback(
+    (view: FocusView) => {
+      setFocusViewRaw(view);
+      if (evalIdStr !== "—" && typeof window !== "undefined") {
+        localStorage.setItem(
+          `teacher:evaluation:${evalIdStr}:assessment:focusView`,
+          view,
+        );
+      }
+    },
+    [evalIdStr],
+  );
+
+  const handleFocusModeToggle = useCallback(() => {
+    if (!focusMode) {
+      // Initialise width synchronously so the grid column is correct on the
+      // very first render with focusMode=true (avoids a 0 px flash).
+      if (notesWidth === 0 && typeof window !== "undefined") {
+        setNotesWidth(Math.floor(window.innerWidth * 0.4));
+      }
+      // Opening: restore stored view, fall back to feedback if notes but no project
+      if (typeof window !== "undefined" && evalIdStr !== "—") {
+        const stored = localStorage.getItem(
+          `teacher:evaluation:${evalIdStr}:assessment:focusView`,
+        );
+        const view: FocusView =
+          stored === "notes" || stored === "feedback" ? stored : "feedback";
+        setFocusViewRaw(view === "notes" && !projectId ? "feedback" : view);
+      }
+      setFocusMode(true);
+    } else {
+      setFocusMode(false);
+    }
+  }, [focusMode, setFocusMode, evalIdStr, projectId, notesWidth]);
 
   // Saving indicators
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
@@ -256,6 +297,7 @@ export default function CombinedAssessmentInner() {
     ])
       .then(([omzaData, preview, existingGrades, evaluation, stdComments]) => {
         setProjectId(evaluation.project_id ?? null);
+        setCourseId(evaluation.course_id ?? null);
         setCategories(omzaData.categories);
 
         // Build standard comments map by category
@@ -696,23 +738,55 @@ export default function CombinedAssessmentInner() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {autoSaveLabel && (
               <span className="text-xs text-gray-500">{autoSaveLabel}</span>
             )}
-            {projectId && (
-              <button
-                type="button"
-                className={`h-9 rounded-lg border px-3 text-xs md:text-sm font-medium shadow-sm transition-colors ${
-                  focusMode
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-                onClick={() => setFocusMode(!focusMode)}
-              >
-                📝 {focusMode ? "Verberg aantekeningen" : "Toon aantekeningen"}
-              </button>
+            {/* View switcher: only visible when focus mode is active */}
+            {focusMode && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-500">Weergave:</span>
+                <button
+                  type="button"
+                  disabled={!projectId}
+                  onClick={() => setFocusView("notes")}
+                  className={`h-7 px-2 rounded-l-lg border text-xs transition-colors ${
+                    focusView === "notes"
+                      ? "border-indigo-300 bg-indigo-100 text-indigo-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  }`}
+                  title={
+                    projectId
+                      ? undefined
+                      : "Geen project gekoppeld aan deze evaluatie"
+                  }
+                >
+                  Aantekeningen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFocusView("feedback")}
+                  className={`h-7 px-2 rounded-r-lg border border-l-0 text-xs transition-colors ${
+                    focusView === "feedback"
+                      ? "border-indigo-300 bg-indigo-100 text-indigo-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  Feedback
+                </button>
+              </div>
             )}
+            <button
+              type="button"
+              className={`h-9 rounded-lg border px-3 text-xs md:text-sm font-medium shadow-sm transition-colors ${
+                focusMode
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              onClick={handleFocusModeToggle}
+            >
+              {focusMode ? "✕ Sluit focusmodus" : "🔎 Focusmodus"}
+            </button>
             <button
               type="button"
               className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100"
@@ -725,14 +799,14 @@ export default function CombinedAssessmentInner() {
 
         {/* Focus mode grid wrapper */}
         <div
-          className={focusMode && projectId ? "grid gap-6 min-w-0" : ""}
+          className={focusMode ? "grid gap-6 min-w-0" : ""}
           style={
-            focusMode && projectId
+            focusMode
               ? { gridTemplateColumns: `${notesWidth}px 1fr` }
               : undefined
           }
         >
-          {focusMode && projectId && (
+          {focusMode && focusView === "notes" && projectId && (
             <ProjectNotesPanel
               projectId={projectId}
               onClose={() => setFocusMode(false)}
@@ -741,6 +815,17 @@ export default function CombinedAssessmentInner() {
               onWidthChange={setNotesWidth}
             />
           )}
+          {focusMode && (focusView === "feedback" || (focusView === "notes" && !projectId)) &&
+            evalIdNum != null && (
+              <StudentFeedbackPanel
+                evalId={evalIdNum}
+                courseId={courseId}
+                onClose={() => setFocusMode(false)}
+                width={notesWidth}
+                maxWidth={maxNotesWidth}
+                onWidthChange={setNotesWidth}
+              />
+            )}
 
           <div className="min-w-0">
             {rows.length === 0 && !loading && (
@@ -915,7 +1000,6 @@ export default function CombinedAssessmentInner() {
                                 <input
                                   type="text"
                                   className="w-20 text-right rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                                  placeholder="bijv. 7.5"
                                   value={
                                     r.rowGroupGrade != null && !Number.isNaN(r.rowGroupGrade)
                                       ? r.rowGroupGrade.toFixed(1)
