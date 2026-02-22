@@ -232,6 +232,8 @@ export default function CombinedAssessmentInner() {
   const scoreTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const commentTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether grade data has unsaved changes
+  const isDirty = useRef(false);
 
   // ── data loading ─────────────────────────────────────────────────────────
 
@@ -247,9 +249,9 @@ export default function CombinedAssessmentInner() {
 
     Promise.all([
       omzaService.getOmzaData(evalIdNum, controller.signal),
-      gradesService.previewGrades(evalIdNum),
-      gradesService.listGrades(evalIdNum),
-      evaluationService.getEvaluation(evalIdNum),
+      gradesService.previewGrades(evalIdNum, controller.signal),
+      gradesService.listGrades(evalIdNum, controller.signal),
+      evaluationService.getEvaluation(evalIdNum, controller.signal),
       omzaService.getStandardComments(evalIdNum, controller.signal),
     ])
       .then(([omzaData, preview, existingGrades, evaluation, stdComments]) => {
@@ -366,7 +368,7 @@ export default function CombinedAssessmentInner() {
   // ── auto-save grades every 30s ────────────────────────────────────────────
 
   const handleDraftSave = useCallback(async () => {
-    if (evalIdNum == null || rows.length === 0) return;
+    if (evalIdNum == null || rows.length === 0 || !isDirty.current) return;
     const overrides = Object.fromEntries(
       rows.map((r) => [
         r.user_id,
@@ -379,6 +381,7 @@ export default function CombinedAssessmentInner() {
         group_grade: null,
         overrides,
       });
+      isDirty.current = false;
       setAutoSaveState("saved");
     } catch {
       setAutoSaveState("error");
@@ -531,6 +534,7 @@ export default function CombinedAssessmentInner() {
 
   function handleUpdateTeamGroupGrade(teamNumber: number | null | undefined, value: string) {
     if (teamNumber == null) return;
+    isDirty.current = true;
     setAutoSaveState("saving");
     if (value.trim() === "") {
       setRows((all) =>
@@ -546,6 +550,7 @@ export default function CombinedAssessmentInner() {
   }
 
   function handleUpdateOverride(userId: number, value: string) {
+    isDirty.current = true;
     setAutoSaveState("saving");
     if (value.trim() === "") {
       setRows((all) => all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)));
@@ -557,6 +562,7 @@ export default function CombinedAssessmentInner() {
   }
 
   function handleClearOverride(userId: number) {
+    isDirty.current = true;
     setAutoSaveState("saving");
     setRows((all) => all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)));
   }
