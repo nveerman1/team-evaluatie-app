@@ -94,6 +94,23 @@ function getDescriptorForLevel(
   return "";
 }
 
+/**
+ * Replicate the backend grade curve: grade = 1 + (normalised ^ 0.85) × 9
+ */
+function scoreToGrade(
+  avgScore: number,
+  scaleMin: number,
+  scaleMax: number,
+  exponent = 0.85,
+): number | null {
+  const scaleRange = scaleMax - scaleMin;
+  if (scaleRange <= 0) return null;
+  const clamped = Math.max(scaleMin, Math.min(scaleMax, avgScore));
+  const normalised = (clamped - scaleMin) / scaleRange;
+  const curved = 1 + Math.pow(normalised, exponent) * 9;
+  return Math.round(curved * 10) / 10;
+}
+
 function RubricLevelsRow({
   criterion,
   scaleMin,
@@ -198,7 +215,7 @@ function RubricLevelsRow({
           <button
             type="button"
             onClick={() => setIsAddingQuick((prev) => !prev)}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-400 text-xs font-semibold text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors"
+            className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-400 text-[10px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors shrink-0"
           >
             +
           </button>
@@ -236,15 +253,16 @@ function RubricLevelsRow({
           </div>
         )}
 
-        <textarea
-          value={comment}
-          onChange={(e) => onCommentChange(e.target.value)}
-          placeholder="Schrijf hier een korte, concrete terugkoppeling..."
-          className="h-full min-h-[96px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-        />
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span>Tip: benoem zowel wat goed gaat als 1 verbeterpunt.</span>
-          <span>{comment.length}/400</span>
+        <div className="relative">
+          <textarea
+            value={comment}
+            onChange={(e) => onCommentChange(e.target.value)}
+            placeholder="Schrijf hier een korte, concrete terugkoppeling..."
+            className="h-full min-h-[120px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pb-5 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+          />
+          <span className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] text-slate-400">
+            {comment.length}/400
+          </span>
         </div>
       </div>
     </div>
@@ -872,6 +890,52 @@ export default function EditProjectAssessmentInner() {
             </div>
           </div>
         </RubricPane>
+      </div>
+
+      {/* Sticky bottom score bar */}
+      <div className="sticky bottom-0 z-20 bg-slate-100 py-2 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-slate-200">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          {categoryGroups.map((group) => {
+            const groupCriteria = group.criteria;
+            const totalWeight = groupCriteria.reduce((sum, c) => sum + c.weight, 0);
+            const categoryGrade =
+              totalWeight > 0
+                ? scoreToGrade(
+                    groupCriteria.reduce((sum, c) => {
+                      const s = scores[c.id]?.score ?? scaleMin;
+                      return sum + s * c.weight;
+                    }, 0) / totalWeight,
+                    scaleMin,
+                    scaleMax,
+                  )
+                : null;
+            return (
+              <div key={group.name} className="flex items-center gap-1">
+                <span className="text-slate-500">{group.name}:</span>
+                <span className="font-semibold text-slate-900">
+                  {categoryGrade !== null ? categoryGrade.toFixed(1) : "—"}
+                </span>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-1">
+            <span className="text-slate-500">Eindcijfer:</span>
+            <span className="font-semibold text-emerald-700">
+              {(() => {
+                const allCriteria = data.criteria;
+                const totalWeight = allCriteria.reduce((sum, c) => sum + c.weight, 0);
+                if (totalWeight === 0) return "—";
+                const avgScore =
+                  allCriteria.reduce((sum, c) => {
+                    const s = scores[c.id]?.score ?? scaleMin;
+                    return sum + s * c.weight;
+                  }, 0) / totalWeight;
+                const g = scoreToGrade(avgScore, scaleMin, scaleMax);
+                return g !== null ? g.toFixed(1) : "—";
+              })()}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
