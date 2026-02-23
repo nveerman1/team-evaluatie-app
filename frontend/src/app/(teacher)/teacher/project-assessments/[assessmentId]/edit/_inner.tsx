@@ -253,15 +253,16 @@ function RubricLevelsRow({
           </div>
         )}
 
-        <textarea
-          value={comment}
-          onChange={(e) => onCommentChange(e.target.value)}
-          placeholder="Schrijf hier een korte, concrete terugkoppeling..."
-          className="h-full min-h-[96px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-        />
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span>Tip: benoem zowel wat goed gaat als 1 verbeterpunt.</span>
-          <span>{comment.length}/400</span>
+        <div className="relative">
+          <textarea
+            value={comment}
+            onChange={(e) => onCommentChange(e.target.value)}
+            placeholder="Schrijf hier een korte, concrete terugkoppeling..."
+            className="h-full min-h-[120px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pb-5 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+          />
+          <span className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] text-slate-400">
+            {comment.length}/400
+          </span>
         </div>
       </div>
     </div>
@@ -917,7 +918,7 @@ export default function EditProjectAssessmentInner() {
               </div>
             );
           })}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="flex items-center gap-1">
             <span className="text-slate-500">Eindcijfer:</span>
             <span className="font-semibold text-emerald-700">
               {(() => {
