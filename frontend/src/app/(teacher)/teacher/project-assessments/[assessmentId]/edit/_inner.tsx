@@ -11,7 +11,7 @@ import {
 } from "@/dtos";
 import { SubmissionOut } from "@/dtos/submission.dto";
 import { Loading, ErrorMessage } from "@/components";
-import { TeamBar, DocumentPane, RubricPane } from "@/components/teacher/project-assessments/split-view";
+import { TeamBar, RubricPane, ReferencePanelWrapper, PanelView } from "@/components/teacher/project-assessments/split-view";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
 import { useFocusMode } from "../layout";
 
@@ -401,6 +401,7 @@ export default function EditProjectAssessmentInner() {
   const [linkHealth, setLinkHealth] = useState<"Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link">("Onbekend");
   const [docMenuOpen, setDocMenuOpen] = useState(false);
   const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
+  const [panelView, setPanelView] = useState<PanelView>('document');
   
   // Layout context for sidebar collapse
   const { setSidebarCollapsed } = useTeacherLayout();
@@ -763,7 +764,15 @@ export default function EditProjectAssessmentInner() {
       >
         {/* Document pane */}
         {docOpen && (
-          <DocumentPane
+          <ReferencePanelWrapper
+            panelView={panelView}
+            onPanelViewChange={setPanelView}
+            onClose={() => {
+              setDocMenuOpen(false);
+              setDocOpen(false);
+            }}
+            assessmentId={assessmentId}
+            teamNumber={teamNumber!}
             docWidth={docWidth}
             maxDocWidth={maxDocWidth}
             docType={docType}
@@ -776,10 +785,6 @@ export default function EditProjectAssessmentInner() {
             onDocTypeChange={setDocType}
             onLinkHealthChange={handleLinkHealthChange}
             onToggleDocMenu={() => setDocMenuOpen(!docMenuOpen)}
-            onClose={() => {
-              setDocMenuOpen(false);
-              setDocOpen(false);
-            }}
             onOpenInTab={() => {
               if (currentDocUrl) {
                 window.open(currentDocUrl, '_blank');
