@@ -742,40 +742,6 @@ export default function CombinedAssessmentInner() {
             {autoSaveLabel && (
               <span className="text-xs text-gray-500">{autoSaveLabel}</span>
             )}
-            {/* View switcher: only visible when focus mode is active */}
-            {focusMode && (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-slate-500">Weergave:</span>
-                <button
-                  type="button"
-                  disabled={!projectId}
-                  onClick={() => setFocusView("notes")}
-                  className={`h-7 px-2 rounded-l-lg border text-xs transition-colors ${
-                    focusView === "notes"
-                      ? "border-indigo-300 bg-indigo-100 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  }`}
-                  title={
-                    projectId
-                      ? undefined
-                      : "Geen project gekoppeld aan deze evaluatie"
-                  }
-                >
-                  Aantekeningen
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFocusView("feedback")}
-                  className={`h-7 px-2 rounded-r-lg border border-l-0 text-xs transition-colors ${
-                    focusView === "feedback"
-                      ? "border-indigo-300 bg-indigo-100 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  Feedback
-                </button>
-              </div>
-            )}
             {!focusMode && (
               <button
                 type="button"
@@ -811,6 +777,9 @@ export default function CombinedAssessmentInner() {
               width={notesWidth}
               maxWidth={maxNotesWidth}
               onWidthChange={setNotesWidth}
+              focusView={focusView}
+              onFocusViewChange={setFocusView}
+              hasNotes={!!projectId}
             />
           )}
           {focusMode && (focusView === "feedback" || (focusView === "notes" && !projectId)) &&
@@ -822,6 +791,9 @@ export default function CombinedAssessmentInner() {
                 width={notesWidth}
                 maxWidth={maxNotesWidth}
                 onWidthChange={setNotesWidth}
+                focusView={focusView}
+                onFocusViewChange={setFocusView}
+                hasNotes={!!projectId}
               />
             )}
 

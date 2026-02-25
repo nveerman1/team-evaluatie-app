@@ -4,12 +4,17 @@ import { useState, useEffect } from "react";
 import { ProjectNote } from "@/dtos/project-notes.dto";
 import { projectNotesService } from "@/services";
 
+type FocusView = "notes" | "feedback";
+
 interface ProjectNotesPanelProps {
   projectId: number | null;
   onClose: () => void;
   width?: number;
   maxWidth?: number;
   onWidthChange?: (width: number) => void;
+  focusView?: FocusView;
+  onFocusViewChange?: (view: FocusView) => void;
+  hasNotes?: boolean;
 }
 
 const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
@@ -20,6 +25,9 @@ export function ProjectNotesPanel({
   width = 400,
   maxWidth = 600,
   onWidthChange,
+  focusView = "notes",
+  onFocusViewChange,
+  hasNotes = true,
 }: ProjectNotesPanelProps) {
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,14 +154,30 @@ export function ProjectNotesPanel({
     <div className="flex h-full">
       <div className="flex flex-col flex-1 bg-slate-50 border-r border-slate-200" style={{ width }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
-          <h3 className="text-sm font-semibold text-slate-700">Projectaantekeningen</h3>
+        <div className="rounded-t-2xl border-t border-x border-slate-200 bg-white px-3 py-2 flex items-center justify-between shrink-0">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => onFocusViewChange?.("notes")}
+              disabled={!hasNotes}
+              title={hasNotes ? undefined : "Geen project gekoppeld aan deze evaluatie"}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition ${focusView === "notes" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"}`}
+            >
+              📋 Aantekeningen
+            </button>
+            <button
+              type="button"
+              onClick={() => onFocusViewChange?.("feedback")}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition ${focusView === "feedback" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white"}`}
+            >
+              💬 Feedback
+            </button>
+          </div>
           <button
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600"
-            title="Sluiten"
           >
-            ✕
+            Sluiten
           </button>
         </div>
 
