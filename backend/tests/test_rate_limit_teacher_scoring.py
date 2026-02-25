@@ -353,11 +353,15 @@ def test_azure_auth_endpoint_skips_rate_limiting():
 
     # Azure login endpoint - should NOT be rate limited
     response = client.get("/api/v1/auth/azure")
-    assert response.status_code == 200, f"Azure login was rate limited: {response.status_code}"
+    assert (
+        response.status_code == 200
+    ), f"Azure login was rate limited: {response.status_code}"
 
     # Azure callback endpoint - should NOT be rate limited
     response = client.get("/api/v1/auth/azure/callback")
-    assert response.status_code == 200, f"Azure callback was rate limited: {response.status_code}"
+    assert (
+        response.status_code == 200
+    ), f"Azure callback was rate limited: {response.status_code}"
 
     # Rate limiter should never be called for Azure auth endpoints
     mock_rate_limiter.is_allowed.assert_not_called()
@@ -413,4 +417,6 @@ def test_rate_limit_uses_forwarded_for_when_no_real_ip():
     mock_request.client.host = "172.19.0.5"
 
     identifier = middleware._get_user_identifier(mock_request)
-    assert identifier == "ip:198.51.100.5", f"Expected first forwarded IP, got: {identifier}"
+    assert (
+        identifier == "ip:198.51.100.5"
+    ), f"Expected first forwarded IP, got: {identifier}"

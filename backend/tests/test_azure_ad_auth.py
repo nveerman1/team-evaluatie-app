@@ -310,7 +310,6 @@ class TestEmailNormalization:
         assert normalize_email("") == ""
         assert normalize_email(None) == ""
 
-
     @patch("app.core.azure_ad.Session")
     def test_provision_handles_concurrent_insert_race_condition(self, mock_session):
         """Concurrent logins should not cause 500 - IntegrityError is handled gracefully"""
@@ -333,8 +332,8 @@ class TestEmailNormalization:
             archived=False,
         )
         mock_db.query.return_value.filter.return_value.first.side_effect = [
-            None,       # First query: user not found
-            raced_user, # Second query (after rollback): user created by concurrent request
+            None,  # First query: user not found
+            raced_user,  # Second query (after rollback): user created by concurrent request
         ]
         # Simulate IntegrityError on commit (duplicate INSERT)
         mock_db.commit.side_effect = IntegrityError("duplicate key", {}, Exception())
