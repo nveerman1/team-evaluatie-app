@@ -310,6 +310,43 @@ class TestEmailNormalization:
         assert normalize_email("") == ""
         assert normalize_email(None) == ""
 
+    @patch("app.core.azure_ad.Session")
+    def test_provision_handles_concurrent_insert_race_condition(self, mock_session):
+        """Concurrent logins should not cause 500 - IntegrityError is handled gracefully"""
+        from app.core.azure_ad import AzureADAuthenticator
+        from app.infra.db.models import User
+        from sqlalchemy.exc import IntegrityError
+
+        authenticator = AzureADAuthenticator()
+        mock_db = MagicMock()
+
+        # First query returns None (user not found yet), simulating race condition
+        # Second query (after rollback) returns the user that was created by the concurrent request
+        raced_user = User(
+            id=42,
+            school_id=1,
+            email="student@school.nl",
+            name="Student",
+            role="student",
+            auth_provider="azure_ad",
+            archived=False,
+        )
+        mock_db.query.return_value.filter.return_value.first.side_effect = [
+            None,  # First query: user not found
+            raced_user,  # Second query (after rollback): user created by concurrent request
+        ]
+        # Simulate IntegrityError on commit (duplicate INSERT)
+        mock_db.commit.side_effect = IntegrityError("duplicate key", {}, Exception())
+
+        profile = {"mail": "student@school.nl", "displayName": "Student"}
+
+        # Should NOT raise an exception - should recover gracefully
+        user = authenticator.provision_or_update_user(mock_db, profile, school_id=1)
+
+        mock_db.rollback.assert_called_once()
+        assert user.email == "student@school.nl"
+        assert user.id == 42
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

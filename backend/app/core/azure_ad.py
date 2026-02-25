@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.core.auth_utils import normalize_email
 from app.infra.db.models import User
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -279,7 +280,23 @@ class AzureADAuthenticator:
             db.add(user)
             logger.info(f"Created new user {email} from Azure AD with role 'student'")
 
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Handle race condition: concurrent logins may attempt duplicate INSERT
+            db.rollback()
+            user = (
+                db.query(User)
+                .filter(User.email == email, User.school_id == school_id)
+                .first()
+            )
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to provision user",
+                )
+            logger.info(f"Recovered from concurrent INSERT for {email} via re-query")
+
         db.refresh(user)
 
         return user
