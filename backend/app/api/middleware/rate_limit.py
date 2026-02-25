@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Callable, Optional
-from fastapi import Request, Response, HTTPException, status
+from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.infra.services.rate_limiter import RateLimiter
