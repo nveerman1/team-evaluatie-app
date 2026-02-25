@@ -16,7 +16,6 @@ interface DocumentPaneProps {
   onDocTypeChange: (type: 'Verslag' | 'Presentatie') => void;
   onLinkHealthChange: (health: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link') => void;
   onToggleDocMenu: () => void;
-  onClose: () => void;
   onOpenInTab?: () => void;
 }
 
@@ -33,7 +32,6 @@ export function DocumentPane({
   onDocTypeChange,
   onLinkHealthChange,
   onToggleDocMenu,
-  onClose,
   onOpenInTab,
 }: DocumentPaneProps) {
   // State for iframe blocking detection
@@ -87,7 +85,7 @@ export function DocumentPane({
     setIframeBlocked(true);
   };
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col h-[calc(100vh-130px)] overflow-hidden">
+    <section className="border-x border-b border-slate-200 bg-white shadow-sm flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 shrink-0">
         <div className="min-w-0">
@@ -151,13 +149,6 @@ export function DocumentPane({
           >
             <span aria-hidden="true">⚙</span>
             <span className="sr-only">Instellingen</span>
-          </button>
-
-          <button
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            onClick={onClose}
-          >
-            Sluiten
           </button>
         </div>
       </div>
