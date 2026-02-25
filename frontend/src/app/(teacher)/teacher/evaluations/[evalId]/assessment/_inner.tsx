@@ -776,17 +776,15 @@ export default function CombinedAssessmentInner() {
                 </button>
               </div>
             )}
-            <button
-              type="button"
-              className={`h-9 rounded-lg border px-3 text-xs md:text-sm font-medium shadow-sm transition-colors ${
-                focusMode
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-              onClick={handleFocusModeToggle}
-            >
-              {focusMode ? "✕ Sluit focusmodus" : "🔎 Focusmodus"}
-            </button>
+            {!focusMode && (
+              <button
+                type="button"
+                className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                onClick={handleFocusModeToggle}
+              >
+                🔎 Zijpaneel
+              </button>
+            )}
             <button
               type="button"
               className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100"
