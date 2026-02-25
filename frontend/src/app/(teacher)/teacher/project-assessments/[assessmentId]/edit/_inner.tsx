@@ -399,7 +399,6 @@ export default function EditProjectAssessmentInner() {
   const [docWidth, setDocWidth] = useState(0);
   const [docType, setDocType] = useState<"Verslag" | "Presentatie">("Verslag");
   const [linkHealth, setLinkHealth] = useState<"Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link">("Onbekend");
-  const [docMenuOpen, setDocMenuOpen] = useState(false);
   const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
   const [panelView, setPanelView] = useState<PanelView>('document');
   
@@ -768,7 +767,6 @@ export default function EditProjectAssessmentInner() {
             panelView={panelView}
             onPanelViewChange={setPanelView}
             onClose={() => {
-              setDocMenuOpen(false);
               setDocOpen(false);
             }}
             assessmentId={assessmentId}
@@ -780,11 +778,9 @@ export default function EditProjectAssessmentInner() {
             currentDocUrl={currentDocUrl}
             currentDocUpdatedAt={currentDocUpdatedAt}
             hasLink={hasLink}
-            docMenuOpen={docMenuOpen}
             onDocWidthChange={setDocWidth}
             onDocTypeChange={setDocType}
             onLinkHealthChange={handleLinkHealthChange}
-            onToggleDocMenu={() => setDocMenuOpen(!docMenuOpen)}
             onOpenInTab={() => {
               if (currentDocUrl) {
                 window.open(currentDocUrl, '_blank');
