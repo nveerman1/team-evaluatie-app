@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Callable, Optional
 from fastapi import Request, Response, HTTPException, status
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.infra.services.rate_limiter import RateLimiter
 from app.core.security import decode_access_token
@@ -72,9 +73,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not is_allowed:
             logger.warning(f"Rate limit exceeded for {rate_key}")
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Retry after {retry_after} seconds.",
+                content={"detail": f"Rate limit exceeded. Retry after {retry_after} seconds."},
                 headers={"Retry-After": str(retry_after)},
             )
 
@@ -109,6 +110,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/health",
+            "/api/v1/auth/azure",
         ]
         if any(path.startswith(skip_path) for skip_path in skip_paths):
             return True
@@ -260,9 +262,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if user_id is not None:  # Handles user ID 0 correctly
                 return f"user:{user_id}"
 
-        # Fallback to IP address
-        client_ip = request.client.host if request.client else "unknown"
-        return f"ip:{client_ip}"
+        # Use real client IP from proxy headers (nginx forwards X-Real-IP)
+        real_ip = (
+            request.headers.get("x-real-ip")
+            or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            or (request.client.host if request.client else "unknown")
+        )
+        return f"ip:{real_ip}"
 
     def _get_rate_limit(self, path: str) -> tuple[int, int]:
         """

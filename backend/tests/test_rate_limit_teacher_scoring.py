@@ -330,3 +330,87 @@ def test_no_user_in_request_state():
     # Should call rate limiter (no exemption without authenticated user)
     assert response.status_code == 200
     mock_rate_limiter.is_allowed.assert_called()
+
+
+def test_azure_auth_endpoint_skips_rate_limiting():
+    """Test that Azure AD auth endpoints bypass rate limiting entirely"""
+    mock_rate_limiter = MagicMock(spec=RateLimiter)
+    # Rate limiter would block if called
+    mock_rate_limiter.is_allowed.return_value = (False, 30)
+
+    app = FastAPI()
+    app.add_middleware(RateLimitMiddleware, rate_limiter=mock_rate_limiter)
+
+    @app.get("/api/v1/auth/azure")
+    def azure_login():
+        return {"message": "redirect to azure"}
+
+    @app.get("/api/v1/auth/azure/callback")
+    def azure_callback():
+        return {"message": "callback handled"}
+
+    client = TestClient(app)
+
+    # Azure login endpoint - should NOT be rate limited
+    response = client.get("/api/v1/auth/azure")
+    assert response.status_code == 200, f"Azure login was rate limited: {response.status_code}"
+
+    # Azure callback endpoint - should NOT be rate limited
+    response = client.get("/api/v1/auth/azure/callback")
+    assert response.status_code == 200, f"Azure callback was rate limited: {response.status_code}"
+
+    # Rate limiter should never be called for Azure auth endpoints
+    mock_rate_limiter.is_allowed.assert_not_called()
+
+
+def test_rate_limit_returns_429_not_500():
+    """Test that rate limiting returns proper 429 response, not 500"""
+    mock_rate_limiter = MagicMock(spec=RateLimiter)
+    mock_rate_limiter.is_allowed.return_value = (False, 60)
+
+    app = FastAPI()
+    app.add_middleware(RateLimitMiddleware, rate_limiter=mock_rate_limiter)
+
+    @app.get("/api/v1/some-endpoint")
+    def some_endpoint():
+        return {"message": "ok"}
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.get("/api/v1/some-endpoint")
+
+    assert response.status_code == 429
+    assert "Retry-After" in response.headers
+    assert response.headers["Retry-After"] == "60"
+
+
+def test_rate_limit_uses_forwarded_ip():
+    """Test that rate limiting uses X-Real-IP header for client identification"""
+    app = FastAPI()
+    middleware = RateLimitMiddleware(app, rate_limiter=MagicMock())
+
+    # Mock request with X-Real-IP header (as forwarded by nginx)
+    mock_request = MagicMock()
+    mock_request.state = MagicMock(spec=[])  # No user in state
+    mock_request.headers.get = lambda key, default="": {
+        "x-real-ip": "203.0.113.42",
+    }.get(key, default)
+    mock_request.client.host = "172.19.0.5"  # Docker internal IP
+
+    identifier = middleware._get_user_identifier(mock_request)
+    assert identifier == "ip:203.0.113.42", f"Expected real IP, got: {identifier}"
+
+
+def test_rate_limit_uses_forwarded_for_when_no_real_ip():
+    """Test fallback to X-Forwarded-For when X-Real-IP is not set"""
+    app = FastAPI()
+    middleware = RateLimitMiddleware(app, rate_limiter=MagicMock())
+
+    mock_request = MagicMock()
+    mock_request.state = MagicMock(spec=[])  # No user in state
+    mock_request.headers.get = lambda key, default="": {
+        "x-forwarded-for": "198.51.100.5, 172.19.0.5",
+    }.get(key, default)
+    mock_request.client.host = "172.19.0.5"
+
+    identifier = middleware._get_user_identifier(mock_request)
+    assert identifier == "ip:198.51.100.5", f"Expected first forwarded IP, got: {identifier}"
