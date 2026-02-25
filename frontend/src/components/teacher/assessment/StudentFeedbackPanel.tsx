@@ -37,7 +37,7 @@ export function StudentFeedbackPanel({
   const [studentsError, setStudentsError] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   // "all" = all senders, "self" = self-assessment, or stringified from_student_id for peer
-  const [selectedSenderKey, setSelectedSenderKey] = useState<string>("all");
+  const [selectedSenderKey, setSelectedSenderKey] = useState<string>("self");
 
   // Load students from course; reset selection when course changes
   useEffect(() => {
@@ -59,7 +59,7 @@ export function StudentFeedbackPanel({
 
   // Reset sender selection when recipient changes
   useEffect(() => {
-    setSelectedSenderKey("all");
+    setSelectedSenderKey("self");
   }, [selectedStudentId]);
 
   // Load aggregated feedback for this evaluation
@@ -82,16 +82,14 @@ export function StudentFeedbackPanel({
       setSelectedStudentId(students[selectedIndex + 1].id);
   }, [selectedIndex, students]);
 
-  // Build sender options from feedback items for the selected recipient
+  // Build sender options from feedback items for the selected recipient.
+  // "Zelf" is always first; no "all" option.
   const senderOptions: SenderOption[] = useMemo(() => {
     if (!selectedStudentId || !feedbackData) return [];
     const items = feedbackData.feedbackItems.filter(
       (item) => item.student_id === selectedStudentId,
     );
-    const options: SenderOption[] = [{ key: "all", label: "— Alle feedback —" }];
-    if (items.some((item) => item.feedback_type === "self")) {
-      options.push({ key: "self", label: "Zelf (self-assessment)" });
-    }
+    const options: SenderOption[] = [{ key: "self", label: "Zelf (self-assessment)" }];
     const seen = new Set<number>();
     for (const item of items) {
       if (item.feedback_type === "peer" && item.from_student_id != null && !seen.has(item.from_student_id)) {
@@ -120,7 +118,6 @@ export function StudentFeedbackPanel({
   const studentFeedback =
     feedbackData?.feedbackItems?.filter((item) => {
       if (item.student_id !== selectedStudentId) return false;
-      if (selectedSenderKey === "all") return true;
       if (selectedSenderKey === "self") return item.feedback_type === "self";
       return item.from_student_id === Number(selectedSenderKey);
     }) ?? [];
@@ -239,7 +236,8 @@ export function StudentFeedbackPanel({
                   ›
                 </button>
               </div>
-              <div className="flex gap-1">
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-500 whitespace-nowrap shrink-0">Feedback van:</span>
                 <select
                   value={selectedSenderKey}
                   onChange={(e) => setSelectedSenderKey(e.target.value)}
@@ -247,7 +245,7 @@ export function StudentFeedbackPanel({
                   disabled={!selectedStudentId || senderOptions.length === 0}
                 >
                   {senderOptions.length === 0 ? (
-                    <option value="all">— Alle feedback —</option>
+                    <option value="self">Zelf (self-assessment)</option>
                   ) : (
                     senderOptions.map((o) => (
                       <option key={o.key} value={o.key}>
