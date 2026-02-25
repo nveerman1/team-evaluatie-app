@@ -4,34 +4,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { isTrustedMicrosoftUrl, getViewerUrl, shouldAttemptInlineEmbed, safeHostname } from '@/lib/document-viewer-utils';
 
 interface DocumentPaneProps {
-  docWidth: number;
-  maxDocWidth: number;
   docType: 'Verslag' | 'Presentatie';
   linkHealth: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link';
   currentDocUrl?: string | null;
   currentDocUpdatedAt?: string | null;
   hasLink: boolean;
-  docMenuOpen: boolean;
-  onDocWidthChange: (width: number) => void;
   onDocTypeChange: (type: 'Verslag' | 'Presentatie') => void;
   onLinkHealthChange: (health: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link') => void;
-  onToggleDocMenu: () => void;
   onOpenInTab?: () => void;
 }
 
 export function DocumentPane({
-  docWidth,
-  maxDocWidth,
   docType,
   linkHealth,
   currentDocUrl,
   currentDocUpdatedAt = '—',
   hasLink,
-  docMenuOpen,
-  onDocWidthChange,
   onDocTypeChange,
   onLinkHealthChange,
-  onToggleDocMenu,
   onOpenInTab,
 }: DocumentPaneProps) {
   // State for iframe blocking detection
@@ -141,35 +131,8 @@ export function DocumentPane({
           >
             Open in tab
           </button>
-
-          <button
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            onClick={onToggleDocMenu}
-            aria-label="Paneelinstellingen"
-          >
-            <span aria-hidden="true">⚙</span>
-            <span className="sr-only">Instellingen</span>
-          </button>
         </div>
       </div>
-
-      {/* Paneelbreedte rij */}
-      {docMenuOpen && (
-        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3 shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="text-xs font-semibold text-slate-700">Paneelbreedte</div>
-            <input
-              type="range"
-              min={340}
-              max={maxDocWidth}
-              value={docWidth}
-              onChange={(e) => onDocWidthChange(parseInt(e.target.value, 10))}
-              className="flex-1"
-            />
-            <div className="w-12 text-right text-xs text-slate-500">{docWidth}px</div>
-          </div>
-        </div>
-      )}
 
       {/* Viewer */}
       <div className="flex-1 min-h-0 bg-slate-50 p-3">
