@@ -777,7 +777,7 @@ export default function CombinedAssessmentInner() {
               width={notesWidth}
               maxWidth={maxNotesWidth}
               onWidthChange={setNotesWidth}
-              focusView={focusView}
+              focusView={focusView === "notes" && !projectId ? "feedback" : focusView}
               onFocusViewChange={setFocusView}
               hasNotes={!!projectId}
             />

@@ -117,7 +117,7 @@ export function StudentFeedbackPanel({
   }, []);
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-[calc(100vh-130px)]">
       <div
         className="flex flex-col flex-1 bg-slate-50 border-r border-slate-200 overflow-hidden"
         style={{ width }}

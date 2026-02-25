@@ -151,8 +151,8 @@ export function ProjectNotesPanel({
   }
 
   return (
-    <div className="flex h-full">
-      <div className="flex flex-col flex-1 bg-slate-50 border-r border-slate-200" style={{ width }}>
+    <div className="flex h-[calc(100vh-130px)]">
+      <div className="flex flex-col flex-1 bg-slate-50 border-r border-slate-200 overflow-hidden" style={{ width }}>
         {/* Header */}
         <div className="rounded-t-2xl border-t border-x border-slate-200 bg-white px-3 py-2 flex items-center justify-between shrink-0">
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
