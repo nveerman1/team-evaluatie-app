@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { courseService } from "@/services/course.service";
 import { CourseStudent } from "@/dtos/course.dto";
 import { useAggregatedFeedback } from "@/hooks/useAggregatedFeedback";
+
+type FocusView = "notes" | "feedback";
 
 interface StudentFeedbackPanelProps {
   evalId: number;
@@ -12,9 +14,12 @@ interface StudentFeedbackPanelProps {
   width?: number;
   maxWidth?: number;
   onWidthChange?: (width: number) => void;
+  focusView?: FocusView;
+  onFocusViewChange?: (view: FocusView) => void;
+  hasNotes?: boolean;
 }
 
-type FeedbackTypeFilter = "all" | "self" | "peer";
+type SenderOption = { key: string; label: string };
 
 export function StudentFeedbackPanel({
   evalId,
@@ -23,12 +28,16 @@ export function StudentFeedbackPanel({
   width = 400,
   maxWidth = 600,
   onWidthChange,
+  focusView = "feedback",
+  onFocusViewChange,
+  hasNotes = false,
 }: StudentFeedbackPanelProps) {
   const [students, setStudents] = useState<CourseStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [studentsError, setStudentsError] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-  const [typeFilter, setTypeFilter] = useState<FeedbackTypeFilter>("all");
+  // "all" = all senders, "self" = self-assessment, or stringified from_student_id for peer
+  const [selectedSenderKey, setSelectedSenderKey] = useState<string>("self");
 
   // Load students from course; reset selection when course changes
   useEffect(() => {
@@ -47,6 +56,11 @@ export function StudentFeedbackPanel({
       .finally(() => { if (mounted) setStudentsLoading(false); });
     return () => { mounted = false; };
   }, [courseId]);
+
+  // Reset sender selection when recipient changes
+  useEffect(() => {
+    setSelectedSenderKey("self");
+  }, [selectedStudentId]);
 
   // Load aggregated feedback for this evaluation
   const { data: feedbackData, loading: feedbackLoading } = useAggregatedFeedback({
@@ -68,13 +82,44 @@ export function StudentFeedbackPanel({
       setSelectedStudentId(students[selectedIndex + 1].id);
   }, [selectedIndex, students]);
 
-  // Feedback received by the selected student, filtered by type
+  // Build sender options from feedback items for the selected recipient.
+  // "Zelf" is always first; no "all" option.
+  const senderOptions: SenderOption[] = useMemo(() => {
+    if (!selectedStudentId || !feedbackData) return [];
+    const items = feedbackData.feedbackItems.filter(
+      (item) => item.student_id === selectedStudentId,
+    );
+    const options: SenderOption[] = [{ key: "self", label: "Zelf (self-assessment)" }];
+    const seen = new Set<number>();
+    for (const item of items) {
+      if (item.feedback_type === "peer" && item.from_student_id != null && !seen.has(item.from_student_id)) {
+        seen.add(item.from_student_id);
+        options.push({
+          key: String(item.from_student_id),
+          label: item.from_student_name || `Leerling ${item.from_student_id}`,
+        });
+      }
+    }
+    return options;
+  }, [selectedStudentId, feedbackData]);
+
+  const senderIndex = senderOptions.findIndex((o) => o.key === selectedSenderKey);
+
+  const goPrevSender = useCallback(() => {
+    if (senderIndex > 0) setSelectedSenderKey(senderOptions[senderIndex - 1].key);
+  }, [senderIndex, senderOptions]);
+
+  const goNextSender = useCallback(() => {
+    if (senderIndex >= 0 && senderIndex < senderOptions.length - 1)
+      setSelectedSenderKey(senderOptions[senderIndex + 1].key);
+  }, [senderIndex, senderOptions]);
+
+  // Feedback received by the selected recipient, filtered by sender
   const studentFeedback =
     feedbackData?.feedbackItems?.filter((item) => {
       if (item.student_id !== selectedStudentId) return false;
-      if (typeFilter === "self") return item.feedback_type === "self";
-      if (typeFilter === "peer") return item.feedback_type === "peer";
-      return true;
+      if (selectedSenderKey === "self") return item.feedback_type === "self";
+      return item.from_student_id === Number(selectedSenderKey);
     }) ?? [];
 
   // Resize handle (same pattern as ProjectNotesPanel)
@@ -109,20 +154,36 @@ export function StudentFeedbackPanel({
   }, []);
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-[calc(100vh-130px)]">
       <div
         className="flex flex-col flex-1 bg-slate-50 border-r border-slate-200 overflow-hidden"
         style={{ width }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
-          <h3 className="text-sm font-semibold text-slate-700">Peerreview feedback ontvangen</h3>
+        <div className="rounded-t-2xl border-t border-x border-slate-200 bg-white px-3 py-2 flex items-center justify-between shrink-0">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => onFocusViewChange?.("notes")}
+              disabled={!hasNotes}
+              title={hasNotes ? undefined : "Geen project gekoppeld aan deze evaluatie"}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition ${focusView === "notes" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"}`}
+            >
+              📋 Aantekeningen
+            </button>
+            <button
+              type="button"
+              onClick={() => onFocusViewChange?.("feedback")}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition ${focusView === "feedback" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white"}`}
+            >
+              💬 Feedback
+            </button>
+          </div>
           <button
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600"
-            title="Sluiten"
           >
-            ✕
+            Sluiten
           </button>
         </div>
 
@@ -175,15 +236,48 @@ export function StudentFeedbackPanel({
                   ›
                 </button>
               </div>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as FeedbackTypeFilter)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="all">Alle (self + peer)</option>
-                <option value="self">Alleen self</option>
-                <option value="peer">Alleen peer</option>
-              </select>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-500 whitespace-nowrap shrink-0">Feedback van:</span>
+                <select
+                  value={selectedSenderKey}
+                  onChange={(e) => setSelectedSenderKey(e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  disabled={!selectedStudentId || senderOptions.length === 0}
+                >
+                  {senderOptions.length === 0 ? (
+                    <option value="self">Zelf (self-assessment)</option>
+                  ) : (
+                    senderOptions.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <button
+                  type="button"
+                  onClick={goPrevSender}
+                  disabled={!selectedStudentId || senderIndex <= 0}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-sm disabled:opacity-40 hover:bg-slate-50"
+                  title="Vorige afzender"
+                >
+                  ‹
+                </button>
+                {selectedStudentId && senderOptions.length > 0 && (
+                  <span className="px-1.5 py-1 text-xs text-slate-500 tabular-nums whitespace-nowrap self-center">
+                    {senderIndex + 1} / {senderOptions.length}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={goNextSender}
+                  disabled={!selectedStudentId || senderIndex < 0 || senderIndex >= senderOptions.length - 1}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-sm disabled:opacity-40 hover:bg-slate-50"
+                  title="Volgende afzender"
+                >
+                  ›
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -222,17 +316,15 @@ export function StudentFeedbackPanel({
                       ? "Zelf"
                       : item.from_student_name || "Onbekend"}
                   </span>
-                  {typeFilter === "all" && (
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-                        item.feedback_type === "self"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-purple-100 text-purple-700"
-                      }`}
-                    >
-                      {item.feedback_type}
-                    </span>
-                  )}
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                      item.feedback_type === "self"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-purple-100 text-purple-700"
+                    }`}
+                  >
+                    {item.feedback_type}
+                  </span>
                 </div>
                 {item.criteria_details.length > 0 ? (
                   <ul className="space-y-2">

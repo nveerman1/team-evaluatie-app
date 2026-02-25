@@ -742,51 +742,15 @@ export default function CombinedAssessmentInner() {
             {autoSaveLabel && (
               <span className="text-xs text-gray-500">{autoSaveLabel}</span>
             )}
-            {/* View switcher: only visible when focus mode is active */}
-            {focusMode && (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-slate-500">Weergave:</span>
-                <button
-                  type="button"
-                  disabled={!projectId}
-                  onClick={() => setFocusView("notes")}
-                  className={`h-7 px-2 rounded-l-lg border text-xs transition-colors ${
-                    focusView === "notes"
-                      ? "border-indigo-300 bg-indigo-100 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  }`}
-                  title={
-                    projectId
-                      ? undefined
-                      : "Geen project gekoppeld aan deze evaluatie"
-                  }
-                >
-                  Aantekeningen
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFocusView("feedback")}
-                  className={`h-7 px-2 rounded-r-lg border border-l-0 text-xs transition-colors ${
-                    focusView === "feedback"
-                      ? "border-indigo-300 bg-indigo-100 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  Feedback
-                </button>
-              </div>
+            {!focusMode && (
+              <button
+                type="button"
+                className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                onClick={handleFocusModeToggle}
+              >
+                🔎 Zijpaneel
+              </button>
             )}
-            <button
-              type="button"
-              className={`h-9 rounded-lg border px-3 text-xs md:text-sm font-medium shadow-sm transition-colors ${
-                focusMode
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-              onClick={handleFocusModeToggle}
-            >
-              {focusMode ? "✕ Sluit focusmodus" : "🔎 Focusmodus"}
-            </button>
             <button
               type="button"
               className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100"
@@ -813,6 +777,9 @@ export default function CombinedAssessmentInner() {
               width={notesWidth}
               maxWidth={maxNotesWidth}
               onWidthChange={setNotesWidth}
+              focusView={focusView === "notes" && !projectId ? "feedback" : focusView}
+              onFocusViewChange={setFocusView}
+              hasNotes={!!projectId}
             />
           )}
           {focusMode && (focusView === "feedback" || (focusView === "notes" && !projectId)) &&
@@ -824,6 +791,9 @@ export default function CombinedAssessmentInner() {
                 width={notesWidth}
                 maxWidth={maxNotesWidth}
                 onWidthChange={setNotesWidth}
+                focusView={focusView}
+                onFocusViewChange={setFocusView}
+                hasNotes={!!projectId}
               />
             )}
 
