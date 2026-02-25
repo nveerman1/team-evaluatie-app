@@ -54,7 +54,7 @@ function LoginForm() {
   };
 
   return (
-    <main className="p-6 max-w-xl mx-auto space-y-4">
+    <main className="min-h-screen flex flex-col justify-center p-6 max-w-xl mx-auto space-y-4">
       <h1 className="text-2xl font-bold">Team Evaluatie App</h1>
       
       {/* Azure AD Login - Production Method */}
@@ -64,7 +64,7 @@ function LoginForm() {
           Gebruik je schoolaccount om in te loggen via Office 365.
         </p>
         <button
-          className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 w-full"
+          className="px-4 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 w-full"
           onClick={handleAzureLogin}
         >
           Login met Office 365
@@ -91,7 +91,7 @@ function LoginForm() {
           )}
           
           <input
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-2 text-base"
             placeholder="student1@example.com of docent@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -102,7 +102,7 @@ function LoginForm() {
           />
           <button
             type="button"
-            className={`px-4 py-2 rounded-xl w-full ${
+            className={`px-4 py-3 rounded-xl w-full ${
               isLoggingIn
                 ? "bg-yellow-400 cursor-wait"
                 : "bg-yellow-600 hover:bg-yellow-700"
@@ -131,7 +131,7 @@ function LoginForm() {
 export default function Home() {
   return (
     <Suspense fallback={
-      <main className="p-6 max-w-xl mx-auto space-y-4">
+      <main className="min-h-screen flex flex-col justify-center p-6 max-w-xl mx-auto space-y-4">
         <h1 className="text-2xl font-bold">Team Evaluatie App</h1>
         <div className="p-4 border rounded-xl bg-gray-50 text-center">
           Laden...
