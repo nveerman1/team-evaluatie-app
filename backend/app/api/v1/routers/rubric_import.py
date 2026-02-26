@@ -150,8 +150,16 @@ def _parse_csv(
             )
             continue
 
-        # Groep aanmaken als nog niet bestaat
-        if rubric_title not in rubric_map:
+        # Groep aanmaken als nog niet bestaat; anders conflicten controleren
+        if rubric_title in rubric_map:
+            existing = rubric_map[rubric_title]
+            if existing.scope != scope:
+                warnings.append(
+                    f"Rij {row_num}: rubric '{rubric_title}' heeft scope "
+                    f"'{scope}', maar eerder was '{existing.scope}' opgegeven. "
+                    f"De eerste waarde wordt gebruikt."
+                )
+        else:
             target_level_raw = row.get("target_level", "").strip().lower() or None
             if target_level_raw and target_level_raw not in VALID_TARGET_LEVELS:
                 warnings.append(
@@ -318,6 +326,36 @@ def _resolve_lo_for_preview_from_cache(
     return resolved
 
 
+def _check_existing_rubric_titles(
+    db: Session,
+    rubric_groups: List[CsvRubricGroup],
+    school_id: int,
+    warnings: List[str],
+) -> None:
+    """
+    Voeg een waarschuwing toe voor elke rubric-titel die al bestaat voor deze school.
+    De import gaat door – er wordt een tweede rubric met dezelfde naam aangemaakt.
+    """
+    titles = [g.rubric_title for g in rubric_groups]
+    if not titles:
+        return
+    existing = (
+        db.execute(
+            select(Rubric.title).where(
+                Rubric.school_id == school_id,
+                Rubric.title.in_(titles),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for title in existing:
+        warnings.append(
+            f"Rubric '{title}' bestaat al voor deze school. "
+            f"Er wordt een tweede rubric met dezelfde naam aangemaakt."
+        )
+
+
 def _collect_all_lo_orders(rubric_groups: List[CsvRubricGroup]) -> List[int]:
     """Verzamel alle unieke leerdoel-order-nummers uit alle criteria."""
     orders: List[int] = []
@@ -380,6 +418,7 @@ async def preview_csv_import(
     # Batch-fetch alle benodigde leerdoelen in één query
     all_orders = _collect_all_lo_orders(rubric_groups)
     lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id, subject_id)
+    _check_existing_rubric_titles(db, rubric_groups, user.school_id, warnings)
 
     preview_rubrics: List[PreviewRubric] = []
 
@@ -467,6 +506,7 @@ async def import_csv(
     # Batch-fetch alle benodigde leerdoelen in één query
     all_orders = _collect_all_lo_orders(rubric_groups)
     lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id, subject_id)
+    _check_existing_rubric_titles(db, rubric_groups, user.school_id, warnings)
 
     created_rubrics = 0
     created_criteria = 0

@@ -13,9 +13,10 @@ Navigeer naar **Rubrics → 📥 CSV Importeren**. De knop verschijnt bovenaan d
 ## Stappenplan
 
 1. Bereid een CSV-bestand voor (zie formaat hieronder).
-2. Sleep het bestand naar het uploadvak of klik **Bestand selecteren**.
-3. Controleer de **preview**: de app toont per rubric welke criteria worden aangemaakt en of de leerdoelkoppelingen gevonden zijn (✓ = gevonden, ✗ = niet gevonden).
-4. Klik **Importeren** om de rubrics definitief op te slaan.
+2. *(Aanbevolen)* Selecteer het **vakgebied** waarvan de leerdoel-nummers afkomstig zijn. Zo worden cross-vak dubbelen voorkomen.
+3. Sleep het bestand naar het uploadvak of klik **Bestand selecteren**.
+4. Controleer de **preview**: de app toont per rubric welke criteria worden aangemaakt en of de leerdoelkoppelingen gevonden zijn (✓ = gevonden, ✗ = niet gevonden).
+5. Klik **Importeren** om de rubrics definitief op te slaan.
 
 ---
 
@@ -94,11 +95,47 @@ De order-nummers verwijzen naar de onderbouw-leerdoelen in `backend/data/templat
 
 ## Foutafhandeling
 
-| Situatie                              | Gedrag                                           |
-|---------------------------------------|--------------------------------------------------|
-| Verplichte kolom ontbreekt            | Import geblokkeerd met foutmelding               |
-| Ongeldige `scope`-waarde              | Rij wordt overgeslagen met foutmelding           |
-| Onbekend `learning_objectives`-nummer | Waarschuwing; koppeling wordt niet aangemaakt    |
-| Gewichten die niet optellen tot 1,0   | Automatisch genormaliseerd; waarschuwing getoond |
-| Bestand groter dan 10 MB              | Import geblokkeerd                               |
-| Meer dan 10 000 rijen                 | Import geblokkeerd                               |
+| Situatie                                    | Gedrag                                                           |
+|---------------------------------------------|------------------------------------------------------------------|
+| Verplichte kolom ontbreekt                  | Import geblokkeerd met foutmelding                               |
+| Ongeldige `scope`-waarde                    | Rij wordt overgeslagen met foutmelding                           |
+| Conflicterende `scope` voor zelfde titel    | Waarschuwing; eerste waarde wordt gebruikt                       |
+| Rubric-titel bestaat al in de database      | Waarschuwing; er wordt een tweede rubric met die naam aangemaakt |
+| Onbekend `learning_objectives`-nummer       | Waarschuwing; koppeling wordt niet aangemaakt                    |
+| Gewichten die niet optellen tot 1,0         | Automatisch genormaliseerd; waarschuwing getoond                 |
+| Bestand groter dan 10 MB                    | Import geblokkeerd                                               |
+| Meer dan 10 000 rijen                       | Import geblokkeerd                                               |
+
+---
+
+## Rubric genereren met een LLM
+
+Gebruik de volgende prompt in ChatGPT, Claude of een andere LLM om een kant-en-klaar CSV-bestand te laten genereren. Vul de laatste regel aan met je eigen opdracht, vak en niveau.
+
+```
+Genereer een rubric in CSV-formaat voor een team-evaluatie-app.
+Gebruik exact de volgende kolomvolgorde (komma-gescheiden, eerste rij is de header):
+
+scope,target_level,rubric_title,rubric_description,scale_min,scale_max,criterion_name,category,weight,level1,level2,level3,level4,level5,learning_objectives
+
+Regels:
+- scope: "peer" (interpersoonlijk samenwerken) of "project" (vakinhoudelijk/resultaat)
+- target_level: "onderbouw" of "bovenbouw" (mag leeg zijn)
+- scale_min / scale_max: standaard 1 en 5
+- Eén rij per criterium; meerdere rijen met dezelfde rubric_title worden automatisch samengevoegd tot één rubric
+- weight: decimaal gewicht (bijv. 0.25); de som per rubric wordt automatisch genormaliseerd naar 1,0
+- level1 t/m level5: tekstbeschrijving van elk beoordelingsniveau (van onvoldoende → uitstekend)
+- learning_objectives: puntkomma-gescheiden order-nummers van leerdoelen (laat leeg als onbekend)
+- Velden die een komma bevatten moeten tussen dubbele aanhalingstekens staan
+- Geldige categorieën voor peer-rubrics:  Organiseren, Meedoen, Zelfvertrouwen, Autonomie
+- Geldige categorieën voor project-rubrics: Projectproces, Eindresultaat, Communicatie
+
+Maak een complete rubric (minimaal 4 criteria per rubric) voor:
+[OMSCHRIJF HIER JE OPDRACHT, VAK EN NIVEAU — bijv. "onderbouw grafisch ontwerp, project over huisstijl"]
+```
+
+**Tips:**
+- Voeg een tweede rubric toe (scope `peer`) als je ook teamwerk wilt beoordelen.
+- Controleer na het genereren of de categorieën overeenkomen met de geldige waarden hierboven.
+- Sla het resultaat op als `.csv` (UTF-8) en upload het via **Rubrics → 📥 CSV Importeren**.
+
