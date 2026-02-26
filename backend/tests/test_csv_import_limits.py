@@ -312,3 +312,78 @@ class TestCSVImportLimits:
             await import_csv(file=mock_file, db=mock_db, user=mock_user)
 
         assert exc_info.value.status_code == 400
+
+    def test_lookup_lo_ids_filters_by_phase(self):
+        """Test that _lookup_lo_ids_from_cache filters matches by phase when provided"""
+        from unittest.mock import Mock
+
+        from app.api.v1.routers.rubric_import import _lookup_lo_ids_from_cache
+
+        ob_lo = Mock()
+        ob_lo.id = 1
+        ob_lo.phase = "onderbouw"
+
+        bb_lo = Mock()
+        bb_lo.id = 2
+        bb_lo.phase = "bovenbouw"
+
+        # Both phases share order number 4
+        cache = {4: [ob_lo, bb_lo]}
+        warnings = []
+
+        # With phase="onderbouw" – should return only the onderbouw LO, no warning
+        ids = _lookup_lo_ids_from_cache(
+            cache, [4], "Rubric", "Criterion", warnings, "onderbouw"
+        )
+        assert ids == [1]
+        assert warnings == []
+
+        # With phase="bovenbouw" – should return only the bovenbouw LO, no warning
+        ids = _lookup_lo_ids_from_cache(
+            cache, [4], "Rubric", "Criterion", warnings, "bovenbouw"
+        )
+        assert ids == [2]
+        assert warnings == []
+
+        # Without phase – should still pick first and emit warning
+        ids = _lookup_lo_ids_from_cache(cache, [4], "Rubric", "Criterion", warnings)
+        assert ids == [1]
+        assert len(warnings) == 1
+        assert "meerdere leerdoelen" in warnings[0]
+
+    def test_resolve_lo_for_preview_filters_by_phase(self):
+        """Test that _resolve_lo_for_preview_from_cache filters matches by phase"""
+        from unittest.mock import Mock
+
+        from app.api.v1.routers.rubric_import import _resolve_lo_for_preview_from_cache
+
+        ob_lo = Mock()
+        ob_lo.id = 1
+        ob_lo.phase = "onderbouw"
+        ob_lo.title = "Leerdoel onderbouw"
+        ob_lo.domain = "A"
+
+        bb_lo = Mock()
+        bb_lo.id = 2
+        bb_lo.phase = "bovenbouw"
+        bb_lo.title = "Leerdoel bovenbouw"
+        bb_lo.domain = "A"
+
+        cache = {3: [ob_lo, bb_lo]}
+
+        # With phase="onderbouw" – resolves to the onderbouw LO
+        resolved = _resolve_lo_for_preview_from_cache(cache, [3], "onderbouw")
+        assert len(resolved) == 1
+        assert resolved[0].found is True
+        assert resolved[0].title == "Leerdoel onderbouw"
+
+        # With phase="bovenbouw" – resolves to the bovenbouw LO
+        resolved = _resolve_lo_for_preview_from_cache(cache, [3], "bovenbouw")
+        assert len(resolved) == 1
+        assert resolved[0].found is True
+        assert resolved[0].title == "Leerdoel bovenbouw"
+
+        # Without phase – still resolves (uses first match)
+        resolved = _resolve_lo_for_preview_from_cache(cache, [3])
+        assert len(resolved) == 1
+        assert resolved[0].found is True

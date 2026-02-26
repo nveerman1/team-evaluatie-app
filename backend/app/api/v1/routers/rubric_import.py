@@ -268,14 +268,18 @@ def _lookup_lo_ids_from_cache(
     rubric_title: str,
     criterion_name: str,
     warnings: List[str],
+    phase: Optional[str] = None,
 ) -> List[int]:
     """
     Zet order-nummers om naar LearningObjective IDs via de batch-cache.
     Geeft waarschuwingen als een nummer niet gevonden is of meerdere matches heeft.
+    Wanneer phase opgegeven is, worden alleen leerdoelen van die fase meegenomen.
     """
     lo_ids: List[int] = []
     for order in orders:
         matches = cache.get(order, [])
+        if phase:
+            matches = [lo for lo in matches if lo.phase == phase]
         if not matches:
             warnings.append(
                 f"Rubric '{rubric_title}', criterium '{criterion_name}': "
@@ -296,13 +300,17 @@ def _lookup_lo_ids_from_cache(
 def _resolve_lo_for_preview_from_cache(
     cache: Dict[int, List[LearningObjective]],
     orders: List[int],
+    phase: Optional[str] = None,
 ) -> List[ResolvedLearningObjective]:
     """
     Zet order-nummers om naar ResolvedLearningObjective objecten via de batch-cache.
+    Wanneer phase opgegeven is, worden alleen leerdoelen van die fase meegenomen.
     """
     resolved: List[ResolvedLearningObjective] = []
     for order in orders:
         matches = cache.get(order, [])
+        if phase:
+            matches = [lo for lo in matches if lo.phase == phase]
         if matches:
             lo = matches[0]
             resolved.append(
@@ -419,7 +427,7 @@ async def preview_csv_import(
         preview_criteria: List[PreviewCriterion] = []
         for c in group.criteria:
             resolved_los = _resolve_lo_for_preview_from_cache(
-                lo_cache, c.learning_objective_orders
+                lo_cache, c.learning_objective_orders, group.target_level
             )
             has_descriptors = any([c.level1, c.level2, c.level3, c.level4, c.level5])
             preview_criteria.append(
@@ -549,6 +557,7 @@ async def import_csv(
                 group.rubric_title,
                 c.criterion_name,
                 warnings,
+                group.target_level,
             )
             for lo_id in lo_ids:
                 assoc = RubricCriterionLearningObjective(
