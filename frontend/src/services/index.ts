@@ -22,4 +22,5 @@ export * from "./academic-year.service";
 export * from "./skill-training.service";
 export * from "./submission.service";
 export * from "./grades.service";
+export * from "./rubric-import.service";
 export * from "./task.service";

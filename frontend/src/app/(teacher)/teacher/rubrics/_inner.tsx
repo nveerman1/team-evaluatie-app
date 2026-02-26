@@ -5,6 +5,7 @@ import { rubricService, competencyService } from "@/services";
 import { RubricListItem, Competency, CompetencyListResponse, CompetencyType, CompetencyCategory, CompetencyCreate, CompetencyUpdate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { useAuth } from "@/hooks/useAuth";
+import RubricImportModal from "@/components/teacher/RubricImportModal";
 
 type TabType = "peer" | "project" | "competencies";
 
@@ -44,6 +45,7 @@ export default function RubricsListInner() {
   const [expandedCompetency, setExpandedCompetency] = useState<number | null>(null);
   const [editingCompetency, setEditingCompetency] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<CompetencyUpdate>({});
+  const [showImportModal, setShowImportModal] = useState(false);
 
   async function fetchRubrics(query = "", scope: "peer" | "project") {
     setLoading(true);
@@ -289,12 +291,21 @@ export default function RubricsListInner() {
             </p>
           </div>
           {activeTab !== "competencies" ? (
-            <Link
-              href={`/teacher/rubrics/create?scope=${activeTab}`}
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-            >
-              + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                📥 CSV Importeren
+              </button>
+              <Link
+                href={`/teacher/rubrics/create?scope=${activeTab}`}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              >
+                + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
+              </Link>
+            </div>
           ) : (
             <button
               onClick={() => {
@@ -930,6 +941,11 @@ export default function RubricsListInner() {
           </div>
         )}
       </main>
+      <RubricImportModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => fetchList("", activeTab)}
+      />
     </>
   );
 }

@@ -1,0 +1,457 @@
+from __future__ import annotations
+
+import csv
+import io
+from typing import Dict, List, Optional, Tuple
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.api.v1.deps import get_db, get_current_user
+from app.infra.db.models import (
+    Rubric,
+    RubricCriterion,
+    LearningObjective,
+    RubricCriterionLearningObjective,
+)
+from app.api.v1.schemas.rubric_import import (
+    CsvCriterionRow,
+    CsvRubricGroup,
+    CsvImportResult,
+    CsvPreviewResult,
+    PreviewRubric,
+    PreviewCriterion,
+    ResolvedLearningObjective,
+)
+
+router = APIRouter(prefix="/rubrics", tags=["rubric-import"])
+
+REQUIRED_COLUMNS = {"rubric_title", "criterion_name", "scope"}
+VALID_SCOPES = {"peer", "project"}
+VALID_TARGET_LEVELS = {"onderbouw", "bovenbouw"}
+ALLOWED_CONTENT_TYPES = {"text/csv", "text/plain", "application/vnd.ms-excel"}
+
+
+def _decode_file(content: bytes) -> str:
+    """Decodeer met utf-8-sig (Excel BOM), fallback naar latin-1."""
+    try:
+        return content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return content.decode("latin-1")
+
+
+def _parse_learning_objective_orders(raw: str) -> List[int]:
+    """Parse puntkomma-gescheiden nummers naar een lijst integers."""
+    if not raw or not raw.strip():
+        return []
+    result = []
+    for part in raw.split(";"):
+        part = part.strip()
+        if part:
+            try:
+                result.append(int(part))
+            except ValueError:
+                pass
+    return result
+
+
+def _parse_csv(
+    text: str,
+) -> Tuple[List[CsvRubricGroup], List[str], List[str]]:
+    """
+    Parseer CSV-tekst naar CsvRubricGroup objecten.
+    Retourneert (rubric_groups, errors, warnings).
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    reader = csv.DictReader(io.StringIO(text))
+    if reader.fieldnames is None:
+        errors.append("CSV-bestand is leeg of heeft geen kopregel.")
+        return [], errors, warnings
+
+    fieldnames = {f.strip().lower() for f in reader.fieldnames}
+
+    # Controleer verplichte kolommen
+    missing = REQUIRED_COLUMNS - fieldnames
+    if missing:
+        errors.append(
+            f"Verplichte kolommen ontbreken: {', '.join(sorted(missing))}"
+        )
+        return [], errors, warnings
+
+    # Waarschuw voor onbekende kolommen
+    known_columns = {
+        "rubric_title",
+        "rubric_description",
+        "scope",
+        "target_level",
+        "scale_min",
+        "scale_max",
+        "criterion_name",
+        "category",
+        "weight",
+        "level1",
+        "level2",
+        "level3",
+        "level4",
+        "level5",
+        "learning_objectives",
+    }
+    unknown = fieldnames - known_columns
+    if unknown:
+        warnings.append(
+            f"Onbekende kolommen worden genegeerd: {', '.join(sorted(unknown))}"
+        )
+
+    # Groepeer rijen per rubric_title
+    rubric_map: Dict[str, CsvRubricGroup] = {}
+    rubric_order: List[str] = []
+
+    for row_num, raw_row in enumerate(reader, start=2):
+        row = {k.strip().lower(): (v or "").strip() for k, v in raw_row.items() if k}
+
+        rubric_title = row.get("rubric_title", "").strip()
+        criterion_name = row.get("criterion_name", "").strip()
+        scope = row.get("scope", "").strip().lower()
+
+        if not rubric_title:
+            errors.append(f"Rij {row_num}: rubric_title is leeg.")
+            continue
+        if not criterion_name:
+            errors.append(f"Rij {row_num}: criterion_name is leeg.")
+            continue
+        if scope not in VALID_SCOPES:
+            errors.append(
+                f"Rij {row_num}: ongeldige scope '{scope}'. "
+                f"Moet 'peer' of 'project' zijn."
+            )
+            continue
+
+        # Groep aanmaken als nog niet bestaat
+        if rubric_title not in rubric_map:
+            target_level_raw = row.get("target_level", "").strip().lower() or None
+            if target_level_raw and target_level_raw not in VALID_TARGET_LEVELS:
+                warnings.append(
+                    f"Rij {row_num}: ongeldig target_level '{target_level_raw}'. "
+                    f"Wordt genegeerd."
+                )
+                target_level_raw = None
+
+            try:
+                scale_min = int(row.get("scale_min", "1") or "1")
+            except ValueError:
+                scale_min = 1
+            try:
+                scale_max = int(row.get("scale_max", "5") or "5")
+            except ValueError:
+                scale_max = 5
+
+            rubric_map[rubric_title] = CsvRubricGroup(
+                rubric_title=rubric_title,
+                rubric_description=row.get("rubric_description") or None,
+                scope=scope,
+                target_level=target_level_raw,
+                scale_min=scale_min,
+                scale_max=scale_max,
+                criteria=[],
+            )
+            rubric_order.append(rubric_title)
+
+        # Gewicht parsen
+        weight_raw = row.get("weight", "").strip()
+        try:
+            weight = float(weight_raw) if weight_raw else 1.0
+        except ValueError:
+            warnings.append(
+                f"Rij {row_num}: ongeldig gewicht '{weight_raw}'. "
+                f"Standaard 1.0 wordt gebruikt."
+            )
+            weight = 1.0
+
+        # Leerdoelen parsen
+        lo_orders = _parse_learning_objective_orders(
+            row.get("learning_objectives", "")
+        )
+
+        criterion = CsvCriterionRow(
+            criterion_name=criterion_name,
+            category=row.get("category") or None,
+            weight=weight,
+            level1=row.get("level1", ""),
+            level2=row.get("level2", ""),
+            level3=row.get("level3", ""),
+            level4=row.get("level4", ""),
+            level5=row.get("level5", ""),
+            learning_objective_orders=lo_orders,
+        )
+        rubric_map[rubric_title].criteria.append(criterion)
+
+    rubric_groups = [rubric_map[title] for title in rubric_order]
+
+    # Valideer en normaliseer gewichten per rubric
+    for group in rubric_groups:
+        if not group.criteria:
+            continue
+        total_weight = sum(c.weight for c in group.criteria)
+        if abs(total_weight - 1.0) > 0.01 and total_weight > 0:
+            warnings.append(
+                f"Rubric '{group.rubric_title}': totaal gewicht is "
+                f"{total_weight:.4f}, wordt genormaliseerd naar 1.0."
+            )
+            for c in group.criteria:
+                c.weight = c.weight / total_weight
+
+    return rubric_groups, errors, warnings
+
+
+def _lookup_learning_objectives(
+    db: Session,
+    orders: List[int],
+    school_id: int,
+    rubric_title: str,
+    criterion_name: str,
+    warnings: List[str],
+) -> List[int]:
+    """
+    Zoek LearningObjective IDs op basis van order-nummers.
+    Alleen is_template=True objecten mogen worden gekoppeld.
+    """
+    lo_ids: List[int] = []
+    for order in orders:
+        results = (
+            db.execute(
+                select(LearningObjective).where(
+                    LearningObjective.school_id == school_id,
+                    LearningObjective.is_template.is_(True),
+                    LearningObjective.order == order,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if not results:
+            warnings.append(
+                f"Rubric '{rubric_title}', criterium '{criterion_name}': "
+                f"leerdoel met nummer {order} niet gevonden."
+            )
+        elif len(results) > 1:
+            warnings.append(
+                f"Rubric '{rubric_title}', criterium '{criterion_name}': "
+                f"meerdere leerdoelen met nummer {order} gevonden. "
+                f"Eerste match wordt gebruikt."
+            )
+            lo_ids.append(results[0].id)
+        else:
+            lo_ids.append(results[0].id)
+    return lo_ids
+
+
+def _resolve_learning_objectives_for_preview(
+    db: Session,
+    orders: List[int],
+    school_id: int,
+) -> List[ResolvedLearningObjective]:
+    """
+    Zoek LearningObjective informatie op voor preview (geen opslag).
+    """
+    resolved: List[ResolvedLearningObjective] = []
+    for order in orders:
+        results = (
+            db.execute(
+                select(LearningObjective).where(
+                    LearningObjective.school_id == school_id,
+                    LearningObjective.is_template.is_(True),
+                    LearningObjective.order == order,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if results:
+            lo = results[0]
+            resolved.append(
+                ResolvedLearningObjective(
+                    order=order,
+                    found=True,
+                    title=lo.title,
+                    domain=lo.domain,
+                )
+            )
+        else:
+            resolved.append(ResolvedLearningObjective(order=order, found=False))
+    return resolved
+
+
+@router.post(
+    "/import-csv/preview",
+    response_model=CsvPreviewResult,
+    status_code=status.HTTP_200_OK,
+)
+async def preview_csv_import(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Preview de CSV import: parseert en valideert maar slaat NIET op in de database.
+    Retourneert per rubric een overzicht met criteria en resolved leerdoelen.
+    """
+    content_type = file.content_type or ""
+    if (
+        content_type not in ALLOWED_CONTENT_TYPES
+        and not (file.filename or "").endswith(".csv")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Alleen CSV-bestanden zijn toegestaan.",
+        )
+
+    content = await file.read()
+    text = _decode_file(content)
+
+    rubric_groups, errors, warnings = _parse_csv(text)
+
+    if errors:
+        return CsvPreviewResult(errors=errors, warnings=warnings, valid=False)
+
+    preview_rubrics: List[PreviewRubric] = []
+
+    for group in rubric_groups:
+        preview_criteria: List[PreviewCriterion] = []
+        for c in group.criteria:
+            resolved_los = _resolve_learning_objectives_for_preview(
+                db, c.learning_objective_orders, user.school_id
+            )
+            has_descriptors = any(
+                [c.level1, c.level2, c.level3, c.level4, c.level5]
+            )
+            preview_criteria.append(
+                PreviewCriterion(
+                    name=c.criterion_name,
+                    category=c.category,
+                    weight=round(c.weight, 4),
+                    has_descriptors=has_descriptors,
+                    learning_objectives=resolved_los,
+                )
+            )
+        preview_rubrics.append(
+            PreviewRubric(
+                title=group.rubric_title,
+                scope=group.scope,
+                criteria_count=len(group.criteria),
+                criteria=preview_criteria,
+            )
+        )
+
+    return CsvPreviewResult(
+        rubrics=preview_rubrics,
+        errors=errors,
+        warnings=warnings,
+        valid=len(errors) == 0,
+    )
+
+
+@router.post(
+    "/import-csv",
+    response_model=CsvImportResult,
+    status_code=status.HTTP_200_OK,
+)
+async def import_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Importeer rubrics uit een CSV-bestand.
+    Maakt Rubric, RubricCriterion en RubricCriterionLearningObjective records aan.
+    """
+    content_type = file.content_type or ""
+    if (
+        content_type not in ALLOWED_CONTENT_TYPES
+        and not (file.filename or "").endswith(".csv")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Alleen CSV-bestanden zijn toegestaan.",
+        )
+
+    content = await file.read()
+    text = _decode_file(content)
+
+    rubric_groups, errors, warnings = _parse_csv(text)
+
+    if errors:
+        return CsvImportResult(errors=errors, warnings=warnings)
+
+    created_rubrics = 0
+    created_criteria = 0
+    linked_objectives = 0
+    rubric_ids: List[int] = []
+
+    for group in rubric_groups:
+        # Rubric aanmaken
+        rubric = Rubric(
+            school_id=user.school_id,
+            title=group.rubric_title,
+            description=group.rubric_description,
+            scale_min=group.scale_min,
+            scale_max=group.scale_max,
+            scope=group.scope,
+            target_level=group.target_level,
+            metadata_json={"imported_from": "csv"},
+        )
+        db.add(rubric)
+        db.flush()
+        rubric_ids.append(rubric.id)
+        created_rubrics += 1
+
+        for c in group.criteria:
+            descriptors = {
+                "level1": c.level1,
+                "level2": c.level2,
+                "level3": c.level3,
+                "level4": c.level4,
+                "level5": c.level5,
+            }
+            criterion = RubricCriterion(
+                school_id=user.school_id,
+                rubric_id=rubric.id,
+                name=c.criterion_name,
+                weight=c.weight,
+                descriptors=descriptors,
+                category=c.category,
+            )
+            db.add(criterion)
+            db.flush()
+            created_criteria += 1
+
+            # Leerdoelen koppelen
+            lo_ids = _lookup_learning_objectives(
+                db,
+                c.learning_objective_orders,
+                user.school_id,
+                group.rubric_title,
+                c.criterion_name,
+                warnings,
+            )
+            for lo_id in lo_ids:
+                assoc = RubricCriterionLearningObjective(
+                    school_id=user.school_id,
+                    criterion_id=criterion.id,
+                    learning_objective_id=lo_id,
+                )
+                db.add(assoc)
+                linked_objectives += 1
+
+    db.commit()
+
+    return CsvImportResult(
+        created_rubrics=created_rubrics,
+        created_criteria=created_criteria,
+        linked_objectives=linked_objectives,
+        errors=errors,
+        warnings=warnings,
+        rubric_ids=rubric_ids,
+    )
