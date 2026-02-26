@@ -412,8 +412,6 @@ function SortableCriterionCard({
     });
   };
 
-  const getCharCount = (text: string) => text.length;
-
   const selectedObjectives = learningObjectives.filter((lo) =>
     item.learning_objective_ids?.includes(lo.id)
   );
@@ -561,7 +559,6 @@ function SortableCriterionCard({
             }}
             aria-label="Weging in procent"
           />
-          <span className="text-sm text-gray-500">%</span>
         </label>
         <div className="flex items-center gap-1">
           <button
@@ -602,7 +599,6 @@ function SortableCriterionCard({
         {(["level1", "level2", "level3", "level4", "level5"] as const).map(
           (level, idx) => {
             const text = String(item.descriptors?.[level] ?? "");
-            const charCount = getCharCount(text);
             
             return (
               <div key={level} className="space-y-1">
@@ -616,9 +612,6 @@ function SortableCriterionCard({
                   placeholder={`Beschrijving niveau ${idx + 1}`}
                   aria-label={`Niveau ${idx + 1} beschrijving`}
                 />
-                <div className="text-xs text-gray-400 text-right">
-                  {charCount} tekens
-                </div>
               </div>
             );
           }
