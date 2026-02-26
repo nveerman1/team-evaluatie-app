@@ -1057,6 +1057,17 @@ def get_assessment_teams_overview(
         else:
             status = "completed"
 
+        # Determine updated_by name
+        updated_by_name = None
+        if assessment_team.last_updated_by_id:
+            updated_by_user = (
+                db.query(User)
+                .filter(User.id == assessment_team.last_updated_by_id)
+                .first()
+            )
+            if updated_by_user:
+                updated_by_name = updated_by_user.name
+
         teams_list.append(
             TeamAssessmentStatus(
                 group_id=project_team.id,
@@ -1067,7 +1078,7 @@ def get_assessment_teams_overview(
                 total_criteria=total_criteria,
                 status=status,
                 updated_at=assessment_team.last_updated_at,
-                updated_by=None,  # Can be enhanced later
+                updated_by=updated_by_name,
             )
         )
 
@@ -1161,6 +1172,8 @@ def batch_create_update_scores(
     _get_assessment_with_access_check(db, assessment_id, user)
 
     result = []
+    updated_team_numbers = set()
+
     for score_data in payload.scores:
         # Build filter based on whether this is a student override or team score
         filters = [
@@ -1197,6 +1210,30 @@ def batch_create_update_scores(
             db.add(new_score)
             db.flush()
             result.append(new_score)
+
+        if score_data.team_number is not None:
+            updated_team_numbers.add(score_data.team_number)
+
+    # Update last_updated_at and last_updated_by_id on the assessment team records
+    if updated_team_numbers:
+        from app.infra.db.models import ProjectAssessmentTeam
+
+        now = datetime.now(timezone.utc)
+        for team_num in updated_team_numbers:
+            assessment_team = (
+                db.query(ProjectAssessmentTeam)
+                .join(ProjectTeam, ProjectAssessmentTeam.project_team_id == ProjectTeam.id)
+                .filter(
+                    ProjectAssessmentTeam.project_assessment_id == assessment_id,
+                    ProjectAssessmentTeam.school_id == user.school_id,
+                    ProjectTeam.team_number == team_num,
+                )
+                .first()
+            )
+            if assessment_team:
+                assessment_team.last_updated_at = now
+                assessment_team.last_updated_by_id = user.id
+                db.add(assessment_team)
 
     db.commit()
     return [ProjectAssessmentScoreOut.model_validate(s) for s in result]
