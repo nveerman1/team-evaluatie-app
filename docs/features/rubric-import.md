@@ -35,7 +35,7 @@ criterion_name,category,weight,level1,level2,level3,level4,level5,learning_objec
 | `rubric_description`  | –         | Vrije tekst                                          |
 | `scale_min`           | –         | Standaard `1`                                        |
 | `scale_max`           | –         | Standaard `5`                                        |
-| `category`            | –         | Groepering binnen de rubric                          |
+| `category`            | –         | **Peer**: `Organiseren` · `Meedoen` · `Zelfvertrouwen` · `Autonomie` (OMZA) — **Project**: `Projectproces` · `Eindresultaat` · `Communicatie` |
 | `weight`              | –         | Decimaal gewicht per criterium (worden genormaliseerd naar 1,0) |
 | `level1` … `level5`  | –         | Tekstbeschrijving per schaalniveau                   |
 | `learning_objectives` | –         | Puntkomma-gescheiden `order`-nummers, bijv. `11;13;41` |
@@ -59,10 +59,10 @@ docs/examples/rubric_import_productontwerp_onderbouw.csv
 
 Dit bestand bevat:
 
-| Rubric                        | Scope   | Aantal criteria | Leerdoelen (order-nummers)           |
-|-------------------------------|---------|-----------------|---------------------------------------|
-| Productontwerp Onderbouw      | project | 5               | 11, 13, 14, 16, 17, 18, 20, 21, 22, 25, 41, 42, 43, 44, 45 |
-| Samenwerken Productontwerp    | peer    | 3               | 1, 3, 4, 5, 15, 29                   |
+| Rubric                        | Scope   | Aantal criteria | Categorieën (geldig)                                  | LO orders |
+|-------------------------------|---------|-----------------|-------------------------------------------------------|-----------|
+| Productontwerp Onderbouw      | project | 5               | `Projectproces` (×2), `Eindresultaat` (×2), `Communicatie` (×1) | 11, 13, 14, 16, 17, 18, 20, 21, 22, 25, 41, 42, 43, 44, 45 |
+| Samenwerken Productontwerp    | peer    | 3               | `Meedoen` (×1), `Organiseren` (×1), `Autonomie` (×1)  | 1, 3, 4, 5, 15, 29 |
 
 De order-nummers verwijzen naar de onderbouw-leerdoelen in `backend/data/templates/learning_objectives_onderbouw.json`:
 
