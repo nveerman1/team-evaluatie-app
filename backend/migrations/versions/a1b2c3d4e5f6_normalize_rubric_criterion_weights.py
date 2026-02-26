@@ -6,7 +6,7 @@ This is needed because older seed data stored weight=1.0 per criterion regardles
 of how many criteria a rubric contained.
 
 Revision ID: a1b2c3d4e5f6
-Revises: f9a1b2c3d4e5
+Revises: f3a9c1d2e4b6
 Create Date: 2026-02-26 14:00:00.000000
 
 """
@@ -17,7 +17,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = "a1b2c3d4e5f6"
-down_revision = "f9a1b2c3d4e5"
+down_revision = "f3a9c1d2e4b6"
 branch_labels = None
 depends_on = None
 
