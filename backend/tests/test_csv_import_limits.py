@@ -18,12 +18,18 @@ class TestCSVImportLimits:
             MAX_CSV_FILE_SIZE as ADMIN_MAX_CSV_FILE_SIZE,
         )
         from app.api.v1.routers.admin_students import MAX_CSV_ROWS as ADMIN_MAX_CSV_ROWS
+        from app.api.v1.routers.rubric_import import (
+            MAX_CSV_FILE_SIZE as RUBRIC_MAX_CSV_FILE_SIZE,
+            MAX_CSV_ROWS as RUBRIC_MAX_CSV_ROWS,
+        )
 
         # Verify limits are defined
         assert MAX_CSV_FILE_SIZE == 10 * 1024 * 1024  # 10MB
         assert MAX_CSV_ROWS == 10000
         assert ADMIN_MAX_CSV_FILE_SIZE == 10 * 1024 * 1024  # 10MB
         assert ADMIN_MAX_CSV_ROWS == 10000
+        assert RUBRIC_MAX_CSV_FILE_SIZE == 10 * 1024 * 1024  # 10MB
+        assert RUBRIC_MAX_CSV_ROWS == 10000
 
     @pytest.mark.asyncio
     async def test_teachers_csv_rejects_oversized_file(self):
@@ -212,3 +218,95 @@ class TestCSVImportLimits:
         # Should succeed without raising exception
         assert result is not None
         assert "created" in result or "updated" in result
+
+    @pytest.mark.asyncio
+    async def test_rubric_csv_rejects_oversized_file(self):
+        """Test that rubric CSV import rejects files over 10MB"""
+        from app.api.v1.routers.rubric_import import import_csv, MAX_CSV_FILE_SIZE
+        from fastapi import HTTPException
+        from unittest.mock import AsyncMock
+
+        large_row = (
+            b"peer,onderbouw,Rubric Title,Description,1,5,"
+            b"Criterion Name,Category,0.25,Level1,Level2,Level3,Level4,Level5,\n"
+        )
+        large_content = (
+            b"scope,target_level,rubric_title,rubric_description,scale_min,scale_max,"
+            b"criterion_name,category,weight,level1,level2,level3,level4,level5,"
+            b"learning_objectives\n"
+            + large_row * (MAX_CSV_FILE_SIZE // len(large_row) + 10)
+        )
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.filename = "rubrics.csv"
+        mock_file.content_type = "text/csv"
+        mock_file.read = AsyncMock(return_value=large_content)
+
+        mock_db = Mock()
+        mock_user = Mock()
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_csv(file=mock_file, db=mock_db, user=mock_user)
+
+        assert exc_info.value.status_code == 400
+        assert "te groot" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_rubric_csv_rejects_too_many_rows(self):
+        """Test that rubric CSV import rejects files with more than 10,000 rows"""
+        from app.api.v1.routers.rubric_import import import_csv, MAX_CSV_ROWS
+        from fastapi import HTTPException
+        from unittest.mock import AsyncMock
+
+        csv_header = (
+            "scope,target_level,rubric_title,rubric_description,scale_min,scale_max,"
+            "criterion_name,category,weight,level1,level2,level3,level4,level5,"
+            "learning_objectives\n"
+        )
+        csv_rows = "\n".join(
+            [
+                f"peer,onderbouw,Rubric {i % 10},Desc,1,5,Criterion {i},Cat,0.25,L1,L2,L3,L4,L5,"
+                for i in range(MAX_CSV_ROWS + 10)
+            ]
+        )
+        csv_content = (csv_header + csv_rows).encode("utf-8")
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.filename = "rubrics.csv"
+        mock_file.content_type = "text/csv"
+        mock_file.read = AsyncMock(return_value=csv_content)
+
+        mock_db = Mock()
+        mock_user = Mock()
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_csv(file=mock_file, db=mock_db, user=mock_user)
+
+        assert exc_info.value.status_code == 400
+        assert "te veel rijen" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_rubric_csv_rejects_invalid_content_type(self):
+        """Test that rubric CSV import rejects non-CSV files"""
+        from app.api.v1.routers.rubric_import import import_csv
+        from fastapi import HTTPException
+        from unittest.mock import AsyncMock
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.filename = "rubrics.xlsx"
+        mock_file.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mock_file.read = AsyncMock(return_value=b"fake xlsx content")
+
+        mock_db = Mock()
+        mock_user = Mock()
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_csv(file=mock_file, db=mock_db, user=mock_user)
+
+        assert exc_info.value.status_code == 400

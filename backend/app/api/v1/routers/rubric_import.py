@@ -32,6 +32,10 @@ VALID_SCOPES = {"peer", "project"}
 VALID_TARGET_LEVELS = {"onderbouw", "bovenbouw"}
 ALLOWED_CONTENT_TYPES = {"text/csv", "text/plain", "application/vnd.ms-excel"}
 
+# DoS protection – same limits as teachers.py / admin_students.py
+MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_CSV_ROWS = 10_000  # maximum number of data rows
+
 
 def _decode_file(content: bytes) -> str:
     """Decodeer met utf-8-sig (Excel BOM), fallback naar latin-1."""
@@ -54,6 +58,20 @@ def _parse_learning_objective_orders(raw: str) -> List[int]:
             except ValueError:
                 pass
     return result
+
+
+def _check_row_limit(text: str) -> None:
+    """
+    Gooi HTTPException als het CSV meer dan MAX_CSV_ROWS gegevensrijen heeft.
+    Consistent met de check in teachers.py / admin_students.py.
+    """
+    # Snelle telbenadering: tel newlines, trek de kopregel af
+    data_lines = text.count("\n") - 1
+    if data_lines > MAX_CSV_ROWS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Te veel rijen in CSV. Maximum is {MAX_CSV_ROWS} rijen.",
+        )
 
 
 def _parse_csv(
@@ -108,8 +126,11 @@ def _parse_csv(
     # Groepeer rijen per rubric_title
     rubric_map: Dict[str, CsvRubricGroup] = {}
     rubric_order: List[str] = []
+    row_count = 0
 
     for row_num, raw_row in enumerate(reader, start=2):
+        row_count += 1
+
         row = {k.strip().lower(): (v or "").strip() for k, v in raw_row.items() if k}
 
         rubric_title = row.get("rubric_title", "").strip()
@@ -190,6 +211,9 @@ def _parse_csv(
 
     rubric_groups = [rubric_map[title] for title in rubric_order]
 
+    if row_count == 0:
+        warnings.append("CSV-bestand bevat geen gegevensrijen.")
+
     # Valideer en normaliseer gewichten per rubric
     for group in rubric_groups:
         if not group.criteria:
@@ -206,71 +230,78 @@ def _parse_csv(
     return rubric_groups, errors, warnings
 
 
-def _lookup_learning_objectives(
+def _batch_fetch_learning_objectives(
     db: Session,
     orders: List[int],
     school_id: int,
+) -> Dict[int, List[LearningObjective]]:
+    """
+    Haal alle gevraagde leerdoelen op in één query (batch).
+    Retourneert een dict: order → list[LearningObjective].
+    Alleen is_template=True objecten worden meegenomen.
+    """
+    if not orders:
+        return {}
+    results = (
+        db.execute(
+            select(LearningObjective).where(
+                LearningObjective.school_id == school_id,
+                LearningObjective.is_template.is_(True),
+                LearningObjective.order.in_(orders),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    lookup: Dict[int, List[LearningObjective]] = {}
+    for lo in results:
+        lookup.setdefault(lo.order, []).append(lo)
+    return lookup
+
+
+def _lookup_lo_ids_from_cache(
+    cache: Dict[int, List[LearningObjective]],
+    orders: List[int],
     rubric_title: str,
     criterion_name: str,
     warnings: List[str],
 ) -> List[int]:
     """
-    Zoek LearningObjective IDs op basis van order-nummers.
-    Alleen is_template=True objecten mogen worden gekoppeld.
+    Zet order-nummers om naar LearningObjective IDs via de batch-cache.
+    Geeft waarschuwingen als een nummer niet gevonden is of meerdere matches heeft.
     """
     lo_ids: List[int] = []
     for order in orders:
-        results = (
-            db.execute(
-                select(LearningObjective).where(
-                    LearningObjective.school_id == school_id,
-                    LearningObjective.is_template.is_(True),
-                    LearningObjective.order == order,
-                )
-            )
-            .scalars()
-            .all()
-        )
-        if not results:
+        matches = cache.get(order, [])
+        if not matches:
             warnings.append(
                 f"Rubric '{rubric_title}', criterium '{criterion_name}': "
                 f"leerdoel met nummer {order} niet gevonden."
             )
-        elif len(results) > 1:
+        elif len(matches) > 1:
             warnings.append(
                 f"Rubric '{rubric_title}', criterium '{criterion_name}': "
                 f"meerdere leerdoelen met nummer {order} gevonden. "
                 f"Eerste match wordt gebruikt."
             )
-            lo_ids.append(results[0].id)
+            lo_ids.append(matches[0].id)
         else:
-            lo_ids.append(results[0].id)
+            lo_ids.append(matches[0].id)
     return lo_ids
 
 
-def _resolve_learning_objectives_for_preview(
-    db: Session,
+def _resolve_lo_for_preview_from_cache(
+    cache: Dict[int, List[LearningObjective]],
     orders: List[int],
-    school_id: int,
 ) -> List[ResolvedLearningObjective]:
     """
-    Zoek LearningObjective informatie op voor preview (geen opslag).
+    Zet order-nummers om naar ResolvedLearningObjective objecten via de batch-cache.
     """
     resolved: List[ResolvedLearningObjective] = []
     for order in orders:
-        results = (
-            db.execute(
-                select(LearningObjective).where(
-                    LearningObjective.school_id == school_id,
-                    LearningObjective.is_template.is_(True),
-                    LearningObjective.order == order,
-                )
-            )
-            .scalars()
-            .all()
-        )
-        if results:
-            lo = results[0]
+        matches = cache.get(order, [])
+        if matches:
+            lo = matches[0]
             resolved.append(
                 ResolvedLearningObjective(
                     order=order,
@@ -282,6 +313,19 @@ def _resolve_learning_objectives_for_preview(
         else:
             resolved.append(ResolvedLearningObjective(order=order, found=False))
     return resolved
+
+
+def _collect_all_lo_orders(rubric_groups: List[CsvRubricGroup]) -> List[int]:
+    """Verzamel alle unieke leerdoel-order-nummers uit alle criteria."""
+    orders: List[int] = []
+    seen: set = set()
+    for group in rubric_groups:
+        for c in group.criteria:
+            for o in c.learning_objective_orders:
+                if o not in seen:
+                    seen.add(o)
+                    orders.append(o)
+    return orders
 
 
 @router.post(
@@ -309,20 +353,35 @@ async def preview_csv_import(
         )
 
     content = await file.read()
+
+    if len(content) > MAX_CSV_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Bestand te groot. Maximum is "
+                f"{MAX_CSV_FILE_SIZE // (1024 * 1024)} MB."
+            ),
+        )
+
     text = _decode_file(content)
+    _check_row_limit(text)
 
     rubric_groups, errors, warnings = _parse_csv(text)
 
     if errors:
         return CsvPreviewResult(errors=errors, warnings=warnings, valid=False)
 
+    # Batch-fetch alle benodigde leerdoelen in één query
+    all_orders = _collect_all_lo_orders(rubric_groups)
+    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id)
+
     preview_rubrics: List[PreviewRubric] = []
 
     for group in rubric_groups:
         preview_criteria: List[PreviewCriterion] = []
         for c in group.criteria:
-            resolved_los = _resolve_learning_objectives_for_preview(
-                db, c.learning_objective_orders, user.school_id
+            resolved_los = _resolve_lo_for_preview_from_cache(
+                lo_cache, c.learning_objective_orders
             )
             has_descriptors = any(
                 [c.level1, c.level2, c.level3, c.level4, c.level5]
@@ -378,12 +437,27 @@ async def import_csv(
         )
 
     content = await file.read()
+
+    if len(content) > MAX_CSV_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Bestand te groot. Maximum is "
+                f"{MAX_CSV_FILE_SIZE // (1024 * 1024)} MB."
+            ),
+        )
+
     text = _decode_file(content)
+    _check_row_limit(text)
 
     rubric_groups, errors, warnings = _parse_csv(text)
 
     if errors:
         return CsvImportResult(errors=errors, warnings=warnings)
+
+    # Batch-fetch alle benodigde leerdoelen in één query
+    all_orders = _collect_all_lo_orders(rubric_groups)
+    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id)
 
     created_rubrics = 0
     created_criteria = 0
@@ -427,11 +501,10 @@ async def import_csv(
             db.flush()
             created_criteria += 1
 
-            # Leerdoelen koppelen
-            lo_ids = _lookup_learning_objectives(
-                db,
+            # Leerdoelen koppelen via batch-cache
+            lo_ids = _lookup_lo_ids_from_cache(
+                lo_cache,
                 c.learning_objective_orders,
-                user.school_id,
                 group.rubric_title,
                 c.criterion_name,
                 warnings,
