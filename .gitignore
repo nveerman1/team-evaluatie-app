@@ -33,6 +33,8 @@ frontend/node_modules/
 
 # Ignore generated CSV exports
 *.csv
+# But keep example CSV files checked in for documentation purposes
+!docs/examples/*.csv
 *:Zone.Identifier
 
 # Virtual environments

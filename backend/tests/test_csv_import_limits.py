@@ -18,12 +18,18 @@ class TestCSVImportLimits:
             MAX_CSV_FILE_SIZE as ADMIN_MAX_CSV_FILE_SIZE,
         )
         from app.api.v1.routers.admin_students import MAX_CSV_ROWS as ADMIN_MAX_CSV_ROWS
+        from app.api.v1.routers.rubric_import import (
+            MAX_CSV_FILE_SIZE as RUBRIC_MAX_CSV_FILE_SIZE,
+            MAX_CSV_ROWS as RUBRIC_MAX_CSV_ROWS,
+        )
 
         # Verify limits are defined
         assert MAX_CSV_FILE_SIZE == 10 * 1024 * 1024  # 10MB
         assert MAX_CSV_ROWS == 10000
         assert ADMIN_MAX_CSV_FILE_SIZE == 10 * 1024 * 1024  # 10MB
         assert ADMIN_MAX_CSV_ROWS == 10000
+        assert RUBRIC_MAX_CSV_FILE_SIZE == 10 * 1024 * 1024  # 10MB
+        assert RUBRIC_MAX_CSV_ROWS == 10000
 
     @pytest.mark.asyncio
     async def test_teachers_csv_rejects_oversized_file(self):
@@ -212,3 +218,172 @@ class TestCSVImportLimits:
         # Should succeed without raising exception
         assert result is not None
         assert "created" in result or "updated" in result
+
+    @pytest.mark.asyncio
+    async def test_rubric_csv_rejects_oversized_file(self):
+        """Test that rubric CSV import rejects files over 10MB"""
+        from app.api.v1.routers.rubric_import import import_csv, MAX_CSV_FILE_SIZE
+        from fastapi import HTTPException
+        from unittest.mock import AsyncMock
+
+        large_row = (
+            b"peer,onderbouw,Rubric Title,Description,1,5,"
+            b"Criterion Name,Category,0.25,Level1,Level2,Level3,Level4,Level5,\n"
+        )
+        large_content = (
+            b"scope,target_level,rubric_title,rubric_description,scale_min,scale_max,"
+            b"criterion_name,category,weight,level1,level2,level3,level4,level5,"
+            b"learning_objectives\n"
+            + large_row * (MAX_CSV_FILE_SIZE // len(large_row) + 10)
+        )
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.filename = "rubrics.csv"
+        mock_file.content_type = "text/csv"
+        mock_file.read = AsyncMock(return_value=large_content)
+
+        mock_db = Mock()
+        mock_user = Mock()
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_csv(file=mock_file, db=mock_db, user=mock_user)
+
+        assert exc_info.value.status_code == 400
+        assert "te groot" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_rubric_csv_rejects_too_many_rows(self):
+        """Test that rubric CSV import rejects files with more than 10,000 rows"""
+        from app.api.v1.routers.rubric_import import import_csv, MAX_CSV_ROWS
+        from fastapi import HTTPException
+        from unittest.mock import AsyncMock
+
+        csv_header = (
+            "scope,target_level,rubric_title,rubric_description,scale_min,scale_max,"
+            "criterion_name,category,weight,level1,level2,level3,level4,level5,"
+            "learning_objectives\n"
+        )
+        csv_rows = "\n".join(
+            [
+                f"peer,onderbouw,Rubric {i % 10},Desc,1,5,Criterion {i},Cat,0.25,L1,L2,L3,L4,L5,"
+                for i in range(MAX_CSV_ROWS + 10)
+            ]
+        )
+        csv_content = (csv_header + csv_rows).encode("utf-8")
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.filename = "rubrics.csv"
+        mock_file.content_type = "text/csv"
+        mock_file.read = AsyncMock(return_value=csv_content)
+
+        mock_db = Mock()
+        mock_user = Mock()
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_csv(file=mock_file, db=mock_db, user=mock_user)
+
+        assert exc_info.value.status_code == 400
+        assert "te veel rijen" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_rubric_csv_rejects_invalid_content_type(self):
+        """Test that rubric CSV import rejects non-CSV files"""
+        from app.api.v1.routers.rubric_import import import_csv
+        from fastapi import HTTPException
+        from unittest.mock import AsyncMock
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.filename = "rubrics.xlsx"
+        mock_file.content_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        mock_file.read = AsyncMock(return_value=b"fake xlsx content")
+
+        mock_db = Mock()
+        mock_user = Mock()
+        mock_user.school_id = 1
+        mock_user.role = "teacher"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_csv(file=mock_file, db=mock_db, user=mock_user)
+
+        assert exc_info.value.status_code == 400
+
+    def test_lookup_lo_ids_filters_by_phase(self):
+        """Test that _lookup_lo_ids_from_cache filters matches by phase when provided"""
+        from unittest.mock import Mock
+
+        from app.api.v1.routers.rubric_import import _lookup_lo_ids_from_cache
+
+        ob_lo = Mock()
+        ob_lo.id = 1
+        ob_lo.phase = "onderbouw"
+
+        bb_lo = Mock()
+        bb_lo.id = 2
+        bb_lo.phase = "bovenbouw"
+
+        # Both phases share order number 4
+        cache = {4: [ob_lo, bb_lo]}
+        warnings = []
+
+        # With phase="onderbouw" – should return only the onderbouw LO, no warning
+        ids = _lookup_lo_ids_from_cache(
+            cache, [4], "Rubric", "Criterion", warnings, "onderbouw"
+        )
+        assert ids == [1]
+        assert warnings == []
+
+        # With phase="bovenbouw" – should return only the bovenbouw LO, no warning
+        ids = _lookup_lo_ids_from_cache(
+            cache, [4], "Rubric", "Criterion", warnings, "bovenbouw"
+        )
+        assert ids == [2]
+        assert warnings == []
+
+        # Without phase – should still pick first and emit warning
+        ids = _lookup_lo_ids_from_cache(cache, [4], "Rubric", "Criterion", warnings)
+        assert ids == [1]
+        assert len(warnings) == 1
+        assert "meerdere leerdoelen" in warnings[0]
+
+    def test_resolve_lo_for_preview_filters_by_phase(self):
+        """Test that _resolve_lo_for_preview_from_cache filters matches by phase"""
+        from unittest.mock import Mock
+
+        from app.api.v1.routers.rubric_import import _resolve_lo_for_preview_from_cache
+
+        ob_lo = Mock()
+        ob_lo.id = 1
+        ob_lo.phase = "onderbouw"
+        ob_lo.title = "Leerdoel onderbouw"
+        ob_lo.domain = "A"
+
+        bb_lo = Mock()
+        bb_lo.id = 2
+        bb_lo.phase = "bovenbouw"
+        bb_lo.title = "Leerdoel bovenbouw"
+        bb_lo.domain = "A"
+
+        cache = {3: [ob_lo, bb_lo]}
+
+        # With phase="onderbouw" – resolves to the onderbouw LO
+        resolved = _resolve_lo_for_preview_from_cache(cache, [3], "onderbouw")
+        assert len(resolved) == 1
+        assert resolved[0].found is True
+        assert resolved[0].title == "Leerdoel onderbouw"
+
+        # With phase="bovenbouw" – resolves to the bovenbouw LO
+        resolved = _resolve_lo_for_preview_from_cache(cache, [3], "bovenbouw")
+        assert len(resolved) == 1
+        assert resolved[0].found is True
+        assert resolved[0].title == "Leerdoel bovenbouw"
+
+        # Without phase – still resolves (uses first match)
+        resolved = _resolve_lo_for_preview_from_cache(cache, [3])
+        assert len(resolved) == 1
+        assert resolved[0].found is True

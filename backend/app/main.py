@@ -7,6 +7,7 @@ from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.middleware.sliding_session import SlidingSessionMiddleware
 import logging
 
+from app.api.v1.routers import rubric_import as rubric_import_router
 from app.api.v1.routers import rubrics as rubrics_router
 from app.api.v1.routers import evaluations as evaluations_router
 from app.api.v1.routers import allocations as allocations_router
@@ -103,6 +104,7 @@ def health():
 
 # Mount v1
 api_v1 = APIRouter(prefix=settings.API_V1_PREFIX)
+api_v1.include_router(rubric_import_router.router)  # VOOR rubrics_router!
 api_v1.include_router(rubrics_router.router)
 api_v1.include_router(evaluations_router.router)
 api_v1.include_router(allocations_router.router)
