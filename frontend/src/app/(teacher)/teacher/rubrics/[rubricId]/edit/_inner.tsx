@@ -46,6 +46,14 @@ const EMPTY_DESC = {
   level5: "",
 };
 
+// Maps lowercase project category names (stored in DB / seed data) to the capitalized
+// values expected by RubricEditor's PROJECT_CATEGORIES.
+const PROJECT_CATEGORY_NORM: Record<string, string> = {
+  "projectproces": "Projectproces",
+  "eindresultaat": "Eindresultaat",
+  "communicatie": "Communicatie",
+};
+
 export default function EditRubricPageInner() {
   const { rubricId } = useParams<{ rubricId: string }>();
   const router = useRouter();
@@ -144,7 +152,7 @@ export default function EditRubricPageInner() {
           id: ci.id,
           name: ci.name,
           weight: ci.weight * 100,
-          category: ci.category ?? null,
+          category: (ci.category ? (PROJECT_CATEGORY_NORM[ci.category] ?? ci.category) : null),
           order: ci.order ?? null,
           descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
           learning_objective_ids: ci.learning_objective_ids || [],
