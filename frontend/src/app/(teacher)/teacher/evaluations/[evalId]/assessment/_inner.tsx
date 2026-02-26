@@ -545,7 +545,7 @@ export default function CombinedAssessmentInner() {
 
   const applyPeerScoresAll = useCallback(async () => {
     if (!evalIdNum) return;
-    const updates: Array<{ student_id: number; category: string; score: number | null }> = [];
+    const updates: Array<{ student_id: number; category: string; score: number }> = [];
     const newScores = { ...teacherScores };
 
     rows.forEach((row) => {

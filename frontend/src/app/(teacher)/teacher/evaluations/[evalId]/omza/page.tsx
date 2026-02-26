@@ -389,7 +389,7 @@ export default function OMZAOverviewPage() {
   const applyPeerScoresAll = useCallback(async () => {
     if (!omzaData || !evalIdNum) return;
     
-    const updates: Array<{ student_id: number; category: string; score: number | null }> = [];
+    const updates: Array<{ student_id: number; category: string; score: number }> = [];
     const newScores: Record<string, number | null> = { ...teacherScores };
     
     omzaData.students.forEach((student) => {

@@ -350,7 +350,9 @@ def test_scoring_endpoint_pattern_matching():
     )
 
     assert not middleware._is_authenticated_teacher_scoring(
-        mock_request("/api/v1/omza/evaluations/1/teacher-score/extra")  # extra path segment
+        mock_request(
+            "/api/v1/omza/evaluations/1/teacher-score/extra"
+        )  # extra path segment
     )
 
 
