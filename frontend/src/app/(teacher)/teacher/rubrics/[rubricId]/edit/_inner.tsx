@@ -139,11 +139,11 @@ export default function EditRubricPageInner() {
         ]);
         if (!mounted) return;
         setRubric(r.data);
-        // Map items from API response
+        // Map items from API response, converting weights from 0-1 to 0-100%
         const mappedItems = (c.data || []).map((ci) => ({
           id: ci.id,
           name: ci.name,
-          weight: ci.weight,
+          weight: ci.weight * 100,
           category: ci.category ?? null,
           order: ci.order ?? null,
           descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
@@ -375,7 +375,7 @@ export default function EditRubricPageInner() {
 
       newItems = selectedTemplates.map((template, idx) => ({
         name: template.title,
-        weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
+        weight: 100 / (items.length + selectedTemplates.length), // Adjust weight in %
         category: categoryMap[template.omza_category] || template.omza_category,
         order: maxOrder + idx + 1,
         descriptors: {
@@ -399,7 +399,7 @@ export default function EditRubricPageInner() {
 
       newItems = selectedTemplates.map((template, idx) => ({
         name: template.title,
-        weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
+        weight: 100 / (items.length + selectedTemplates.length), // Adjust weight in %
         category: categoryMap[template.category] || template.category,
         order: maxOrder + idx + 1,
         descriptors: {
@@ -429,11 +429,18 @@ export default function EditRubricPageInner() {
     setError(null);
     setInfo(null);
     try {
+      const totalPct = items.reduce((s, it) => s + (Number(it.weight) || 0), 0);
+      if (Math.abs(totalPct - 100) > 1) {
+        setError(
+          `Totale weging is ${totalPct.toFixed(1)}%, moet 100% zijn (±1%). Pas de wegingen aan.`
+        );
+        return;
+      }
       const payload = {
         items: items.map((it, i) => ({
           id: it.id ?? undefined,
           name: it.name?.trim() || `Criterium ${i + 1}`,
-          weight: Number(it.weight) || 1.0,
+          weight: (Number(it.weight) || 0) / 100,
           category: it.category ?? null,
           order: i + 1,  // Use array index as global order, not per-category order
           descriptors: {
@@ -450,13 +457,13 @@ export default function EditRubricPageInner() {
         `/rubrics/${rubric.id}/criteria/batch`,
         payload,
       );
-      // reflecteer response
+      // reflecteer response - convert weights back to % for display
       const back = (res.data?.items || []) as CriterionOut[];
       setItems(
         back.map((ci, i) => ({
           id: ci.id,
           name: ci.name,
-          weight: ci.weight,
+          weight: ci.weight * 100,
           category: ci.category ?? null,
           order: ci.order ?? i + 1,
           descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },

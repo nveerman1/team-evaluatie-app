@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------- Helpers ----------
 
@@ -167,6 +167,20 @@ class CriterionUpsertItem(BaseModel):
 
 class CriterionBatchUpsertRequest(BaseModel):
     items: List[CriterionUpsertItem]
+
+    @model_validator(mode="after")
+    def check_weights(self) -> "CriterionBatchUpsertRequest":
+        if not self.items:
+            return self
+        weights = [item.weight for item in self.items]
+        if any(w < 0 for w in weights):
+            raise ValueError("Weights must be non-negative")
+        total = sum(weights)
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(
+                f"Sum of weights must be approximately 1.0 (got {total:.4f})"
+            )
+        return self
 
 
 class CriterionBatchUpsertResponse(BaseModel):

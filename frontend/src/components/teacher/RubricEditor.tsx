@@ -142,7 +142,7 @@ export default function RubricEditor({
     const maxOrder = items.reduce((m, it) => Math.max(m, it.order ?? 0), 0);
     const newItem: CriterionItem = {
       name: "Nieuw criterium",
-      weight: 1.0,
+      weight: 0,
       category,
       order: maxOrder + 1,
       descriptors: { ...EMPTY_DESC },
@@ -294,7 +294,7 @@ export default function RubricEditor({
               </button>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-600">
-                  Weging: <strong>{categoryWeight.toFixed(2)}</strong>
+                  Weging: <strong>{categoryWeight.toFixed(1)}%</strong>
                 </span>
                 <button
                   onClick={() => addCriterion(cat.value)}
@@ -351,17 +351,17 @@ export default function RubricEditor({
           <div className="flex items-center gap-6">
             <div className="text-sm">
               <span className="text-gray-600">Totale weging: </span>
-              <strong className={totalWeight === 1.0 ? "text-green-600" : "text-orange-600"}>
-                {totalWeight.toFixed(2)}
+              <strong className={Math.abs(totalWeight - 100) <= 1 ? "text-green-600" : "text-orange-600"}>
+                {totalWeight.toFixed(1)}%
               </strong>
               <span className="text-gray-500 ml-2">
-                {totalWeight !== 1.0 && "(streef 1.0)"}
+                {Math.abs(totalWeight - 100) > 1 && "(streef 100%)"}
               </span>
             </div>
             {categories.map((cat) => (
               <div key={cat.value} className="text-sm">
                 <span className="text-gray-600">{cat.value}: </span>
-                <strong>{weightsByCategory[cat.value].toFixed(2)}</strong>
+                <strong>{weightsByCategory[cat.value].toFixed(1)}%</strong>
               </div>
             ))}
           </div>
@@ -547,19 +547,21 @@ function SortableCriterionCard({
         )}
 
         <label className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Weging:</span>
+          <span className="text-sm text-gray-600">Weging (%):</span>
           <input
             type="number"
             step="0.1"
             min="0"
+            max="100"
             className="w-20 border border-slate-200 rounded-xl px-2 py-2 bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white text-sm transition"
             value={Number.isFinite(item.weight) ? item.weight : 0}
             onChange={(e) => {
               const value = e.target.valueAsNumber;
               onUpdate(index, { weight: Number.isNaN(value) ? 0 : value });
             }}
-            aria-label="Weging"
+            aria-label="Weging in procent"
           />
+          <span className="text-sm text-gray-500">%</span>
         </label>
         <div className="flex items-center gap-1">
           <button
