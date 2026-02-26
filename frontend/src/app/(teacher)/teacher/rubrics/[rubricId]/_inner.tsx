@@ -246,7 +246,7 @@ export default function EditRubricPageInner() {
                   }
                 />
               </div>
-              <div className="flex items-center gap-1">
+              <div>
                 <input
                   type="number"
                   step="0.1"
@@ -264,7 +264,6 @@ export default function EditRubricPageInner() {
                     )
                   }
                 />
-                <span className="text-gray-500">%</span>
               </div>
               <div>
                 <textarea
