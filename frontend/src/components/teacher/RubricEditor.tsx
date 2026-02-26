@@ -412,8 +412,6 @@ function SortableCriterionCard({
     });
   };
 
-  const getCharCount = (text: string) => text.length;
-
   const selectedObjectives = learningObjectives.filter((lo) =>
     item.learning_objective_ids?.includes(lo.id)
   );
@@ -601,25 +599,19 @@ function SortableCriterionCard({
         {(["level1", "level2", "level3", "level4", "level5"] as const).map(
           (level, idx) => {
             const text = String(item.descriptors?.[level] ?? "");
-            const charCount = getCharCount(text);
             
             return (
               <div key={level} className="space-y-1">
                 <label className="block text-xs font-medium text-gray-600">
                   Niveau {idx + 1}
                 </label>
-                <div className="relative">
-                  <textarea
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 pb-5 text-sm resize-y min-h-[96px] bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white transition"
-                    value={text}
-                    onChange={(e) => handleDescriptorChange(level, e.target.value)}
-                    placeholder={`Beschrijving niveau ${idx + 1}`}
-                    aria-label={`Niveau ${idx + 1} beschrijving`}
-                  />
-                  <span className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] text-slate-400">
-                    {charCount} tekens
-                  </span>
-                </div>
+                <textarea
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-y min-h-[96px] bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white transition"
+                  value={text}
+                  onChange={(e) => handleDescriptorChange(level, e.target.value)}
+                  placeholder={`Beschrijving niveau ${idx + 1}`}
+                  aria-label={`Niveau ${idx + 1} beschrijving`}
+                />
               </div>
             );
           }
