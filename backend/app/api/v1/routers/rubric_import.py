@@ -234,22 +234,25 @@ def _batch_fetch_learning_objectives(
     db: Session,
     orders: List[int],
     school_id: int,
+    subject_id: Optional[int] = None,
 ) -> Dict[int, List[LearningObjective]]:
     """
     Haal alle gevraagde leerdoelen op in één query (batch).
     Retourneert een dict: order → list[LearningObjective].
     Alleen is_template=True objecten worden meegenomen.
+    Wanneer subject_id opgegeven is, worden alleen leerdoelen van dat vak opgehaald.
     """
     if not orders:
         return {}
+    query = select(LearningObjective).where(
+        LearningObjective.school_id == school_id,
+        LearningObjective.is_template.is_(True),
+        LearningObjective.order.in_(orders),
+    )
+    if subject_id is not None:
+        query = query.where(LearningObjective.subject_id == subject_id)
     results = (
-        db.execute(
-            select(LearningObjective).where(
-                LearningObjective.school_id == school_id,
-                LearningObjective.is_template.is_(True),
-                LearningObjective.order.in_(orders),
-            )
-        )
+        db.execute(query)
         .scalars()
         .all()
     )
@@ -335,6 +338,9 @@ def _collect_all_lo_orders(rubric_groups: List[CsvRubricGroup]) -> List[int]:
 )
 async def preview_csv_import(
     file: UploadFile = File(...),
+    subject_id: Optional[int] = Query(
+        None, description="Filter leerdoelen op vak (voorkomt dubbele nummers)"
+    ),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -373,7 +379,7 @@ async def preview_csv_import(
 
     # Batch-fetch alle benodigde leerdoelen in één query
     all_orders = _collect_all_lo_orders(rubric_groups)
-    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id)
+    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id, subject_id)
 
     preview_rubrics: List[PreviewRubric] = []
 
@@ -419,6 +425,9 @@ async def preview_csv_import(
 )
 async def import_csv(
     file: UploadFile = File(...),
+    subject_id: Optional[int] = Query(
+        None, description="Filter leerdoelen op vak (voorkomt dubbele nummers)"
+    ),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -457,7 +466,7 @@ async def import_csv(
 
     # Batch-fetch alle benodigde leerdoelen in één query
     all_orders = _collect_all_lo_orders(rubric_groups)
-    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id)
+    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id, subject_id)
 
     created_rubrics = 0
     created_criteria = 0

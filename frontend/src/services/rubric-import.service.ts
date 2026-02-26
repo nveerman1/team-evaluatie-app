@@ -42,11 +42,12 @@ export const rubricImportService = {
   /**
    * Preview CSV import without saving to database
    */
-  async preview(file: File): Promise<CsvPreviewResult> {
+  async preview(file: File, subjectId?: number | null): Promise<CsvPreviewResult> {
     const formData = new FormData();
     formData.append("file", file);
+    const params = subjectId ? `?subject_id=${subjectId}` : "";
     const response = await api.post<CsvPreviewResult>(
-      "/rubrics/import-csv/preview",
+      `/rubrics/import-csv/preview${params}`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } },
     );
@@ -56,11 +57,12 @@ export const rubricImportService = {
   /**
    * Import rubrics from CSV file
    */
-  async importCsv(file: File): Promise<CsvImportResult> {
+  async importCsv(file: File, subjectId?: number | null): Promise<CsvImportResult> {
     const formData = new FormData();
     formData.append("file", file);
+    const params = subjectId ? `?subject_id=${subjectId}` : "";
     const response = await api.post<CsvImportResult>(
-      "/rubrics/import-csv",
+      `/rubrics/import-csv${params}`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } },
     );

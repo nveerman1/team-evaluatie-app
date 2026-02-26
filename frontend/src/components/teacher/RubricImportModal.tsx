@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   rubricImportService,
   CsvPreviewResult,
   CsvImportResult,
   PreviewRubric,
 } from "@/services/rubric-import.service";
+import { subjectService } from "@/services/subject.service";
+import type { Subject } from "@/dtos/subject.dto";
 
 type Step = "upload" | "preview" | "importing" | "done";
 
@@ -28,6 +30,17 @@ export default function RubricImportModal({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      subjectService
+        .listSubjects({ per_page: 100, is_active: true })
+        .then((res) => setSubjects(res.subjects))
+        .catch(() => setSubjects([]));
+    }
+  }, [open]);
 
   const reset = () => {
     setStep("upload");
@@ -37,6 +50,7 @@ export default function RubricImportModal({
     setPreviewError(null);
     setIsDragging(false);
     setLoadingPreview(false);
+    setSelectedSubjectId(null);
   };
 
   const handleClose = () => {
@@ -53,7 +67,7 @@ export default function RubricImportModal({
     setPreviewError(null);
     setLoadingPreview(true);
     try {
-      const previewResult = await rubricImportService.preview(selectedFile);
+      const previewResult = await rubricImportService.preview(selectedFile, selectedSubjectId);
       setPreview(previewResult);
       setStep("preview");
     } catch (err: unknown) {
@@ -65,7 +79,7 @@ export default function RubricImportModal({
     } finally {
       setLoadingPreview(false);
     }
-  }, []);
+  }, [selectedSubjectId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -87,7 +101,7 @@ export default function RubricImportModal({
     if (!file) return;
     setStep("importing");
     try {
-      const importResult = await rubricImportService.importCsv(file);
+      const importResult = await rubricImportService.importCsv(file, selectedSubjectId);
       setResult(importResult);
       setStep("done");
     } catch (err: unknown) {
@@ -153,6 +167,34 @@ export default function RubricImportModal({
                   </li>
                 </ul>
               </div>
+
+              {/* Subject selector */}
+              {subjects.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vakgebied (aanbevolen)
+                  </label>
+                  <select
+                    value={selectedSubjectId ?? ""}
+                    onChange={(e) =>
+                      setSelectedSubjectId(
+                        e.target.value ? parseInt(e.target.value, 10) : null,
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="">— Alle vakgebieden (kan dubbele leerdoelen geven) —</option>
+                    {subjects.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.code})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Selecteer het vakgebied waarvan de leerdoel-nummers in de CSV afkomstig zijn.
+                  </p>
+                </div>
+              )}
 
               {previewError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
