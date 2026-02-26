@@ -285,6 +285,9 @@ class ProjectAssessmentTeam(Base):
     # Progress tracking
     scores_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_updated_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    last_updated_by_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Relationships
     project_assessment: Mapped["ProjectAssessment"] = relationship(
