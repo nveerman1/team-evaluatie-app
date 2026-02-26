@@ -36,7 +36,7 @@ export default function EditRubricPageInner() {
         const mapped: CriterionUpsertItem[] = (c.data || []).map((ci) => ({
           id: ci.id,
           name: ci.name,
-          weight: ci.weight,
+          weight: ci.weight * 100,
           descriptors: ci.descriptors || EMPTY_DESCRIPTORS,
           order: ci.order ?? null,
         }));
@@ -60,7 +60,7 @@ export default function EditRubricPageInner() {
       {
         id: undefined,
         name: "Nieuw criterium",
-        weight: 1.0,
+        weight: 0,
         descriptors: { ...EMPTY_DESCRIPTORS },
         order: maxOrder + 1,
       },
@@ -88,11 +88,17 @@ export default function EditRubricPageInner() {
     try {
       if (!rubric) throw new Error("Rubric ontbreekt");
       if (items.length === 0) throw new Error("Voeg minstens 1 criterium toe");
-      // ensure all descriptors have level1..level5
+      const totalPct = items.reduce((s, it) => s + (Number(it.weight) || 0), 0);
+      if (Math.abs(totalPct - 100) > 1) {
+        throw new Error(
+          `Totale weging is ${totalPct.toFixed(1)}%, moet 100% zijn (±1%). Pas de wegingen aan.`
+        );
+      }
+      // ensure all descriptors have level1..level5; convert weights from % to 0-1
       const cleaned = items.map((it, i) => ({
         ...it,
         name: it.name?.trim() || `Criterium ${i + 1}`,
-        weight: Number(it.weight) || 1.0,
+        weight: (Number(it.weight) || 0) / 100,
         descriptors: {
           level1: it.descriptors?.level1 ?? "",
           level2: it.descriptors?.level2 ?? "",
@@ -114,7 +120,7 @@ export default function EditRubricPageInner() {
         back.map((ci, i) => ({
           id: ci.id,
           name: ci.name,
-          weight: ci.weight,
+          weight: ci.weight * 100,
           descriptors: ci.descriptors,
           order: ci.order ?? i + 1,
         })),
@@ -211,7 +217,7 @@ export default function EditRubricPageInner() {
           <div className="grid grid-cols-[28px_1.2fr_0.6fr_1fr_1fr_1fr_1fr_1fr_120px] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
             <div>#</div>
             <div>Criterium</div>
-            <div>Weging</div>
+            <div>Weging (%)</div>
             <div>Niveau 1</div>
             <div>Niveau 2</div>
             <div>Niveau 3</div>
@@ -244,8 +250,10 @@ export default function EditRubricPageInner() {
                 <input
                   type="number"
                   step="0.1"
-                  className="w-24 border rounded-lg px-2 py-1"
-                  value={it.weight}
+                  min="0"
+                  max="100"
+                  className="w-20 border rounded-lg px-2 py-1"
+                  value={Number.isFinite(it.weight) ? it.weight : 0}
                   onChange={(e) =>
                     setItems((prev) =>
                       prev.map((x, i) =>
@@ -392,8 +400,10 @@ export default function EditRubricPageInner() {
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-t bg-gray-50">
             <div className="text-sm text-gray-600">
               Som wegingen:{" "}
-              <span className="font-medium">{totalWeight.toFixed(2)}</span>{" "}
-              (streef 1.0 of 100%)
+              <span className={`font-medium ${Math.abs(totalWeight - 100) <= 1 ? "text-green-600" : "text-orange-600"}`}>
+                {totalWeight.toFixed(1)}%
+              </span>{" "}
+              (streef 100%)
             </div>
             <div className="flex items-center gap-2">
               <button

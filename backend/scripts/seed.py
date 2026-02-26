@@ -730,6 +730,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     if peer_templates:
         # Create criteria from templates (each row is a criterion, not a category)
+        equal_weight = 1.0 / len(peer_templates)
         for i, (category, title, description) in enumerate(peer_templates):
             criterion = create_instance(
                 RubricCriterion,
@@ -739,7 +740,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 category=category,  # e.g., "Organiseren"
                 description=description,
                 order=i,
-                weight=1.0,
+                weight=equal_weight,
             )
             db.add(criterion)
         db.commit()
@@ -750,6 +751,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         # Fallback: create minimal criteria if templates don't exist
         print_warning("No peer templates found, creating basic criteria")
         peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
+        equal_weight = 1.0 / len(peer_categories)
         for i, category in enumerate(peer_categories):
             criterion = create_instance(
                 RubricCriterion,
@@ -759,7 +761,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 category=category,
                 description=f"Algemene beoordeling van {category.lower()}",
                 order=i,
-                weight=1.0,
+                weight=equal_weight,
             )
             db.add(criterion)
         db.commit()
@@ -801,6 +803,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     if project_templates:
         # Create criteria from templates (each row is a criterion, not a category)
+        equal_weight = 1.0 / len(project_templates)
         for i, (category, title, description, level_descriptors) in enumerate(
             project_templates
         ):
@@ -813,7 +816,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 description=description,
                 descriptors=level_descriptors,  # Add level descriptors
                 order=i,
-                weight=1.0,
+                weight=equal_weight,
             )
             db.add(criterion)
         db.commit()
@@ -850,6 +853,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 "description": "Presentatie en communicatie over het project",
             },
         ]
+        equal_weight = 1.0 / len(project_criteria_data)
         for i, criterion_data in enumerate(project_criteria_data):
             criterion = create_instance(
                 RubricCriterion,
@@ -859,7 +863,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 category=criterion_data["category"],
                 description=criterion_data["description"],
                 order=i,
-                weight=1.0,
+                weight=equal_weight,
             )
             db.add(criterion)
         db.commit()
