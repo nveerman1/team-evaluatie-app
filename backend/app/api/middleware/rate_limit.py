@@ -140,9 +140,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Use precise regex patterns to match only intended scoring endpoints
         # Pattern 1: /api/v1/project-assessments/{id}/scores[/*]
         # Pattern 2: /api/v1/evaluations/{id}/grades[/*]
+        # Pattern 3: /api/v1/omza/evaluations/{id}/teacher-score
         scoring_patterns = [
             r"^/api/v1/project-assessments/\d+/scores(?:/.*)?$",
             r"^/api/v1/evaluations/\d+/grades(?:/.*)?$",
+            r"^/api/v1/omza/evaluations/\d+/teacher-score$",  # OMZA teacher scoring
         ]
 
         is_scoring_endpoint = any(

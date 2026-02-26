@@ -386,10 +386,10 @@ export default function OMZAOverviewPage() {
   }, [evalIdNum, showToast]);
 
   // Apply peer scores for all students (map to icon levels)
-  const applyPeerScoresAll = useCallback(() => {
+  const applyPeerScoresAll = useCallback(async () => {
     if (!omzaData || !evalIdNum) return;
     
-    const updates: Array<Promise<any>> = [];
+    const updates: Array<{ student_id: number; category: string; score: number | null }> = [];
     const newScores: Record<string, number | null> = { ...teacherScores };
     
     omzaData.students.forEach((student) => {
@@ -401,26 +401,33 @@ export default function OMZAOverviewPage() {
           const key = `${student.student_id}-${cat}`;
           newScores[key] = iconLevel;
           
-          updates.push(
-            omzaService.saveTeacherScore(evalIdNum, {
-              student_id: student.student_id,
-              category: cat,
-              score: iconLevel,
-            })
-          );
+          updates.push({
+            student_id: student.student_id,
+            category: cat,
+            score: iconLevel,
+          });
         }
       });
     });
     
     setTeacherScores(newScores);
     
-    Promise.all(updates)
-      .then(() => {
-        showToast("Docentscores overgenomen van peer scores");
-      })
-      .catch((err) => {
-        showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
-      });
+    // Batch in chunks of 10 to avoid overwhelming the server
+    const chunkSize = 10;
+    try {
+      for (let i = 0; i < updates.length; i += chunkSize) {
+        const chunk = updates.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map((update) =>
+            omzaService.saveTeacherScore(evalIdNum, update)
+          )
+        );
+      }
+      showToast("Docentscores overgenomen van peer scores");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      showToast(`Fout bij opslaan: ${error?.message || "Onbekende fout"}`);
+    }
   }, [omzaData, evalIdNum, teacherScores, showToast]);
 
   // Add standard comment to teacher comment
