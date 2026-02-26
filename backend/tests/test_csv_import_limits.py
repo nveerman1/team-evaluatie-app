@@ -298,7 +298,9 @@ class TestCSVImportLimits:
 
         mock_file = Mock(spec=UploadFile)
         mock_file.filename = "rubrics.xlsx"
-        mock_file.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mock_file.content_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         mock_file.read = AsyncMock(return_value=b"fake xlsx content")
 
         mock_db = Mock()
