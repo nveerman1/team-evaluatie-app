@@ -94,9 +94,7 @@ def _parse_csv(
     # Controleer verplichte kolommen
     missing = REQUIRED_COLUMNS - fieldnames
     if missing:
-        errors.append(
-            f"Verplichte kolommen ontbreken: {', '.join(sorted(missing))}"
-        )
+        errors.append(f"Verplichte kolommen ontbreken: {', '.join(sorted(missing))}")
         return [], errors, warnings
 
     # Waarschuw voor onbekende kolommen
@@ -200,9 +198,7 @@ def _parse_csv(
             weight = 1.0
 
         # Leerdoelen parsen
-        lo_orders = _parse_learning_objective_orders(
-            row.get("learning_objectives", "")
-        )
+        lo_orders = _parse_learning_objective_orders(row.get("learning_objectives", ""))
 
         criterion = CsvCriterionRow(
             criterion_name=criterion_name,
@@ -259,11 +255,7 @@ def _batch_fetch_learning_objectives(
     )
     if subject_id is not None:
         query = query.where(LearningObjective.subject_id == subject_id)
-    results = (
-        db.execute(query)
-        .scalars()
-        .all()
-    )
+    results = db.execute(query).scalars().all()
     lookup: Dict[int, List[LearningObjective]] = {}
     for lo in results:
         lookup.setdefault(lo.order, []).append(lo)
@@ -387,9 +379,8 @@ async def preview_csv_import(
     Retourneert per rubric een overzicht met criteria en resolved leerdoelen.
     """
     content_type = file.content_type or ""
-    if (
-        content_type not in ALLOWED_CONTENT_TYPES
-        and not (file.filename or "").endswith(".csv")
+    if content_type not in ALLOWED_CONTENT_TYPES and not (file.filename or "").endswith(
+        ".csv"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -417,7 +408,9 @@ async def preview_csv_import(
 
     # Batch-fetch alle benodigde leerdoelen in één query
     all_orders = _collect_all_lo_orders(rubric_groups)
-    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id, subject_id)
+    lo_cache = _batch_fetch_learning_objectives(
+        db, all_orders, user.school_id, subject_id
+    )
     _check_existing_rubric_titles(db, rubric_groups, user.school_id, warnings)
 
     preview_rubrics: List[PreviewRubric] = []
@@ -428,9 +421,7 @@ async def preview_csv_import(
             resolved_los = _resolve_lo_for_preview_from_cache(
                 lo_cache, c.learning_objective_orders
             )
-            has_descriptors = any(
-                [c.level1, c.level2, c.level3, c.level4, c.level5]
-            )
+            has_descriptors = any([c.level1, c.level2, c.level3, c.level4, c.level5])
             preview_criteria.append(
                 PreviewCriterion(
                     name=c.criterion_name,
@@ -475,9 +466,8 @@ async def import_csv(
     Maakt Rubric, RubricCriterion en RubricCriterionLearningObjective records aan.
     """
     content_type = file.content_type or ""
-    if (
-        content_type not in ALLOWED_CONTENT_TYPES
-        and not (file.filename or "").endswith(".csv")
+    if content_type not in ALLOWED_CONTENT_TYPES and not (file.filename or "").endswith(
+        ".csv"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -505,7 +495,9 @@ async def import_csv(
 
     # Batch-fetch alle benodigde leerdoelen in één query
     all_orders = _collect_all_lo_orders(rubric_groups)
-    lo_cache = _batch_fetch_learning_objectives(db, all_orders, user.school_id, subject_id)
+    lo_cache = _batch_fetch_learning_objectives(
+        db, all_orders, user.school_id, subject_id
+    )
     _check_existing_rubric_titles(db, rubric_groups, user.school_id, warnings)
 
     created_rubrics = 0
