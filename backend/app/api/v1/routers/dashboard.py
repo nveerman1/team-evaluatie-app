@@ -216,11 +216,11 @@ def dashboard_evaluation(
     # === 5) GCF: Calculate per-team means and ratios (matching grades.py logic) ===
     # Load GCF range from evaluation settings
     settings = getattr(ev, "settings", {}) or {}
-    min_cf = 0.6
-    max_cf = 1.4
+    min_cf = 0.85
+    max_cf = 1.5
     if isinstance(settings, dict):
-        min_cf = float(settings.get("min_cf", 0.6))
-        max_cf = float(settings.get("max_cf", 1.4))
+        min_cf = float(settings.get("min_cf", 0.85))
+        max_cf = float(settings.get("max_cf", 1.5))
 
     # Group peer averages by team_number
     peer_avg_by_team: dict[int | None, list[float]] = {}

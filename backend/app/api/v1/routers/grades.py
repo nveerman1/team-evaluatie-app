@@ -165,16 +165,16 @@ def preview_grades(
     scale_max = 5
     crit_weights: dict[int, float] = {}
     # GCF range from evaluation settings
-    min_cf = 0.6
-    max_cf = 1.4
+    min_cf = 0.85
+    max_cf = 1.5
     if Evaluation and Rubric and RubricCriterion:
         ev = db.get(Evaluation, evaluation_id)
         if ev:
             # Load GCF range from evaluation settings
             settings = getattr(ev, "settings", {}) or {}
             if isinstance(settings, dict):
-                min_cf = float(settings.get("min_cf", 0.6))
-                max_cf = float(settings.get("max_cf", 1.4))
+                min_cf = float(settings.get("min_cf", 0.85))
+                max_cf = float(settings.get("max_cf", 1.5))
 
             rub = db.get(Rubric, getattr(ev, "rubric_id", None))
             if rub:

@@ -54,8 +54,8 @@ export default function EvaluationSettingsPageInner() {
     "pseudonym",
   );
   const [minWords, setMinWords] = useState<number>(50);
-  const [minCf, setMinCf] = useState<number>(0.6);
-  const [maxCf, setMaxCf] = useState<number>(1.4);
+  const [minCf, setMinCf] = useState<number>(0.85);
+  const [maxCf, setMaxCf] = useState<number>(1.5);
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
 
@@ -110,8 +110,8 @@ export default function EvaluationSettingsPageInner() {
           s.deadline_reflection;
         setReviewDeadline(r1 || "");
         setReflectionDeadline(r2 || "");
-        setMinCf(Number.isFinite(s.min_cf) ? s.min_cf : 0.6);
-        setMaxCf(Number.isFinite(s.max_cf) ? s.max_cf : 1.4);
+        setMinCf(Number.isFinite(s.min_cf) ? s.min_cf : 0.85);
+        setMaxCf(Number.isFinite(s.max_cf) ? s.max_cf : 1.5);
         setSmoothing(Boolean(s.smoothing ?? true));
         setReviewerRating(Boolean(s.reviewer_rating ?? true));
       } catch (e: any) {
@@ -344,7 +344,7 @@ export default function EvaluationSettingsPageInner() {
                 onChange={(e) => setMaxCf(e.target.valueAsNumber || 0)}
               />
             </div>
-            <p className="text-xs text-slate-500">Bijv. 0.6 – 1.4</p>
+            <p className="text-xs text-slate-500">Bijv. 0.85 – 1.5</p>
           </div>
         </div>
 

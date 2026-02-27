@@ -57,8 +57,8 @@ export default function CreateEvaluationPageInner() {
 
   // Optionele instellingen
   const [minWords, setMinWords] = useState<number>(50);
-  const [minCf, setMinCf] = useState<number>(0.6);
-  const [maxCf, setMaxCf] = useState<number>(1.4);
+  const [minCf, setMinCf] = useState<number>(0.85);
+  const [maxCf, setMaxCf] = useState<number>(1.5);
   const smoothing = true;
   const reviewerRating = true;
 
@@ -358,7 +358,7 @@ export default function CreateEvaluationPageInner() {
                 onChange={(e) => setMaxCf(e.target.valueAsNumber || 0)}
               />
             </div>
-            <p className="text-xs text-gray-500">Bijv. 0.6 – 1.4</p>
+            <p className="text-xs text-gray-500">Bijv. 0.85 – 1.5</p>
           </div>
         </div>
 
