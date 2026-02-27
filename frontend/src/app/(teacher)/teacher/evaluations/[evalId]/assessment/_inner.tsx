@@ -543,9 +543,9 @@ export default function CombinedAssessmentInner() {
 
   // ── "Neem peer score over" ────────────────────────────────────────────────
 
-  const applyPeerScoresAll = useCallback(() => {
+  const applyPeerScoresAll = useCallback(async () => {
     if (!evalIdNum) return;
-    const updates: Array<Promise<unknown>> = [];
+    const updates: Array<{ student_id: number; category: string; score: number }> = [];
     const newScores = { ...teacherScores };
 
     rows.forEach((row) => {
@@ -555,21 +555,32 @@ export default function CombinedAssessmentInner() {
           const level = mapPeerScoreToIconLevel(cs.peer_avg);
           const key = `${row.user_id}-${cat}`;
           newScores[key] = level;
-          updates.push(
-            omzaService.saveTeacherScore(evalIdNum, {
-              student_id: row.user_id,
-              category: cat,
-              score: level,
-            }),
-          );
+          updates.push({
+            student_id: row.user_id,
+            category: cat,
+            score: level,
+          });
         }
       });
     });
 
     setTeacherScores(newScores);
-    Promise.all(updates)
-      .then(() => showToast("Docentscores overgenomen van peer scores"))
-      .catch((err) => showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`));
+    // Batch in chunks of 10 to avoid overwhelming the server
+    const chunkSize = 10;
+    try {
+      for (let i = 0; i < updates.length; i += chunkSize) {
+        const chunk = updates.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map((update) =>
+            omzaService.saveTeacherScore(evalIdNum, update)
+          ),
+        );
+      }
+      showToast("Docentscores overgenomen van peer scores");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      showToast(`Fout bij opslaan: ${error?.message || "Onbekende fout"}`);
+    }
   }, [evalIdNum, rows, categories, teacherScores, showToast]);
 
   // ── grade helpers ─────────────────────────────────────────────────────────

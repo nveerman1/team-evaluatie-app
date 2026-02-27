@@ -248,6 +248,38 @@ def test_regular_endpoints_still_rate_limited():
     assert "X-RateLimit-Limit" in response.headers
 
 
+def test_omza_teacher_score_endpoint_exempted():
+    """Test that OMZA teacher-score endpoints are exempted for teachers"""
+    mock_rate_limiter = MagicMock(spec=RateLimiter)
+    mock_rate_limiter.is_allowed.return_value = (False, 30)
+
+    app = FastAPI()
+    app.add_middleware(RateLimitMiddleware, rate_limiter=mock_rate_limiter)
+
+    teacher_user = MockUser(id=1, role="teacher")
+
+    @app.post("/api/v1/omza/evaluations/1/teacher-score")
+    def omza_teacher_score_endpoint():
+        return {"message": "teacher score saved"}
+
+    @app.middleware("http")
+    async def add_user_to_request(request, call_next):
+        request.state.user = teacher_user
+        return await call_next(request)
+
+    client = TestClient(app)
+
+    # Make multiple rapid requests - should NOT be rate limited
+    for i in range(10):
+        response = client.post("/api/v1/omza/evaluations/1/teacher-score")
+        assert (
+            response.status_code == 200
+        ), f"Request {i+1} failed with status {response.status_code}"
+
+    # Rate limiter should never be called because endpoint is exempted
+    mock_rate_limiter.is_allowed.assert_not_called()
+
+
 def test_scoring_endpoint_pattern_matching():
     """Test that scoring endpoint pattern matching is precise"""
     app = FastAPI()
@@ -279,6 +311,14 @@ def test_scoring_endpoint_pattern_matching():
         mock_request("/api/v1/evaluations/101/grades/summary")
     )
 
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/1/teacher-score")
+    )
+
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/42/teacher-score")
+    )
+
     # Should NOT match - not scoring endpoints
     assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/123")
@@ -303,6 +343,16 @@ def test_scoring_endpoint_pattern_matching():
 
     assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/project-assessments/123/scores")  # missing /api/v1
+    )
+
+    assert not middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/abc/teacher-score")  # non-numeric ID
+    )
+
+    assert not middleware._is_authenticated_teacher_scoring(
+        mock_request(
+            "/api/v1/omza/evaluations/1/teacher-score/extra"
+        )  # extra path segment
     )
 
 

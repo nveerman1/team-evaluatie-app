@@ -105,9 +105,15 @@ ENV NODE_ENV=production \
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Upgrade npm to v11+ to replace the bundled minimatch@9.x (CVE-2026-26996)
-# that ships with Node.js 20's default npm@10. npm@11.6.1+ bundles minimatch@10.x.
-RUN npm install -g npm@11.10.0
+# Remove npm (and npx/corepack) from the runner image.
+# The runner stage only executes 'node server.js' and does not need npm.
+# Removing it eliminates npm's bundled minimatch@10.2.2 (CVE-2026-27903,
+# CVE-2026-27904) – no available npm release yet ships minimatch@10.2.3+.
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public
