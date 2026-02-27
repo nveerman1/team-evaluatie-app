@@ -106,8 +106,9 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Upgrade npm to v11+ to replace the bundled minimatch@9.x (CVE-2026-26996)
-# that ships with Node.js 20's default npm@10. npm@11.6.1+ bundles minimatch@10.x.
-RUN npm install -g npm@11.10.0
+# that ships with Node.js 20's default npm@10. npm@11.10.1+ bundles minimatch@10.2.x
+# (npm@11.10.0 bundled minimatch@^10.1.1 which resolved to 10.1.2, still vulnerable).
+RUN npm install -g npm@11.10.1
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public
