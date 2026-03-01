@@ -49,7 +49,7 @@ export function DocumentPane({
       watchdogTimerRef.current = setTimeout(() => {
         // If iframe hasn't loaded after timeout, mark as blocked
         setIframeBlocked(true);
-      }, 2000); // 2 seconds timeout
+      }, 5000); // 5 seconds — allows time for redirect chains (e.g. 1drv.ms)
     }
     
     return () => {
@@ -59,7 +59,9 @@ export function DocumentPane({
     };
   }, [currentDocUrl, hasLink, embedDecision.ok, viewerUrl]);
 
-  // Handle iframe load success
+  // Handle iframe load success.
+  // A successful onLoad means the content loaded; the watchdog timer + handleIframeError handle real failures.
+  // If Microsoft blocks embedding (e.g. X-Frame-Options), neither onLoad nor onError fires, so the watchdog catches it.
   const handleIframeLoad = () => {
     if (watchdogTimerRef.current) {
       clearTimeout(watchdogTimerRef.current);
@@ -179,10 +181,10 @@ export function DocumentPane({
                     <div className="text-3xl">📄</div>
                     <div>
                       <p className="text-sm font-medium text-slate-700 mb-1">
-                        Open in tab nodig
+                        Document kan niet worden getoond
                       </p>
                       <p className="text-xs text-slate-500">
-                        Deze Microsoft-link kan niet veilig in de app worden getoond. 
+                        Microsoft staat het inladen van dit document in de app niet toe.
                         Open het document in een nieuw tabblad.
                       </p>
                     </div>
@@ -202,17 +204,18 @@ export function DocumentPane({
               )}
             </>
           ) : (
-            // Show fallback immediately for SharePoint/OneDrive/Office links
+            // Show fallback immediately for web-viewer and other non-embeddable links
             <div className="h-full flex items-center justify-center px-6 text-center">
               <div className="space-y-4 max-w-md">
                 <div className="text-3xl">📄</div>
                 <div>
                   <p className="text-sm font-medium text-slate-700 mb-1">
-                    Open in tab nodig
+                    Document kan niet worden getoond
                   </p>
                   <p className="text-xs text-slate-500">
-                    Deze Microsoft-link kan niet veilig in de app worden getoond. 
-                    Open het document in een nieuw tabblad.
+                    Deze link opent een web-viewer die niet in de app ingeladen kan worden.
+                    Gebruik een directe download- of deellink voor inline weergave,
+                    of open het document via het tabblad.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 items-center">
