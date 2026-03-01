@@ -94,26 +94,43 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
     const pathname = urlObj.pathname.toLowerCase();
     const urlLower = url.toLowerCase();
     
-    // Check for PDF - look for .pdf extension specifically
-    if (pathname.endsWith('.pdf') || /\.pdf(\?|#|$)/.test(urlLower)) {
+    // Check for PDF - explicit extension OR SharePoint/OneDrive PDF sharing patterns
+    // SharePoint sharing URLs encode file type in the path: /:b:/ = PDF/binary
+    // OneDrive short links: 1drv.ms/b/... also indicate PDF/binary
+    if (
+      pathname.endsWith('.pdf') ||
+      /\.pdf(\?|#|$)/.test(urlLower) ||
+      /\/:b:\//.test(pathname) ||
+      (isHostnameOrSubdomain(urlObj.hostname.toLowerCase(), '1drv.ms') && /^\/b\//i.test(pathname))
+    ) {
       return "pdf";
     }
-    
+
     // Check for Word documents - specific patterns
-    if (pathname.endsWith('.doc') || pathname.endsWith('.docx') || 
-        /\.docx?(\?|#|$)/.test(urlLower) ||
-        urlObj.hostname.toLowerCase() === 'word.office.com' ||
-        urlObj.hostname.toLowerCase().endsWith('.word.office.com') ||
-        /\/w\/[^/]*$/.test(pathname)) { // Office Online word path pattern
+    // SharePoint sharing: /:w:/ = Word
+    if (
+      pathname.endsWith('.doc') ||
+      pathname.endsWith('.docx') ||
+      /\.docx?(\?|#|$)/.test(urlLower) ||
+      /\/:w:\//.test(pathname) ||
+      urlObj.hostname.toLowerCase() === 'word.office.com' ||
+      urlObj.hostname.toLowerCase().endsWith('.word.office.com') ||
+      /\/w\/[^/]*$/.test(pathname)
+    ) {
       return "doc";
     }
-    
+
     // Check for PowerPoint presentations - specific patterns
-    if (pathname.endsWith('.ppt') || pathname.endsWith('.pptx') || 
-        /\.pptx?(\?|#|$)/.test(urlLower) ||
-        urlObj.hostname.toLowerCase() === 'powerpoint.office.com' ||
-        urlObj.hostname.toLowerCase().endsWith('.powerpoint.office.com') ||
-        /\/p\/[^/]*$/.test(pathname)) { // Office Online PowerPoint path pattern
+    // SharePoint sharing: /:p:/ = PowerPoint
+    if (
+      pathname.endsWith('.ppt') ||
+      pathname.endsWith('.pptx') ||
+      /\.pptx?(\?|#|$)/.test(urlLower) ||
+      /\/:p:\//.test(pathname) ||
+      urlObj.hostname.toLowerCase() === 'powerpoint.office.com' ||
+      urlObj.hostname.toLowerCase().endsWith('.powerpoint.office.com') ||
+      /\/p\/[^/]*$/.test(pathname)
+    ) {
       return "ppt";
     }
     
