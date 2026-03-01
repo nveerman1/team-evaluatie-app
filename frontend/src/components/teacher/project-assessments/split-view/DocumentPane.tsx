@@ -64,7 +64,11 @@ export function DocumentPane({
     if (watchdogTimerRef.current) {
       clearTimeout(watchdogTimerRef.current);
     }
-    setIframeBlocked(false);
+    // Detect X-Frame-Options / CSP frame-ancestors blocking:
+    // - Cross-origin content loaded successfully → contentDocument is null (cross-origin access denied)
+    // - Frame was blocked → browser leaves it at about:blank → contentDocument is accessible (non-null)
+    const iframeEl = iframeRef.current;
+    setIframeBlocked(iframeEl != null && iframeEl.contentDocument != null);
   };
 
   // Handle iframe load error
