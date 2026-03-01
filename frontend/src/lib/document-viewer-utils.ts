@@ -133,6 +133,16 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
     ) {
       return "ppt";
     }
+
+    // SharePoint OneDrive viewer URLs: _layouts/15/onedrive.aspx?id=/path/to/file.ext
+    // The 'id' query parameter contains the decoded file path (e.g. /personal/.../file.pdf)
+    const idParam = urlObj.searchParams.get('id');
+    if (idParam) {
+      const idLower = idParam.toLowerCase();
+      if (idLower.endsWith('.pdf')) return "pdf";
+      if (idLower.endsWith('.doc') || idLower.endsWith('.docx')) return "doc";
+      if (idLower.endsWith('.ppt') || idLower.endsWith('.pptx')) return "ppt";
+    }
     
     return "unknown";
   } catch (e) {

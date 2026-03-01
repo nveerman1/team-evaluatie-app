@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
+from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs, unquote as _unquote
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -606,6 +607,36 @@ def _is_trusted_proxy_url(url: str) -> bool:
         return False
 
 
+def _url_looks_like_pdf(url: str) -> bool:
+    """Return True if the URL appears to reference a PDF document."""
+    try:
+        url_lower = url.lower()
+        parsed = _urlparse(url)
+        pathname = parsed.path.lower()
+
+        # Direct .pdf extension in path or anywhere in the URL string
+        if (
+            pathname.endswith(".pdf")
+            or ".pdf?" in url_lower
+            or ".pdf#" in url_lower
+            or url_lower.endswith(".pdf")
+        ):
+            return True
+
+        # SharePoint sharing URL: /:b:/ = PDF/binary
+        if "/:b:/" in url:
+            return True
+
+        # SharePoint OneDrive viewer URL: _layouts/15/onedrive.aspx?id=/path/to/file.pdf
+        id_param = _unquote(_parse_qs(parsed.query).get("id", [""])[0]).lower()
+        if id_param.endswith(".pdf"):
+            return True
+
+        return False
+    except Exception:
+        return False
+
+
 @router.get("/{submission_id}/proxy-document")
 async def proxy_submission_document(
     submission_id: int,
@@ -668,12 +699,23 @@ async def proxy_submission_document(
 
     # Validate content type is PDF
     content_type = response.headers.get("content-type", "")
-    url_lower = submission.url.lower()
-    if not content_type.startswith("application/pdf") and not url_lower.endswith(".pdf"):
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Alleen PDF-documenten kunnen inline worden getoond",
-        )
+    if not content_type.startswith("application/pdf"):
+        if content_type.startswith("text/html"):
+            # HTML response means the URL redirected to a Microsoft login page.
+            # The document is not publicly accessible without authentication.
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Dit document vereist inloggen bij Microsoft. "
+                    "Deel het PDF via 'Iedereen met de link kan weergeven' "
+                    "en gebruik die deellink om het inline te bekijken."
+                ),
+            )
+        if not _url_looks_like_pdf(submission.url):
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Alleen PDF-documenten kunnen inline worden getoond",
+            )
 
     return StreamingResponse(
         content=iter([response.content]),
