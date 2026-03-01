@@ -49,7 +49,7 @@ export function DocumentPane({
       watchdogTimerRef.current = setTimeout(() => {
         // If iframe hasn't loaded after timeout, mark as blocked
         setIframeBlocked(true);
-      }, 2000); // 2 seconds timeout
+      }, 5000); // 5 seconds — allows time for redirect chains (e.g. 1drv.ms)
     }
     
     return () => {
@@ -59,11 +59,9 @@ export function DocumentPane({
     };
   }, [currentDocUrl, hasLink, embedDecision.ok, viewerUrl]);
 
-  // Handle iframe load success
   // Handle iframe load success.
-  // SharePoint/OneDrive URLs never reach this point (blocked at the source in
-  // isBlockedIframeHost). For other domains, a successful onLoad means the
-  // content loaded; the watchdog timer + handleIframeError handle real failures.
+  // A successful onLoad means the content loaded; the watchdog timer + handleIframeError handle real failures.
+  // If Microsoft blocks embedding (e.g. X-Frame-Options), neither onLoad nor onError fires, so the watchdog catches it.
   const handleIframeLoad = () => {
     if (watchdogTimerRef.current) {
       clearTimeout(watchdogTimerRef.current);

@@ -73,7 +73,9 @@ export function isSharePointPdfViewerUrl(url: string | null | undefined): boolea
 
     return pathname.includes('/:b:/') ||
            pathname.endsWith('/preview') ||
-           urlObj.searchParams.get('action') === 'embedview';
+           urlObj.searchParams.get('action') === 'embedview' ||
+           // Personal OneDrive consumer PDF short links: 1drv.ms/b/c/<userId>/<itemId>
+           (isHostnameOrSubdomain(hostname, '1drv.ms') && /^\/b\/c\//.test(pathname));
   } catch (e) {
     return false;
   }
@@ -250,7 +252,7 @@ export function tryGetSharePointPdfEmbedUrl(url: string | null | undefined): str
       return null;
     }
 
-    // Pattern 1: /:b:/ sharing links → use action=embedview
+    // Pattern 1: SharePoint /:b:/ sharing links → use action=embedview
     // Clear existing query params (e.g. ?e=<token>) and set only action=embedview
     if (pathname.includes('/:b:/')) {
       const embedUrl = new URL(url);
@@ -259,7 +261,15 @@ export function tryGetSharePointPdfEmbedUrl(url: string | null | undefined): str
       return embedUrl.toString();
     }
 
-    // Pattern 2: Direct PDF file paths → proxy via view.officeapps.live.com
+    // Pattern 2: Personal OneDrive consumer PDF short links: 1drv.ms/b/c/<userId>/<itemId>
+    // Keep the ?e= sharing token and add action=embedview so the redirect lands on the embed viewer
+    if (isHostnameOrSubdomain(hostname, '1drv.ms') && /^\/b\/c\//.test(pathname)) {
+      const embedUrl = new URL(url);
+      embedUrl.searchParams.set('action', 'embedview');
+      return embedUrl.toString();
+    }
+
+    // Pattern 3: Direct PDF file paths → proxy via view.officeapps.live.com
     if (pathname.endsWith('.pdf')) {
       return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
