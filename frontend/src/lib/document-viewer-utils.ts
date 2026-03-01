@@ -52,6 +52,34 @@ export function safeHostname(url: string | null | undefined): string | null {
 }
 
 /**
+ * Check if a URL matches a SharePoint PDF viewer or embed URL pattern
+ * (e.g., /:b:/ sharing links, /preview paths, or action=embedview parameter)
+ * @param url The URL to check
+ * @returns true if the URL is a SharePoint PDF viewer/embed URL
+ */
+export function isSharePointPdfViewerUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    const pathname = urlObj.pathname.toLowerCase();
+
+    if (!isHostnameOrSubdomain(hostname, 'sharepoint.com') &&
+        !isHostnameOrSubdomain(hostname, 'onedrive.live.com') &&
+        !isHostnameOrSubdomain(hostname, '1drv.ms')) {
+      return false;
+    }
+
+    return pathname.includes('/:b:/') ||
+           pathname.endsWith('/preview') ||
+           urlObj.searchParams.get('action') === 'embedview';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Check if a URL belongs to a trusted Microsoft domain for document viewing
  * @param url The URL to validate
  * @returns true if the URL is from a trusted Microsoft domain
@@ -178,23 +206,67 @@ export function isDirectPdfUrl(url: string | null | undefined): boolean {
     const pathname = urlObj.pathname.toLowerCase();
     const urlLower = url.toLowerCase();
     
-    // Must end with .pdf
-    if (!pathname.endsWith('.pdf')) {
+    // Must end with .pdf or be a recognised SharePoint PDF viewer URL
+    const hasPdfExtension = pathname.endsWith('.pdf');
+    const isSpViewerUrl = isSharePointPdfViewerUrl(url);
+
+    if (!hasPdfExtension && !isSpViewerUrl) {
       return false;
     }
-    
+
     // If it's from SharePoint/OneDrive/1drv.ms, only allow if it has explicit download parameter
+    // or matches a known SharePoint PDF viewer/embed URL pattern
     if (isHostnameOrSubdomain(hostname, 'sharepoint.com') ||
         isHostnameOrSubdomain(hostname, 'onedrive.live.com') ||
         isHostnameOrSubdomain(hostname, '1drv.ms')) {
-      // Only allow if it has download=1 or similar direct download indicator
-      return urlLower.includes('download=1') || urlLower.includes('?download=1');
+      return urlLower.includes('download=1') || isSpViewerUrl;
     }
     
     // For other domains, allow direct PDF links
     return true;
   } catch (e) {
     return false;
+  }
+}
+
+/**
+ * Try to convert a SharePoint/OneDrive PDF URL into an embeddable iframe URL.
+ * - Pattern 1: SharePoint /:b:/ sharing links → set action=embedview
+ * - Pattern 2: Direct SharePoint PDF file paths → proxy via view.officeapps.live.com
+ * @param url The original document URL
+ * @returns An embeddable URL, or null if the URL is not a supported SharePoint PDF
+ */
+export function tryGetSharePointPdfEmbedUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    const pathname = urlObj.pathname.toLowerCase();
+
+    if (!isHostnameOrSubdomain(hostname, 'sharepoint.com') &&
+        !isHostnameOrSubdomain(hostname, 'onedrive.live.com') &&
+        !isHostnameOrSubdomain(hostname, '1drv.ms')) {
+      return null;
+    }
+
+    // Pattern 1: /:b:/ sharing links → use action=embedview
+    // Clear existing query params (e.g. ?e=<token>) and set only action=embedview
+    if (pathname.includes('/:b:/')) {
+      const embedUrl = new URL(url);
+      embedUrl.search = '';
+      embedUrl.searchParams.set('action', 'embedview');
+      return embedUrl.toString();
+    }
+
+    // Pattern 2: Direct PDF file paths → proxy via view.officeapps.live.com
+    if (pathname.endsWith('.pdf')) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    }
+
+    return null;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -219,16 +291,22 @@ export function shouldAttemptInlineEmbed(url: string | null | undefined): { ok: 
     return { ok: false, reason: 'blocked-host' };
   }
   
-  // Check if likely to redirect to login
-  if (isLikelyToRedirectToLogin(url)) {
-    return { ok: false, reason: 'microsoft-web-link' };
-  }
-  
-  // Check if it's a direct PDF URL
+  // Check if it's a direct PDF URL (includes SharePoint viewer patterns)
   if (isDirectPdfUrl(url)) {
     return { ok: true };
   }
-  
+
+  // Check if the URL points to a PDF based on file hint — getViewerUrl will handle conversion
+  if (getFileHint(url) === 'pdf') {
+    return { ok: true };
+  }
+
+  // Check if likely to redirect to login (checked after PDF checks so SharePoint PDF
+  // links are not prematurely rejected)
+  if (isLikelyToRedirectToLogin(url)) {
+    return { ok: false, reason: 'microsoft-web-link' };
+  }
+
   // For all other cases (Office docs, etc.), don't attempt embedding
   return { ok: false, reason: 'not-direct-pdf' };
 }
@@ -244,11 +322,19 @@ export function getViewerUrl(url: string | null | undefined): string | null {
   
   const decision = shouldAttemptInlineEmbed(url);
   
-  // Only return URL if we should attempt embedding (direct PDF)
+  // Only return URL if we should attempt embedding
   if (decision.ok) {
-    return url;
+    // Try to convert SharePoint PDF URLs to an embeddable format; fall back to original URL
+    return tryGetSharePointPdfEmbedUrl(url) ?? url;
   }
-  
+
+  // Fallback: some SharePoint PDF URLs (e.g. /:b:/ sharing links) are rejected by
+  // shouldAttemptInlineEmbed because they superficially match redirect-to-login patterns,
+  // but can be converted into a safe embeddable URL by tryGetSharePointPdfEmbedUrl.
+  if (decision.reason === 'microsoft-web-link' || decision.reason === 'not-direct-pdf') {
+    return tryGetSharePointPdfEmbedUrl(url);
+  }
+
   // For all other cases, return null (will show fallback)
   return null;
 }
