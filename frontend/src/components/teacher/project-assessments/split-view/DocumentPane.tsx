@@ -60,15 +60,15 @@ export function DocumentPane({
   }, [currentDocUrl, hasLink, embedDecision.ok, viewerUrl]);
 
   // Handle iframe load success
+  // Handle iframe load success.
+  // SharePoint/OneDrive URLs never reach this point (blocked at the source in
+  // isBlockedIframeHost). For other domains, a successful onLoad means the
+  // content loaded; the watchdog timer + handleIframeError handle real failures.
   const handleIframeLoad = () => {
     if (watchdogTimerRef.current) {
       clearTimeout(watchdogTimerRef.current);
     }
-    // Detect X-Frame-Options / CSP frame-ancestors blocking:
-    // - Cross-origin content loaded successfully → contentDocument is null (cross-origin access denied)
-    // - Frame was blocked → browser leaves it at about:blank → contentDocument is accessible (non-null)
-    const iframeEl = iframeRef.current;
-    setIframeBlocked(iframeEl != null && iframeEl.contentDocument != null);
+    setIframeBlocked(false);
   };
 
   // Handle iframe load error
