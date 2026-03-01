@@ -291,6 +291,16 @@ export function shouldAttemptInlineEmbed(url: string | null | undefined): { ok: 
     return { ok: false, reason: 'blocked-host' };
   }
   
+  // Organisation personal OneDrive sites ({tenant}-my.sharepoint.com) routinely have
+  // IT-enforced iframe-embedding restrictions. When blocked, SharePoint serves an HTML
+  // "This content is blocked" page inside the iframe (onLoad fires, cancelling our
+  // watchdog) so the fallback overlay never appears. Show fallback immediately instead.
+  // The anchored regex matches the exact sharepoint.com subdomain format for personal
+  // OneDrive sites and avoids partial-suffix false positives.
+  if (hostname && /^[a-z0-9-]+-my\.sharepoint\.com$/.test(hostname)) {
+    return { ok: false, reason: 'org-personal-onedrive' };
+  }
+
   // Check if it's a direct PDF URL (includes SharePoint viewer patterns)
   if (isDirectPdfUrl(url)) {
     return { ok: true };
