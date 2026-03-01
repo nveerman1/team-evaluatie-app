@@ -16,6 +16,7 @@ boto3
 pydantic[email]
 email-validator
 requests
+httpx
 msal>=1.31.0
 croniter
 urllib3>=2.6.3,<3

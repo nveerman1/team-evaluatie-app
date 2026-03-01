@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
+from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs, unquote as _unquote
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
@@ -576,4 +579,149 @@ def get_my_team_submissions(
     return MyTeamSubmissionsResponse(
         team_id=team_member.project_team_id,
         submissions=[SubmissionOut.model_validate(s) for s in submissions],
+    )
+
+
+# ---------- PDF proxy endpoint (teacher only) ----------
+
+_TRUSTED_PDF_PROXY_DOMAINS = {
+    "sharepoint.com",
+    "1drv.ms",
+    "onedrive.live.com",
+    "officeapps.live.com",
+}
+
+
+def _is_trusted_proxy_url(url: str) -> bool:
+    """Return True if the URL's hostname is a trusted domain (or subdomain)."""
+    try:
+        from urllib.parse import urlparse
+
+        hostname = urlparse(url).hostname or ""
+        hostname = hostname.lower()
+        return any(
+            hostname == domain or hostname.endswith("." + domain)
+            for domain in _TRUSTED_PDF_PROXY_DOMAINS
+        )
+    except Exception:
+        return False
+
+
+def _url_looks_like_pdf(url: str) -> bool:
+    """Return True if the URL appears to reference a PDF document."""
+    try:
+        url_lower = url.lower()
+        parsed = _urlparse(url)
+        pathname = parsed.path.lower()
+
+        # Direct .pdf extension in path or anywhere in the URL string
+        if (
+            pathname.endswith(".pdf")
+            or ".pdf?" in url_lower
+            or ".pdf#" in url_lower
+            or url_lower.endswith(".pdf")
+        ):
+            return True
+
+        # SharePoint sharing URL: /:b:/ = PDF/binary
+        if "/:b:/" in url:
+            return True
+
+        # SharePoint OneDrive viewer URL: _layouts/15/onedrive.aspx?id=/path/to/file.pdf
+        id_param = _unquote(_parse_qs(parsed.query).get("id", [""])[0]).lower()
+        if id_param.endswith(".pdf"):
+            return True
+
+        return False
+    except Exception:
+        return False
+
+
+@router.get("/{submission_id}/proxy-document")
+async def proxy_submission_document(
+    submission_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Proxy the PDF document for a submission server-side so the browser does not
+    encounter X-Frame-Options restrictions.  Only accessible to teachers and admins.
+    """
+    # Permission: teacher or admin only
+    if current_user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Alleen docenten en beheerders hebben toegang tot deze functie",
+        )
+
+    # Look up submission within the user's school
+    submission = (
+        db.query(AssignmentSubmission)
+        .filter(
+            AssignmentSubmission.id == submission_id,
+            AssignmentSubmission.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
+    if not submission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Inlevering niet gevonden"
+        )
+
+    if not submission.url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Geen document-URL opgeslagen"
+        )
+
+    # Validate the URL belongs to a trusted domain
+    if not _is_trusted_proxy_url(submission.url):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document-URL is niet van een vertrouwd domein",
+        )
+
+    # Fetch the document server-side
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, max_redirects=5, timeout=30.0) as client:
+            response = await client.get(submission.url)
+            response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Document kon niet worden opgehaald (HTTP {exc.response.status_code})",
+        )
+    except httpx.RequestError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Document kon niet worden opgehaald (netwerk fout)",
+        )
+
+    # Validate content type is PDF
+    content_type = response.headers.get("content-type", "")
+    if not content_type.startswith("application/pdf"):
+        if content_type.startswith("text/html"):
+            # HTML response means the URL redirected to a Microsoft login page.
+            # The document is not publicly accessible without authentication.
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Dit document vereist inloggen bij Microsoft. "
+                    "Deel het PDF via 'Iedereen met de link kan weergeven' "
+                    "en gebruik die deellink om het inline te bekijken."
+                ),
+            )
+        if not _url_looks_like_pdf(submission.url):
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Alleen PDF-documenten kunnen inline worden getoond",
+            )
+
+    return StreamingResponse(
+        content=iter([response.content]),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "inline",
+            "Cache-Control": "private, max-age=300",
+        },
     )
