@@ -30,10 +30,6 @@ export function isBlockedIframeHost(hostname: string): boolean {
     'microsoftonline.com', // Blocks most iframe embeds
     'msauth.net',
     'msauthimages.net',
-    // SharePoint / OneDrive set X-Frame-Options and block iframe embedding for authenticated content
-    'sharepoint.com',
-    'onedrive.live.com',
-    '1drv.ms',
   ];
   
   return blockedDomains.some(domain => isHostnameOrSubdomain(hostname, domain));
