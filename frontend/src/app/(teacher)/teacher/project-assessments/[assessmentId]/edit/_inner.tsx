@@ -778,6 +778,7 @@ export default function EditProjectAssessmentInner() {
             currentDocUrl={currentDocUrl}
             currentDocUpdatedAt={currentDocUpdatedAt}
             hasLink={hasLink}
+            submissionId={currentSubmission?.id ?? null}
             onDocWidthChange={setDocWidth}
             onDocTypeChange={setDocType}
             onLinkHealthChange={handleLinkHealthChange}
