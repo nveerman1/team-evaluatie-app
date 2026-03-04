@@ -38,9 +38,7 @@ class EmailService:
     def is_configured(self) -> bool:
         """Return ``True`` when all mandatory SMTP settings are present."""
         return bool(
-            settings.SMTP_HOST
-            and settings.SMTP_USERNAME
-            and settings.SMTP_PASSWORD
+            settings.SMTP_HOST and settings.SMTP_USERNAME and settings.SMTP_PASSWORD
         )
 
     # ------------------------------------------------------------------ core

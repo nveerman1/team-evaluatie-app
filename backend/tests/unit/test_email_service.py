@@ -157,7 +157,9 @@ class TestEmailServiceSendEmail:
 
         smtp_instance = MagicMock()
         mock_smtp_cls.return_value.__enter__.return_value = smtp_instance
-        smtp_instance.send_message.side_effect = smtplib.SMTPException("Connection refused")
+        smtp_instance.send_message.side_effect = smtplib.SMTPException(
+            "Connection refused"
+        )
 
         svc = EmailService()
         with patch("app.infra.services.email_service.settings", _make_settings()):

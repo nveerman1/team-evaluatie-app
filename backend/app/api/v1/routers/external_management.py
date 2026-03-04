@@ -249,9 +249,7 @@ def create_bulk_invitations(
         for link in created_links:
             evaluator_obj = db.get(ExternalEvaluator, link.external_evaluator_id)
             if evaluator_obj and evaluator_obj.email:
-                invite_link = (
-                    f"{settings.FRONTEND_URL}/external-assessment/{link.invitation_token}"
-                )
+                invite_link = f"{settings.FRONTEND_URL}/external-assessment/{link.invitation_token}"
                 email_body = (
                     f"Beste {evaluator_obj.name or 'beoordelaar'},\n\n"
                     f"U bent uitgenodigd om een projectbeoordeling in te vullen.\n\n"

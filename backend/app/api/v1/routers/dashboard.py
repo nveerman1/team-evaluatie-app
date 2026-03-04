@@ -928,9 +928,7 @@ def send_evaluation_reminders(
 
         # Build email body
         tasks_list = "\n".join(f"- {t}" for t in tasks_incomplete)
-        frontend_link = (
-            f"{settings.FRONTEND_URL}/student?evaluation_id={evaluation_id}"
-        )
+        frontend_link = f"{settings.FRONTEND_URL}/student?evaluation_id={evaluation_id}"
         email_body = (
             f"Beste {student.user_name},\n\n"
             f"Je hebt je evaluatie '{ev.title}' nog niet volledig afgerond. "
