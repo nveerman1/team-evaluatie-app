@@ -221,10 +221,11 @@ def create_bulk_invitations(
             )
 
             if existing_link:
-                # Update status if needed
+                # Refresh expiry and invited_at on re-invite so the existing link stays valid
+                existing_link.token_expires_at = datetime.utcnow() + timedelta(days=90)
+                existing_link.invited_at = datetime.utcnow()
                 if existing_link.status == "NOT_INVITED":
                     existing_link.status = "INVITED"
-                    existing_link.invited_at = datetime.utcnow()
                 created_links.append(existing_link)
                 continue
 
@@ -325,12 +326,13 @@ def create_bulk_invitations(
             )
 
             if existing_link:
-                # Update status if needed
+                # Always update the invitation token so the email link matches the database.
+                # Without this, a re-invite would send a new token that doesn't exist in the DB.
+                existing_link.invitation_token = token
+                existing_link.token_expires_at = datetime.utcnow() + timedelta(days=90)
+                existing_link.invited_at = datetime.utcnow()
                 if existing_link.status == "NOT_INVITED":
                     existing_link.status = "INVITED"
-                    existing_link.invited_at = datetime.utcnow()
-                    # Update to use the same token for all teams
-                    existing_link.invitation_token = token
                 created_links.append(existing_link)
                 continue
 
