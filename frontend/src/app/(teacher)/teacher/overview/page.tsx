@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AllItemsTab from "./components/AllItemsTab";
 import LearningObjectivesOverviewTab from "./components/LearningObjectivesOverviewTab";
@@ -13,23 +13,19 @@ function OverviewPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  
-  // Initialize state from URL or defaults
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "totaal");
 
-  // Sync URL with active tab - only replace when the URL doesn't already reflect the current tab
-  useEffect(() => {
-    const currentTabInUrl = searchParams.get("tab") || "totaal";
-    if (currentTabInUrl === activeTab) return;
+  // Derive active tab directly from URL — URL is the single source of truth
+  const activeTab = searchParams.get("tab") || "totaal";
 
+  const handleTabChange = (tabId: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (activeTab !== "totaal") {
-      params.set("tab", activeTab);
+    if (tabId !== "totaal") {
+      params.set("tab", tabId);
     } else {
       params.delete("tab");
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [activeTab, pathname, router, searchParams]);
+  };
 
   const tabs = [
     { id: "totaal", label: "Totaal" },
@@ -61,7 +57,7 @@ function OverviewPageContent() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`
                 py-4 px-1 border-b-2 font-medium text-sm transition-colors
                 ${
