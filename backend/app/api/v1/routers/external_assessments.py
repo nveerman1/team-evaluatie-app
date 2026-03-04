@@ -146,13 +146,18 @@ def resolve_token_and_list_teams(
         if not team_number:
             continue  # Skip links without team_number
 
-        # Get project info if available
+        # Get project info - prefer direct project_id, fall back to project_team relationship
         project = None
         if link.project_id:
             project = db.get(Project, link.project_id)
-            if project and not project_name:
-                project_name = project.title
-                class_name = project.class_name
+        elif link.project_team_id:
+            project_team_row = db.get(ProjectTeam, link.project_team_id)
+            if project_team_row:
+                project = db.get(Project, project_team_row.project_id)
+
+        if project and not project_name:
+            project_name = project.title
+            class_name = project.class_name
 
         # Skip if no project - we need it to find the team
         if not project:
@@ -226,10 +231,14 @@ def get_team_assessment_detail(
             status_code=403, detail="This team is not accessible with your invitation"
         )
 
-    # Get project
+    # Get project - prefer direct project_id, fall back to project_team relationship
     project = None
     if team_link.project_id:
         project = db.get(Project, team_link.project_id)
+    elif team_link.project_team_id:
+        project_team_row = db.get(ProjectTeam, team_link.project_team_id)
+        if project_team_row:
+            project = db.get(Project, project_team_row.project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -251,7 +260,6 @@ def get_team_assessment_detail(
     if not project_team:
         raise HTTPException(status_code=404, detail="Team not found in project")
 
-    # Find existing external assessment for this evaluator + team via junction table
     existing_assessment = (
         db.query(ProjectAssessment)
         .join(
@@ -405,10 +413,14 @@ def submit_team_assessment(
             status_code=400, detail="This assessment has already been submitted"
         )
 
-    # Get project
+    # Get project - prefer direct project_id, fall back to project_team relationship
     project = None
     if team_link.project_id:
         project = db.get(Project, team_link.project_id)
+    elif team_link.project_team_id:
+        project_team_row = db.get(ProjectTeam, team_link.project_team_id)
+        if project_team_row:
+            project = db.get(Project, project_team_row.project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
