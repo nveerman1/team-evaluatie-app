@@ -11,6 +11,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
+from app.core.config import settings
 from app.infra.db.models import (
     User,
     Competency,
@@ -26,6 +27,7 @@ from app.api.v1.schemas.competencies import (
     CompetencyOut,
 )
 from app.core.security import generate_external_token, hash_token
+from app.infra.services.email_service import email_service
 
 router = APIRouter(prefix="/competencies/external", tags=["competencies-external"])
 
@@ -147,7 +149,7 @@ def create_invites(
     ttl_days = get_window_setting(window, "invite_ttl_days", DEFAULT_INVITE_TTL_DAYS)
     expires_at = datetime.utcnow() + timedelta(days=ttl_days)
 
-    # Create invites
+    # Create invites; also track plain tokens for use in email links
     created_invites = []
     for email in data.emails:
         # Generate token
@@ -168,21 +170,43 @@ def create_invites(
             rubric_snapshot=rubric_snapshot,
         )
         db.add(invite)
-        created_invites.append(invite)
+        created_invites.append((invite, token))
 
     db.commit()
 
-    # Refresh to get IDs
-    for invite in created_invites:
+    # Refresh to get IDs; resolve final list
+    refreshed_invites = []
+    for invite, token in created_invites:
         db.refresh(invite)
+        refreshed_invites.append((invite, token))
 
-    # TODO: Send emails asynchronously
-    # For now, just mark as sent
-    for invite in created_invites:
-        invite.sent_at = datetime.utcnow()
+    # Send invitation emails and set sent_at only for successful sends
+    for invite, token in refreshed_invites:
+        invite_link = f"{settings.FRONTEND_URL}/external-review/{token}"
+        subject_display = subject.name if subject else "een student"
+        email_body = (
+            f"Beste {data.external_name or 'beoordelaar'},\n\n"
+            f"U bent uitgenodigd om een competentiebeoordeling in te vullen voor "
+            f"{subject_display}.\n\n"
+            f"Klik op de onderstaande link om de beoordeling te openen:\n"
+            f"{invite_link}\n\n"
+            f"Deze uitnodiging is geldig tot {invite.expires_at.strftime('%d-%m-%Y')}.\n\n"
+            f"Met vriendelijke groet,\n"
+            f"Technasium MBH App"
+        )
+
+        sent = email_service.send_email(
+            to=[invite.email],
+            subject="Uitnodiging: Competentiebeoordeling",
+            body=email_body,
+        )
+
+        if sent:
+            invite.sent_at = datetime.utcnow()
+
     db.commit()
 
-    return created_invites
+    return [invite for invite, _ in refreshed_invites]
 
 
 @router.get("/invites", response_model=List[ExternalInviteOut])

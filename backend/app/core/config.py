@@ -243,6 +243,17 @@ class Settings(BaseSettings):
             return "production"
         return v
 
+    # SMTP Email Configuration (TransIP: smtp.transip.email:587 with STARTTLS)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_STARTTLS: bool = True
+    SMTP_FROM_NAME: str = "Technasium MBH App"
+    SMTP_FROM_EMAIL: str = "noreply@technasiummbh.nl"
+    SMTP_REPLY_TO: str = "support@technasiummbh.nl"
+    SMTP_TIMEOUT: int = 10
+
     # Ollama instellingen
     OLLAMA_BASE_URL: AnyUrl = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.1"
