@@ -230,11 +230,18 @@ def create_bulk_invitations(
 
             # Create new link with unique token
             token = generate_external_token()
+            project_team_obj = db.get(ProjectTeam, config.project_team_id)
+            if not project_team_obj:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Project team {config.project_team_id} not found",
+                )
             link = ProjectTeamExternal(
                 school_id=user.school_id,
                 project_team_id=config.project_team_id,
                 team_number=config.team_number,
                 assessment_id=payload.assessment_id,  # Set assessment_id from payload
+                project_id=project_team_obj.project_id,
                 external_evaluator_id=evaluator.id,
                 invitation_token=token,
                 token_expires_at=datetime.utcnow() + timedelta(days=90),
@@ -249,7 +256,7 @@ def create_bulk_invitations(
         for link in created_links:
             evaluator_obj = db.get(ExternalEvaluator, link.external_evaluator_id)
             if evaluator_obj and evaluator_obj.email:
-                invite_link = f"{settings.FRONTEND_URL}/external-assessment/{link.invitation_token}"
+                invite_link = f"{settings.FRONTEND_URL}/external/assessment/{link.invitation_token}"
                 email_body = (
                     f"Beste {evaluator_obj.name or 'beoordelaar'},\n\n"
                     f"U bent uitgenodigd om een projectbeoordeling in te vullen.\n\n"
@@ -328,11 +335,18 @@ def create_bulk_invitations(
                 continue
 
             # Create new link with shared token
+            project_team_obj = db.get(ProjectTeam, team_info.project_team_id)
+            if not project_team_obj:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Project team {team_info.project_team_id} not found",
+                )
             link = ProjectTeamExternal(
                 school_id=user.school_id,
                 project_team_id=team_info.project_team_id,
                 team_number=team_info.team_number,
                 assessment_id=payload.assessment_id,  # Set assessment_id from payload
+                project_id=project_team_obj.project_id,
                 external_evaluator_id=evaluator.id,
                 invitation_token=token,  # Same token for all teams
                 token_expires_at=datetime.utcnow() + timedelta(days=90),
@@ -345,7 +359,7 @@ def create_bulk_invitations(
         db.commit()
 
         if evaluator.email:
-            invite_link = f"{settings.FRONTEND_URL}/external-assessment/{token}"
+            invite_link = f"{settings.FRONTEND_URL}/external/assessment/{token}"
             email_body = (
                 f"Beste {evaluator.name or 'beoordelaar'},\n\n"
                 f"U bent uitgenodigd om een projectbeoordeling in te vullen voor "

@@ -4,7 +4,7 @@ Public endpoints that use token-based authentication
 """
 
 from __future__ import annotations
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -74,6 +74,21 @@ def _get_all_team_links_for_token(db: Session, token: str) -> List[ProjectTeamEx
     )
 
 
+def _get_project_for_link(db: Session, link: ProjectTeamExternal) -> Optional[Project]:
+    """
+    Resolve the Project for a team link.
+    Prefers the direct project_id field; falls back to the project_team
+    relationship for legacy records where project_id was not populated.
+    """
+    if link.project_id:
+        return db.get(Project, link.project_id)
+    if link.project_team_id:
+        project_team = db.get(ProjectTeam, link.project_team_id)
+        if project_team:
+            return db.get(Project, project_team.project_id)
+    return None
+
+
 def _get_member_names(db: Session, project_id: int, team_number: int) -> str:
     """
     Get comma-separated member names for a team (identified by project_id + team_number).
@@ -121,8 +136,8 @@ def resolve_token_and_list_teams(
 
     This endpoint is public (no auth required) but requires a valid token.
     """
-    # Validate the token
-    first_link = _validate_token(db, token)
+    # Validate the token (discard return – used for side-effect validation only)
+    _validate_token(db, token)
 
     # Get all team links for this token
     team_links = _get_all_team_links_for_token(db, token)
@@ -130,8 +145,8 @@ def resolve_token_and_list_teams(
     if not team_links:
         raise HTTPException(status_code=404, detail="No teams found for this token")
 
-    # Get the external evaluator
-    evaluator = db.get(ExternalEvaluator, first_link.external_evaluator_id)
+    # Get the external evaluator from the first link (all links share the same evaluator)
+    evaluator = db.get(ExternalEvaluator, team_links[0].external_evaluator_id)
     if not evaluator:
         raise HTTPException(status_code=404, detail="External evaluator not found")
 
@@ -146,13 +161,12 @@ def resolve_token_and_list_teams(
         if not team_number:
             continue  # Skip links without team_number
 
-        # Get project info if available
-        project = None
-        if link.project_id:
-            project = db.get(Project, link.project_id)
-            if project and not project_name:
-                project_name = project.title
-                class_name = project.class_name
+        # Get project info - prefer direct project_id, fall back to project_team relationship
+        project = _get_project_for_link(db, link)
+
+        if project and not project_name:
+            project_name = project.title
+            class_name = project.class_name
 
         # Skip if no project - we need it to find the team
         if not project:
@@ -177,10 +191,10 @@ def resolve_token_and_list_teams(
                 team_name=team_name,
                 team_number=team_number,
                 members=members,
-                project_id=project.id if project else None,
-                project_title=project.title if project else None,
-                class_name=project.class_name if project else None,
-                description=project.description if project else None,
+                project_id=project.id,
+                project_title=project.title,
+                class_name=project.class_name,
+                description=project.description,
                 status=status,
             )
         )
@@ -226,10 +240,8 @@ def get_team_assessment_detail(
             status_code=403, detail="This team is not accessible with your invitation"
         )
 
-    # Get project
-    project = None
-    if team_link.project_id:
-        project = db.get(Project, team_link.project_id)
+    # Get project - prefer direct project_id, fall back to project_team relationship
+    project = _get_project_for_link(db, team_link)
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -251,7 +263,6 @@ def get_team_assessment_detail(
     if not project_team:
         raise HTTPException(status_code=404, detail="Team not found in project")
 
-    # Find existing external assessment for this evaluator + team via junction table
     existing_assessment = (
         db.query(ProjectAssessment)
         .join(
@@ -356,8 +367,8 @@ def get_team_assessment_detail(
         team_name=team_name,
         team_number=team_number,
         members=members,
-        project_title=project.title if project else None,
-        project_description=project.description if project else None,
+        project_title=project.title,
+        project_description=project.description,
         rubric=rubric_out,
         existing_scores=existing_scores,
         general_comment=general_comment,
@@ -405,10 +416,8 @@ def submit_team_assessment(
             status_code=400, detail="This assessment has already been submitted"
         )
 
-    # Get project
-    project = None
-    if team_link.project_id:
-        project = db.get(Project, team_link.project_id)
+    # Get project - prefer direct project_id, fall back to project_team relationship
+    project = _get_project_for_link(db, team_link)
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
