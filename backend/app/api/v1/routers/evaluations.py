@@ -288,28 +288,11 @@ def list_evaluations(
     if evaluation_type:
         stmt = stmt.where(Evaluation.evaluation_type == evaluation_type)
 
-    # Deduplicate by project_id at application level
-    # First, get ALL matching evaluations (without pagination)
-    all_rows = db.execute(stmt.order_by(Evaluation.id.desc())).scalars().all()
+    stmt = stmt.order_by(Evaluation.id.desc())
+    stmt = stmt.offset((page - 1) * limit).limit(limit)
+    rows = db.execute(stmt).scalars().all()
 
-    # Deduplicate: keep only the first (most recent) evaluation for each project_id
-    seen_projects = set()
-    deduplicated = []
-    for ev in all_rows:
-        # Always include evaluations without a project_id
-        if ev.project_id is None:
-            deduplicated.append(ev)
-        # Include this evaluation if we haven't seen its project yet
-        elif ev.project_id not in seen_projects:
-            seen_projects.add(ev.project_id)
-            deduplicated.append(ev)
-
-    # Apply pagination after deduplication
-    start_idx = (page - 1) * limit
-    end_idx = start_idx + limit
-    paginated_results = deduplicated[start_idx:end_idx]
-
-    return [_to_out(ev) for ev in paginated_results]
+    return [_to_out(ev) for ev in rows]
 
 
 @router.patch("/{evaluation_id}/status", response_model=EvaluationOut)
