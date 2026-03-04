@@ -178,14 +178,14 @@ export default function CreateEvaluationPageInner() {
         <div className="flex items-center gap-2">
           <a
             href="/teacher/evaluations"
-            className="px-3 py-2 rounded-lg border"
+            className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
           >
             Terug
           </a>
           <button
             onClick={handleSubmit as any}
             disabled={submitting || anyLoading}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {submitting ? "Aanmaken…" : "Aanmaken"}
           </button>
@@ -193,23 +193,23 @@ export default function CreateEvaluationPageInner() {
       </header>
 
       {(error) && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700 break-words">
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 break-words">
           {error}
         </div>
       )}
       {info && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
+        <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-700">{info}</div>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white border rounded-2xl p-5 space-y-6"
+        className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-6"
       >
         {/* Titel */}
         <div className="space-y-1">
           <label className="block text-sm font-medium">Titel</label>
           <input
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Bijv. Tussenreview sprint 2"
@@ -224,7 +224,7 @@ export default function CreateEvaluationPageInner() {
               Course <span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               value={courseId === "" ? "" : Number(courseId)}
               onChange={(e) => {
                 setCourseId(e.target.value ? Number(e.target.value) : "");
@@ -250,7 +250,7 @@ export default function CreateEvaluationPageInner() {
               Project <span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               value={projectId === "" ? "" : Number(projectId)}
               onChange={(e) => {
                 setProjectId(e.target.value ? Number(e.target.value) : "");
@@ -275,7 +275,7 @@ export default function CreateEvaluationPageInner() {
         <div className="space-y-1">
           <label className="block text-sm font-medium">Rubric</label>
           <select
-            className="w-full px-3 py-2 border rounded-lg"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             value={rubricId === "" ? "" : Number(rubricId)}
             onChange={(e) =>
               setRubricId(e.target.value ? Number(e.target.value) : "")
@@ -305,7 +305,7 @@ export default function CreateEvaluationPageInner() {
             </label>
             <input
               type="datetime-local"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
               value={reviewDeadline}
               onChange={(e) => setReviewDeadline(e.target.value)}
             />
@@ -316,7 +316,7 @@ export default function CreateEvaluationPageInner() {
             </label>
             <input
               type="datetime-local"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
               value={reflectionDeadline}
               onChange={(e) => setReflectionDeadline(e.target.value)}
             />
@@ -331,7 +331,7 @@ export default function CreateEvaluationPageInner() {
             </label>
             <input
               type="number"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
               value={minWords}
               onChange={(e) => setMinWords(e.target.valueAsNumber || 0)}
               min={0}
@@ -346,14 +346,14 @@ export default function CreateEvaluationPageInner() {
               <input
                 type="number"
                 step="0.1"
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={minCf}
                 onChange={(e) => setMinCf(e.target.valueAsNumber || 0)}
               />
               <input
                 type="number"
                 step="0.1"
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={maxCf}
                 onChange={(e) => setMaxCf(e.target.valueAsNumber || 0)}
               />
@@ -366,13 +366,13 @@ export default function CreateEvaluationPageInner() {
           <button
             type="submit"
             disabled={submitting || anyLoading}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {submitting ? "Aanmaken…" : "Aanmaken"}
           </button>
           <a
             href="/teacher/evaluations"
-            className="px-4 py-2 rounded-xl border"
+            className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
           >
             Annuleer
           </a>

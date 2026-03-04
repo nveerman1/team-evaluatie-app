@@ -94,10 +94,10 @@ export default function CreateProjectPlanInner() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 bg-white p-5 rounded-2xl border"
+        className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-5"
       >
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">{error}</div>
         )}
 
         <div className="space-y-1">
@@ -105,7 +105,7 @@ export default function CreateProjectPlanInner() {
             Titel (optioneel)
           </label>
           <input
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Bijv. Projectplan periode 1"
@@ -122,7 +122,7 @@ export default function CreateProjectPlanInner() {
               Vak <span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               value={courseId}
               onChange={(e) => {
                 setCourseId(e.target.value ? Number(e.target.value) : "");
@@ -148,7 +148,7 @@ export default function CreateProjectPlanInner() {
               Project <span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               value={projectId}
               onChange={(e) => {
                 setProjectId(e.target.value ? Number(e.target.value) : "");
@@ -174,7 +174,7 @@ export default function CreateProjectPlanInner() {
             Versie (optioneel)
           </label>
           <input
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={version}
             onChange={(e) => setVersion(e.target.value)}
             placeholder="Bijv. v1.0, concept, definitief"
@@ -189,7 +189,7 @@ export default function CreateProjectPlanInner() {
             Zichtbaarheid <span className="text-red-500">*</span>
           </label>
           <select
-            className="w-full px-3 py-2 border rounded-lg"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             value={status}
             onChange={(e) => setStatus(e.target.value as ProjectPlanStatus)}
             required
@@ -208,13 +208,13 @@ export default function CreateProjectPlanInner() {
           <button
             type="submit"
             disabled={saving || courses.length === 0 || !courseId}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan & verder"}
           </button>
           <Link
             href="/teacher/projectplans"
-            className="px-4 py-2 rounded-xl border"
+            className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
           >
             Annuleer
           </Link>
