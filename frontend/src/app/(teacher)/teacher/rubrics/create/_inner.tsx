@@ -386,16 +386,16 @@ export default function CreateRubricPageInner() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 bg-white p-5 rounded-2xl border"
+        className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-5"
       >
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">{error}</div>
         )}
 
         <div className="space-y-1">
           <label className="block text-sm font-medium">Type</label>
           <select
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={scope}
             onChange={(e) => setScope(e.target.value as "peer" | "project")}
           >
@@ -408,16 +408,16 @@ export default function CreateRubricPageInner() {
         <div className="space-y-1">
           <label className="block text-sm font-medium">Vakgebied / Sectie</label>
           {loadingSubjects ? (
-            <div className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
+            <div className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
               Vakgebieden laden...
             </div>
           ) : subjects.length === 0 ? (
-            <div className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
+            <div className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
               Geen vakgebieden beschikbaar
             </div>
           ) : (
             <select
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
               value={selectedSubjectId || ""}
               onChange={(e) => setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null)}
             >
@@ -434,7 +434,7 @@ export default function CreateRubricPageInner() {
         <div className="space-y-1">
           <label className="block text-sm font-medium">Niveau (Onderbouw/Bovenbouw)</label>
           <select
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={targetLevel || ""}
             onChange={(e) => setTargetLevel(e.target.value ? (e.target.value as "onderbouw" | "bovenbouw") : null)}
           >
@@ -458,7 +458,7 @@ export default function CreateRubricPageInner() {
             {loadingCriteria ? (
               <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
             ) : (scope === "peer" ? peerCriteria : projectCriteria).length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm border rounded-lg bg-gray-50">
+              <div className="p-4 text-center text-gray-500 text-sm border border-gray-200 rounded-lg bg-gray-50">
                 Geen criteria templates gevonden voor dit vakgebied.
               </div>
             ) : (
@@ -467,7 +467,7 @@ export default function CreateRubricPageInner() {
                   ref={buttonRef}
                   type="button"
                   onClick={toggleDropdown}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
                 >
                   <span className={selectedCriteriaIds.length === 0 ? "text-gray-500" : ""}>
                     {getSelectedCriteriaText()}
@@ -485,7 +485,7 @@ export default function CreateRubricPageInner() {
                 {isDropdownOpen && dropdownPosition && createPortal(
                   <div 
                     ref={panelRef}
-                    className="fixed z-[9999] bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                    className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto"
                     style={{
                       top: `${dropdownPosition.top}px`,
                       left: `${dropdownPosition.left}px`,
@@ -622,7 +622,7 @@ export default function CreateRubricPageInner() {
         <div className="space-y-1">
           <label className="block text-sm font-medium">Titel</label>
           <input
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -634,7 +634,7 @@ export default function CreateRubricPageInner() {
             Omschrijving (optioneel)
           </label>
           <textarea
-            className="w-full border rounded-lg px-3 py-2 min-h-24"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-24"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
@@ -644,11 +644,11 @@ export default function CreateRubricPageInner() {
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan & verder"}
           </button>
-          <a href="/teacher/rubrics" className="px-4 py-2 rounded-xl border">
+          <a href="/teacher/rubrics" className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
             Annuleer
           </a>
         </div>
