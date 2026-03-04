@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
+from app.core.config import settings
 from app.infra.db.models import (
     User,
     ExternalEvaluator,
@@ -30,6 +31,7 @@ from app.api.v1.schemas.external_assessments import (
 )
 from app.core.security import generate_external_token
 from app.core.rbac import require_role
+from app.infra.services.email_service import email_service
 
 router = APIRouter(
     prefix="/projects/external-management", tags=["external-assessments-management"]
@@ -244,6 +246,24 @@ def create_bulk_invitations(
 
         db.commit()
 
+        for link in created_links:
+            evaluator_obj = db.get(ExternalEvaluator, link.external_evaluator_id)
+            if evaluator_obj and evaluator_obj.email:
+                invite_link = f"{settings.FRONTEND_URL}/external-assessment/{link.invitation_token}"
+                email_body = (
+                    f"Beste {evaluator_obj.name or 'beoordelaar'},\n\n"
+                    f"U bent uitgenodigd om een projectbeoordeling in te vullen.\n\n"
+                    f"Klik op de onderstaande link om de beoordeling te openen:\n"
+                    f"{invite_link}\n\n"
+                    f"Met vriendelijke groet,\n"
+                    f"Technasium MBH App"
+                )
+                email_service.send_email(
+                    to=[evaluator_obj.email],
+                    subject="Uitnodiging: Projectbeoordeling",
+                    body=email_body,
+                )
+
         return {
             "success": True,
             "message": f"Created {len(created_links)} invitation(s)",
@@ -323,6 +343,23 @@ def create_bulk_invitations(
             created_links.append(link)
 
         db.commit()
+
+        if evaluator.email:
+            invite_link = f"{settings.FRONTEND_URL}/external-assessment/{token}"
+            email_body = (
+                f"Beste {evaluator.name or 'beoordelaar'},\n\n"
+                f"U bent uitgenodigd om een projectbeoordeling in te vullen voor "
+                f"{len(created_links)} team(s).\n\n"
+                f"Klik op de onderstaande link om de beoordeling te openen:\n"
+                f"{invite_link}\n\n"
+                f"Met vriendelijke groet,\n"
+                f"Technasium MBH App"
+            )
+            email_service.send_email(
+                to=[evaluator.email],
+                subject="Uitnodiging: Projectbeoordeling",
+                body=email_body,
+            )
 
         return {
             "success": True,

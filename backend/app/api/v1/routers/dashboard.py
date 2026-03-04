@@ -9,6 +9,7 @@ import csv
 from datetime import datetime, timezone
 
 from app.api.v1.deps import get_db, get_current_user
+from app.core.config import settings
 from app.infra.db.models import (
     Evaluation,
     Rubric,
@@ -29,6 +30,7 @@ from app.api.v1.schemas.dashboard import (
     StudentProgressRow,
     StudentProgressKPIs,
 )
+from app.infra.services.email_service import email_service
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -924,16 +926,25 @@ def send_evaluation_reminders(
         if student.reflection_status != "completed":
             tasks_incomplete.append("Reflectie")
 
-        # TODO: Send actual email using SMTP
-        # Example: send_email(
-        #     to=student_user.email,
-        #     subject=f"Herinnering: Evaluatie '{ev.title}' nog niet afgerond",
-        #     body=f"Beste {student.user_name},\n\n"
-        #          f"Je hebt je evaluatie nog niet afgerond. De volgende onderdelen ontbreken:\n"
-        #          f"- {chr(10).join(tasks_incomplete)}\n\n"
-        #          f"Klik hier om verder te gaan: [link]\n\n"
-        #          f"Met vriendelijke groet,\nTeam Evaluatie App"
-        # )
+        # Build email body
+        tasks_list = "\n".join(f"- {t}" for t in tasks_incomplete)
+        frontend_link = f"{settings.FRONTEND_URL}/student?evaluation_id={evaluation_id}"
+        email_body = (
+            f"Beste {student.user_name},\n\n"
+            f"Je hebt je evaluatie '{ev.title}' nog niet volledig afgerond. "
+            f"De volgende onderdelen ontbreken nog:\n"
+            f"{tasks_list}\n\n"
+            f"Klik op de onderstaande link om verder te gaan:\n"
+            f"{frontend_link}\n\n"
+            f"Met vriendelijke groet,\n"
+            f"Technasium MBH App"
+        )
+
+        email_sent = email_service.send_email(
+            to=[student_user.email],
+            subject=f"Herinnering: Evaluatie '{ev.title}' nog niet afgerond",
+            body=email_body,
+        )
 
         reminders_sent.append(
             {
@@ -942,12 +953,22 @@ def send_evaluation_reminders(
                 "email": student_user.email,
                 "tasks_incomplete": tasks_incomplete,
                 "progress_percent": student.total_progress_percent,
+                "email_sent": email_sent,
             }
+        )
+
+    smtp_configured = email_service.is_configured()
+    if smtp_configured:
+        message = f"{len(reminders_sent)} herinnering(en) verzonden via e-mail"
+    else:
+        message = (
+            f"{len(reminders_sent)} herinnering(en) verzonden "
+            "(simulatie — SMTP niet geconfigureerd)"
         )
 
     return {
         "evaluation_id": evaluation_id,
         "reminders_sent": len(reminders_sent),
         "students": reminders_sent,
-        "message": f"{len(reminders_sent)} herinnering(en) verzonden (simulatie - email functionaliteit nog niet geïmplementeerd)",
+        "message": message,
     }
