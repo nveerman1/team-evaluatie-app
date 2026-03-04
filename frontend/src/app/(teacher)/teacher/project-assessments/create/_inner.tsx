@@ -1,19 +1,12 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
-import api, { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService, rubricService, projectService } from "@/services";
 import { RubricListItem, ProjectAssessmentCreate } from "@/dtos";
+import { ApiAuthError } from "@/lib/api";
 import { Loading, ErrorMessage } from "@/components";
 import type { ProjectListItem } from "@/dtos/project.dto";
 import { useCourses } from "@/hooks";
-
-type Group = {
-  id: number;
-  name: string;
-  team_number?: number | null;
-  course_id?: number | null;
-};
 
 export default function CreateProjectAssessmentInner() {
   const router = useRouter();
@@ -22,14 +15,12 @@ export default function CreateProjectAssessmentInner() {
   const [error, setError] = useState<string | null>(null);
 
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const { courses } = useCourses();
 
   const [title, setTitle] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">("");
-  const [groupId, setGroupId] = useState<number | "">("");
   const [projectId, setProjectId] = useState<number | "">("");
   const [version, setVersion] = useState("");
 
@@ -39,21 +30,6 @@ export default function CreateProjectAssessmentInner() {
     return projects.filter(p => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
-  // Filter groups based on selected course
-  const filteredGroups = useMemo(() => {
-    if (typeof courseId !== "number") return [];
-    return groups.filter(g => g.course_id === Number(courseId));
-  }, [groups, courseId]);
-
-  // Auto-select group when course changes and there's only one group
-  useEffect(() => {
-    if (filteredGroups.length === 1) {
-      setGroupId(filteredGroups[0].id);
-    } else {
-      setGroupId("");
-    }
-  }, [filteredGroups]);
-
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -62,12 +38,6 @@ export default function CreateProjectAssessmentInner() {
         // Load project rubrics
         const rubricResponse = await rubricService.getRubrics("", "project");
         setRubrics(rubricResponse.items || []);
-
-        // Load teams from the students/teams endpoint
-        const groupsResponse = await api.get<Group[]>("/students/teams");
-        setGroups(
-          Array.isArray(groupsResponse.data) ? groupsResponse.data : [],
-        );
 
         // Load projects
         const projectsResponse = await projectService.listProjects();
@@ -91,8 +61,8 @@ export default function CreateProjectAssessmentInner() {
       setError("Selecteer een project");
       return;
     }
-    if (!rubricId || !groupId) {
-      setError("Selecteer een rubric en cluster");
+    if (!rubricId) {
+      setError("Selecteer een rubric");
       return;
     }
 
@@ -164,7 +134,6 @@ export default function CreateProjectAssessmentInner() {
               onChange={(e) => {
                 setCourseId(e.target.value ? Number(e.target.value) : "");
                 setProjectId(""); // Reset project when course changes
-                setGroupId(""); // Reset group when course changes
               }}
               required
               disabled={loading}
@@ -177,7 +146,7 @@ export default function CreateProjectAssessmentInner() {
               ))}
             </select>
             <p className="text-xs text-gray-500">
-              Bepaalt welke projecten en clusters beschikbaar zijn.
+              Bepaalt welke projecten beschikbaar zijn.
             </p>
           </div>
 
@@ -247,7 +216,7 @@ export default function CreateProjectAssessmentInner() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={saving || rubrics.length === 0 || courses.length === 0 || !courseId || filteredGroups.length === 0}
+            disabled={saving || rubrics.length === 0 || courses.length === 0 || !courseId}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan & verder"}
