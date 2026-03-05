@@ -86,7 +86,6 @@ def preview_grades(
 
     # 1) Get ALL students in this course with active enrollment (and not archived)
     students: List[User] = []
-    team_gid_by_uid: Dict[int, Optional[int]] = {}
     if HAS_MODELS and course is not None:
         try:
             # Get all enrollments for this course
@@ -221,7 +220,17 @@ def preview_grades(
 
     if Allocation:
         for u in students:
-            raw_gid = team_gid_by_uid.get(u.id)
+            # Determine the team this student belongs to for GCF grouping.
+            # For project evaluations use the project team map; for regular
+            # (course-based) evaluations use User.team_number.  The old
+            # team_gid_by_uid dict was never populated after the GroupMember
+            # model was removed, so every student ended up in a single
+            # virtual "None" team, causing all GCF values to be computed
+            # against the overall class mean instead of their own team mean.
+            if evaluation and getattr(evaluation, "project_id", None):
+                raw_gid = project_team_map.get(u.id)
+            else:
+                raw_gid = getattr(u, "team_number", None)
             teamid_by_uid[u.id] = raw_gid
 
             allocs = (
@@ -287,31 +296,17 @@ def preview_grades(
             else 0.0
         )
 
-        # --- Suggestie op basis van Peer en Self (1–10 schaal) ---
-        # Gebruik verbeterde formule: (percentage / 100) * 9 + 1
-        # Dit geeft realistischere cijfers: 60% → 6.4, 80% → 8.2, 100% → 10.0
-        P = ((avg_score / 100.0) * 9 + 1) if avg_score > 0 else None
-        S = (
-            ((self_pct / 100.0) * 9 + 1)
-            if (self_pct is not None and self_pct > 0)
-            else None
-        )
-
-        if P is not None and S is not None:
-            # 75% peer, 25% self: gebalanceerd en robuust
-            suggested_val = 0.75 * P + 0.25 * S
-
-            # Optioneel: lichte SPR-correctie (max ±10% effect)
-            spr_val = (S / P) if P > 0 else 1.0
-            spr_val = max(0.90, min(1.10, spr_val))
-            suggested_val *= spr_val
-
-        elif P is not None:
-            suggested_val = P
-        elif S is not None:
-            suggested_val = S
+        # --- Suggestie op basis van Peer score (1–10 schaal) ---
+        # Gebruik alleen de peer score voor het voorstel, zodat dit consistent
+        # is met de GCF (die ook uitsluitend op peer scores is gebaseerd).
+        # De self-score is zichtbaar in de OMZA-categoriekolommen en kan door
+        # de docent handmatig worden meegewogen.
+        # Formule: (percentage / 100) * 9 + 1
+        # → 0% → 1.0, 60% → 6.4, 80% → 8.2, 100% → 10.0
+        suggested_val: float | None
+        if avg_score > 0:
+            suggested_val = (avg_score / 100.0) * 9 + 1
         else:
-            # Geen peer en geen self evaluaties: geen voorstel
             suggested_val = None
 
         # afronden en begrenzen (alleen als er een waarde is)
