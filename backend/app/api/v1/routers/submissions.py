@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
@@ -14,6 +15,8 @@ from app.infra.db.models import (
     ProjectTeamMember,
     User,
     Notification,
+    Project,
+    TeacherCourse,
 )
 from app.api.v1.schemas.submissions import (
     SubmissionCreate,
@@ -26,6 +29,57 @@ from app.api.v1.schemas.submissions import (
 from app.api.v1.utils.url_validation import validate_sharepoint_url
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
+
+
+def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to via teacher_courses"""
+    if user.role == "admin":
+        # Admins see everything, return empty list to indicate no filtering
+        return []
+    if user.role != "teacher":
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active.is_(True),
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
+
+
+def _check_teacher_can_access_assessment(
+    db: Session, assessment: ProjectAssessment, user: User
+) -> bool:
+    """
+    Check if a teacher has access to an assessment.
+    
+    - Admins: can access any assessment in their school
+    - Teachers: can access assessments for courses they're assigned to
+    - Others: return False
+    
+    Returns True if user has access, False otherwise.
+    """
+    if user.role == "admin":
+        return True
+    
+    if user.role != "teacher":
+        return False
+    
+    # Check course access via project_id
+    if assessment.project_id:
+        project = db.query(Project).filter(Project.id == assessment.project_id).first()
+        if project and project.course_id:
+            teacher_course_ids = _get_teacher_course_ids(db, user)
+            # If teacher has no course assignments, they can't access anything
+            if not teacher_course_ids:
+                return False
+            # Check if the assessment's course is in the teacher's assigned courses
+            if project.course_id not in teacher_course_ids:
+                return False
+    
+    return True
+
 
 
 def log_submission_event(
@@ -238,7 +292,7 @@ def clear_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Inlevering niet gevonden"
         )
 
-    # Permission: team member OR teacher of assessment OR admin
+    # Permission: team member OR teacher with course access OR admin
     is_team_member = (
         db.query(ProjectTeamMember)
         .filter(
@@ -248,17 +302,21 @@ def clear_submission(
         .first()
     )
 
-    is_teacher = (
+    # Check if user is a teacher with access to this assessment
+    assessment = (
         db.query(ProjectAssessment)
         .filter(
             ProjectAssessment.id == submission.project_assessment_id,
-            ProjectAssessment.teacher_id == current_user.id,
             ProjectAssessment.school_id == current_user.school_id,
         )
         .first()
     )
+    
+    has_teacher_access = False
+    if assessment:
+        has_teacher_access = _check_teacher_can_access_assessment(db, assessment, current_user)
 
-    if not (is_team_member or is_teacher or current_user.role == "admin"):
+    if not (is_team_member or has_teacher_access):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Geen toegang om deze inlevering te verwijderen",
@@ -316,10 +374,11 @@ def update_submission_status(
             status_code=status.HTTP_404_NOT_FOUND, detail="Assessment niet gevonden"
         )
 
-    if assessment.teacher_id != current_user.id and current_user.role != "admin":
+    # Check if teacher has access to this assessment via course assignment
+    if not _check_teacher_can_access_assessment(db, assessment, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Alleen de docent kan de status wijzigen",
+            detail="Alleen docenten met toegang tot deze cursus kunnen de status wijzigen",
         )
 
     old_status = submission.status
@@ -384,9 +443,10 @@ def list_submissions_for_assessment(
         f"[DEBUG submissions] assessment_id={assessment_id}, assessment.teacher_id={assessment.teacher_id}, current_user.id={current_user.id}, current_user.email={current_user.email}, current_user.role={current_user.role}"
     )
 
-    if assessment.teacher_id != current_user.id and current_user.role != "admin":
+    # Check if teacher has access to this assessment via course assignment
+    if not _check_teacher_can_access_assessment(db, assessment, current_user):
         print(
-            f"[DEBUG submissions] 403: teacher_id mismatch - assessment.teacher_id={assessment.teacher_id} != current_user.id={current_user.id}"
+            f"[DEBUG submissions] 403: teacher does not have access - assessment.teacher_id={assessment.teacher_id}, current_user.id={current_user.id}"
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
