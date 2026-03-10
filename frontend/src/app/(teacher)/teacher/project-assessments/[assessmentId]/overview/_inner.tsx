@@ -20,6 +20,18 @@ export default function ProjectAssessmentOverviewInner() {
   const [sortBy, setSortBy] = useState<"team" | "status" | "progress" | "updated">("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  const handleSort = useCallback(
+    (field: "team" | "status" | "progress" | "updated") => {
+      if (sortBy === field) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortBy(field);
+        setSortOrder("asc");
+      }
+    },
+    [sortBy, sortOrder]
+  );
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -94,6 +106,11 @@ export default function ProjectAssessmentOverviewInner() {
     return sortOrder === "asc" ? comparison : -comparison;
   });
 
+  const SortIcon = ({ field }: { field: "team" | "status" | "progress" | "updated" }) => {
+    if (sortBy !== field) return <span className="ml-1 text-gray-300" aria-label="sorteerbaar">↕</span>;
+    return <span className="ml-1" aria-label={sortOrder === "asc" ? "gesorteerd oplopend" : "gesorteerd aflopend"}>{sortOrder === "asc" ? "↑" : "↓"}</span>;
+  };
+
   return (
     <>
       {/* Search and Filters - styled like OMZA */}
@@ -107,16 +124,6 @@ export default function ProjectAssessmentOverviewInner() {
           />
           <select
             className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "team" | "status" | "progress" | "updated")}
-          >
-            <option value="team">Teamnummer</option>
-            <option value="status">Status</option>
-            <option value="progress">Voortgang</option>
-            <option value="updated">Laatste bewerking</option>
-          </select>
-          <select
-            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -125,12 +132,6 @@ export default function ProjectAssessmentOverviewInner() {
             <option value="in_progress">⚠️ In progress</option>
             <option value="completed">✅ Afgerond</option>
           </select>
-          <button
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
-          >
-            {sortOrder === "asc" ? "↑" : "↓"}
-          </button>
         </div>
       </div>
 
@@ -140,20 +141,32 @@ export default function ProjectAssessmentOverviewInner() {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
-                  Team
+                <th
+                  className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("team")}
+                >
+                  Team <SortIcon field="team" />
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
                   Leden
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-[160px]">
-                  Status
+                <th
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-[160px] cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("status")}
+                >
+                  Status <SortIcon field="status" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
-                  Voortgang
+                <th
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px] cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("progress")}
+                >
+                  Voortgang <SortIcon field="progress" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                  Laatste bewerking
+                <th
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("updated")}
+                >
+                  Laatste bewerking <SortIcon field="updated" />
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
                   Acties
