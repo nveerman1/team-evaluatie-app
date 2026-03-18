@@ -15,6 +15,7 @@ interface DocumentPaneProps {
   onDocTypeChange: (type: 'Verslag' | 'Presentatie') => void;
   onLinkHealthChange: (health: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link') => void;
   onOpenInTab?: () => void;
+  submissionId?: number | null;
 }
 
 interface ReferencePanelWrapperProps extends DocumentPaneProps {

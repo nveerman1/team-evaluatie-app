@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { isTrustedMicrosoftUrl, getViewerUrl, shouldAttemptInlineEmbed, safeHostname } from '@/lib/document-viewer-utils';
+import { isTrustedMicrosoftUrl, getViewerUrl, shouldAttemptInlineEmbed, safeHostname, getFileHint } from '@/lib/document-viewer-utils';
+import { PdfViewer } from './PdfViewer';
 
 interface DocumentPaneProps {
   docType: 'Verslag' | 'Presentatie';
@@ -12,6 +13,7 @@ interface DocumentPaneProps {
   onDocTypeChange: (type: 'Verslag' | 'Presentatie') => void;
   onLinkHealthChange: (health: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link') => void;
   onOpenInTab?: () => void;
+  submissionId?: number | null;
 }
 
 export function DocumentPane({
@@ -23,6 +25,7 @@ export function DocumentPane({
   onDocTypeChange,
   onLinkHealthChange,
   onOpenInTab,
+  submissionId,
 }: DocumentPaneProps) {
   // State for iframe blocking detection
   const [iframeBlocked, setIframeBlocked] = useState(false);
@@ -33,6 +36,11 @@ export function DocumentPane({
   const isTrusted = isTrustedMicrosoftUrl(currentDocUrl);
   const embedDecision = shouldAttemptInlineEmbed(currentDocUrl);
   const viewerUrl = getViewerUrl(currentDocUrl);
+  const fileHint = getFileHint(currentDocUrl);
+
+  // Use the PDF proxy when the file is a PDF and we have a submission ID
+  const canProxyPdf = hasLink && isTrusted && fileHint === 'pdf' && submissionId;
+  const proxyUrl = canProxyPdf ? `/api/v1/submissions/${submissionId}/proxy-document` : null;
 
   // Reset iframe blocked state when document URL changes
   useEffect(() => {
@@ -157,6 +165,8 @@ export function DocumentPane({
                 </button>
               </div>
             </div>
+          ) : proxyUrl ? (
+            <PdfViewer proxyUrl={proxyUrl} />
           ) : embedDecision.ok && viewerUrl ? (
             <>
               {/* Iframe viewer - only render for direct PDF links */}
@@ -205,13 +215,19 @@ export function DocumentPane({
             // Show fallback immediately for SharePoint/OneDrive/Office links
             <div className="h-full flex items-center justify-center px-6 text-center">
               <div className="space-y-4 max-w-md">
-                <div className="text-3xl">📄</div>
+                <div className="text-3xl">
+                  {fileHint === 'doc' ? '📝' : fileHint === 'ppt' ? '📊' : '📄'}
+                </div>
                 <div>
                   <p className="text-sm font-medium text-slate-700 mb-1">
                     Open in tab nodig
                   </p>
                   <p className="text-xs text-slate-500">
-                    Deze Microsoft-link kan niet veilig in de app worden getoond. 
+                    {fileHint === 'doc'
+                      ? 'Word-documenten kunnen niet inline worden getoond.'
+                      : fileHint === 'ppt'
+                      ? 'Presentaties kunnen niet inline worden getoond.'
+                      : 'Deze Microsoft-link kan niet veilig in de app worden getoond.'}{' '}
                     Open het document in een nieuw tabblad.
                   </p>
                 </div>
@@ -220,7 +236,7 @@ export function DocumentPane({
                     onClick={onOpenInTab}
                     className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 shadow-sm"
                   >
-                    📄 Open in nieuw tabblad
+                    {fileHint === 'doc' ? '📝' : fileHint === 'ppt' ? '📊' : '📄'} Open in nieuw tabblad
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-2">
