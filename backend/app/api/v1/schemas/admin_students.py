@@ -11,11 +11,16 @@ class CourseEnrollmentInfo(BaseModel):
 
 
 class AdminStudentCreate(BaseModel):
-    name: str
+    name: Optional[str] = None
     email: EmailStr
     class_name: Optional[str] = None
     team_number: Optional[int] = None
     status: Optional[Literal["active", "inactive"]] = "active"
+    # Somtoday-compatibele velden
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class AdminStudentUpdate(BaseModel):
@@ -25,6 +30,11 @@ class AdminStudentUpdate(BaseModel):
     # NB: course_name wijzigen doen we via dedicated membership endpoints; niet hier.
     team_number: Optional[int] = None
     status: Optional[Literal["active", "inactive"]] = None
+    # Somtoday-compatibele velden
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class AdminStudentOut(BaseModel):
@@ -39,3 +49,8 @@ class AdminStudentOut(BaseModel):
     # New fields for enhanced display
     class_info: Optional[str] = None  # e.g., "G2a (2025-2026)"
     course_enrollments: List[CourseEnrollmentInfo] = []  # List of enrolled courses
+    # Somtoday-compatibele velden
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None

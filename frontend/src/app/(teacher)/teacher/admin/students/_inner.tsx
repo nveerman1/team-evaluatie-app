@@ -13,6 +13,11 @@ type Student = {
   course_name?: string | null; // <— nieuw, vervangt cluster
   status?: "active" | "inactive" | null;
   team_number?: number | null;
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 };
 
 export default function StudentsAdminInner() {
@@ -200,15 +205,18 @@ export default function StudentsAdminInner() {
         <table className="w-full table-auto border-collapse">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[10%]">
+                Leerlingnr.
+              </th>
               <SortableTh
                 label="Naam"
                 col="name"
                 sort={sort}
                 dir={dir}
                 onClick={toggleSort}
-                className="w-[18%]"
+                className="w-[16%]"
               />
-              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[20%]">
+              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[18%]">
                 Email
               </th>
               <SortableTh
@@ -239,7 +247,7 @@ export default function StudentsAdminInner() {
               <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[10%]">
                 Status
               </th>
-              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[18%]">
+              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[16%]">
                 Acties
               </th>
             </tr>
@@ -249,7 +257,7 @@ export default function StudentsAdminInner() {
             {loading && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-6 text-sm text-gray-500 text-center"
                 >
                   Laden…
@@ -259,7 +267,7 @@ export default function StudentsAdminInner() {
             {!loading && rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-6 text-sm text-gray-500 text-center"
                 >
                   Geen leerlingen gevonden.
@@ -273,6 +281,7 @@ export default function StudentsAdminInner() {
                   key={s.id}
                   className="text-sm hover:bg-gray-50 transition-colors"
                 >
+                  <td className="px-4 py-2 text-left text-gray-500">{s.student_number || "-"}</td>
                   <td className="px-4 py-2 truncate">{s.name || "-"}</td>
                   <td className="px-4 py-2 truncate">
                     <a href={`mailto:${s.email}`} className="hover:underline">
@@ -587,6 +596,9 @@ function EditStudentModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const [firstName, setFirstName] = useState(student.first_name ?? "");
+  const [prefix, setPrefix] = useState(student.prefix ?? "");
+  const [lastName, setLastName] = useState(student.last_name ?? "");
   const [name, setName] = useState(student.name ?? "");
   const [email, setEmail] = useState(student.email ?? "");
   const [className, setClassName] = useState(student.class_name ?? "");
@@ -597,18 +609,29 @@ function EditStudentModal({
   const [teamNumber, setTeamNumber] = useState<string>(
     student.team_number?.toString() ?? "",
   );
+  const [studentNumber, setStudentNumber] = useState(student.student_number ?? "");
   const [saving, setSaving] = useState(false);
 
   const save = useCallback(async () => {
     setSaving(true);
     try {
+      const fn = firstName.trim() || null;
+      const pfx = prefix.trim() || null;
+      const ln = lastName.trim() || null;
+      const nameParts = [fn, pfx, ln].filter(Boolean);
+      const computedName = nameParts.length > 0 ? nameParts.join(" ") : (name.trim() || null);
+
       await api.put(`/admin/students/${student.id}`, {
-        name,
+        name: computedName,
         email,
         class_name: className,
         course_name: courseName.trim() || null, // <— stuur course_name mee
         status,
         team_number: teamNumber.trim() === "" ? null : Number(teamNumber),
+        student_number: studentNumber.trim() || null,
+        first_name: fn,
+        prefix: pfx,
+        last_name: ln,
       });
       await onSaved(); // reload
       onClose();
@@ -621,11 +644,15 @@ function EditStudentModal({
     className,
     courseName,
     email,
+    firstName,
+    prefix,
+    lastName,
     name,
     onSaved,
     onClose,
     status,
     student.id,
+    studentNumber,
     teamNumber,
   ]);
 
@@ -633,7 +660,7 @@ function EditStudentModal({
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-2xl shadow-xl w-[520px] p-5 space-y-4">
+      <div className="relative z-10 bg-white rounded-2xl shadow-xl w-[560px] p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Leerling bewerken</h2>
           <Button variant="ghost" onClick={onClose}>
@@ -642,14 +669,31 @@ function EditStudentModal({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <TextInput
-            label="Naam"
-            value={name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+            label="Voornaam"
+            value={firstName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+          />
+          <TextInput
+            label="Tussenvoegsel"
+            placeholder="Bijv. van der"
+            value={prefix}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrefix(e.target.value)}
+          />
+          <TextInput
+            label="Achternaam"
+            value={lastName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
           />
           <TextInput
             label="Email"
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+          />
+          <TextInput
+            label="Leerlingnummer"
+            placeholder="Bijv. 450000"
+            value={studentNumber}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentNumber(e.target.value)}
           />
           <TextInput
             label="Vak/Course"

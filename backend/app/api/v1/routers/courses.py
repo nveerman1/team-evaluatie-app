@@ -653,18 +653,39 @@ def add_student_to_course(
 
     if student:
         # Update existing student
-        student.name = payload.name
+        if payload.name:
+            student.name = payload.name
+        elif payload.first_name or payload.last_name:
+            parts = [p for p in [payload.first_name, payload.prefix, payload.last_name] if p]
+            student.name = " ".join(parts) or student.name
         student.class_name = payload.class_name
         student.team_number = payload.team_number
+        if payload.student_number is not None:
+            student.student_number = payload.student_number
+        if payload.first_name is not None:
+            student.first_name = payload.first_name
+        if payload.prefix is not None:
+            student.prefix = payload.prefix
+        if payload.last_name is not None:
+            student.last_name = payload.last_name
     else:
+        # Build name from parts if not provided directly
+        name = payload.name
+        if not name and (payload.first_name or payload.last_name):
+            parts = [p for p in [payload.first_name, payload.prefix, payload.last_name] if p]
+            name = " ".join(parts)
         # Create new student
         student = User(
             school_id=user.school_id,
             email=payload.email,
-            name=payload.name,
+            name=name or payload.email,
             role="student",
             class_name=payload.class_name,
             team_number=payload.team_number,
+            student_number=payload.student_number,
+            first_name=payload.first_name,
+            prefix=payload.prefix,
+            last_name=payload.last_name,
             password_hash=None,  # No password for students initially
         )
         db.add(student)

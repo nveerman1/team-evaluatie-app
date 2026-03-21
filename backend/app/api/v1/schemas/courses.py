@@ -99,6 +99,10 @@ class CourseStudentOut(BaseModel):
     email: str
     class_name: Optional[str] = None
     team_number: Optional[int] = None
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -107,10 +111,14 @@ class CourseStudentOut(BaseModel):
 class CourseStudentCreate(BaseModel):
     """Schema for adding a student to a course"""
 
-    name: str = Field(..., min_length=1, max_length=200)
+    name: Optional[str] = Field(None, max_length=200)
     email: str = Field(..., min_length=1, max_length=200)
     class_name: Optional[str] = Field(None, max_length=50)
     team_number: Optional[int] = None
+    student_number: Optional[str] = Field(None, max_length=50)
+    first_name: Optional[str] = Field(None, max_length=100)
+    prefix: Optional[str] = Field(None, max_length=30)
+    last_name: Optional[str] = Field(None, max_length=100)
 
 
 class StudentTeamUpdate(BaseModel):

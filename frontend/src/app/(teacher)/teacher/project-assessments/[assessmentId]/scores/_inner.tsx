@@ -214,10 +214,11 @@ export default function ScoresOverviewInner() {
       // Revoke the object URL to prevent memory leaks
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else if (viewMode === "students" && studentsData) {
-      const headers = ["Leerling", "Klas", "Team", ...studentsData.criteria.map((c) => c.name), "Totaalscore", "Cijfer", "Laatst bewerkt"];
+      const headers = ["Leerlingnummer", "Leerling", "Klas", "Team", ...studentsData.criteria.map((c) => c.name), "Totaalscore", "Cijfer", "Laatst bewerkt"];
       const rows = studentsData.student_scores.map((student) => {
         const scores = student.criterion_scores.map((cs) => cs.score?.toString() || "—");
         return [
+          student.student_number || "",
           student.student_name,
           student.class_name || "—",
           student.team_name || "—",

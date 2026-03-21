@@ -121,6 +121,7 @@ class StudentLearningObjectiveOverview(BaseModel):
     user_id: int
     user_name: str
     class_name: Optional[str]
+    student_number: Optional[str] = None
     objectives: List[StudentLearningObjectiveProgress]
 
 

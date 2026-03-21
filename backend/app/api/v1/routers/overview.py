@@ -845,9 +845,11 @@ def get_overview_matrix(
 
             for member in members:
                 if member.id not in student_data:
+                    sn = getattr(member, "student_number", None)
                     student_data[member.id] = {
                         "name": member.name,
                         "class": member.class_name,
+                        "student_number": sn if isinstance(sn, str) else None,
                         "cells": {},
                     }
 
@@ -945,9 +947,11 @@ def get_overview_matrix(
 
             for student in students_in_eval:
                 if student.id not in student_data:
+                    sn = getattr(student, "student_number", None)
                     student_data[student.id] = {
                         "name": student.name,
                         "class": student.class_name,
+                        "student_number": sn if isinstance(sn, str) else None,
                         "cells": {},
                     }
 
@@ -1032,9 +1036,11 @@ def get_overview_matrix(
 
             for student in students_with_scores:
                 if student.id not in student_data:
+                    sn = getattr(student, "student_number", None)
                     student_data[student.id] = {
                         "name": student.name,
                         "class": student.class_name,
+                        "student_number": sn if isinstance(sn, str) else None,
                         "cells": {},
                     }
 
@@ -1098,6 +1104,7 @@ def get_overview_matrix(
                     student_id=student_id,
                     student_name=data["name"],
                     student_class=data["class"],
+                    student_number=data.get("student_number"),
                     cells=cells,
                     average=average,
                 )
@@ -1189,14 +1196,14 @@ def export_matrix_csv(
     writer = csv.writer(output)
 
     # Header row
-    header = ["Leerling", "Klas"]
+    header = ["Leerlingnummer", "Leerling", "Klas"]
     for col in matrix_data.columns:
         header.append(f"{col.title} ({col.type})")
     writer.writerow(header)
 
     # Data rows
     for row in matrix_data.rows:
-        csv_row = [row.student_name, row.student_class or ""]
+        csv_row = [row.student_number or "", row.student_name, row.student_class or ""]
         for col in matrix_data.columns:
             cell = row.cells.get(col.key)
             if cell and cell.score is not None:

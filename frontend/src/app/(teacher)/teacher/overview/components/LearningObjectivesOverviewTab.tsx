@@ -200,7 +200,7 @@ export default function LearningObjectivesOverviewTab() {
     if (!overview) return;
 
     // Create CSV content
-    const headers = ["Naam", "Klas", ...allObjectives.map(obj => obj.domain || obj.title)];
+    const headers = ["Leerlingnummer", "Naam", "Klas", ...allObjectives.map(obj => obj.domain || obj.title)];
     const rows = overview.students.map(student => {
       const scores = allObjectives.map(obj => {
         const progress = student.objectives.find(
@@ -209,6 +209,7 @@ export default function LearningObjectivesOverviewTab() {
         return formatScore(progress?.average_score || null);
       });
       return [
+        student.student_number || "",
         student.user_name,
         student.class_name || "",
         ...scores

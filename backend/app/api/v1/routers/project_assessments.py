@@ -1764,6 +1764,7 @@ def get_assessment_students_overview(
             class_name=student.class_name,
             team_number=team_num,
             team_name=team_name,
+            student_number=getattr(student, "student_number", None),
             criterion_scores=criterion_scores_list,
             total_score=round(avg_score, 1) if avg_score is not None else None,
             grade=grade,

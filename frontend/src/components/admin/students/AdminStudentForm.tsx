@@ -6,12 +6,16 @@ import { useCallback, useMemo, useState } from "react";
 type Status = "active" | "inactive";
 
 export type AdminStudentFormPayload = {
-  name: string;
+  name?: string | null;
   email: string;
   class_name?: string | null;
   course_name?: string | null;
   team_number?: number | null;
   status: Status;
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 };
 
 export default function AdminStudentForm({
@@ -24,8 +28,11 @@ export default function AdminStudentForm({
   onSubmit: (payload: AdminStudentFormPayload) => Promise<void> | void;
 }) {
   const [form, setForm] = useState({
-    name: initial?.name ?? "",
+    first_name: initial?.first_name ?? "",
+    prefix: initial?.prefix ?? "",
+    last_name: initial?.last_name ?? "",
     email: initial?.email ?? "",
+    student_number: initial?.student_number ?? "",
     class_name: initial?.class_name ?? "",
     course_name: initial?.course_name ?? "",
     team_number:
@@ -40,8 +47,8 @@ export default function AdminStudentForm({
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
-    return form.name.trim() !== "" && /\S+@\S+\.\S+/.test(form.email);
-  }, [form.name, form.email]);
+    return (form.first_name.trim() !== "" || form.last_name.trim() !== "") && /\S+@\S+\.\S+/.test(form.email);
+  }, [form.first_name, form.last_name, form.email]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -51,14 +58,24 @@ export default function AdminStudentForm({
       setBusy(true);
       setError(null);
       try {
+        const firstName = form.first_name.trim() || null;
+        const pfx = form.prefix.trim() || null;
+        const lastName = form.last_name.trim() || null;
+        const nameParts = [firstName, pfx, lastName].filter(Boolean);
+        const computedName = nameParts.join(" ") || null;
+
         const payload: AdminStudentFormPayload = {
-          name: form.name.trim(),
+          name: computedName,
           email: form.email.trim(),
           class_name: form.class_name.trim() || null,
           course_name: form.course_name.trim() || null,
           team_number:
             form.team_number.trim() === "" ? null : Number(form.team_number),
           status: form.status,
+          student_number: form.student_number.trim() || null,
+          first_name: firstName,
+          prefix: pfx,
+          last_name: lastName,
         };
         await onSubmit(payload);
       } catch (err: any) {
@@ -86,10 +103,24 @@ export default function AdminStudentForm({
       {/* Grid layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <TextInput
-          label="Naam"
-          name="name"
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          label="Voornaam"
+          name="first_name"
+          value={form.first_name}
+          onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
+          required
+        />
+        <TextInput
+          label="Tussenvoegsel"
+          name="prefix"
+          placeholder="Bijv. van der"
+          value={form.prefix}
+          onChange={(e) => setForm((f) => ({ ...f, prefix: e.target.value }))}
+        />
+        <TextInput
+          label="Achternaam"
+          name="last_name"
+          value={form.last_name}
+          onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
           required
         />
         <TextInput
@@ -99,6 +130,16 @@ export default function AdminStudentForm({
           value={form.email}
           onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
           required
+        />
+
+        <TextInput
+          label="Leerlingnummer"
+          name="student_number"
+          placeholder="Bijv. 450000"
+          value={form.student_number}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, student_number: e.target.value }))
+          }
         />
 
         <TextInput

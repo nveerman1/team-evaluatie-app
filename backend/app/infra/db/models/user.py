@@ -43,6 +43,20 @@ class User(Base):
     # ✅ Teamnummer
     team_number: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
 
+    # ✅ Somtoday-compatibele velden
+    student_number: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, index=True
+    )  # "leerlingnummer"
+    first_name: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # "roepnaam"
+    prefix: Mapped[Optional[str]] = mapped_column(
+        String(30), nullable=True
+    )  # "voorvoegsel" / tussenvoegsel
+    last_name: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # "achternaam"
+
     school: Mapped["School"] = relationship(back_populates="users")
 
     # 3de Blok RFID Attendance relationships
@@ -65,6 +79,13 @@ class User(Base):
     __table_args__ = (
         UniqueConstraint("school_id", "email", name="uq_user_email_per_school"),
         Index("ix_user_role_school", "school_id", "role"),
+        Index(
+            "uq_student_number_per_school",
+            "school_id",
+            "student_number",
+            unique=True,
+            postgresql_where=sa.text("student_number IS NOT NULL"),
+        ),
     )
 
 
