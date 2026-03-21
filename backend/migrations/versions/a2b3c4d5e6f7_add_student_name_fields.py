@@ -53,7 +53,7 @@ def upgrade() -> None:
         SET
             last_name = CASE
                 WHEN INSTR(name, ' ') > 0
-                THEN SUBSTR(name, LENGTH(name) - LENGTH(name) + INSTR(REVERSE(name), ' ') + 1 - 1)
+                THEN SUBSTR(name, LENGTH(name) - INSTR(REVERSE(name), ' ') + 2)
                 ELSE name
             END,
             first_name = CASE
