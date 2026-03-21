@@ -107,7 +107,6 @@ export default function AdminStudentForm({
           name="first_name"
           value={form.first_name}
           onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
-          required
         />
         <TextInput
           label="Tussenvoegsel"
