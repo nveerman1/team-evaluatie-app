@@ -619,9 +619,7 @@ class TestAdminStudentsCRUDNewFields:
         current_user = self._make_current_user()
         db = MagicMock()
 
-        with patch(
-            "app.api.v1.routers.admin_students._course_name_subquery"
-        ), patch(
+        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
             "app.api.v1.routers.admin_students._set_user_course_enrollment"
         ):
             db.query.return_value.filter.return_value.first.return_value = None
@@ -688,9 +686,7 @@ class TestAdminStudentsCRUDNewFields:
             "last_name": "Vries",
         }
 
-        with patch(
-            "app.api.v1.routers.admin_students._course_name_subquery"
-        ), patch(
+        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
             "app.api.v1.routers.admin_students._set_user_course_enrollment"
         ):
             result = update_admin_student(
@@ -766,7 +762,9 @@ class TestAdminStudentsCSVExport:
                     "last_name": "Berg",
                 },
             )
-            db.query.return_value.outerjoin.return_value.filter.return_value = db.query.return_value
+            db.query.return_value.outerjoin.return_value.filter.return_value = (
+                db.query.return_value
+            )
             db.query.return_value.all.return_value = [FakeRow()]
 
             response = export_students_csv(
@@ -822,7 +820,9 @@ class TestAdminStudentsCSVExport:
                     "last_name": "Berg",
                 },
             )
-            db.query.return_value.outerjoin.return_value.filter.return_value = db.query.return_value
+            db.query.return_value.outerjoin.return_value.filter.return_value = (
+                db.query.return_value
+            )
             db.query.return_value.all.return_value = [FakeRow()]
 
             response = export_students_csv(
@@ -888,9 +888,7 @@ class TestAdminStudentsCSVImport:
         db.add.side_effect = capture_add
         db.flush.return_value = None
 
-        with patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
-        ):
+        with patch("app.api.v1.routers.admin_students._set_user_course_enrollment"):
             result = import_students_csv(
                 file=self._make_csv_upload(csv_content),
                 db=db,
@@ -927,9 +925,7 @@ class TestAdminStudentsCSVImport:
         uploaded_students = []
         db.add.side_effect = uploaded_students.append
 
-        with patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
-        ):
+        with patch("app.api.v1.routers.admin_students._set_user_course_enrollment"):
             result = import_students_csv(
                 file=self._make_csv_upload(csv_content),
                 db=db,
@@ -955,9 +951,7 @@ class TestAdminStudentsCSVImport:
         db = MagicMock()
         db.query.return_value.filter.return_value.first.return_value = None
 
-        with patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
-        ):
+        with patch("app.api.v1.routers.admin_students._set_user_course_enrollment"):
             result = import_students_csv(
                 file=self._make_csv_upload(csv_content),
                 db=db,
@@ -993,9 +987,7 @@ class TestAdminStudentsCSVImport:
         db = MagicMock()
         db.query.return_value.filter.return_value.first.return_value = existing
 
-        with patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
-        ):
+        with patch("app.api.v1.routers.admin_students._set_user_course_enrollment"):
             result = import_students_csv(
                 file=self._make_csv_upload(csv_content),
                 db=db,
@@ -1126,7 +1118,7 @@ class TestMigrationNameSplitLogic:
             return None, name
         rev = name[::-1]
         space_idx = rev.index(" ") + 1  # 1-indexed
-        last_name = name[len(name) - space_idx + 1:]
+        last_name = name[len(name) - space_idx + 1 :]
         first_name = name[: len(name) - space_idx]
         return first_name, last_name
 

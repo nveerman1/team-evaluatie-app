@@ -656,7 +656,9 @@ def add_student_to_course(
         if payload.name:
             student.name = payload.name
         elif payload.first_name or payload.last_name:
-            parts = [p for p in [payload.first_name, payload.prefix, payload.last_name] if p]
+            parts = [
+                p for p in [payload.first_name, payload.prefix, payload.last_name] if p
+            ]
             student.name = " ".join(parts) or student.name
         student.class_name = payload.class_name
         student.team_number = payload.team_number
@@ -672,7 +674,9 @@ def add_student_to_course(
         # Build name from parts if not provided directly
         name = payload.name
         if not name and (payload.first_name or payload.last_name):
-            parts = [p for p in [payload.first_name, payload.prefix, payload.last_name] if p]
+            parts = [
+                p for p in [payload.first_name, payload.prefix, payload.last_name] if p
+            ]
             name = " ".join(parts)
         # Create new student
         student = User(

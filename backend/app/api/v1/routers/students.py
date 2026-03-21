@@ -27,7 +27,9 @@ def _user_is_student_scoped():
     return True
 
 
-def _build_name(first_name: Optional[str], prefix: Optional[str], last_name: Optional[str]) -> Optional[str]:
+def _build_name(
+    first_name: Optional[str], prefix: Optional[str], last_name: Optional[str]
+) -> Optional[str]:
     parts = [p for p in [first_name, prefix, last_name] if p]
     return " ".join(parts) if parts else None
 
@@ -175,7 +177,9 @@ def create_student(
 
     u = User(
         school_id=current_user.school_id,
-        name=payload.name or _build_name(payload.first_name, payload.prefix, payload.last_name) or payload.email,
+        name=payload.name
+        or _build_name(payload.first_name, payload.prefix, payload.last_name)
+        or payload.email,
         email=payload.email,
         class_name=payload.class_name,
         role="student",
@@ -310,7 +314,9 @@ def export_students_csv(
     current_user=Depends(get_current_user),
 ):
     items = list_students(db=db, current_user=current_user, limit=10_000)
-    lines = ["id,student_number,first_name,prefix,last_name,name,email,class,course_id,course_name,status"]
+    lines = [
+        "id,student_number,first_name,prefix,last_name,name,email,class,course_id,course_name,status"
+    ]
     for s in items:
         lines.append(
             f"{s.id},{s.student_number or ''},{s.first_name or ''},{s.prefix or ''},{s.last_name or ''},{s.name},{s.email},{s.class_name or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"

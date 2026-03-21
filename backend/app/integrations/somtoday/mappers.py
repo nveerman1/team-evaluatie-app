@@ -33,9 +33,13 @@ def map_somtoday_student_to_user(
         "birthDate": "2005-03-15"
     }
     """
-    first_name = somtoday_student.get("roepnaam") or somtoday_student.get("firstName") or ""
+    first_name = (
+        somtoday_student.get("roepnaam") or somtoday_student.get("firstName") or ""
+    )
     prefix = somtoday_student.get("voorvoegsel") or ""
-    last_name = somtoday_student.get("achternaam") or somtoday_student.get("lastName") or ""
+    last_name = (
+        somtoday_student.get("achternaam") or somtoday_student.get("lastName") or ""
+    )
     name_parts = [p for p in [first_name, prefix, last_name] if p]
     full_name = " ".join(name_parts).strip()
 
@@ -47,7 +51,11 @@ def map_somtoday_student_to_user(
         "auth_provider": "somtoday",
         "class_name": somtoday_student.get("class"),
         # Somtoday-compatibele velden
-        "student_number": str(somtoday_student["leerlingnummer"]) if somtoday_student.get("leerlingnummer") is not None else None,
+        "student_number": (
+            str(somtoday_student["leerlingnummer"])
+            if somtoday_student.get("leerlingnummer") is not None
+            else None
+        ),
         "first_name": first_name or None,
         "prefix": prefix or None,
         "last_name": last_name or None,

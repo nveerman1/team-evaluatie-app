@@ -370,7 +370,9 @@ def create_admin_student(
         parts = [p for p in [first_name, prefix, last_name] if p]
         name = " ".join(parts)
     if not name:
-        raise HTTPException(status_code=400, detail="name (of first_name/last_name) is verplicht")
+        raise HTTPException(
+            status_code=400, detail="name (of first_name/last_name) is verplicht"
+        )
 
     # unieke email binnen school
     dup = (
@@ -593,7 +595,19 @@ def export_students_csv(
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(
-        ["id", "student_number", "first_name", "prefix", "last_name", "name", "email", "class_name", "course_name", "team_number", "status"]
+        [
+            "id",
+            "student_number",
+            "first_name",
+            "prefix",
+            "last_name",
+            "name",
+            "email",
+            "class_name",
+            "course_name",
+            "team_number",
+            "status",
+        ]
     )
     for r in rows:
         writer.writerow(
