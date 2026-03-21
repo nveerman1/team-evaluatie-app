@@ -3,15 +3,26 @@ Tests for RFID API key authentication
 """
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
+from app.api.v1.deps import get_db
 
 
 @pytest.fixture
 def client():
-    """Create a test client"""
-    return TestClient(app, raise_server_exceptions=False)
+    """Create a test client with a mocked database (no PostgreSQL required)."""
+    mock_db = MagicMock()
+    # Default: no RFID card found for any UID → endpoint returns "not_found"
+    mock_db.query.return_value.filter.return_value.first.return_value = None
+
+    def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    test_client = TestClient(app, raise_server_exceptions=False)
+    yield test_client
+    app.dependency_overrides.pop(get_db, None)
 
 
 class TestRFIDAPIKeyAuth:

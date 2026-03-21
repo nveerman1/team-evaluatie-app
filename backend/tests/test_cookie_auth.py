@@ -184,7 +184,11 @@ class TestLogoutEndpoint:
 
     def test_logout_clears_cookie(self, client):
         """Test that logout endpoint clears the cookie"""
-        response = client.post("/api/v1/auth/logout")
+        # Include Origin header so CSRF middleware allows the POST request
+        response = client.post(
+            "/api/v1/auth/logout",
+            headers={"Origin": "http://localhost:3000"},
+        )
 
         assert response.status_code == 200
         assert response.json()["message"] == "Successfully logged out"
@@ -256,8 +260,9 @@ class TestDevLoginProduction:
 
     def test_dev_login_blocked_in_production(self, client, monkeypatch):
         """Test that X-User-Email header is ignored in production"""
-        # Set NODE_ENV to production
+        # Set NODE_ENV to production and disable dev-login to simulate production
         monkeypatch.setattr(settings, "NODE_ENV", "production")
+        monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", False)
 
         # Try to access with X-User-Email header
         response = client.get(

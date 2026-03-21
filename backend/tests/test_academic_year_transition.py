@@ -503,6 +503,8 @@ class TestCopyCoursesAndEnrollments:
         mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = (
             []
         )
+        # No existing course with same name+period → service should create new courses
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
         created_courses = []
 
@@ -626,10 +628,14 @@ class TestCopyCoursesAndEnrollments:
         mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = (
             target_students
         )
-        # First enrollment exists, second doesn't
+        # first.side_effect order:
+        #   [0] course existence check (Course with same name+period) → None (no existing course)
+        #   [1] enrollment existence check for student 100 → existing_enrollment (skip)
+        #   [2] enrollment existence check for student 101 → None (create)
         mock_db.query.return_value.filter.return_value.first.side_effect = [
-            existing_enrollment,
-            None,
+            None,  # No existing course with same name+period
+            existing_enrollment,  # First enrollment already exists
+            None,  # Second enrollment does not exist
         ]
 
         created_courses = []

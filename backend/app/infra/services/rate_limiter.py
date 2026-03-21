@@ -6,6 +6,7 @@ import logging
 import time
 from typing import Optional
 from redis import Redis
+from redis.exceptions import RedisError
 from app.infra.queue.connection import RedisConnection
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,15 @@ class RateLimiter:
         # Set expiration to cleanup old keys
         pipe.expire(rate_key, window_seconds + 60)
 
-        results = pipe.execute()
-        current_count = results[1]
+        try:
+            results = pipe.execute()
+            current_count = results[1]
+        except RedisError as exc:
+            logger.warning(
+                f"Redis unavailable during rate-limit check for key '{key}': {exc}. "
+                "Failing open (allowing request)."
+            )
+            return True, None
 
         if current_count < max_requests:
             # Request allowed
@@ -77,7 +85,10 @@ class RateLimiter:
         else:
             # Request blocked - calculate retry time
             # Get oldest request in window
-            oldest_requests = self.redis.zrange(rate_key, 0, 0, withscores=True)
+            try:
+                oldest_requests = self.redis.zrange(rate_key, 0, 0, withscores=True)
+            except RedisError:
+                return False, window_seconds
             if oldest_requests:
                 oldest_time = oldest_requests[0][1]
                 retry_after = int(oldest_time + window_seconds - now) + 1
@@ -111,12 +122,24 @@ class RateLimiter:
         window_start = now - window_seconds
         rate_key = f"rate_limit:{key}"
 
-        # Count requests in current window
-        count = self.redis.zcount(rate_key, window_start, now)
+        try:
+            # Count requests in current window
+            count = self.redis.zcount(rate_key, window_start, now)
 
-        # Get oldest and newest timestamps
-        oldest_requests = self.redis.zrange(rate_key, 0, 0, withscores=True)
-        newest_requests = self.redis.zrange(rate_key, -1, -1, withscores=True)
+            # Get oldest and newest timestamps
+            oldest_requests = self.redis.zrange(rate_key, 0, 0, withscores=True)
+            newest_requests = self.redis.zrange(rate_key, -1, -1, withscores=True)
+        except RedisError as exc:
+            logger.warning(
+                f"Redis unavailable during get_usage for key '{key}': {exc}. "
+                "Returning zero usage."
+            )
+            return {
+                "current_count": 0,
+                "window_seconds": window_seconds,
+                "oldest_request": None,
+                "newest_request": None,
+            }
 
         oldest_time = oldest_requests[0][1] if oldest_requests else None
         newest_time = newest_requests[0][1] if newest_requests else None

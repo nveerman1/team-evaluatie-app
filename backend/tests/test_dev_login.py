@@ -199,9 +199,9 @@ class TestDevLoginEndpoint:
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", False)
 
         # Mock database
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = (
                 test_user
             )
@@ -209,6 +209,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should return 404, not 403 (don't leak endpoint existence)
@@ -222,9 +223,9 @@ class TestDevLoginEndpoint:
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
         # Mock database
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = (
                 test_user
             )
@@ -232,6 +233,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should redirect
@@ -249,9 +251,9 @@ class TestDevLoginEndpoint:
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
         # Mock database
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
 
             # Test teacher redirect
             mock_db.query.return_value.filter.return_value.first.return_value = (
@@ -260,6 +262,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
             assert "/teacher" in response.headers["location"]
 
@@ -270,6 +273,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_student.email}",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
             assert "/student" in response.headers["location"]
 
@@ -279,9 +283,9 @@ class TestDevLoginEndpoint:
 
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = (
                 test_user
             )
@@ -289,6 +293,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}&return_to=/teacher/rubrics",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should redirect to returnTo
@@ -302,9 +307,9 @@ class TestDevLoginEndpoint:
 
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = (
                 test_user
             )
@@ -313,6 +318,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}&return_to=https://evil.com",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should redirect to role home, not the malicious URL
@@ -326,14 +332,15 @@ class TestDevLoginEndpoint:
 
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = None
 
             response = client.post(
                 "/api/v1/auth/dev-login?email=nonexistent@example.com",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should return 401
@@ -345,9 +352,9 @@ class TestDevLoginEndpoint:
 
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
 
             # User stored with lowercase email
             test_user.email = "teacher@example.com"
@@ -359,6 +366,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 "/api/v1/auth/dev-login?email=TEACHER@EXAMPLE.COM",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should succeed (find user with normalized email)
@@ -371,9 +379,9 @@ class TestDevLoginEndpoint:
 
         monkeypatch.setattr(settings, "ENABLE_DEV_LOGIN", True)
 
-        with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
+        with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
-            mock_get_db.return_value = mock_db
+            mock_session.return_value = mock_db
 
             # User stored with lowercase email
             test_user.email = "l316student@school.nl"
@@ -385,6 +393,7 @@ class TestDevLoginEndpoint:
             response = client.post(
                 "/api/v1/auth/dev-login?email=L316Student@School.NL",
                 follow_redirects=False,
+                headers={"Origin": "http://localhost:3000"},
             )
 
             # Should succeed (find user with normalized email)
