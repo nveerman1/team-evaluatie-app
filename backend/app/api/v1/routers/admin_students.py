@@ -287,6 +287,82 @@ def list_admin_students(
     return out
 
 
+@router.get("/export.csv")
+def export_students_csv(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+    q: Optional[str] = Query(None),
+    status: Optional[str] = Query("active"),
+    course: Optional[str] = Query(None),
+    sort: Optional[SortKey] = Query("name"),
+    dir: Optional[Dir] = Query("asc"),
+):
+    if current_user is None or getattr(current_user, "school_id", None) is None:
+        raise HTTPException(status_code=401)
+
+    csub = _course_name_subquery(db, current_user.school_id)
+    qry = (
+        db.query(
+            User.id,
+            User.name,
+            User.email,
+            getattr(User, "class_name", literal(None)).label("class_name"),
+            getattr(User, "team_number", literal(None)).label("team_number"),
+            getattr(User, "archived", literal(False)).label("archived"),
+            getattr(User, "student_number", literal(None)).label("student_number"),
+            getattr(User, "first_name", literal(None)).label("first_name"),
+            getattr(User, "prefix", literal(None)).label("prefix"),
+            getattr(User, "last_name", literal(None)).label("last_name"),
+            csub.c.course_name.label("course_name"),
+        )
+        .outerjoin(csub, csub.c.user_id == User.id)
+        .filter(User.school_id == current_user.school_id, User.role == "student")
+    )
+    qry = _apply_filters(qry, q, status, course, csub)
+    qry = _apply_sort(qry, sort, dir, csub)
+    rows = qry.all()
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "id",
+            "student_number",
+            "first_name",
+            "prefix",
+            "last_name",
+            "name",
+            "email",
+            "class_name",
+            "course_name",
+            "team_number",
+            "status",
+        ]
+    )
+    for r in rows:
+        writer.writerow(
+            [
+                sanitize_csv_value(r.id),
+                sanitize_csv_value(r.student_number or ""),
+                sanitize_csv_value(r.first_name or ""),
+                sanitize_csv_value(r.prefix or ""),
+                sanitize_csv_value(r.last_name or ""),
+                sanitize_csv_value(r.name or ""),
+                sanitize_csv_value(r.email),
+                sanitize_csv_value(r.class_name or ""),
+                sanitize_csv_value(r.course_name or ""),
+                sanitize_csv_value("" if r.team_number is None else r.team_number),
+                sanitize_csv_value("inactive" if r.archived else "active"),
+            ]
+        )
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="students.csv"'},
+    )
+
+
 @router.get("/{student_id}", response_model=dict)
 def get_admin_student(
     student_id: int,
@@ -555,82 +631,6 @@ def delete_admin_student(
     db.delete(u)
     db.commit()
     return Response(status_code=204)
-
-
-@router.get("/export.csv")
-def export_students_csv(
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-    q: Optional[str] = Query(None),
-    status: Optional[str] = Query("active"),
-    course: Optional[str] = Query(None),
-    sort: Optional[SortKey] = Query("name"),
-    dir: Optional[Dir] = Query("asc"),
-):
-    if current_user is None or getattr(current_user, "school_id", None) is None:
-        raise HTTPException(status_code=401)
-
-    csub = _course_name_subquery(db, current_user.school_id)
-    qry = (
-        db.query(
-            User.id,
-            User.name,
-            User.email,
-            getattr(User, "class_name", literal(None)).label("class_name"),
-            getattr(User, "team_number", literal(None)).label("team_number"),
-            getattr(User, "archived", literal(False)).label("archived"),
-            getattr(User, "student_number", literal(None)).label("student_number"),
-            getattr(User, "first_name", literal(None)).label("first_name"),
-            getattr(User, "prefix", literal(None)).label("prefix"),
-            getattr(User, "last_name", literal(None)).label("last_name"),
-            csub.c.course_name.label("course_name"),
-        )
-        .outerjoin(csub, csub.c.user_id == User.id)
-        .filter(User.school_id == current_user.school_id, User.role == "student")
-    )
-    qry = _apply_filters(qry, q, status, course, csub)
-    qry = _apply_sort(qry, sort, dir, csub)
-    rows = qry.all()
-
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(
-        [
-            "id",
-            "student_number",
-            "first_name",
-            "prefix",
-            "last_name",
-            "name",
-            "email",
-            "class_name",
-            "course_name",
-            "team_number",
-            "status",
-        ]
-    )
-    for r in rows:
-        writer.writerow(
-            [
-                sanitize_csv_value(r.id),
-                sanitize_csv_value(r.student_number or ""),
-                sanitize_csv_value(r.first_name or ""),
-                sanitize_csv_value(r.prefix or ""),
-                sanitize_csv_value(r.last_name or ""),
-                sanitize_csv_value(r.name or ""),
-                sanitize_csv_value(r.email),
-                sanitize_csv_value(r.class_name or ""),
-                sanitize_csv_value(r.course_name or ""),
-                sanitize_csv_value("" if r.team_number is None else r.team_number),
-                sanitize_csv_value("inactive" if r.archived else "active"),
-            ]
-        )
-    output.seek(0)
-    return StreamingResponse(
-        output,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="students.csv"'},
-    )
 
 
 @router.post("/import.csv")
