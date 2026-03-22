@@ -73,7 +73,7 @@ export default function StudentCSVImportModal({
   };
 
   const downloadTemplate = () => {
-    const csvContent = "name,email,class_name,course_name,team_number,status\nJan de Vries,j.devries@school.nl,4A,Onderzoek & Ontwerpen,1,active\nMarie Jansen,m.jansen@school.nl,4B,Biologie,,active";
+    const csvContent = "student_number,first_name,prefix,last_name,name,email,class_name,course_name,team_number,status\n450001,Jan,de,Vries,Jan de Vries,j.devries@school.nl,4A,Onderzoek & Ontwerpen,1,active\n450002,Marie,,Jansen,Marie Jansen,m.jansen@school.nl,4B,Biologie,,active";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -99,11 +99,11 @@ export default function StudentCSVImportModal({
             Verwacht CSV-formaat:
           </p>
           <code className="text-xs text-blue-700 block">
-            name,email,class_name,course_name,team_number,status
+            student_number,first_name,prefix,last_name,name,email,class_name,course_name,team_number,status
           </code>
           <p className="text-xs text-blue-700 mt-2">
-            <strong>Verplicht:</strong> name, email<br />
-            <strong>Optioneel:</strong> class_name (klas), course_name (vak), team_number, status (active/inactive)
+            <strong>Verplicht:</strong> email + name (of first_name/last_name)<br />
+            <strong>Optioneel:</strong> student_number (leerlingnummer), first_name (voornaam), prefix (tussenvoegsel), last_name (achternaam), class_name (klas), course_name (vak), team_number, status (active/inactive)
           </p>
           <button
             type="button"
