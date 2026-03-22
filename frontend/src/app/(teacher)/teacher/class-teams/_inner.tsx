@@ -699,8 +699,8 @@ export default function ClassTeamsPageInner() {
           </div>
         )}
 
-        {/* Combined Vak + Project Selector Card (no courseId in URL) */}
-        {(isTeacher || isAdmin) && !courseIdParam && (
+        {/* Combined Vak + Project Selector Card */}
+        {(isTeacher || isAdmin) && (
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {/* Vak */}
@@ -738,33 +738,6 @@ export default function ClassTeamsPageInner() {
                 )}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Project Selection Card when courseId comes from URL */}
-        {courseIdParam && selectedCourse && (
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-            <p className="mb-2 text-sm font-semibold text-gray-700">Project</p>
-            <select
-              value={selectedProject?.id || ""}
-              onChange={(e) => {
-                const project = projects.find((p) => p.id === parseInt(e.target.value));
-                handleProjectSelect(project || null);
-              }}
-              className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">— Selecteer een project —</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title} ({project.status})
-                </option>
-              ))}
-            </select>
-            {selectedProject && isProjectClosed && (
-              <p className="text-xs text-amber-600 mt-2">
-                🔒 Dit project is afgesloten. Teams kunnen niet meer worden gewijzigd.
-              </p>
-            )}
           </div>
         )}
 
