@@ -102,7 +102,7 @@ export default function StudentCSVImportModal({
             student_number,first_name,prefix,last_name,name,email,class_name,course_name,team_number,status
           </code>
           <p className="text-xs text-blue-700 mt-2">
-            <strong>Verplicht:</strong> email + name (óf first_name/last_name)<br />
+            <strong>Verplicht:</strong> email + name (of first_name/last_name)<br />
             <strong>Optioneel:</strong> student_number (leerlingnummer), first_name (voornaam), prefix (tussenvoegsel), last_name (achternaam), class_name (klas), course_name (vak), team_number, status (active/inactive)
           </p>
           <button
