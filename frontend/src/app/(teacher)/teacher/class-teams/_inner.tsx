@@ -791,13 +791,6 @@ export default function ClassTeamsPageInner() {
               {selectedProject && !isProjectClosed && (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={handleOpenAddModal}
-                    className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                  >
-                    ➕ Leerling toevoegen
-                  </button>
-
-                  <button
                     onClick={handleCreateTeams}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
                   >
