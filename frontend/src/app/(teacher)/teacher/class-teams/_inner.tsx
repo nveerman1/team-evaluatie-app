@@ -699,8 +699,8 @@ export default function ClassTeamsPageInner() {
           </div>
         )}
 
-        {/* Course Selector for Teachers (no courseId in URL) */}
-        {isTeacher && !courseIdParam && (
+        {/* Course Selector for Teachers and Admins (no courseId in URL) */}
+        {(isTeacher || isAdmin) && !courseIdParam && (
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
             <label className="mb-2 block text-sm font-semibold text-gray-500">Selecteer vak</label>
             <CourseSelector
