@@ -97,12 +97,6 @@ export default function CourseSelector({
 
   return (
     <div className="flex flex-col gap-2">
-      <label
-        htmlFor="course-select"
-        className="text-sm font-medium text-gray-700"
-      >
-        Selecteer vak
-      </label>
       <select
         id="course-select"
         value={selectedCourseId || 0}
@@ -119,19 +113,6 @@ export default function CourseSelector({
           </option>
         ))}
       </select>
-
-      {selectedCourseId && (
-        <div className="text-sm text-gray-600">
-          <span className="font-medium">
-            {courses.find((c) => c.id === selectedCourseId)?.name}
-          </span>
-          {courses.find((c) => c.id === selectedCourseId)?.description && (
-            <p className="mt-1 text-gray-500">
-              {courses.find((c) => c.id === selectedCourseId)?.description}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }
