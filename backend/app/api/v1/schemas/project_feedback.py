@@ -66,7 +66,7 @@ class ProjectFeedbackRoundDetail(ProjectFeedbackRoundOut):
 
 class AnswerIn(BaseModel):
     question_id: int
-    rating_value: Optional[int] = Field(None, ge=1, le=5)
+    rating_value: Optional[int] = Field(None, ge=1, le=10)
     text_value: Optional[str] = None
 
 
