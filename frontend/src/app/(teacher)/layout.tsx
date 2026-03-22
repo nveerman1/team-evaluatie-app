@@ -160,6 +160,7 @@ export default function TeacherLayout({
                 </div>
                 <div className="space-y-1">
                   <NavItem href="/teacher/admin/schoolbeheer" label="Schoolbeheer" icon={School} />
+                  <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" icon={UsersRound} />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" icon={Target} />
                   <NavItem href="/teacher/rubrics" label="Rubrics" icon={ClipboardList} />
                   <NavItem href="/teacher/admin/templates" label="Templates" icon={FileStack} />

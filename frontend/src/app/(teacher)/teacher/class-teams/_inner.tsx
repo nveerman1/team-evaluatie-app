@@ -699,49 +699,50 @@ export default function ClassTeamsPageInner() {
           </div>
         )}
 
-        {/* Course Selector for Teachers (no courseId in URL) */}
-        {isTeacher && !courseIdParam && (
+        {/* Combined Vak + Project Selector Card */}
+        {(isTeacher || isAdmin) && (
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-            <label className="mb-2 block text-sm font-semibold text-gray-500">Selecteer vak</label>
-            <CourseSelector
-              onCourseChange={(course) => setSelectedCourse(course)}
-              selectedCourseId={selectedCourse?.id}
-            />
-          </div>
-        )}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {/* Vak */}
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-700">Vak</p>
+                <CourseSelector
+                  onCourseChange={(course) => setSelectedCourse(course)}
+                  selectedCourseId={selectedCourse?.id}
+                />
+              </div>
 
-        {!selectedCourse && (
-          <div className="rounded-2xl bg-white p-8 text-center shadow-sm border border-gray-200">
-            <p className="text-gray-600">Selecteer een vak om te beginnen</p>
+              {/* Project */}
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-700">Project</p>
+                <select
+                  value={selectedProject?.id || ""}
+                  onChange={(e) => {
+                    const project = projects.find((p) => p.id === parseInt(e.target.value));
+                    handleProjectSelect(project || null);
+                  }}
+                  disabled={!selectedCourse}
+                  className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">— Selecteer een project —</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.title} ({project.status})
+                    </option>
+                  ))}
+                </select>
+                {selectedProject && isProjectClosed && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    🔒 Dit project is afgesloten. Teams kunnen niet meer worden gewijzigd.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
         {selectedCourse && (
           <>
-            {/* Project Selection Card */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-              <label className="mb-2 block text-sm font-semibold text-gray-500">Selecteer project</label>
-              <select
-                value={selectedProject?.id || ""}
-                onChange={(e) => {
-                  const project = projects.find((p) => p.id === parseInt(e.target.value));
-                  handleProjectSelect(project || null);
-                }}
-                className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">— Selecteer een project —</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.title} ({project.status})
-                  </option>
-                ))}
-              </select>
-              {selectedProject && isProjectClosed && (
-                <p className="text-xs text-amber-600 mt-2">
-                  🔒 Dit project is afgesloten. Teams kunnen niet meer worden gewijzigd.
-                </p>
-              )}
-            </div>
 
             {/* Search and Filter Card */}
             <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-200">
@@ -790,13 +791,6 @@ export default function ClassTeamsPageInner() {
               {/* Row 2: Actions - Only show when project is open */}
               {selectedProject && !isProjectClosed && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={handleOpenAddModal}
-                    className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                  >
-                    ➕ Leerling toevoegen
-                  </button>
-
                   <button
                     onClick={handleCreateTeams}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
