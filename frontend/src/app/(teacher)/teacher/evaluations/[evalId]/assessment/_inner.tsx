@@ -207,6 +207,7 @@ export default function CombinedAssessmentInner() {
   const [error, setError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<number | null>(null);
   const [courseId, setCourseId] = useState<number | null>(null);
+  const [evaluationTitle, setEvaluationTitle] = useState<string | null>(null);
 
   const [teacherScores, setTeacherScores] = useState<Record<string, number | null>>({});
   const [teacherComments, setTeacherComments] = useState<Record<string, string>>({});
@@ -302,6 +303,7 @@ export default function CombinedAssessmentInner() {
       .then(([omzaData, preview, existingGrades, evaluation, stdComments]) => {
         setProjectId(evaluation.project_id ?? null);
         setCourseId(evaluation.course_id ?? null);
+        setEvaluationTitle(evaluation.title ?? null);
         setCategories(omzaData.categories);
 
         // Build standard comments map by category
@@ -617,7 +619,10 @@ export default function CombinedAssessmentInner() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = `beoordeling-${evalIdStr}.csv`;
+    const safeTitle = evaluationTitle
+      ? (evaluationTitle.replace(/[/\\<>:"|?*]/g, "") || evalIdStr)
+      : evalIdStr;
+    link.download = `Peer Evaluatie - ${safeTitle}.csv`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
