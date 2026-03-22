@@ -8,6 +8,7 @@ import { projectService } from "@/services/project.service";
 import { clientService } from "@/services/client.service";
 import { projectTeamService } from "@/services/project-team.service";
 import { listMailTemplates } from "@/services/mail-template.service";
+import { projectFeedbackService } from "@/services/project-feedback.service";
 import { useCourses } from "@/hooks";
 import { Loading } from "@/components";
 import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
@@ -16,6 +17,7 @@ import type { RunningProjectItem, Subproject } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
 import type { Course } from "@/dtos/course.dto";
 import type { ProjectTeam as ProjectTeamDto } from "@/dtos/project-team.dto";
+import type { ProjectFeedbackRound } from "@/dtos/project-feedback.dto";
 
 // Default fallback templates when no templates are available from API
 const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
@@ -703,7 +705,7 @@ function ProjectTable({
                   <tr className="bg-gray-50/60">
                     <td colSpan={colSpan} className="px-4 pb-3 pt-0">
                       {/* Evaluation status grid */}
-                      <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-5 gap-3 text-[11px] text-gray-700">
+                      <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-6 gap-3 text-[11px] text-gray-700">
                         <div>
                           <div className="font-semibold text-gray-900 mb-1">Opdrachtgever</div>
                           <div className="flex items-center gap-1">
@@ -765,6 +767,16 @@ function ProjectTable({
                               ? <><span className="font-medium">{project.note_count}</span> aantekening{(project.note_count || 0) > 1 ? "en" : ""} • <span className="underline underline-offset-2">Bekijk overzicht</span></>
                               : "Nog geen aantekeningen"
                             }
+                          </Link>
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900 mb-1">Projectfeedback</div>
+                          <Link
+                            href={`/teacher/project-feedback/create?project_id=${project.project_id}`}
+                            className="flex items-center gap-1 hover:underline"
+                          >
+                            {renderStatusIndicator("not_started")}
+                            + Feedback opzetten
                           </Link>
                         </div>
                       </div>
@@ -1495,6 +1507,150 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   );
 }
 
+// ===== Projectfeedback Tab =====
+
+const FEEDBACK_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  draft: { label: "Concept", color: "bg-gray-100 text-gray-600 border-gray-200" },
+  open: { label: "Open", color: "bg-green-100 text-green-700 border-green-200" },
+  closed: { label: "Gesloten", color: "bg-slate-100 text-slate-600 border-slate-200" },
+};
+
+function ProjectFeedbackTab() {
+  const [rounds, setRounds] = useState<ProjectFeedbackRound[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await projectFeedbackService.listRounds();
+        setRounds(data);
+      } catch (e: any) {
+        setError(e?.message || "Laden mislukt");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const filtered = rounds.filter((r) => {
+    const matchSearch =
+      !search || r.title.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || r.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  if (loading) return <Loading />;
+  if (error) return <div className="text-sm text-red-600 p-4">{error}</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-wrap gap-2 flex-1">
+          <input
+            type="text"
+            placeholder="Zoeken op titel…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Alle statussen</option>
+            <option value="draft">Concept</option>
+            <option value="open">Open</option>
+            <option value="closed">Gesloten</option>
+          </select>
+        </div>
+        <Link
+          href="/teacher/project-feedback/create"
+          className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 shrink-0"
+        >
+          + Nieuwe projectfeedback
+        </Link>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="px-6 py-10 text-center text-sm text-gray-500">
+            {rounds.length === 0
+              ? "Nog geen feedbackrondes aangemaakt."
+              : "Geen resultaten gevonden."}
+          </div>
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-xs text-gray-500 bg-gray-50/60">
+                <th className="px-4 py-3 text-left font-medium">Titel</th>
+                <th className="px-4 py-3 text-left font-medium">Ingevuld</th>
+                <th className="px-4 py-3 text-left font-medium">Gem. score</th>
+                <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-left font-medium">Aangemaakt</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => {
+                const info = FEEDBACK_STATUS_LABELS[r.status] ?? FEEDBACK_STATUS_LABELS.draft;
+                return (
+                  <tr
+                    key={r.id}
+                    className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer"
+                    onClick={() =>
+                      (window.location.href = `/teacher/project-feedback/${r.id}`)
+                    }
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {r.title}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {r.response_count}/{r.total_students}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {r.avg_rating != null ? (
+                        <span className="font-medium">{r.avg_rating.toFixed(1)}</span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${info.color}`}
+                      >
+                        {info.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {new Date(r.created_at).toLocaleDateString("nl-NL")}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/teacher/project-feedback/${r.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-medium text-blue-600 hover:underline"
+                      >
+                        Bekijken →
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState("onderbouw");
 
@@ -1508,6 +1664,11 @@ export default function ProjectsPage() {
       id: "bovenbouw",
       label: "Bovenbouw",
       content: <TabContent levelFilter="bovenbouw" />,
+    },
+    {
+      id: "projectfeedback",
+      label: "⭐ Projectfeedback",
+      content: <ProjectFeedbackTab />,
     },
   ];
 

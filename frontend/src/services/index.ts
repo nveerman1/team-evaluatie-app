@@ -24,3 +24,4 @@ export * from "./submission.service";
 export * from "./grades.service";
 export * from "./rubric-import.service";
 export * from "./task.service";
+export * from "./project-feedback.service";
