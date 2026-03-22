@@ -30,11 +30,13 @@ def upgrade() -> None:
     # For non-PostgreSQL databases (e.g. SQLite in tests), use a regular unique index
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        op.execute("""
+        op.execute(
+            """
             CREATE UNIQUE INDEX uq_student_number_per_school
             ON users (school_id, student_number)
             WHERE student_number IS NOT NULL
-            """)
+            """
+        )
     else:
         # SQLite / other: just create a regular index (no partial index support)
         op.create_index(
