@@ -36,6 +36,10 @@ class GradePreviewItem(BaseModel):
     suggested_grade: Optional[float] = None  # 1–10 or None if no evaluations
     team_number: Optional[int] = None
     class_name: Optional[str] = None
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class GradePreviewResponse(BaseModel):

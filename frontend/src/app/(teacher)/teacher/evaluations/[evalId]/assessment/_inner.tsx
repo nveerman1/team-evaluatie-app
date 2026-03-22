@@ -344,10 +344,10 @@ export default function CombinedAssessmentInner() {
               omzaStudent?.team_number ?? gradeItem?.team_number ?? null,
             className:
               omzaStudent?.class_name ?? gradeItem?.class_name ?? null,
-            studentNumber: omzaStudent?.student_number ?? null,
-            firstName: omzaStudent?.first_name ?? null,
-            prefix: omzaStudent?.prefix ?? null,
-            lastName: omzaStudent?.last_name ?? null,
+            studentNumber: omzaStudent?.student_number ?? gradeItem?.student_number ?? null,
+            firstName: omzaStudent?.first_name ?? gradeItem?.first_name ?? null,
+            prefix: omzaStudent?.prefix ?? gradeItem?.prefix ?? null,
+            lastName: omzaStudent?.last_name ?? gradeItem?.last_name ?? null,
             categoryScores: omzaData.categories.reduce<
               Record<string, { peer_avg: number | null; self_avg: number | null }>
             >((acc, cat) => {

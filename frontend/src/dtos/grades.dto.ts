@@ -7,6 +7,10 @@ export type GradePreviewItem = {
   suggested_grade: number; // 1..10
   team_number?: number | null;
   class_name?: string | null;
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 };
 
 export type GradePreviewResponse = {

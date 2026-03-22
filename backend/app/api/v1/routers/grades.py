@@ -338,6 +338,10 @@ def preview_grades(
                 suggested_grade=suggested,  # 1–10
                 team_number=team_num,
                 class_name=getattr(u, "class_name", None),
+                student_number=getattr(u, "student_number", None),
+                first_name=getattr(u, "first_name", None),
+                prefix=getattr(u, "prefix", None),
+                last_name=getattr(u, "last_name", None),
             )
         )
 
