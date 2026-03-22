@@ -222,6 +222,10 @@ async def get_omza_data(
                 student_name=student.name,
                 class_name=student.class_name,
                 team_number=team_number,
+                student_number=getattr(student, "student_number", None),
+                first_name=getattr(student, "first_name", None),
+                prefix=getattr(student, "prefix", None),
+                last_name=getattr(student, "last_name", None),
                 category_scores=category_scores,
                 teacher_comment=teacher_comment,
             )

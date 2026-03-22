@@ -254,6 +254,9 @@ class StudentScoreOverview(BaseModel):
     team_number: Optional[int] = None
     team_name: Optional[str] = None
     student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
     criterion_scores: List[CriterionScore]
     total_score: Optional[float] = None
     grade: Optional[float] = None
