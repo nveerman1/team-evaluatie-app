@@ -77,7 +77,7 @@ jobs:
         run: docker images | head -n 50
 
       - name: Trivy scan backend
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
           image-ref: tea-backend:ci
@@ -88,7 +88,7 @@ jobs:
           version: v0.69.1
 
       - name: Trivy scan frontend
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
           image-ref: tea-frontend:ci
@@ -102,7 +102,7 @@ jobs:
         run: docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
       - name: Trivy scan nginx (custom image with updated libpng)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
           image-ref: tea-nginx:ci

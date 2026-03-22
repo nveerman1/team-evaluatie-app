@@ -81,7 +81,7 @@ class TestAzureADConfiguration:
     def test_domain_validation_with_restrictions(self, monkeypatch):
         """validate_domain should enforce domain restrictions"""
         monkeypatch.setattr(
-            settings, "AZURE_AD_ALLOWED_DOMAINS", ["school.nl", "example.edu"]
+            settings, "azure_ad_allowed_domains_str", "school.nl,example.edu"
         )
 
         authenticator = AzureADAuthenticator()
@@ -96,7 +96,7 @@ class TestAzureADConfiguration:
 
     def test_domain_validation_case_insensitive(self, monkeypatch):
         """validate_domain should be case-insensitive"""
-        monkeypatch.setattr(settings, "AZURE_AD_ALLOWED_DOMAINS", ["School.NL"])
+        monkeypatch.setattr(settings, "azure_ad_allowed_domains_str", "School.NL")
 
         authenticator = AzureADAuthenticator()
 
@@ -107,7 +107,7 @@ class TestAzureADConfiguration:
 
     def test_domain_validation_malformed_email(self, monkeypatch):
         """validate_domain should reject malformed emails"""
-        monkeypatch.setattr(settings, "AZURE_AD_ALLOWED_DOMAINS", ["school.nl"])
+        monkeypatch.setattr(settings, "azure_ad_allowed_domains_str", "school.nl")
 
         authenticator = AzureADAuthenticator()
 

@@ -27,6 +27,13 @@ def _user_is_student_scoped():
     return True
 
 
+def _build_name(
+    first_name: Optional[str], prefix: Optional[str], last_name: Optional[str]
+) -> Optional[str]:
+    parts = [p for p in [first_name, prefix, last_name] if p]
+    return " ".join(parts) if parts else None
+
+
 def _to_out_row(
     u: User,
     class_name: Optional[str],
@@ -44,6 +51,10 @@ def _to_out_row(
         course_id=course_id,
         course_name=course_name,
         status="inactive" if getattr(u, "archived", False) else "active",
+        student_number=getattr(u, "student_number", None),
+        first_name=getattr(u, "first_name", None),
+        prefix=getattr(u, "prefix", None),
+        last_name=getattr(u, "last_name", None),
     )
 
 
@@ -166,11 +177,17 @@ def create_student(
 
     u = User(
         school_id=current_user.school_id,
-        name=payload.name,
+        name=payload.name
+        or _build_name(payload.first_name, payload.prefix, payload.last_name)
+        or payload.email,
         email=payload.email,
         class_name=payload.class_name,
         role="student",
         archived=False,
+        student_number=payload.student_number,
+        first_name=payload.first_name,
+        prefix=payload.prefix,
+        last_name=payload.last_name,
     )
     db.add(u)
     db.commit()
@@ -230,6 +247,24 @@ def update_student(
         u.class_name = payload.class_name
     if payload.active is not None:
         u.archived = not payload.active
+    if payload.student_number is not None:
+        u.student_number = payload.student_number
+    if payload.first_name is not None:
+        u.first_name = payload.first_name
+    if payload.prefix is not None:
+        u.prefix = payload.prefix
+    if payload.last_name is not None:
+        u.last_name = payload.last_name
+
+    # Als name niet expliciet meegegeven maar wel name-velden: herbereken name
+    if payload.name is None and (payload.first_name or payload.last_name):
+        computed = _build_name(
+            payload.first_name or u.first_name,
+            payload.prefix if payload.prefix is not None else u.prefix,
+            payload.last_name or u.last_name,
+        )
+        if computed:
+            u.name = computed
 
     db.add(u)
     db.commit()
@@ -279,10 +314,12 @@ def export_students_csv(
     current_user=Depends(get_current_user),
 ):
     items = list_students(db=db, current_user=current_user, limit=10_000)
-    lines = ["id,name,email,class,course_id,course_name,status"]
+    lines = [
+        "id,student_number,first_name,prefix,last_name,name,email,class,course_id,course_name,status"
+    ]
     for s in items:
         lines.append(
-            f"{s.id},{s.name},{s.email},{s.class_name or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"
+            f"{s.id},{s.student_number or ''},{s.first_name or ''},{s.prefix or ''},{s.last_name or ''},{s.name},{s.email},{s.class_name or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"
         )
     return PlainTextResponse(
         content="\n".join(lines),

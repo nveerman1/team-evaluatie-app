@@ -157,9 +157,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Log that we found a scoring endpoint
         logger.info(f"Scoring endpoint detected: {path}")
 
-        # Get user role from authentication token
-        user_role = self._get_user_role_from_token(request)
-        logger.info(f"User role extracted from token: {user_role}")
+        # Check request.state.user first – this is set by the auth dependency or by
+        # a middleware that runs before RateLimitMiddleware (common in tests and some
+        # production configurations).
+        try:
+            state_user = request.state.user
+        except AttributeError:
+            state_user = None
+
+        if state_user is not None:
+            user_role = getattr(state_user, "role", None)
+            logger.info(f"User role from request.state.user: {user_role}")
+        else:
+            # Fall back to extracting role from JWT token
+            user_role = self._get_user_role_from_token(request)
+            logger.info(f"User role extracted from token: {user_role}")
 
         if user_role in ("teacher", "admin"):
             logger.info(f"Rate limiting exempted for {user_role} on {path}")

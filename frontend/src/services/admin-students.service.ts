@@ -9,13 +9,17 @@ export type AdminStudent = {
   team_number?: number;
   status: "active" | "inactive";
   has_logged_in?: boolean;
-  // New fields
-  class_info?: string; // e.g., "G2a (2025-2026)"
+  class_info?: string;
   course_enrollments?: Array<{
     course_id: number;
     course_name: string;
     subject_code?: string;
   }>;
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 };
 
 export type AdminStudentListParams = {
@@ -34,12 +38,17 @@ export type AdminStudentListResponse = {
 };
 
 export type AdminStudentCreate = {
-  name: string;
+  name?: string;
   email: string;
   class_name?: string;
   course_name?: string;
   team_number?: number;
   status?: "active" | "inactive";
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 };
 
 export type AdminStudentUpdate = {
@@ -49,6 +58,11 @@ export type AdminStudentUpdate = {
   course_name?: string;
   team_number?: number;
   status?: "active" | "inactive";
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 };
 
 export const adminStudentService = {

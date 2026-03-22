@@ -77,6 +77,7 @@ export interface StudentLearningObjectiveOverview {
   user_id: number;
   user_name: string;
   class_name: string | null;
+  student_number?: string | null;
   objectives: StudentLearningObjectiveProgress[];
 }
 

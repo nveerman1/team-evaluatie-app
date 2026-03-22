@@ -121,6 +121,7 @@ class StudentMatrixRowOut(BaseModel):
     student_id: int
     student_name: str
     student_class: Optional[str] = None
+    student_number: Optional[str] = None
     cells: dict[str, Optional[MatrixCellOut]]  # key -> cell data (None if no data)
     average: Optional[float] = None  # Overall average across all evaluations
 

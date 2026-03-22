@@ -33,15 +33,32 @@ def map_somtoday_student_to_user(
         "birthDate": "2005-03-15"
     }
     """
+    first_name = (
+        somtoday_student.get("roepnaam") or somtoday_student.get("firstName") or ""
+    )
+    prefix = somtoday_student.get("voorvoegsel") or ""
+    last_name = (
+        somtoday_student.get("achternaam") or somtoday_student.get("lastName") or ""
+    )
+    name_parts = [p for p in [first_name, prefix, last_name] if p]
+    full_name = " ".join(name_parts).strip()
+
     return {
         "school_id": school_id,
         "email": somtoday_student.get("email", "").lower(),
-        "name": f"{somtoday_student.get('firstName', '')} {somtoday_student.get('lastName', '')}".strip(),
+        "name": full_name,
         "role": "student",
         "auth_provider": "somtoday",
         "class_name": somtoday_student.get("class"),
-        # Store Somtoday ID in metadata for future reference
-        # This would need a metadata_json field on User model
+        # Somtoday-compatibele velden
+        "student_number": (
+            str(somtoday_student["leerlingnummer"])
+            if somtoday_student.get("leerlingnummer") is not None
+            else None
+        ),
+        "first_name": first_name or None,
+        "prefix": prefix or None,
+        "last_name": last_name or None,
     }
 
 
@@ -100,8 +117,6 @@ def match_user_by_leerlingnummer(
     """
     Match a user by leerlingnummer (student number)
 
-    Note: This requires storing leerlingnummer in User metadata
-
     Args:
         leerlingnummer: Student number to search for
         existing_users: List of User objects
@@ -109,8 +124,9 @@ def match_user_by_leerlingnummer(
     Returns:
         Matched User or None
     """
-    # TODO: Implement when User.metadata_json is available
-    # For now, return None
+    for user in existing_users:
+        if getattr(user, "student_number", None) == str(leerlingnummer):
+            return user
     return None
 
 
@@ -120,6 +136,7 @@ def prepare_grade_export(
     grade_value: float,
     grade_date: datetime,
     description: str = "",
+    student_number: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Prepare a grade for export to Somtoday
@@ -130,12 +147,14 @@ def prepare_grade_export(
         grade_value: Grade value (1-10)
         grade_date: Date when grade was assigned
         description: Optional description
+        student_number: Leerlingnummer (preferred identifier for Somtoday)
 
     Returns:
-        Grade object for Somtoday API
+        Grade object for Somtoday API / CSV export
 
     Example output:
     {
+        "leerlingnummer": "450000",
         "studentEmail": "jan.jansen@school.nl",
         "courseCode": "BIO",
         "grade": 8.5,
@@ -144,7 +163,7 @@ def prepare_grade_export(
         "weight": 1.0
     }
     """
-    return {
+    result: Dict[str, Any] = {
         "studentEmail": user_email,
         "courseCode": course_code,
         "grade": round(grade_value, 1),
@@ -152,6 +171,9 @@ def prepare_grade_export(
         "description": description or "Peer evaluation",
         "weight": 1.0,
     }
+    if student_number is not None:
+        result["leerlingnummer"] = student_number
+    return result
 
 
 class ImportResult:

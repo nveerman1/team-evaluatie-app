@@ -722,6 +722,7 @@ def get_learning_objectives_overview(
                 user_id=student.id,
                 user_name=student.name,
                 class_name=student.class_name,
+                student_number=getattr(student, "student_number", None),
                 objectives=objectives_progress,
             )
         )

@@ -200,6 +200,7 @@ export type StudentScoreOverview = {
   class_name?: string | null;
   team_number?: number | null;
   team_name?: string | null;
+  student_number?: string | null;
   criterion_scores: CriterionScore[];
   total_score?: number | null;
   grade?: number | null;

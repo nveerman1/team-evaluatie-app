@@ -60,6 +60,7 @@ class TestProjectsEndpoints:
         mock_project.end_date = date(2025, 6, 30)
         mock_project.status = "active"
         mock_project.created_at = datetime.now()
+        mock_project.period = "Q1"  # required by ProjectListItem schema
 
         # Setup query chain
         query_mock = Mock()
@@ -114,11 +115,14 @@ class TestProjectsEndpoints:
                 "app.api.v1.routers.projects.can_access_course", return_value=True
             ):
                 with patch("app.api.v1.routers.projects.log_action"):
-                    create_project(payload=payload, db=db, user=user)
+                    with patch(
+                        "app.api.v1.routers.projects.require_course_year_not_archived"
+                    ):
+                        create_project(payload=payload, db=db, user=user)
 
-                    # Verify project was added and committed
-                    db.add.assert_called()
-                    db.commit.assert_called()
+                        # Verify project was added and committed
+                        db.add.assert_called()
+                        db.commit.assert_called()
 
     def test_create_project_validates_course_access(self):
         """Test that project creation validates course access"""
@@ -185,9 +189,17 @@ class TestProjectsEndpoints:
                 "app.api.v1.routers.projects.can_access_course", return_value=True
             ):
                 with patch("app.api.v1.routers.projects.log_action"):
-                    update_project(project_id=1, payload=payload, db=db, user=user)
+                    with patch(
+                        "app.api.v1.routers.projects.require_project_year_not_archived"
+                    ):
+                        with patch(
+                            "app.api.v1.routers.projects.require_course_year_not_archived"
+                        ):
+                            update_project(
+                                project_id=1, payload=payload, db=db, user=user
+                            )
 
-                    db.commit.assert_called()
+                            db.commit.assert_called()
 
     def test_delete_project_hard_deletes_it(self):
         """Test that deleting a project performs a hard delete"""
@@ -212,11 +224,14 @@ class TestProjectsEndpoints:
                 "app.api.v1.routers.projects.can_access_course", return_value=True
             ):
                 with patch("app.api.v1.routers.projects.log_action"):
-                    delete_project(project_id=1, db=db, user=user)
+                    with patch(
+                        "app.api.v1.routers.projects.require_project_year_not_archived"
+                    ):
+                        delete_project(project_id=1, db=db, user=user)
 
-                    # Verify project was hard deleted (db.delete called)
-                    db.delete.assert_called_once_with(mock_project)
-                    db.commit.assert_called()
+                        # Verify project was hard deleted (db.delete called)
+                        db.delete.assert_called_once_with(mock_project)
+                        db.commit.assert_called()
 
 
 class TestWizardEndpoint:

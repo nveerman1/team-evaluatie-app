@@ -6,9 +6,14 @@ from pydantic import BaseModel, EmailStr
 # Aanmaken: je kunt óf direct naar een bestaand team koppelen via team_id,
 # óf (makkelijker) naar een course + team_number (maakt team aan als nodig).
 class StudentCreate(BaseModel):
-    name: str
+    name: Optional[str] = None
     email: EmailStr
     class_name: Optional[str] = None
+    # Somtoday-compatibele velden
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
     # Koppelen via course + team_number (optioneel, samen gebruikt):
     course_id: Optional[int] = None  # koppel aan course
     team_number: Optional[int] = None  # bv. 1 -> "Team 1" binnen course
@@ -21,6 +26,11 @@ class StudentUpdate(BaseModel):
     email: Optional[EmailStr] = None
     class_name: Optional[str] = None
     active: Optional[bool] = None
+    # Somtoday-compatibele velden
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
     # Wijzigen van membership:
     course_id: Optional[int] = None
     team_number: Optional[int] = None
@@ -32,6 +42,11 @@ class StudentOut(BaseModel):
     name: str
     email: EmailStr
     class_name: Optional[str] = None
+    # Somtoday-compatibele velden
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
 
     # Primair (actief) membership samengevat:
     team_id: Optional[int] = None

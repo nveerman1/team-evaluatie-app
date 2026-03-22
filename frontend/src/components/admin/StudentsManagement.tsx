@@ -528,6 +528,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                           />
                         </th>
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Leerlingnr.
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Naam
                         </th>
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -557,6 +560,11 @@ const StudentsManagement = forwardRef((props, ref) => {
                               onChange={() => handleToggleSelectStudent(student.id)}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {student.student_number || "—"}
+                            </div>
                           </td>
                           <td className="px-3 py-3">
                             <div className="text-sm font-medium text-gray-900 truncate max-w-[150px]" title={student.name}>

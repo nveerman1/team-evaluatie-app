@@ -123,8 +123,12 @@ class TestWebhookService:
         assert payload["event"] == "job.failed"
         assert payload["data"]["error"] == "Test error"
 
+    @patch(
+        "app.infra.services.webhook_service.validate_webhook_url",
+        return_value=(True, None),
+    )
     @patch("requests.post")
-    def test_send_webhook_success(self, mock_post):
+    def test_send_webhook_success(self, mock_post, mock_validate):
         """Test successful webhook delivery."""
         mock_response = Mock()
         mock_response.status_code = 200

@@ -234,6 +234,10 @@ def list_admin_students(
             getattr(User, "archived", literal(False)).label("archived"),
             getattr(User, "auth_provider", literal("local")).label("auth_provider"),
             getattr(User, "password_hash", literal(None)).label("password_hash"),
+            getattr(User, "student_number", literal(None)).label("student_number"),
+            getattr(User, "first_name", literal(None)).label("first_name"),
+            getattr(User, "prefix", literal(None)).label("prefix"),
+            getattr(User, "last_name", literal(None)).label("last_name"),
             csub.c.course_name.label("course_name"),
         )
         .outerjoin(csub, csub.c.user_id == User.id)
@@ -273,6 +277,11 @@ def list_admin_students(
                 # New fields
                 "class_info": enrichment["class_info"],
                 "course_enrollments": enrichment["course_enrollments"],
+                # Somtoday-compatibele velden
+                "student_number": r.student_number,
+                "first_name": r.first_name,
+                "prefix": r.prefix,
+                "last_name": r.last_name,
             }
         )
     return out
@@ -329,6 +338,11 @@ def get_admin_student(
         # New fields
         "class_info": enrichment["class_info"],
         "course_enrollments": enrichment["course_enrollments"],
+        # Somtoday-compatibele velden
+        "student_number": getattr(u, "student_number", None),
+        "first_name": getattr(u, "first_name", None),
+        "prefix": getattr(u, "prefix", None),
+        "last_name": getattr(u, "last_name", None),
     }
 
 
@@ -345,8 +359,20 @@ def create_admin_student(
 
     name = (payload.get("name") or "").strip()
     email = (payload.get("email") or "").strip().lower()
-    if not name or not email:
-        raise HTTPException(status_code=400, detail="name en email zijn verplicht")
+    if not email:
+        raise HTTPException(status_code=400, detail="email is verplicht")
+
+    # Stel name samen uit first_name/prefix/last_name als name niet opgegeven
+    first_name = (payload.get("first_name") or "").strip() or None
+    prefix = (payload.get("prefix") or "").strip() or None
+    last_name = (payload.get("last_name") or "").strip() or None
+    if not name and (first_name or last_name):
+        parts = [p for p in [first_name, prefix, last_name] if p]
+        name = " ".join(parts)
+    if not name:
+        raise HTTPException(
+            status_code=400, detail="name (of first_name/last_name) is verplicht"
+        )
 
     # unieke email binnen school
     dup = (
@@ -361,6 +387,7 @@ def create_admin_student(
     team_number = payload.get("team_number", None)
     status_val = (payload.get("status") or "active").strip().lower()
     archived = status_val == "inactive"
+    student_number = (payload.get("student_number") or "").strip() or None
 
     u = User(
         school_id=current_user.school_id,
@@ -371,6 +398,10 @@ def create_admin_student(
         team_number=team_number,
         archived=archived,
         auth_provider="local",
+        student_number=student_number,
+        first_name=first_name,
+        prefix=prefix,
+        last_name=last_name,
     )
     db.add(u)
     db.flush()  # krijgt id
@@ -396,6 +427,11 @@ def create_admin_student(
         "course_name": course_name_out,
         "team_number": getattr(u, "team_number", None),
         "status": "inactive" if getattr(u, "archived", False) else "active",
+        # Somtoday-compatibele velden
+        "student_number": getattr(u, "student_number", None),
+        "first_name": getattr(u, "first_name", None),
+        "prefix": getattr(u, "prefix", None),
+        "last_name": getattr(u, "last_name", None),
     }
 
 
@@ -443,6 +479,24 @@ def update_admin_student(
         u.team_number = payload["team_number"]
     if "status" in payload:
         u.archived = payload["status"] == "inactive"
+    if "student_number" in payload:
+        u.student_number = payload["student_number"] or None
+    if "first_name" in payload:
+        u.first_name = payload["first_name"] or None
+    if "prefix" in payload:
+        u.prefix = payload["prefix"] or None
+    if "last_name" in payload:
+        u.last_name = payload["last_name"] or None
+
+    # Als name niet expliciet meegegeven maar wel name-velden: herbereken name
+    if "name" not in payload or not payload.get("name"):
+        new_first = payload.get("first_name", u.first_name)
+        new_prefix = payload.get("prefix", u.prefix)
+        new_last = payload.get("last_name", u.last_name)
+        if new_first or new_last:
+            parts = [p for p in [new_first, new_prefix, new_last] if p]
+            if parts:
+                u.name = " ".join(parts)
 
     # optioneel: course_name wijzigen via update
     course_name = payload.get("course_name")
@@ -467,6 +521,11 @@ def update_admin_student(
         "course_name": course_name_out,
         "team_number": getattr(u, "team_number", None),
         "status": "inactive" if getattr(u, "archived", False) else "active",
+        # Somtoday-compatibele velden
+        "student_number": getattr(u, "student_number", None),
+        "first_name": getattr(u, "first_name", None),
+        "prefix": getattr(u, "prefix", None),
+        "last_name": getattr(u, "last_name", None),
     }
 
 
@@ -520,6 +579,10 @@ def export_students_csv(
             getattr(User, "class_name", literal(None)).label("class_name"),
             getattr(User, "team_number", literal(None)).label("team_number"),
             getattr(User, "archived", literal(False)).label("archived"),
+            getattr(User, "student_number", literal(None)).label("student_number"),
+            getattr(User, "first_name", literal(None)).label("first_name"),
+            getattr(User, "prefix", literal(None)).label("prefix"),
+            getattr(User, "last_name", literal(None)).label("last_name"),
             csub.c.course_name.label("course_name"),
         )
         .outerjoin(csub, csub.c.user_id == User.id)
@@ -532,12 +595,28 @@ def export_students_csv(
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(
-        ["id", "name", "email", "class_name", "course_name", "team_number", "status"]
+        [
+            "id",
+            "student_number",
+            "first_name",
+            "prefix",
+            "last_name",
+            "name",
+            "email",
+            "class_name",
+            "course_name",
+            "team_number",
+            "status",
+        ]
     )
     for r in rows:
         writer.writerow(
             [
                 sanitize_csv_value(r.id),
+                sanitize_csv_value(r.student_number or ""),
+                sanitize_csv_value(r.first_name or ""),
+                sanitize_csv_value(r.prefix or ""),
+                sanitize_csv_value(r.last_name or ""),
                 sanitize_csv_value(r.name or ""),
                 sanitize_csv_value(r.email),
                 sanitize_csv_value(r.class_name or ""),
@@ -562,7 +641,9 @@ def import_students_csv(
 ):
     """
     CSV-kolommen (header, volgorde vrij):
-    - name, email (verplicht)
+    - name, email (verplicht, tenzij first_name/last_name + email opgegeven)
+    - student_number (optioneel) — leerlingnummer
+    - first_name, prefix, last_name (optioneel)
     - class_name (optioneel)
     - course of course_name (optioneel)  <-- vervangt oude 'cluster'
     - team_number (optioneel)
@@ -617,8 +698,21 @@ def import_students_csv(
         try:
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()
-            if not name or not email:
-                raise ValueError("name en email zijn verplicht")
+            if not email:
+                raise ValueError("email is verplicht")
+
+            # Somtoday-compatibele velden
+            student_number = (row.get("student_number") or "").strip() or None
+            first_name = (row.get("first_name") or "").strip() or None
+            prefix = (row.get("prefix") or "").strip() or None
+            last_name = (row.get("last_name") or "").strip() or None
+
+            # Stel name samen als niet aanwezig
+            if not name and (first_name or last_name):
+                parts = [p for p in [first_name, prefix, last_name] if p]
+                name = " ".join(parts)
+            if not name:
+                raise ValueError("name (of first_name/last_name) is verplicht")
 
             class_name = (row.get("class_name") or "").strip() or None
             team_number_raw = (row.get("team_number") or "").strip()
@@ -645,6 +739,14 @@ def import_students_csv(
                     team_number if team_number is not None else u.team_number
                 )
                 u.archived = archived
+                if student_number is not None:
+                    u.student_number = student_number
+                if first_name is not None:
+                    u.first_name = first_name
+                if prefix is not None:
+                    u.prefix = prefix
+                if last_name is not None:
+                    u.last_name = last_name
                 updated += 1
             else:
                 u = User(
@@ -656,6 +758,10 @@ def import_students_csv(
                     team_number=team_number,
                     archived=archived,
                     auth_provider="local",
+                    student_number=student_number,
+                    first_name=first_name,
+                    prefix=prefix,
+                    last_name=last_name,
                 )
                 db.add(u)
                 db.flush()  # krijg id

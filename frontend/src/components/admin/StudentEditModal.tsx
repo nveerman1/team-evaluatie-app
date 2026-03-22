@@ -20,11 +20,14 @@ export default function StudentEditModal({
   studentId,
   mode,
 }: StudentEditModalProps) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [prefix, setPrefix] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [className, setClassName] = useState("");
   const [selectedCourseName, setSelectedCourseName] = useState("");
   const [status, setStatus] = useState<"active" | "inactive">("active");
+  const [studentNumber, setStudentNumber] = useState("");
   const [courses, setCourses] = useState<Course[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,11 +39,14 @@ export default function StudentEditModal({
       loadStudent(studentId);
     } else if (isOpen && mode === "create") {
       // Reset form for create mode
-      setName("");
+      setFirstName("");
+      setPrefix("");
+      setLastName("");
       setEmail("");
       setClassName("");
       setSelectedCourseName("");
       setStatus("active");
+      setStudentNumber("");
       setError(null);
     }
     loadCourses();
@@ -51,11 +57,14 @@ export default function StudentEditModal({
     setError(null);
     try {
       const student = await adminStudentService.getStudent(id);
-      setName(student.name);
+      setFirstName(student.first_name || "");
+      setPrefix(student.prefix || "");
+      setLastName(student.last_name || "");
       setEmail(student.email);
       setClassName(student.class_name || "");
       setSelectedCourseName(student.course_name || "");
       setStatus(student.status);
+      setStudentNumber(student.student_number || "");
     } catch (err) {
       console.error("Failed to load student:", err);
       setError("Kon leerling niet laden");
@@ -83,12 +92,22 @@ export default function StudentEditModal({
     setIsSubmitting(true);
 
     try {
+      const fn = firstName.trim() || null;
+      const pfx = prefix.trim() || null;
+      const ln = lastName.trim() || null;
+      const nameParts = [fn, pfx, ln].filter(Boolean);
+      const computedName = nameParts.join(" ") || undefined;
+
       const data = {
-        name: name.trim(),
+        name: computedName,
         email: email.trim().toLowerCase(),
         class_name: className.trim() || undefined,
         course_name: selectedCourseName || undefined,
         status,
+        student_number: studentNumber.trim() || null,
+        first_name: fn,
+        prefix: pfx,
+        last_name: ln,
       };
 
       await onSubmit(data);
@@ -121,21 +140,74 @@ export default function StudentEditModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  htmlFor="first_name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Voornaam *
+                </label>
+                <input
+                  id="first_name"
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Bijv. Jan"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="prefix"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Tussenvoegsel
+                </label>
+                <input
+                  id="prefix"
+                  type="text"
+                  value={prefix}
+                  onChange={(e) => setPrefix(e.target.value)}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Bijv. van der"
+                />
+              </div>
+            </div>
+
             <div>
               <label
-                htmlFor="name"
+                htmlFor="last_name"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Naam *
+                Achternaam *
               </label>
               <input
-                id="name"
+                id="last_name"
                 type="text"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Bijv. Jan Jansen"
+                placeholder="Bijv. Jansen"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="student_number"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Leerlingnummer
+              </label>
+              <input
+                id="student_number"
+                type="text"
+                value={studentNumber}
+                onChange={(e) => setStudentNumber(e.target.value)}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Bijv. 450000"
               />
             </div>
 

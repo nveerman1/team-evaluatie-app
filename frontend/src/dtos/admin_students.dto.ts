@@ -8,14 +8,24 @@ export interface AdminStudent {
   course_name?: string | null;
   team_number?: number | null;
   status: AdminStudentStatus;
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 }
 
 export interface AdminStudentCreate {
-  name: string;
+  name?: string | null;
   email: string;
   class_name?: string | null;
   team_number?: number | null;
   status?: AdminStudentStatus; // default 'active' server-side
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 }
 
 export interface AdminStudentUpdate {
@@ -24,4 +34,9 @@ export interface AdminStudentUpdate {
   class_name?: string | null;
   team_number?: number | null;
   status?: AdminStudentStatus;
+  // Somtoday-compatibele velden
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
 }
