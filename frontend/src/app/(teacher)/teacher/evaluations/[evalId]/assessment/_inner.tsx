@@ -178,6 +178,10 @@ type Row = {
   name: string;
   teamNumber: number | null;
   className: string | null;
+  studentNumber: string | null;
+  firstName: string | null;
+  prefix: string | null;
+  lastName: string | null;
   // OMZA
   categoryScores: Record<string, { peer_avg: number | null; self_avg: number | null }>;
   teacherComment: string | null;
@@ -340,6 +344,10 @@ export default function CombinedAssessmentInner() {
               omzaStudent?.team_number ?? gradeItem?.team_number ?? null,
             className:
               omzaStudent?.class_name ?? gradeItem?.class_name ?? null,
+            studentNumber: omzaStudent?.student_number ?? null,
+            firstName: omzaStudent?.first_name ?? null,
+            prefix: omzaStudent?.prefix ?? null,
+            lastName: omzaStudent?.last_name ?? null,
             categoryScores: omzaData.categories.reduce<
               Record<string, { peer_avg: number | null; self_avg: number | null }>
             >((acc, cat) => {
@@ -585,6 +593,35 @@ export default function CombinedAssessmentInner() {
 
   // ── grade helpers ─────────────────────────────────────────────────────────
 
+  function exportAssessmentCSV() {
+    if (filteredSorted.length === 0) return;
+
+    const headers = ["Team", "Leerlingnummer", "Naam", "Voornaam", "Tussenvoegsel", "Achternaam", "Klas", "Cijfer"];
+    const rows = filteredSorted.map((r) => [
+      r.teamNumber != null ? String(r.teamNumber) : "—",
+      r.studentNumber || "",
+      r.name,
+      r.firstName || "",
+      r.prefix || "",
+      r.lastName || "",
+      r.className || "—",
+      finalGrade(r).toFixed(1),
+    ]);
+
+    const csvContent =
+      headers.join(",") +
+      "\n" +
+      rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `beoordeling-${evalIdStr}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function handleUpdateTeamGroupGrade(teamNumber: number | null | undefined, value: string) {
     if (teamNumber == null) return;
     isDirty.current = true;
@@ -768,6 +805,13 @@ export default function CombinedAssessmentInner() {
               onClick={applyPeerScoresAll}
             >
               Neem peer score over
+            </button>
+            <button
+              type="button"
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs md:text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              onClick={exportAssessmentCSV}
+            >
+              📄 CSV
             </button>
           </div>
         </div>

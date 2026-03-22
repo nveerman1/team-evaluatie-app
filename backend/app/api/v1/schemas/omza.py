@@ -27,6 +27,10 @@ class OmzaStudentData(BaseModel):
     student_name: str
     class_name: Optional[str] = None
     team_number: Optional[int] = None
+    student_number: Optional[str] = None
+    first_name: Optional[str] = None
+    prefix: Optional[str] = None
+    last_name: Optional[str] = None
     category_scores: Dict[str, OmzaCategoryScore] = Field(
         default_factory=dict,
         description="Map of category name to scores (e.g., {'O': {...}, 'M': {...}})",

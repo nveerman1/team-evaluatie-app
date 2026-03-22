@@ -15,6 +15,10 @@ export interface OmzaStudentData {
   student_name: string;
   class_name?: string | null;
   team_number?: number | null;
+  student_number?: string | null;
+  first_name?: string | null;
+  prefix?: string | null;
+  last_name?: string | null;
   category_scores: Record<string, OmzaCategoryScore>;
   teacher_comment?: string | null;
 }

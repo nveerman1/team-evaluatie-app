@@ -214,18 +214,17 @@ export default function ScoresOverviewInner() {
       // Revoke the object URL to prevent memory leaks
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else if (viewMode === "students" && studentsData) {
-      const headers = ["Leerlingnummer", "Leerling", "Klas", "Team", ...studentsData.criteria.map((c) => c.name), "Totaalscore", "Cijfer", "Laatst bewerkt"];
+      const headers = ["Team", "Leerlingnummer", "Naam", "Voornaam", "Tussenvoegsel", "Achternaam", "Klas", "Cijfer"];
       const rows = studentsData.student_scores.map((student) => {
-        const scores = student.criterion_scores.map((cs) => cs.score?.toString() || "—");
         return [
+          student.team_name || "—",
           student.student_number || "",
           student.student_name,
+          student.first_name || "",
+          student.prefix || "",
+          student.last_name || "",
           student.class_name || "—",
-          student.team_name || "—",
-          ...scores,
-          student.total_score?.toFixed(1) || "—",
           student.grade?.toFixed(1) || "—",
-          student.updated_at ? new Date(student.updated_at).toLocaleDateString("nl-NL") : "—",
         ];
       });
 
@@ -240,7 +239,6 @@ export default function ScoresOverviewInner() {
       link.href = url;
       link.download = `scores-students-${studentsData.assessment.title.replace(/[^a-z0-9]/gi, "_")}.csv`;
       link.click();
-      // Revoke the object URL to prevent memory leaks
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   }
@@ -403,12 +401,14 @@ export default function ScoresOverviewInner() {
           >
             ⟳ Verversen
           </button>
-          <button
-            onClick={exportToCSV}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-          >
-            📄 CSV
-          </button>
+          {viewMode === "students" && (
+            <button
+              onClick={exportToCSV}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              📄 CSV
+            </button>
+          )}
         </div>
       </div>
 
