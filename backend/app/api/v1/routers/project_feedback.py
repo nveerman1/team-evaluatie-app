@@ -1,6 +1,7 @@
 """
 Project Feedback API endpoints (Projectfeedback door leerlingen)
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -24,7 +25,6 @@ from app.infra.db.models import (
     User,
 )
 from app.api.v1.schemas.project_feedback import (
-    AnswerIn,
     ProjectFeedbackQuestionOut,
     ProjectFeedbackResults,
     ProjectFeedbackRoundCreate,
@@ -43,34 +43,121 @@ router = APIRouter(prefix="/project-feedback", tags=["project-feedback"])
 
 DEFAULT_QUESTIONS = [
     # project
-    {"question_text": "Het project was leerzaam", "question_type": "rating", "order": 1, "is_required": True},
-    {"question_text": "Het project was interessant", "question_type": "rating", "order": 2, "is_required": True},
-    {"question_text": "Het project voelde als een echte opdracht", "question_type": "rating", "order": 3, "is_required": True},
-    {"question_text": "De moeilijkheidsgraad was passend", "question_type": "rating", "order": 4, "is_required": True},
-    {"question_text": "Wat werkte goed in dit project?", "question_type": "open", "order": 5, "is_required": False},
+    {
+        "question_text": "Het project was leerzaam",
+        "question_type": "rating",
+        "order": 1,
+        "is_required": True,
+    },
+    {
+        "question_text": "Het project was interessant",
+        "question_type": "rating",
+        "order": 2,
+        "is_required": True,
+    },
+    {
+        "question_text": "Het project voelde als een echte opdracht",
+        "question_type": "rating",
+        "order": 3,
+        "is_required": True,
+    },
+    {
+        "question_text": "De moeilijkheidsgraad was passend",
+        "question_type": "rating",
+        "order": 4,
+        "is_required": True,
+    },
+    {
+        "question_text": "Wat werkte goed in dit project?",
+        "question_type": "open",
+        "order": 5,
+        "is_required": False,
+    },
     # organisatie
-    {"question_text": "De opdracht was duidelijk", "question_type": "rating", "order": 6, "is_required": True},
-    {"question_text": "Het project was goed georganiseerd", "question_type": "rating", "order": 7, "is_required": True},
-    {"question_text": "Ik had voldoende tijd", "question_type": "rating", "order": 8, "is_required": True},
-    {"question_text": "Ik wist tijdens het project welke stap we moesten doen (bijv. onderzoek, ideeën, ontwerp)", "question_type": "rating", "order": 9, "is_required": True},
-    {"question_text": "Wat zou je verbeteren aan de organisatie?", "question_type": "open", "order": 10, "is_required": False},
+    {
+        "question_text": "De opdracht was duidelijk",
+        "question_type": "rating",
+        "order": 6,
+        "is_required": True,
+    },
+    {
+        "question_text": "Het project was goed georganiseerd",
+        "question_type": "rating",
+        "order": 7,
+        "is_required": True,
+    },
+    {
+        "question_text": "Ik had voldoende tijd",
+        "question_type": "rating",
+        "order": 8,
+        "is_required": True,
+    },
+    {
+        "question_text": "Ik wist tijdens het project welke stap we moesten doen (bijv. onderzoek, ideeën, ontwerp)",
+        "question_type": "rating",
+        "order": 9,
+        "is_required": True,
+    },
+    {
+        "question_text": "Wat zou je verbeteren aan de organisatie?",
+        "question_type": "open",
+        "order": 10,
+        "is_required": False,
+    },
     # begeleiding
-    {"question_text": "De feedback van de docent hielp mij verder", "question_type": "rating", "order": 11, "is_required": True},
-    {"question_text": "Ik kon op tijd hulp krijgen", "question_type": "rating", "order": 12, "is_required": True},
-    {"question_text": "Hoe kan de begeleiding beter?", "question_type": "open", "order": 13, "is_required": False},
+    {
+        "question_text": "De feedback van de docent hielp mij verder",
+        "question_type": "rating",
+        "order": 11,
+        "is_required": True,
+    },
+    {
+        "question_text": "Ik kon op tijd hulp krijgen",
+        "question_type": "rating",
+        "order": 12,
+        "is_required": True,
+    },
+    {
+        "question_text": "Hoe kan de begeleiding beter?",
+        "question_type": "open",
+        "order": 13,
+        "is_required": False,
+    },
     # samenwerking
-    {"question_text": "Mijn team werkte goed samen tijdens het project", "question_type": "rating", "order": 14, "is_required": True},
+    {
+        "question_text": "Mijn team werkte goed samen tijdens het project",
+        "question_type": "rating",
+        "order": 14,
+        "is_required": True,
+    },
     # eindvragen
-    {"question_text": "Welk cijfer geef je dit project?", "question_type": "scale10", "order": 15, "is_required": True},
-    {"question_text": "Ik zou dit project aanraden aan andere leerlingen", "question_type": "rating", "order": 16, "is_required": True},
-    {"question_text": "Wat is je belangrijkste tip voor verbetering?", "question_type": "open", "order": 17, "is_required": False},
+    {
+        "question_text": "Welk cijfer geef je dit project?",
+        "question_type": "scale10",
+        "order": 15,
+        "is_required": True,
+    },
+    {
+        "question_text": "Ik zou dit project aanraden aan andere leerlingen",
+        "question_type": "rating",
+        "order": 16,
+        "is_required": True,
+    },
+    {
+        "question_text": "Wat is je belangrijkste tip voor verbetering?",
+        "question_type": "open",
+        "order": 17,
+        "is_required": False,
+    },
 ]
 
 
 # ---------- Helpers ----------
 
 
-def _get_round_or_404(db: Session, round_id: int, school_id: int) -> ProjectFeedbackRound:
+def _get_round_or_404(
+    db: Session, round_id: int, school_id: int
+) -> ProjectFeedbackRound:
     r = (
         db.query(ProjectFeedbackRound)
         .filter(
@@ -98,7 +185,9 @@ def _count_students_for_project(db: Session, project_id: int, school_id: int) ->
     )
 
 
-def _build_round_out(db: Session, r: ProjectFeedbackRound, school_id: int) -> ProjectFeedbackRoundOut:
+def _build_round_out(
+    db: Session, r: ProjectFeedbackRound, school_id: int
+) -> ProjectFeedbackRoundOut:
     question_count = (
         db.query(func.count(ProjectFeedbackQuestion.id))
         .filter(ProjectFeedbackQuestion.round_id == r.id)
@@ -171,7 +260,9 @@ def _build_round_out(db: Session, r: ProjectFeedbackRound, school_id: int) -> Pr
         response_count=response_count,
         total_students=total_students,
         avg_rating=round(float(avg_rating), 2) if avg_rating is not None else None,
-        project_grade=round(float(project_grade), 2) if project_grade is not None else None,
+        project_grade=(
+            round(float(project_grade), 2) if project_grade is not None else None
+        ),
         course_name=course_name,
         created_at=r.created_at,
     )
@@ -182,7 +273,9 @@ def _build_round_out(db: Session, r: ProjectFeedbackRound, school_id: int) -> Pr
 # ============================================================
 
 
-@router.post("", response_model=ProjectFeedbackRoundOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=ProjectFeedbackRoundOut, status_code=status.HTTP_201_CREATED
+)
 def create_feedback_round(
     payload: ProjectFeedbackRoundCreate,
     db: Session = Depends(get_db),
@@ -446,8 +539,14 @@ def get_feedback_results(
         )
 
         if q.question_type in ("rating", "scale10"):
-            rating_values = [a.rating_value for a in answers if a.rating_value is not None]
-            avg = round(sum(rating_values) / len(rating_values), 2) if rating_values else None
+            rating_values = [
+                a.rating_value for a in answers if a.rating_value is not None
+            ]
+            avg = (
+                round(sum(rating_values) / len(rating_values), 2)
+                if rating_values
+                else None
+            )
             distribution: dict[int, int] = {}
             for v in rating_values:
                 distribution[v] = distribution.get(v, 0) + 1
@@ -532,7 +631,11 @@ def get_my_response(
     )
 
 
-@router.post("/{round_id}/submit", response_model=ProjectFeedbackResponseOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{round_id}/submit",
+    response_model=ProjectFeedbackResponseOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def submit_feedback(
     round_id: int,
     payload: ProjectFeedbackSubmission,
@@ -556,7 +659,9 @@ def submit_feedback(
         .first()
     )
     if existing and existing.submitted_at is not None:
-        raise HTTPException(status_code=400, detail="You have already submitted feedback for this round")
+        raise HTTPException(
+            status_code=400, detail="You have already submitted feedback for this round"
+        )
 
     # Validate question ids belong to this round
     valid_question_ids = {

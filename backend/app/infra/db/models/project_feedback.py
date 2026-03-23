@@ -1,6 +1,7 @@
 """
 Project feedback models — feedback given by students about the project itself.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -36,9 +37,7 @@ class ProjectFeedbackRound(Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
-    teacher_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE")
-    )
+    teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(String(30), default="draft")
     closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
@@ -80,9 +79,7 @@ class ProjectFeedbackResponse(Base):
     submitted_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     __table_args__ = (
-        UniqueConstraint(
-            "round_id", "student_id", name="uq_feedback_response_student"
-        ),
+        UniqueConstraint("round_id", "student_id", name="uq_feedback_response_student"),
     )
 
 

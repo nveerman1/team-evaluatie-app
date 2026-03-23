@@ -53,11 +53,23 @@ def upgrade() -> None:
             index=True,
         ),
         sa.Column("question_text", sa.String(500), nullable=False),
-        sa.Column("question_type", sa.String(30), nullable=False, server_default="rating"),
+        sa.Column(
+            "question_type", sa.String(30), nullable=False, server_default="rating"
+        ),
         sa.Column("order", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("is_required", sa.Boolean(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
     )
 
     op.create_table(
@@ -79,9 +91,21 @@ def upgrade() -> None:
             index=True,
         ),
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.UniqueConstraint("round_id", "student_id", name="uq_feedback_response_student"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.UniqueConstraint(
+            "round_id", "student_id", name="uq_feedback_response_student"
+        ),
     )
 
     op.create_table(
@@ -103,8 +127,18 @@ def upgrade() -> None:
         ),
         sa.Column("rating_value", sa.SmallInteger(), nullable=True),
         sa.Column("text_value", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
     )
 
 
