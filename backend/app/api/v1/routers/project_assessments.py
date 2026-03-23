@@ -697,6 +697,27 @@ def get_project_assessment(
             # Convert to grade (1-10 scale) using curved mapping
             grade = _score_to_grade(total_score, rubric.scale_min, rubric.scale_max)
 
+    # Get general comment from the team record (teacher-facing, per team)
+    general_comment = None
+    if team_number is not None:
+        from app.infra.db.models import ProjectAssessmentTeam
+
+        assessment_team = (
+            db.query(ProjectAssessmentTeam)
+            .join(
+                ProjectTeam,
+                ProjectAssessmentTeam.project_team_id == ProjectTeam.id,
+            )
+            .filter(
+                ProjectAssessmentTeam.project_assessment_id == pa.id,
+                ProjectAssessmentTeam.school_id == user.school_id,
+                ProjectTeam.team_number == team_number,
+            )
+            .first()
+        )
+        if assessment_team:
+            general_comment = assessment_team.general_comment
+
     return ProjectAssessmentDetailOut(
         assessment=_to_out_assessment(pa),
         scores=[ProjectAssessmentScoreOut.model_validate(s) for s in scores],
@@ -721,6 +742,7 @@ def get_project_assessment(
         teacher_name=teacher_name,
         total_score=total_score,
         grade=grade,
+        general_comment=general_comment,
     )
 
 
@@ -1238,6 +1260,28 @@ def batch_create_update_scores(
                 assessment_team.last_updated_at = now
                 assessment_team.last_updated_by_id = user.id
                 db.add(assessment_team)
+
+    # Save general comment to the team record if a team_number is provided
+    # (allow any value including None/empty to support clearing the comment)
+    if payload.team_number is not None and "general_comment" in payload.model_fields_set:
+        from app.infra.db.models import ProjectAssessmentTeam
+
+        assessment_team = (
+            db.query(ProjectAssessmentTeam)
+            .join(
+                ProjectTeam,
+                ProjectAssessmentTeam.project_team_id == ProjectTeam.id,
+            )
+            .filter(
+                ProjectAssessmentTeam.project_assessment_id == assessment_id,
+                ProjectAssessmentTeam.school_id == user.school_id,
+                ProjectTeam.team_number == payload.team_number,
+            )
+            .first()
+        )
+        if assessment_team:
+            assessment_team.general_comment = payload.general_comment
+            db.add(assessment_team)
 
     db.commit()
     return [ProjectAssessmentScoreOut.model_validate(s) for s in result]
