@@ -30,6 +30,37 @@ function getCategory(order: number) {
   return "overig";
 }
 
+// Likert color palette (scale 1–5)
+const LIKERT_COLORS: Record<number, string> = {
+  1: "bg-red-600",
+  2: "bg-rose-400",
+  3: "bg-orange-500",
+  4: "bg-lime-500",
+  5: "bg-green-600",
+};
+
+const SCALE10_COLORS: Record<number, string> = {
+  1: "bg-red-600",
+  2: "bg-red-500",
+  3: "bg-rose-400",
+  4: "bg-orange-400",
+  5: "bg-amber-400",
+  6: "bg-yellow-400",
+  7: "bg-lime-400",
+  8: "bg-green-400",
+  9: "bg-green-500",
+  10: "bg-emerald-600",
+};
+
+/** Maps a 1–5 average to the matching Likert color class */
+function likertColorForAvg(avg: number): string {
+  if (avg >= 4.5) return LIKERT_COLORS[5];
+  if (avg >= 3.5) return LIKERT_COLORS[4];
+  if (avg >= 2.5) return LIKERT_COLORS[3];
+  if (avg >= 1.5) return LIKERT_COLORS[2];
+  return LIKERT_COLORS[1];
+}
+
 function StarRating({ value, max = 5 }: { value: number; max?: number }) {
   const full = Math.floor(value);
   const half = value - full >= 0.5;
@@ -54,27 +85,7 @@ function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max
   );
 }
 
-const LIKERT_COLORS: Record<number, string> = {
-  1: "bg-red-500",
-  2: "bg-rose-400",
-  3: "bg-orange-400",
-  4: "bg-lime-400",
-  5: "bg-green-500",
-};
-
-const SCALE10_COLORS: Record<number, string> = {
-  1: "bg-red-600",
-  2: "bg-red-500",
-  3: "bg-rose-400",
-  4: "bg-orange-400",
-  5: "bg-amber-400",
-  6: "bg-yellow-400",
-  7: "bg-lime-400",
-  8: "bg-green-400",
-  9: "bg-green-500",
-  10: "bg-emerald-600",
-};
-
+/** Single stacked horizontal Likert bar (no per-question legend). */
 function LikertBar({
   distribution,
   max,
@@ -89,140 +100,99 @@ function LikertBar({
   const scores = Array.from({ length: max }, (_, i) => i + 1);
 
   return (
-    <div className="space-y-1.5 mt-1">
-      <div className="flex items-center gap-2">
-        {/* Stacked bar */}
-        <div className="flex-1 h-5 rounded-md overflow-hidden flex">
-          {total === 0 ? (
-            <div className="w-full h-full bg-gray-100 rounded-md" />
-          ) : (
-            scores.map((v) => {
-              const count = distribution[v] ?? 0;
-              const pct = (count / total) * 100;
-              if (pct === 0) return null;
-              return (
-                <div
-                  key={v}
-                  title={`${v}: ${count}×`}
-                  className={`${colors[v] ?? "bg-gray-300"} h-full flex items-center justify-center transition-all`}
-                  style={{ width: `${pct}%` }}
-                >
-                  {pct >= 8 && (
-                    <span className="text-[10px] font-semibold text-white/90 leading-none select-none">
-                      {count}
-                    </span>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-        {/* Average */}
-        {avg != null && (
-          <span className="text-sm font-semibold text-gray-700 w-14 text-right tabular-nums shrink-0">
-            gem.&nbsp;{avg.toFixed(1)}
-          </span>
+    <div className="flex items-center gap-2 mt-1">
+      {/* Stacked bar */}
+      <div className="flex-1 h-5 rounded-md overflow-hidden flex">
+        {total === 0 ? (
+          <div className="w-full h-full bg-gray-100 rounded-md" />
+        ) : (
+          scores.map((v) => {
+            const count = distribution[v] ?? 0;
+            const pct = (count / total) * 100;
+            if (pct === 0) return null;
+            return (
+              <div
+                key={v}
+                title={`${v}: ${count}×`}
+                className={`${colors[v] ?? "bg-gray-300"} h-full flex items-center justify-center transition-all`}
+                style={{ width: `${pct}%` }}
+              >
+                {pct >= 8 && (
+                  <span className="text-[10px] font-semibold text-white/90 leading-none select-none">
+                    {count}
+                  </span>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
-      {/* Score legend */}
-      <div className="flex gap-1 flex-wrap">
-        {scores.map((v) => {
-          const count = distribution[v] ?? 0;
-          return (
-            <span
-              key={v}
-              className="inline-flex items-center gap-1 text-[10px] text-gray-500"
-            >
-              <span className={`inline-block w-2 h-2 rounded-sm ${colors[v] ?? "bg-gray-300"}`} />
-              {v}:{count}
-            </span>
-          );
-        })}
-      </div>
+      {/* Average */}
+      {avg != null && (
+        <span className="text-sm font-semibold text-gray-700 w-14 text-right tabular-nums shrink-0">
+          gem.&nbsp;{avg.toFixed(1)}
+        </span>
+      )}
     </div>
   );
 }
 
-function CategorySection({
+/** Shared Likert legend shown once below all stacked bars. */
+function LikertLegend() {
+  const items = [
+    { score: 1, label: "Helemaal oneens" },
+    { score: 2, label: "Oneens" },
+    { score: 3, label: "Neutraal" },
+    { score: 4, label: "Eens" },
+    { score: 5, label: "Helemaal eens" },
+  ];
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 pt-3 border-t border-gray-100">
+      {items.map(({ score, label }) => (
+        <span key={score} className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+          <span className={`inline-block w-3 h-3 rounded-sm shrink-0 ${LIKERT_COLORS[score]}`} />
+          <span className="font-medium text-gray-600">{score}</span>
+          <span>– {label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Summary card shown below the category pill tabs. */
+function CategorySummaryCard({
   label,
-  questions,
-  open,
-  onToggle,
+  avg,
 }: {
   label: string;
-  questions: ProjectFeedbackResults["questions"];
-  open: boolean;
-  onToggle: () => void;
+  avg: number | null;
 }) {
-  const ratingQs = questions.filter(
-    (q) => q.question_type !== "open" && q.avg_rating != null
-  );
-  const categoryAvg =
-    ratingQs.length > 0
-      ? ratingQs.reduce((sum, q) => sum + (q.avg_rating ?? 0), 0) / ratingQs.length
-      : null;
-
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 text-left"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-gray-900">{label}</span>
-          {categoryAvg != null && (
-            <span className="text-xs text-gray-500">gem. {categoryAvg.toFixed(1)}</span>
-          )}
-        </div>
-        <span className="text-gray-400 text-sm">{open ? "▼" : "▶"}</span>
-      </button>
-
-      {open && (
-        <div className="divide-y divide-gray-100">
-          {questions.map((q, i) => (
-            <div key={q.id} className="px-4 py-3">
-              <p className="text-sm font-medium text-gray-800 mb-2">
-                <span className="text-gray-400 mr-1 text-xs">{i + 1}.</span>
-                {q.question_text}
-              </p>
-
-              {q.question_type !== "open" && q.avg_rating != null && (() => {
-                const max = q.question_type === "scale10" ? 10 : 5;
-                const dist = q.rating_distribution ?? {};
-                return (
-                  <LikertBar
-                    distribution={dist}
-                    max={max}
-                    avg={q.avg_rating}
-                  />
-                );
-              })()}
-
-              {q.question_type !== "open" && q.avg_rating == null && (
-                <p className="text-xs text-gray-400">Nog geen antwoorden</p>
-              )}
-
-              {q.question_type === "open" && q.open_answers && q.open_answers.length > 0 && (
-                <ul className="space-y-1 mt-1">
-                  {q.open_answers.map((ans, j) => (
-                    <li
-                      key={j}
-                      className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-xs text-gray-700"
-                    >
-                      {ans}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {q.question_type === "open" && (!q.open_answers || q.open_answers.length === 0) && (
-                <p className="text-xs text-gray-400">Nog geen antwoorden</p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-5">
+      <div className="shrink-0 text-center min-w-[3.5rem]">
+        {avg != null ? (
+          <>
+            <span className="text-3xl font-bold text-gray-900 tabular-nums leading-none">
+              {avg.toFixed(1)}
+            </span>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">gemiddelde score</p>
+          </>
+        ) : (
+          <span className="text-lg text-gray-400">—</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">{label}</p>
+        <p className="text-xs text-gray-400">schaal 1 tot 5</p>
+        {avg != null && (
+          <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className={`h-2 rounded-full transition-all ${likertColorForAvg(avg)}`}
+              style={{ width: `${((avg - 1) / 4) * 100}%` }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -282,7 +252,7 @@ export default function ProjectFeedbackDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(["project"]));
+  const [activeCategoryKey, setActiveCategoryKey] = useState<string | null>(null);
 
   async function loadResults() {
     setLoading(true);
@@ -341,15 +311,6 @@ export default function ProjectFeedbackDashboardPage() {
     }
   }
 
-  function toggleCategory(key: string) {
-    setOpenCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!results) return null;
@@ -391,6 +352,23 @@ export default function ProjectFeedbackDashboardPage() {
       return { label: cat.label, avg };
     })
     .filter(Boolean) as { label: string; avg: number }[];
+
+  // Active category for pill tabs — default to first available
+  const firstCategoryKey = categoriesToShow[0]?.key ?? null;
+  const currentKey = activeCategoryKey ?? firstCategoryKey;
+  const activeCategory = categoriesToShow.find((c) => c.key === currentKey) ?? categoriesToShow[0];
+  const activeCatQuestions = activeCategory ? (byCategory[activeCategory.key] ?? []) : [];
+  const activeCatRatingQs = activeCatQuestions.filter(
+    (q) => q.question_type !== "open" && q.question_type !== "scale10"
+  );
+  const activeCatScale10Qs = activeCatQuestions.filter(
+    (q) => q.question_type === "scale10"
+  );
+  const activeCatOpenQs = activeCatQuestions.filter((q) => q.question_type === "open");
+  const activeCatAvg =
+    activeCatRatingQs.length > 0
+      ? activeCatRatingQs.reduce((s, q) => s + (q.avg_rating ?? 0), 0) / activeCatRatingQs.length
+      : null;
 
   return (
     <>
@@ -534,7 +512,7 @@ export default function ProjectFeedbackDashboardPage() {
                   <span className="w-28 shrink-0 text-sm font-medium text-gray-700">
                     {label}
                   </span>
-                  <ProgressBar value={avg} max={5} color="bg-blue-500" />
+                  <ProgressBar value={avg} max={5} color={likertColorForAvg(avg)} />
                   <span className="w-8 text-sm font-semibold text-gray-700 text-right tabular-nums">
                     {avg.toFixed(1)}
                   </span>
@@ -549,16 +527,119 @@ export default function ProjectFeedbackDashboardPage() {
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
             Per vraag
           </h2>
-          <div className="space-y-2">
-            {categoriesToShow.map((cat) => (
-              <CategorySection
-                key={cat.key}
-                label={cat.label}
-                questions={byCategory[cat.key] ?? []}
-                open={openCategories.has(cat.key)}
-                onToggle={() => toggleCategory(cat.key)}
-              />
-            ))}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Category pill tabs */}
+            <div className="px-4 pt-4 pb-0 flex flex-wrap gap-2 border-b border-gray-100">
+              {categoriesToShow.map((cat) => {
+                const isActive = cat.key === (activeCategoryKey ?? firstCategoryKey);
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setActiveCategoryKey(cat.key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors mb-3 ${
+                      isActive
+                        ? "bg-slate-800 text-white border-slate-800 shadow-sm"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeCategory && (
+              <div className="p-4 space-y-4">
+                {/* Category summary card (only for scale-5 categories with a meaningful avg) */}
+                {activeCatAvg != null && (
+                  <CategorySummaryCard label={activeCategory.label} avg={activeCatAvg} />
+                )}
+
+                {/* Scale-5 Likert questions */}
+                {activeCatRatingQs.length > 0 && (
+                  <div className="space-y-4">
+                    {activeCatRatingQs.map((q, i) => (
+                      <div key={q.id}>
+                        <p className="text-sm font-medium text-gray-800">
+                          <span className="text-gray-400 mr-1 text-xs">{i + 1}.</span>
+                          {q.question_text}
+                        </p>
+                        {q.avg_rating != null ? (
+                          <LikertBar
+                            distribution={q.rating_distribution ?? {}}
+                            max={5}
+                            avg={q.avg_rating}
+                          />
+                        ) : (
+                          <p className="text-xs text-gray-400 mt-1">Nog geen antwoorden</p>
+                        )}
+                      </div>
+                    ))}
+                    {/* One shared legend below all Likert bars */}
+                    <LikertLegend />
+                  </div>
+                )}
+
+                {/* Scale-10 questions (separate block, no Likert legend) */}
+                {activeCatScale10Qs.length > 0 && (
+                  <div className="space-y-4 pt-2">
+                    {activeCatScale10Qs.map((q, i) => (
+                      <div key={q.id}>
+                        <p className="text-sm font-medium text-gray-800">
+                          <span className="text-gray-400 mr-1 text-xs">
+                            {activeCatRatingQs.length + i + 1}.
+                          </span>
+                          {q.question_text}
+                        </p>
+                        {q.avg_rating != null ? (
+                          <LikertBar
+                            distribution={q.rating_distribution ?? {}}
+                            max={10}
+                            avg={q.avg_rating}
+                          />
+                        ) : (
+                          <p className="text-xs text-gray-400 mt-1">Nog geen antwoorden</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* No scored questions empty state */}
+                {activeCatRatingQs.length === 0 && activeCatScale10Qs.length === 0 && (
+                  <p className="text-sm text-gray-400">Geen scorevragen in deze categorie.</p>
+                )}
+
+                {/* Open answers */}
+                {activeCatOpenQs.length > 0 && (
+                  <div className="space-y-3 pt-2 border-t border-gray-100">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                      Open antwoorden
+                    </p>
+                    {activeCatOpenQs.map((q) => (
+                      <div key={q.id}>
+                        <p className="text-sm font-medium text-gray-700 mb-1">{q.question_text}</p>
+                        {q.open_answers && q.open_answers.length > 0 ? (
+                          <ul className="space-y-1">
+                            {q.open_answers.map((ans, j) => (
+                              <li
+                                key={j}
+                                className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-xs text-gray-700"
+                              >
+                                {ans}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-gray-400">Nog geen antwoorden</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
       </div>
