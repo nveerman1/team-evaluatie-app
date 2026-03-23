@@ -93,6 +93,8 @@ class ProjectAssessmentScoreOut(BaseModel):
 
 class ProjectAssessmentScoreBatchRequest(BaseModel):
     scores: List[ProjectAssessmentScoreCreate]
+    general_comment: Optional[str] = None
+    team_number: Optional[int] = None
 
 
 # ---------- Project Assessment Reflection ----------
@@ -130,6 +132,7 @@ class ProjectAssessmentDetailOut(BaseModel):
     teacher_name: Optional[str] = None
     total_score: Optional[float] = None
     grade: Optional[float] = None
+    general_comment: Optional[str] = None
 
 
 # ---------- Team member info ----------

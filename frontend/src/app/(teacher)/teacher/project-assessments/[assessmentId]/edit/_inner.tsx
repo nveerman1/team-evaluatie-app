@@ -488,6 +488,7 @@ export default function EditProjectAssessmentInner() {
         );
         setData(result);
         setStatus(result.assessment.status as "draft" | "published");
+        setGeneralComment(result.general_comment || "");
 
         const scoresMap: Record<number, { score: number; comment: string }> =
           {};
@@ -527,20 +528,22 @@ export default function EditProjectAssessmentInner() {
 
       await projectAssessmentService.batchUpdateScores(assessmentId, {
         scores: scoresPayload,
+        general_comment: generalComment || null,
+        team_number: teamNumber,
       });
     } catch (e: any) {
       console.error("Auto-save failed", e);
     } finally {
       setAutoSaving(false);
     }
-  }, [scores, assessmentId, data, teamNumber]);
+  }, [scores, generalComment, assessmentId, data, teamNumber]);
 
-  // Trigger autosave when scores change
+  // Trigger autosave when scores or general comment change
   useEffect(() => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
-    if (Object.keys(scores).length > 0 && teamNumber !== undefined) {
+    if (teamNumber !== undefined && (Object.keys(scores).length > 0 || generalComment)) {
       autoSaveTimerRef.current = setTimeout(() => {
         autoSaveScores();
       }, 2000);
@@ -550,7 +553,7 @@ export default function EditProjectAssessmentInner() {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [scores, autoSaveScores, teamNumber]);
+  }, [scores, generalComment, autoSaveScores, teamNumber]);
 
   const handleSaveScores = async () => {
     if (teamNumber === undefined) return;
@@ -569,6 +572,8 @@ export default function EditProjectAssessmentInner() {
 
       await projectAssessmentService.batchUpdateScores(assessmentId, {
         scores: scoresPayload,
+        general_comment: generalComment || null,
+        team_number: teamNumber,
       });
       setSuccessMsg("Scores opgeslagen");
     } catch (e: any) {

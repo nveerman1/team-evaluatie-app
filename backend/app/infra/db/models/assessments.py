@@ -289,6 +289,9 @@ class ProjectAssessmentTeam(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
+    # General comment per team
+    general_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # Relationships
     project_assessment: Mapped["ProjectAssessment"] = relationship(
         back_populates="assessment_teams"

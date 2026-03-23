@@ -71,6 +71,8 @@ export type ProjectAssessmentScoreCreate = {
 
 export type ProjectAssessmentScoreBatchRequest = {
   scores: ProjectAssessmentScoreCreate[];
+  general_comment?: string | null;
+  team_number?: number | null;
 };
 
 export type ProjectAssessmentReflectionOut = {
@@ -103,6 +105,7 @@ export type ProjectAssessmentDetailOut = {
   teacher_name?: string | null;
   total_score?: number | null;
   grade?: number | null;
+  general_comment?: string | null;
 };
 
 export type TeamMemberInfo = {
