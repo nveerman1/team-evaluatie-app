@@ -12,7 +12,6 @@ Create Date: 2026-03-23 11:30:00.000000
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "c1d2e3f4a5b6"
@@ -28,28 +27,21 @@ _TABLES = [
 
 
 def upgrade() -> None:
+    # Use IF NOT EXISTS so this migration is safe whether the columns were
+    # already created by the updated b1c2d3e4f5a6 migration (fresh install)
+    # or are genuinely missing (existing install from the original migration).
     for table in _TABLES:
-        op.add_column(
-            table,
-            sa.Column(
-                "created_at",
-                sa.DateTime(timezone=True),
-                nullable=False,
-                server_default=sa.text("now()"),
-            ),
+        op.execute(
+            f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS"
+            " created_at TIMESTAMPTZ NOT NULL DEFAULT now()"
         )
-        op.add_column(
-            table,
-            sa.Column(
-                "updated_at",
-                sa.DateTime(timezone=True),
-                nullable=False,
-                server_default=sa.text("now()"),
-            ),
+        op.execute(
+            f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS"
+            " updated_at TIMESTAMPTZ NOT NULL DEFAULT now()"
         )
 
 
 def downgrade() -> None:
     for table in reversed(_TABLES):
-        op.drop_column(table, "updated_at")
-        op.drop_column(table, "created_at")
+        op.execute(f"ALTER TABLE {table} DROP COLUMN IF EXISTS updated_at")
+        op.execute(f"ALTER TABLE {table} DROP COLUMN IF EXISTS created_at")
