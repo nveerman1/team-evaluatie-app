@@ -19,29 +19,44 @@ function RatingButtons({
   max,
   onChange,
   disabled,
+  questionType,
 }: {
   value: number | undefined;
   max: number;
   onChange: (v: number) => void;
   disabled?: boolean;
+  questionType?: string;
 }) {
+  const leftLabel =
+    questionType === "scale10" ? "1 = heel slecht" : "Helemaal mee oneens";
+  const rightLabel =
+    questionType === "scale10" ? "10 = uitstekend" : "Helemaal mee eens";
+
   return (
-    <div className="flex gap-1 flex-wrap">
-      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => !disabled && onChange(n)}
-          disabled={disabled}
-          className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-colors disabled:cursor-not-allowed ${
-            value === n
-              ? "bg-slate-800 border-slate-800 text-white"
-              : "border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-800 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
-          }`}
-        >
-          {n}
-        </button>
-      ))}
+    <div className="flex flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:gap-3">
+      <span className="shrink-0 text-[11px] text-slate-400 text-right leading-tight max-w-[80px] sm:max-w-none">
+        {leftLabel}
+      </span>
+      <div className="flex gap-1 flex-wrap justify-center">
+        {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => !disabled && onChange(n)}
+            disabled={disabled}
+            className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-colors disabled:cursor-not-allowed ${
+              value === n
+                ? "bg-slate-800 border-slate-800 text-white"
+                : "border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-800 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <span className="shrink-0 text-[11px] text-slate-400 text-left leading-tight max-w-[80px] sm:max-w-none">
+        {rightLabel}
+      </span>
     </div>
   );
 }
@@ -150,7 +165,7 @@ export default function StudentFeedbackFormPage() {
     return (
       <div className={studentStyles.layout.pageContainer}>
         <div className={studentStyles.header.container}>
-          <header className={studentStyles.header.wrapper}>
+          <header className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
             <div className={studentStyles.header.titleSection}>
               <h1 className={studentStyles.header.title}>Bedankt!</h1>
               <p className={studentStyles.header.subtitle}>
@@ -159,7 +174,7 @@ export default function StudentFeedbackFormPage() {
             </div>
           </header>
         </div>
-        <main className={studentStyles.layout.contentWrapper + " flex flex-col items-center py-16 gap-4"}>
+        <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 flex flex-col items-center py-16 gap-4">
           <div className="text-5xl">✅</div>
           <h2 className={studentStyles.typography.sectionTitle}>Bedankt voor je feedback!</h2>
           <p className={studentStyles.typography.infoText}>Je antwoorden zijn anoniem opgeslagen.</p>
@@ -179,7 +194,7 @@ export default function StudentFeedbackFormPage() {
     <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
       <div className={studentStyles.header.container}>
-        <header className={studentStyles.header.wrapper}>
+        <header className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
           <div className={studentStyles.header.titleSection}>
             <div className="mb-1 text-sm text-white/60">
               <Link href="/student?tab=projectfeedback" className="hover:text-white/90 transition-colors">
@@ -195,7 +210,7 @@ export default function StudentFeedbackFormPage() {
       </div>
 
       {/* Main Content */}
-      <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
+      <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 space-y-6">
         {alreadySubmitted && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             ✓ Je hebt deze vragenlijst al ingevuld. Je kunt de antwoorden hieronder bekijken.
@@ -227,27 +242,13 @@ export default function StudentFeedbackFormPage() {
                     disabled={alreadySubmitted}
                   />
                 ) : (
-                  <div className="space-y-1.5">
-                    <RatingButtons
-                      value={answers[q.id]?.rating_value}
-                      max={q.question_type === "scale10" ? 10 : 5}
-                      onChange={(v) => setRating(q.id, v)}
-                      disabled={alreadySubmitted}
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
-                      {q.question_type === "scale10" ? (
-                        <>
-                          <span>1 = heel slecht</span>
-                          <span>10 = uitstekend</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>1 = helemaal mee oneens</span>
-                          <span>5 = helemaal mee eens</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  <RatingButtons
+                    value={answers[q.id]?.rating_value}
+                    max={q.question_type === "scale10" ? 10 : 5}
+                    onChange={(v) => setRating(q.id, v)}
+                    disabled={alreadySubmitted}
+                    questionType={q.question_type}
+                  />
                 )}
               </div>
             ))}
