@@ -14,47 +14,201 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   closed: { label: "Gesloten", className: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 
-function StarBar({ avg, max = 5 }: { avg: number; max?: number }) {
-  const pct = (avg / max) * 100;
+// Category definitions matching the default question order
+const CATEGORIES = [
+  { key: "project", label: "Project", orderRange: [1, 5] },
+  { key: "organisatie", label: "Organisatie", orderRange: [6, 10] },
+  { key: "begeleiding", label: "Begeleiding", orderRange: [11, 13] },
+  { key: "samenwerking", label: "Samenwerking", orderRange: [14, 14] },
+  { key: "eindvragen", label: "Eindvragen", orderRange: [15, 17] },
+];
+
+function getCategory(order: number) {
+  for (const cat of CATEGORIES) {
+    if (order >= cat.orderRange[0] && order <= cat.orderRange[1]) return cat.key;
+  }
+  return "overig";
+}
+
+function StarRating({ value, max = 5 }: { value: number; max?: number }) {
+  const full = Math.floor(value);
+  const half = value - full >= 0.5;
+  const stars = Array.from({ length: max });
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-        <div
-          className="h-2 rounded-full bg-blue-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-xs font-semibold text-gray-700 w-8 text-right">
-        {avg.toFixed(1)}
-      </span>
+    <span className="inline-flex gap-0.5 text-amber-400 text-lg leading-none">
+      {stars.map((_, i) => {
+        if (i < full) return <span key={i}>★</span>;
+        if (i === full && half) return <span key={i} className="text-amber-200">★</span>;
+        return <span key={i} className="text-gray-200">★</span>;
+      })}
+    </span>
+  );
+}
+
+function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max: number; color?: string }) {
+  const pct = Math.min((value / max) * 100, 100);
+  return (
+    <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+      <div className={`h-2 rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
-function DistributionBar({ distribution, max }: { distribution: Record<number, number>; max: number }) {
-  const total = Object.values(distribution).reduce((a, b) => a + b, 0);
-  if (total === 0) return null;
-  const steps = Array.from({ length: max }, (_, i) => i + 1);
+function DistributionRow({ label, count, total }: { label: string; count: number; total: number }) {
+  const pct = total > 0 ? (count / total) * 100 : 0;
   return (
-    <div className="space-y-1 mt-2">
-      {steps.map((v) => {
-        const count = distribution[v] ?? 0;
-        const pct = total > 0 ? (count / total) * 100 : 0;
-        return (
-          <div key={v} className="flex items-center gap-2 text-xs text-gray-600">
-            <span className="w-4 text-right font-medium">{v}</span>
-            <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-              <div
-                className="h-1.5 rounded-full bg-blue-400"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <span className="w-8 text-gray-400">{count}×</span>
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-2 text-xs text-gray-600">
+      <span className="w-4 text-right font-medium text-gray-500">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+        <div className="h-1.5 rounded-full bg-blue-400 transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-8 text-gray-400 tabular-nums">{count}×</span>
     </div>
   );
+}
+
+function CategorySection({
+  label,
+  questions,
+  open,
+  onToggle,
+}: {
+  label: string;
+  questions: ProjectFeedbackResults["questions"];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const ratingQs = questions.filter(
+    (q) => q.question_type !== "open" && q.avg_rating != null
+  );
+  const categoryAvg =
+    ratingQs.length > 0
+      ? ratingQs.reduce((sum, q) => sum + (q.avg_rating ?? 0), 0) / ratingQs.length
+      : null;
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-gray-900">{label}</span>
+          {categoryAvg != null && (
+            <span className="text-xs text-gray-500">gem. {categoryAvg.toFixed(1)}</span>
+          )}
+        </div>
+        <span className="text-gray-400 text-sm">{open ? "▼" : "▶"}</span>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-gray-100">
+          {questions.map((q, i) => (
+            <div key={q.id} className="px-4 py-3">
+              <p className="text-sm font-medium text-gray-800 mb-2">
+                <span className="text-gray-400 mr-1 text-xs">{i + 1}.</span>
+                {q.question_text}
+              </p>
+
+              {q.question_type !== "open" && q.avg_rating != null && (() => {
+                const max = q.question_type === "scale10" ? 10 : 5;
+                const dist = q.rating_distribution ?? {};
+                const total = Object.values(dist).reduce((a, b) => a + b, 0);
+                return (
+                  <div className="space-y-1 mt-1">
+                    <div className="flex items-center gap-3">
+                      <ProgressBar value={q.avg_rating} max={max} />
+                      <span className="text-sm font-semibold text-gray-700 w-10 text-right tabular-nums">
+                        {q.avg_rating.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5 mt-2">
+                      {Array.from({ length: max }, (_, k) => k + 1).map((v) => (
+                        <DistributionRow
+                          key={v}
+                          label={String(v)}
+                          count={dist[v] ?? 0}
+                          total={total}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {q.question_type !== "open" && q.avg_rating == null && (
+                <p className="text-xs text-gray-400">Nog geen antwoorden</p>
+              )}
+
+              {q.question_type === "open" && q.open_answers && q.open_answers.length > 0 && (
+                <ul className="space-y-1 mt-1">
+                  {q.open_answers.map((ans, j) => (
+                    <li
+                      key={j}
+                      className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-xs text-gray-700"
+                    >
+                      {ans}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {q.question_type === "open" && (!q.open_answers || q.open_answers.length === 0) && (
+                <p className="text-xs text-gray-400">Nog geen antwoorden</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function exportToCsv(results: ProjectFeedbackResults, filename: string) {
+  const { round, questions } = results;
+  const rows: string[][] = [];
+
+  rows.push(["Vraag", "Type", "Gem. score", "Verdeling / Antwoorden"]);
+
+  for (const q of questions) {
+    if (q.question_type === "open") {
+      const answers = (q.open_answers ?? []).join(" | ");
+      rows.push([q.question_text, "open", "", answers]);
+    } else {
+      const max = q.question_type === "scale10" ? 10 : 5;
+      const dist = q.rating_distribution ?? {};
+      const distStr = Array.from({ length: max }, (_, i) => i + 1)
+        .map((v) => `${v}:${dist[v] ?? 0}`)
+        .join("; ");
+      rows.push([
+        q.question_text,
+        q.question_type,
+        q.avg_rating != null ? q.avg_rating.toFixed(2) : "",
+        distStr,
+      ]);
+    }
+  }
+
+  rows.push([]);
+  rows.push([
+    "Ronde",
+    round.title,
+    `Respons: ${round.response_count}/${round.total_students}`,
+    `Status: ${round.status}`,
+  ]);
+
+  const csv = rows
+    .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function ProjectFeedbackDashboardPage() {
@@ -66,6 +220,7 @@ export default function ProjectFeedbackDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(["project"]));
 
   async function loadResults() {
     setLoading(true);
@@ -124,6 +279,15 @@ export default function ProjectFeedbackDashboardPage() {
     }
   }
 
+  function toggleCategory(key: string) {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!results) return null;
@@ -132,17 +296,47 @@ export default function ProjectFeedbackDashboardPage() {
   const statusInfo = STATUS_LABELS[round.status] ?? STATUS_LABELS.draft;
   const responseLabel = `${round.response_count} / ${round.total_students} ingevuld`;
 
+  // Derive overview metrics
+  const gradeQuestion = questions.find((q) => q.question_type === "scale10");
+  const recommendQuestion = questions.find(
+    (q) => q.question_type === "rating" && q.order === 16
+  );
+
+  // Group questions by category
+  const byCategory: Record<string, typeof questions> = {};
+  for (const q of questions) {
+    const cat = getCategory(q.order);
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(q);
+  }
+
+  const categoriesToShow = [
+    ...CATEGORIES.filter((c) => byCategory[c.key]?.length),
+    ...(byCategory["overig"]?.length
+      ? [{ key: "overig", label: "Overig", orderRange: [0, 0] }]
+      : []),
+  ];
+
+  // Per-category averages (rating questions only)
+  const categoryAvgs = categoriesToShow
+    .map((cat) => {
+      const qs = (byCategory[cat.key] ?? []).filter(
+        (q) => q.question_type !== "open" && q.avg_rating != null
+      );
+      if (qs.length === 0) return null;
+      const avg = qs.reduce((s, q) => s + (q.avg_rating ?? 0), 0) / qs.length;
+      return { label: cat.label, avg };
+    })
+    .filter(Boolean) as { label: string; avg: number }[];
+
   return (
     <>
-      {/* Header */}
+      {/* Page header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-5 max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Link
-                href="/teacher/projects"
-                className="text-xs text-gray-400 hover:text-gray-600"
-              >
+              <Link href="/teacher/projects" className="text-xs text-gray-400 hover:text-gray-600">
                 ← Projecten
               </Link>
             </div>
@@ -155,7 +349,7 @@ export default function ProjectFeedbackDashboardPage() {
               </span>
             </h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {round.status === "draft" && (
               <button
                 onClick={handleOpen}
@@ -175,6 +369,23 @@ export default function ProjectFeedbackDashboardPage() {
               </button>
             )}
             <button
+              onClick={() =>
+                exportToCsv(
+                  results,
+                  `projectfeedback-${round.title.toLowerCase().replace(/\s+/g, "-")}.csv`
+                )
+              }
+              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+            >
+              📥 Export CSV
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+            >
+              🖨️ Afdrukken
+            </button>
+            <button
               onClick={handleDelete}
               className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
             >
@@ -185,91 +396,110 @@ export default function ProjectFeedbackDashboardPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-        {/* Response rate card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Respons</p>
-              <p className="text-xs text-gray-500">{responseLabel}</p>
-            </div>
-            <span className="text-2xl font-bold text-gray-900">
-              {response_rate.toFixed(0)}%
-            </span>
-          </div>
-          <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-2.5 rounded-full bg-blue-500 transition-all"
-              style={{ width: `${Math.min(response_rate, 100)}%` }}
-            />
-          </div>
-          {round.avg_rating && (
-            <p className="text-xs text-gray-500 mt-2">
-              Gemiddelde score (alle Likert-vragen):{" "}
-              <span className="font-semibold text-gray-800">{round.avg_rating.toFixed(1)} / 5</span>
-            </p>
-          )}
-        </div>
-
-        {/* Question results */}
-        <div className="space-y-3">
-          {questions.map((q, i) => (
-            <div
-              key={q.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
-            >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <p className="text-sm font-medium text-gray-900">
-                  <span className="text-gray-400 mr-1">{i + 1}.</span>
-                  {q.question_text}
-                </p>
-                <span className="shrink-0 text-[11px] font-medium text-gray-400">
-                  {q.question_type === "open"
-                    ? "open"
-                    : q.question_type === "scale10"
-                    ? "1–10"
-                    : "1–5"}
+        {/* ─── OVERZICHT ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+            Overzicht
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Project grade */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Projectcijfer
                 </span>
+                {gradeQuestion?.avg_rating != null ? (
+                  <div className="flex items-end gap-1 mt-1">
+                    <span className="text-4xl font-bold text-gray-900">
+                      {gradeQuestion.avg_rating.toFixed(1)}
+                    </span>
+                    <span className="text-sm text-gray-400 mb-1">/ 10</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-400 mt-1">—</span>
+                )}
               </div>
 
-              {q.question_type !== "open" && q.avg_rating != null && (
-                <div className="space-y-1">
-                  <StarBar
-                    avg={q.avg_rating}
-                    max={q.question_type === "scale10" ? 10 : 5}
-                  />
-                  {q.rating_distribution && (
-                    <DistributionBar
-                      distribution={q.rating_distribution}
-                      max={q.question_type === "scale10" ? 10 : 5}
+              {/* Recommendation */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Aanbevelen
+                </span>
+                {recommendQuestion?.avg_rating != null ? (
+                  <>
+                    <StarRating value={recommendQuestion.avg_rating} />
+                    <span className="text-sm text-gray-600">
+                      {recommendQuestion.avg_rating.toFixed(1)} / 5
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-400 mt-1">—</span>
+                )}
+              </div>
+
+              {/* Fill rate */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Invulpercentage
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-2.5 rounded-full bg-blue-500 transition-all"
+                      style={{ width: `${Math.min(response_rate, 100)}%` }}
                     />
-                  )}
+                  </div>
+                  <span className="text-lg font-bold text-gray-900 tabular-nums">
+                    {response_rate.toFixed(0)}%
+                  </span>
                 </div>
-              )}
-
-              {q.question_type === "open" && q.open_answers && q.open_answers.length > 0 && (
-                <ul className="mt-2 space-y-1">
-                  {q.open_answers.map((ans, j) => (
-                    <li
-                      key={j}
-                      className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-xs text-gray-700"
-                    >
-                      {ans}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {q.question_type !== "open" && q.avg_rating == null && (
-                <p className="text-xs text-gray-400">Nog geen antwoorden</p>
-              )}
-
-              {q.question_type === "open" && (!q.open_answers || q.open_answers.length === 0) && (
-                <p className="text-xs text-gray-400">Nog geen antwoorden</p>
-              )}
+                <span className="text-xs text-gray-500">{responseLabel}</span>
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
+        </section>
+
+        {/* ─── PER CATEGORIE ─── */}
+        {categoryAvgs.length > 0 && (
+          <section>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+              Per categorie
+            </h2>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-3">
+              {categoryAvgs.map(({ label, avg }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-sm font-medium text-gray-700">
+                    {label}
+                  </span>
+                  <ProgressBar value={avg} max={5} color="bg-blue-500" />
+                  <span className="w-8 text-sm font-semibold text-gray-700 text-right tabular-nums">
+                    {avg.toFixed(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ─── PER VRAAG ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+            Per vraag
+          </h2>
+          <div className="space-y-2">
+            {categoriesToShow.map((cat) => (
+              <CategorySection
+                key={cat.key}
+                label={cat.label}
+                questions={byCategory[cat.key] ?? []}
+                open={openCategories.has(cat.key)}
+                onToggle={() => toggleCategory(cat.key)}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </>
   );
 }
+

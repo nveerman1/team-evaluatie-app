@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText } from "lucide-react";
+import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText, MessageSquare } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { ProjectPlanDashboardCard } from "@/components/student/dashboard/ProjectPlanDashboardCard";
@@ -19,6 +19,7 @@ import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
 import { SkillTrainingTab } from "@/components/student/dashboard/SkillTrainingTab";
+import { ProjectFeedbackDashboardTab } from "@/components/student/dashboard/ProjectFeedbackDashboardTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Dumbbell } from "lucide-react";
@@ -119,7 +120,7 @@ function StudentDashboardContent() {
         {/* Tabs */}
         <div className="mt-6">
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm">
+            <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
               <TabsTrigger
                 value="overzicht"
                 className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
@@ -167,6 +168,12 @@ function StudentDashboardContent() {
                 className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
               >
                 <Clock className="mr-2 h-4 w-4" /> 3de Blok
+              </TabsTrigger>
+              <TabsTrigger
+                value="projectfeedback"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm whitespace-nowrap"
+              >
+                <MessageSquare className="mr-2 h-4 w-4" /> Projectfeedback
               </TabsTrigger>
             </TabsList>
 
@@ -341,6 +348,11 @@ function StudentDashboardContent() {
             {/* ATTENDANCE / 3DE BLOK */}
             <TabsContent value="attendance" className="mt-6 space-y-4">
               <AttendanceTab />
+            </TabsContent>
+
+            {/* PROJECTFEEDBACK */}
+            <TabsContent value="projectfeedback" className="mt-6 space-y-4">
+              <ProjectFeedbackDashboardTab />
             </TabsContent>
           </Tabs>
         </div>
