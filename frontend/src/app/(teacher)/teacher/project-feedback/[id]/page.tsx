@@ -197,51 +197,6 @@ function CategorySummaryCard({
   );
 }
 
-function exportToCsv(results: ProjectFeedbackResults, filename: string) {
-  const { round, questions } = results;
-  const rows: string[][] = [];
-
-  rows.push(["Vraag", "Type", "Gem. score", "Verdeling / Antwoorden"]);
-
-  for (const q of questions) {
-    if (q.question_type === "open") {
-      const answers = (q.open_answers ?? []).join(" | ");
-      rows.push([q.question_text, "open", "", answers]);
-    } else {
-      const max = q.question_type === "scale10" ? 10 : 5;
-      const dist = q.rating_distribution ?? {};
-      const distStr = Array.from({ length: max }, (_, i) => i + 1)
-        .map((v) => `${v}:${dist[v] ?? 0}`)
-        .join("; ");
-      rows.push([
-        q.question_text,
-        q.question_type,
-        q.avg_rating != null ? q.avg_rating.toFixed(2) : "",
-        distStr,
-      ]);
-    }
-  }
-
-  rows.push([]);
-  rows.push([
-    "Ronde",
-    round.title,
-    `Respons: ${round.response_count}/${round.total_students}`,
-    `Status: ${round.status}`,
-  ]);
-
-  const csv = rows
-    .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 export default function ProjectFeedbackDashboardPage() {
   const { id } = useParams<{ id: string }>();
@@ -391,41 +346,48 @@ export default function ProjectFeedbackDashboardPage() {
             </h1>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
-            {round.status === "draft" && (
+            {/* Status toggle — pill group: Concept | Open | Gesloten */}
+            <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden text-sm">
               <button
-                onClick={handleOpen}
-                disabled={actionLoading}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
+                type="button"
+                disabled={actionLoading || round.status === "draft"}
+                className={`px-3 py-1.5 font-medium transition-colors ${
+                  round.status === "draft"
+                    ? "bg-gray-700 text-white"
+                    : "bg-white text-gray-500 hover:bg-gray-50 disabled:cursor-default"
+                }`}
               >
-                Openstellen voor leerlingen
+                Concept
               </button>
-            )}
-            {round.status === "open" && (
               <button
-                onClick={handleClose}
-                disabled={actionLoading}
-                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-700 disabled:opacity-60"
+                type="button"
+                disabled={actionLoading || round.status === "open" || round.status === "closed"}
+                onClick={round.status === "draft" ? handleOpen : undefined}
+                className={`px-3 py-1.5 font-medium border-x border-gray-200 transition-colors ${
+                  round.status === "open"
+                    ? "bg-green-600 text-white"
+                    : round.status === "closed"
+                    ? "bg-white text-gray-400 cursor-default"
+                    : "bg-white text-gray-600 hover:bg-green-50 hover:text-green-700"
+                }`}
               >
-                Sluiten
+                {actionLoading && round.status === "draft" ? "…" : "Open"}
               </button>
-            )}
-            <button
-              onClick={() =>
-                exportToCsv(
-                  results,
-                  `projectfeedback-${round.title.toLowerCase().replace(/\s+/g, "-")}.csv`
-                )
-              }
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-            >
-              📥 Export CSV
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-            >
-              🖨️ Afdrukken
-            </button>
+              <button
+                type="button"
+                disabled={actionLoading || round.status === "closed" || round.status === "draft"}
+                onClick={round.status === "open" ? handleClose : undefined}
+                className={`px-3 py-1.5 font-medium transition-colors ${
+                  round.status === "closed"
+                    ? "bg-slate-600 text-white"
+                    : round.status === "draft"
+                    ? "bg-white text-gray-300 cursor-default"
+                    : "bg-white text-gray-600 hover:bg-slate-100"
+                }`}
+              >
+                {actionLoading && round.status === "open" ? "…" : "Gesloten"}
+              </button>
+            </div>
             <button
               onClick={handleDelete}
               className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"

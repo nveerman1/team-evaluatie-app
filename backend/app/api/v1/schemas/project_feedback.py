@@ -50,6 +50,8 @@ class ProjectFeedbackRoundOut(BaseModel):
     response_count: int
     total_students: int
     avg_rating: Optional[float] = None
+    project_grade: Optional[float] = None
+    course_name: Optional[str] = None
     created_at: datetime
 
     class Config:

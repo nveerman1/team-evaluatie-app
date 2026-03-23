@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.deps import get_db, get_current_user
 from app.core.rbac import require_role
 from app.infra.db.models import (
+    Course,
     Project,
     ProjectFeedbackAnswer,
     ProjectFeedbackQuestion,
@@ -115,7 +116,7 @@ def _build_round_out(db: Session, r: ProjectFeedbackRound, school_id: int) -> Pr
     )
     total_students = _count_students_for_project(db, r.project_id, school_id)
 
-    # Average rating across all rating answers for this round
+    # Average rating across all scale-5 rating answers for this round
     avg_rating = (
         db.query(func.avg(ProjectFeedbackAnswer.rating_value))
         .join(
@@ -134,6 +135,33 @@ def _build_round_out(db: Session, r: ProjectFeedbackRound, school_id: int) -> Pr
         .scalar()
     )
 
+    # Average of scale-10 question(s) — used as the project grade
+    project_grade = (
+        db.query(func.avg(ProjectFeedbackAnswer.rating_value))
+        .join(
+            ProjectFeedbackResponse,
+            ProjectFeedbackResponse.id == ProjectFeedbackAnswer.response_id,
+        )
+        .join(
+            ProjectFeedbackQuestion,
+            ProjectFeedbackQuestion.id == ProjectFeedbackAnswer.question_id,
+        )
+        .filter(
+            ProjectFeedbackResponse.round_id == r.id,
+            ProjectFeedbackQuestion.question_type == "scale10",
+            ProjectFeedbackAnswer.rating_value.isnot(None),
+        )
+        .scalar()
+    )
+
+    # Course name via the linked project
+    project = db.query(Project).filter(Project.id == r.project_id).first()
+    course_name: Optional[str] = None
+    if project and project.course_id:
+        course = db.query(Course).filter(Course.id == project.course_id).first()
+        if course:
+            course_name = course.name
+
     return ProjectFeedbackRoundOut(
         id=r.id,
         project_id=r.project_id,
@@ -143,6 +171,8 @@ def _build_round_out(db: Session, r: ProjectFeedbackRound, school_id: int) -> Pr
         response_count=response_count,
         total_students=total_students,
         avg_rating=round(float(avg_rating), 2) if avg_rating is not None else None,
+        project_grade=round(float(project_grade), 2) if project_grade is not None else None,
+        course_name=course_name,
         created_at=r.created_at,
     )
 

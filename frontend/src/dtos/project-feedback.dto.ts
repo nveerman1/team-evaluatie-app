@@ -7,6 +7,8 @@ export type ProjectFeedbackRound = {
   response_count: number;
   total_students: number;
   avg_rating?: number;
+  project_grade?: number;
+  course_name?: string;
   created_at: string;
 };
 

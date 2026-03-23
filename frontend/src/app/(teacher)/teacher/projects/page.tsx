@@ -1515,12 +1515,20 @@ const FEEDBACK_STATUS_LABELS: Record<string, { label: string; color: string }> =
   closed: { label: "Gesloten", color: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 
+const NO_COURSE_FILTER_VALUE = "__none__";
+
+type FeedbackSortField = "title" | "course_name" | "response_count" | "project_grade" | "status" | "created_at";
+type FeedbackSortDir = "asc" | "desc";
+
 function ProjectFeedbackTab() {
   const [rounds, setRounds] = useState<ProjectFeedbackRound[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [courseFilter, setCourseFilter] = useState("all");
+  const [sortField, setSortField] = useState<FeedbackSortField>("created_at");
+  const [sortDir, setSortDir] = useState<FeedbackSortDir>("desc");
 
   useEffect(() => {
     async function load() {
@@ -1536,12 +1544,72 @@ function ProjectFeedbackTab() {
     load();
   }, []);
 
-  const filtered = rounds.filter((r) => {
-    const matchSearch =
-      !search || r.title.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || r.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // Collect unique course names for filter
+  const courseOptions = React.useMemo(() => {
+    const names = Array.from(new Set(rounds.map((r) => r.course_name).filter(Boolean) as string[]));
+    return names.sort();
+  }, [rounds]);
+
+  const handleSort = (field: FeedbackSortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const sortIndicator = (field: FeedbackSortField) =>
+    sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : "";
+
+  const filtered = React.useMemo(() => {
+    let list = rounds.filter((r) => {
+      const matchSearch =
+        !search || r.title.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = statusFilter === "all" || r.status === statusFilter;
+      const matchCourse =
+        courseFilter === "all" ||
+        (courseFilter === NO_COURSE_FILTER_VALUE ? !r.course_name : r.course_name === courseFilter);
+      return matchSearch && matchStatus && matchCourse;
+    });
+
+    list = [...list].sort((a, b) => {
+      let av: any;
+      let bv: any;
+      switch (sortField) {
+        case "title":
+          av = a.title.toLowerCase();
+          bv = b.title.toLowerCase();
+          break;
+        case "course_name":
+          av = (a.course_name ?? "").toLowerCase();
+          bv = (b.course_name ?? "").toLowerCase();
+          break;
+        case "response_count":
+          av = a.response_count;
+          bv = b.response_count;
+          break;
+        case "project_grade":
+          av = a.project_grade ?? -1;
+          bv = b.project_grade ?? -1;
+          break;
+        case "status": {
+          const order: Record<string, number> = { draft: 0, open: 1, closed: 2 };
+          av = order[a.status] ?? 0;
+          bv = order[b.status] ?? 0;
+          break;
+        }
+        default:
+          av = new Date(a.created_at).getTime();
+          bv = new Date(b.created_at).getTime();
+      }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [rounds, search, statusFilter, courseFilter, sortField, sortDir]);
 
   if (loading) return <Loading />;
   if (error) return <div className="text-sm text-red-600 p-4">{error}</div>;
@@ -1568,6 +1636,21 @@ function ProjectFeedbackTab() {
             <option value="open">Open</option>
             <option value="closed">Gesloten</option>
           </select>
+          {courseOptions.length > 0 && (
+            <select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Alle vakken</option>
+              {courseOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              <option value={NO_COURSE_FILTER_VALUE}>– Geen vak –</option>
+            </select>
+          )}
         </div>
         <Link
           href="/teacher/project-feedback/create"
@@ -1589,11 +1672,42 @@ function ProjectFeedbackTab() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-xs text-gray-500 bg-gray-50/60">
-                <th className="px-4 py-3 text-left font-medium">Titel</th>
-                <th className="px-4 py-3 text-left font-medium">Ingevuld</th>
-                <th className="px-4 py-3 text-left font-medium">Gem. score</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Aangemaakt</th>
+                <th
+                  className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700 select-none"
+                  onClick={() => handleSort("title")}
+                >
+                  Titel{sortIndicator("title")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700 select-none"
+                  onClick={() => handleSort("course_name")}
+                >
+                  Vak{sortIndicator("course_name")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700 select-none"
+                  onClick={() => handleSort("response_count")}
+                >
+                  Ingevuld{sortIndicator("response_count")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700 select-none"
+                  onClick={() => handleSort("project_grade")}
+                >
+                  Projectcijfer{sortIndicator("project_grade")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700 select-none"
+                  onClick={() => handleSort("status")}
+                >
+                  Status{sortIndicator("status")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700 select-none"
+                  onClick={() => handleSort("created_at")}
+                >
+                  Aangemaakt{sortIndicator("created_at")}
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -1611,12 +1725,18 @@ function ProjectFeedbackTab() {
                     <td className="px-4 py-3 font-medium text-gray-900">
                       {r.title}
                     </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">
+                      {r.course_name ?? <span className="text-gray-400">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
                       {r.response_count}/{r.total_students}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {r.avg_rating != null ? (
-                        <span className="font-medium">{r.avg_rating.toFixed(1)}</span>
+                    <td className="px-4 py-3 text-gray-700">
+                      {r.project_grade != null ? (
+                        <span className="font-semibold tabular-nums">
+                          {r.project_grade.toFixed(1)}
+                          <span className="text-gray-400 font-normal"> /10</span>
+                        </span>
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
@@ -1667,7 +1787,7 @@ export default function ProjectsPage() {
     },
     {
       id: "projectfeedback",
-      label: "⭐ Projectfeedback",
+      label: "Projectfeedback",
       content: <ProjectFeedbackTab />,
     },
   ];
