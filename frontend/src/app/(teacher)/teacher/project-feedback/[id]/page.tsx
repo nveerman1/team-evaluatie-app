@@ -54,15 +54,91 @@ function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max
   );
 }
 
-function DistributionRow({ label, count, total }: { label: string; count: number; total: number }) {
-  const pct = total > 0 ? (count / total) * 100 : 0;
+const LIKERT_COLORS: Record<number, string> = {
+  1: "bg-red-500",
+  2: "bg-rose-400",
+  3: "bg-orange-400",
+  4: "bg-lime-400",
+  5: "bg-green-500",
+};
+
+const SCALE10_COLORS: Record<number, string> = {
+  1: "bg-red-600",
+  2: "bg-red-500",
+  3: "bg-rose-400",
+  4: "bg-orange-400",
+  5: "bg-amber-400",
+  6: "bg-yellow-400",
+  7: "bg-lime-400",
+  8: "bg-green-400",
+  9: "bg-green-500",
+  10: "bg-emerald-600",
+};
+
+function LikertBar({
+  distribution,
+  max,
+  avg,
+}: {
+  distribution: Record<number, number>;
+  max: number;
+  avg: number | null;
+}) {
+  const total = Object.values(distribution).reduce((a, b) => a + b, 0);
+  const colors = max === 10 ? SCALE10_COLORS : LIKERT_COLORS;
+  const scores = Array.from({ length: max }, (_, i) => i + 1);
+
   return (
-    <div className="flex items-center gap-2 text-xs text-gray-600">
-      <span className="w-4 text-right font-medium text-gray-500">{label}</span>
-      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-        <div className="h-1.5 rounded-full bg-blue-400 transition-all" style={{ width: `${pct}%` }} />
+    <div className="space-y-1.5 mt-1">
+      <div className="flex items-center gap-2">
+        {/* Stacked bar */}
+        <div className="flex-1 h-5 rounded-md overflow-hidden flex">
+          {total === 0 ? (
+            <div className="w-full h-full bg-gray-100 rounded-md" />
+          ) : (
+            scores.map((v) => {
+              const count = distribution[v] ?? 0;
+              const pct = (count / total) * 100;
+              if (pct === 0) return null;
+              return (
+                <div
+                  key={v}
+                  title={`${v}: ${count}×`}
+                  className={`${colors[v] ?? "bg-gray-300"} h-full flex items-center justify-center transition-all`}
+                  style={{ width: `${pct}%` }}
+                >
+                  {pct >= 8 && (
+                    <span className="text-[10px] font-semibold text-white/90 leading-none select-none">
+                      {count}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+        {/* Average */}
+        {avg != null && (
+          <span className="text-sm font-semibold text-gray-700 w-14 text-right tabular-nums shrink-0">
+            gem.&nbsp;{avg.toFixed(1)}
+          </span>
+        )}
       </div>
-      <span className="w-8 text-gray-400 tabular-nums">{count}×</span>
+      {/* Score legend */}
+      <div className="flex gap-1 flex-wrap">
+        {scores.map((v) => {
+          const count = distribution[v] ?? 0;
+          return (
+            <span
+              key={v}
+              className="inline-flex items-center gap-1 text-[10px] text-gray-500"
+            >
+              <span className={`inline-block w-2 h-2 rounded-sm ${colors[v] ?? "bg-gray-300"}`} />
+              {v}:{count}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -114,26 +190,12 @@ function CategorySection({
               {q.question_type !== "open" && q.avg_rating != null && (() => {
                 const max = q.question_type === "scale10" ? 10 : 5;
                 const dist = q.rating_distribution ?? {};
-                const total = Object.values(dist).reduce((a, b) => a + b, 0);
                 return (
-                  <div className="space-y-1 mt-1">
-                    <div className="flex items-center gap-3">
-                      <ProgressBar value={q.avg_rating} max={max} />
-                      <span className="text-sm font-semibold text-gray-700 w-10 text-right tabular-nums">
-                        {q.avg_rating.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="space-y-0.5 mt-2">
-                      {Array.from({ length: max }, (_, k) => k + 1).map((v) => (
-                        <DistributionRow
-                          key={v}
-                          label={String(v)}
-                          count={dist[v] ?? 0}
-                          total={total}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <LikertBar
+                    distribution={dist}
+                    max={max}
+                    avg={q.avg_rating}
+                  />
                 );
               })()}
 
@@ -317,8 +379,9 @@ export default function ProjectFeedbackDashboardPage() {
       : []),
   ];
 
-  // Per-category averages (rating questions only)
+  // Per-category averages (rating questions only; skip "eindvragen" — mixed scales)
   const categoryAvgs = categoriesToShow
+    .filter((cat) => cat.key !== "eindvragen")
     .map((cat) => {
       const qs = (byCategory[cat.key] ?? []).filter(
         (q) => q.question_type !== "open" && q.avg_rating != null
