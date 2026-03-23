@@ -9,18 +9,21 @@ import type {
 } from "@/dtos/project-feedback.dto";
 import { ApiAuthError } from "@/lib/api";
 import { Loading, ErrorMessage } from "@/components";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 import Link from "next/link";
 
 type AnswerMap = Record<number, { rating_value?: number; text_value?: string }>;
 
-function StarRating({
+function RatingButtons({
   value,
   max,
   onChange,
+  disabled,
 }: {
   value: number | undefined;
   max: number;
   onChange: (v: number) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex gap-1 flex-wrap">
@@ -28,11 +31,12 @@ function StarRating({
         <button
           key={n}
           type="button"
-          onClick={() => onChange(n)}
-          className={`w-9 h-9 rounded-lg text-sm font-semibold border transition-colors ${
+          onClick={() => !disabled && onChange(n)}
+          disabled={disabled}
+          className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-colors disabled:cursor-not-allowed ${
             value === n
-              ? "bg-blue-600 border-blue-600 text-white"
-              : "border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"
+              ? "bg-slate-800 border-slate-800 text-white"
+              : "border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-800 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
           }`}
         >
           {n}
@@ -144,107 +148,139 @@ export default function StudentFeedbackFormPage() {
 
   if (submitted) {
     return (
-      <main className="max-w-xl mx-auto p-6 space-y-4 text-center">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 space-y-3">
-          <div className="text-4xl">✅</div>
-          <h2 className="text-xl font-semibold text-gray-900">Bedankt voor je feedback!</h2>
-          <p className="text-sm text-gray-600">Je antwoorden zijn opgeslagen.</p>
-          <Link
-            href="/student/project-feedback"
-            className="inline-block mt-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Terug naar overzicht
-          </Link>
+      <div className={studentStyles.layout.pageContainer}>
+        <div className={studentStyles.header.container}>
+          <header className={studentStyles.header.wrapper}>
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>Bedankt!</h1>
+              <p className={studentStyles.header.subtitle}>
+                Je feedback is opgeslagen.
+              </p>
+            </div>
+          </header>
         </div>
-      </main>
+        <main className={studentStyles.layout.contentWrapper + " flex flex-col items-center py-16 gap-4"}>
+          <div className="text-5xl">✅</div>
+          <h2 className={studentStyles.typography.sectionTitle}>Bedankt voor je feedback!</h2>
+          <p className={studentStyles.typography.infoText}>Je antwoorden zijn anoniem opgeslagen.</p>
+          <button
+            type="button"
+            onClick={() => router.push("/student?tab=projectfeedback")}
+            className={studentStyles.buttons.primary + " mt-2 px-6 py-2 text-sm font-semibold text-white"}
+          >
+            ← Terug naar dashboard
+          </button>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-5">
-      <header>
-        <div className="mb-1">
-          <Link
-            href="/student/project-feedback"
-            className="text-xs text-gray-400 hover:text-gray-600"
-          >
-            ← Terug naar overzicht
-          </Link>
-        </div>
-        <h1 className="text-xl font-semibold tracking-tight text-gray-900">
-          {round.title}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {round.question_count} vragen · Vul eerlijk in, jouw antwoorden zijn anoniem
-        </p>
-      </header>
-
-      {alreadySubmitted && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-          ✓ Je hebt deze vragenlijst al ingevuld. Je kunt de antwoorden hieronder bekijken.
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {round.questions.map((q: ProjectFeedbackQuestion, i: number) => (
-          <div
-            key={q.id}
-            className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3"
-          >
-            <p className="text-sm font-medium text-gray-900">
-              <span className="text-gray-400 mr-1">{i + 1}.</span>
-              {q.question_text}
-              {q.is_required && q.question_type !== "open" && (
-                <span className="text-red-500 ml-0.5">*</span>
-              )}
+    <div className={studentStyles.layout.pageContainer}>
+      {/* Header */}
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.titleSection}>
+            <div className="mb-1 text-sm text-white/60">
+              <Link href="/student?tab=projectfeedback" className="hover:text-white/90 transition-colors">
+                ← Projectfeedback
+              </Link>
+            </div>
+            <h1 className={studentStyles.header.title}>{round.title}</h1>
+            <p className={studentStyles.header.subtitle}>
+              {round.question_count} vragen · Jouw antwoorden zijn anoniem
             </p>
-
-            {q.question_type === "open" ? (
-              <textarea
-                rows={3}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Typ je antwoord hier…"
-                value={answers[q.id]?.text_value ?? ""}
-                onChange={(e) => setText(q.id, e.target.value)}
-                disabled={alreadySubmitted}
-              />
-            ) : (
-              <div className="space-y-1">
-                <StarRating
-                  value={answers[q.id]?.rating_value}
-                  max={q.question_type === "scale10" ? 10 : 5}
-                  onChange={(v) => !alreadySubmitted && setRating(q.id, v)}
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 px-0.5">
-                  {q.question_type === "scale10" ? (
-                    <>
-                      <span>1 = heel slecht</span>
-                      <span>10 = uitstekend</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>1 = helemaal mee oneens</span>
-                      <span>5 = helemaal mee eens</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
-        ))}
+        </header>
+      </div>
 
-        {!alreadySubmitted && (
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-            >
-              {submitting ? "Versturen…" : "Feedback versturen"}
-            </button>
+      {/* Main Content */}
+      <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
+        {alreadySubmitted && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            ✓ Je hebt deze vragenlijst al ingevuld. Je kunt de antwoorden hieronder bekijken.
           </div>
         )}
-      </form>
-    </main>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            {round.questions.map((q: ProjectFeedbackQuestion, i: number) => (
+              <div
+                key={q.id}
+                className="border-b border-slate-100 pb-4 last:border-b-0 last:pb-0"
+              >
+                <p className={studentStyles.typography.cardTitle + " mb-3"}>
+                  <span className="text-slate-400 mr-1.5 text-sm font-normal">{i + 1}.</span>
+                  {q.question_text}
+                  {q.is_required && q.question_type !== "open" && (
+                    <span className="text-rose-500 ml-0.5">*</span>
+                  )}
+                </p>
+
+                {q.question_type === "open" ? (
+                  <textarea
+                    rows={3}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
+                    placeholder="Typ je antwoord hier…"
+                    value={answers[q.id]?.text_value ?? ""}
+                    onChange={(e) => setText(q.id, e.target.value)}
+                    disabled={alreadySubmitted}
+                  />
+                ) : (
+                  <div className="space-y-1.5">
+                    <RatingButtons
+                      value={answers[q.id]?.rating_value}
+                      max={q.question_type === "scale10" ? 10 : 5}
+                      onChange={(v) => setRating(q.id, v)}
+                      disabled={alreadySubmitted}
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
+                      {q.question_type === "scale10" ? (
+                        <>
+                          <span>1 = heel slecht</span>
+                          <span>10 = uitstekend</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>1 = helemaal mee oneens</span>
+                          <span>5 = helemaal mee eens</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {!alreadySubmitted && (
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => router.push("/student?tab=projectfeedback")}
+                className={studentStyles.buttons.secondary + " border border-slate-200 px-6 py-2 text-sm font-medium text-slate-700"}
+              >
+                Annuleren
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className={studentStyles.buttons.primary + " px-6 py-2 text-sm font-semibold text-white disabled:opacity-50"}
+              >
+                {submitting ? "Versturen…" : "Feedback versturen"}
+              </button>
+            </div>
+          )}
+        </form>
+
+        {/* Info note */}
+        <div className="rounded-xl bg-indigo-50 p-4">
+          <p className="text-sm text-slate-700">
+            💡 <span className="font-medium">Jouw antwoorden zijn anoniem.</span> De docent ziet alleen geaggregeerde resultaten, niet jouw individuele antwoorden.
+          </p>
+        </div>
+      </main>
+    </div>
   );
 }
+
