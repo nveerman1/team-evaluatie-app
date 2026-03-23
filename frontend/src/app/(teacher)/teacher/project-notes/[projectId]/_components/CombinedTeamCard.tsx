@@ -13,6 +13,7 @@ interface CombinedTeamCardProps {
   notes: ProjectNote[];
   search: string;
   searchOmza: string;
+  searchTeacher: string;
   initialOpen?: boolean;
   onNoteSaved: () => void;
 }
@@ -53,6 +54,7 @@ export function CombinedTeamCard({
   notes,
   search,
   searchOmza,
+  searchTeacher,
   initialOpen = false,
   onNoteSaved,
 }: CombinedTeamCardProps) {
@@ -258,6 +260,7 @@ export function CombinedTeamCard({
               filter={filter}
               search={search}
               searchOmza={searchOmza}
+              searchTeacher={searchTeacher}
             />
           </div>
         )}

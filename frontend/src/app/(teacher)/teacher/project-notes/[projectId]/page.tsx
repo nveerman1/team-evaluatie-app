@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { use } from "react";
 import { CombinedTeamCard } from "./_components/CombinedTeamCard";
-import { projectNotesService } from "@/services";
+import { projectNotesService, courseService } from "@/services";
 import { ProjectNotesContextDetail, ProjectNote, TeamInfo } from "@/dtos/project-notes.dto";
+import { TeacherCourse } from "@/dtos/course.dto";
 
 // OMZA categories
 const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
@@ -19,16 +20,33 @@ export default function ProjectNotesDetailPage({
   const [context, setContext] = useState<ProjectNotesContextDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [allNotes, setAllNotes] = useState<ProjectNote[]>([]);
-  
+  const [courseTeachers, setCourseTeachers] = useState<TeacherCourse[]>([]);
+
+  // Editable project title
+  const [editableTitle, setEditableTitle] = useState<string>("");
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
   // Filter states
   const [search, setSearch] = useState<string>("");
   const [searchOmza, setSearchOmza] = useState<string>("");
+  const [searchTeacher, setSearchTeacher] = useState<string>("");
 
   const loadContext = useCallback(async () => {
     try {
       setLoading(true);
       const data = await projectNotesService.getContext(Number(projectId));
       setContext(data);
+      setEditableTitle(data.title ?? "");
+      // Load teachers for the course if available
+      if (data.course_id) {
+        try {
+          const teachers = await courseService.getCourseTeachers(data.course_id);
+          setCourseTeachers(teachers);
+        } catch {
+          // Teachers not critical – ignore errors
+        }
+      }
     } catch (error) {
       console.error("Failed to load project context:", error);
     } finally {
@@ -53,6 +71,36 @@ export default function ProjectNotesDetailPage({
   const handleNoteSaved = useCallback(() => {
     loadAllNotes();
   }, [loadAllNotes]);
+
+  const handleTitleSave = useCallback(async () => {
+    if (!context || editableTitle.trim() === context.title) return;
+    const trimmed = editableTitle.trim();
+    if (!trimmed) {
+      setEditableTitle(context.title);
+      return;
+    }
+    try {
+      setIsSavingTitle(true);
+      await projectNotesService.updateContext(Number(projectId), { title: trimmed });
+      setContext(prev => prev ? { ...prev, title: trimmed } : prev);
+    } catch (error) {
+      console.error("Failed to save title:", error);
+      setEditableTitle(context.title);
+    } finally {
+      setIsSavingTitle(false);
+    }
+  }, [context, editableTitle, projectId]);
+
+  const handleResponsibleTeacherChange = useCallback(async (teacherId: string) => {
+    if (!context) return;
+    const newSettings = { ...context.settings, responsible_teacher_id: teacherId ? Number(teacherId) : null };
+    try {
+      await projectNotesService.updateContext(Number(projectId), { settings: newSettings });
+      setContext(prev => prev ? { ...prev, settings: newSettings } : prev);
+    } catch (error) {
+      console.error("Failed to save responsible teacher:", error);
+    }
+  }, [context, projectId]);
 
   async function handleExport() {
     try {
@@ -121,7 +169,7 @@ export default function ProjectNotesDetailPage({
 
   // Check if a team has search matches
   const teamHasSearchMatches = (team: TeamInfo): boolean => {
-    if (!search && !searchOmza) return false;
+    if (!search && !searchOmza && !searchTeacher) return false;
     
     const teamNotes = getNotesForTeam(team);
     return teamNotes.some(note => {
@@ -130,7 +178,8 @@ export default function ProjectNotesDetailPage({
         note.student_name?.toLowerCase().includes(search.toLowerCase()) ||
         team.members.some(m => m.toLowerCase().includes(search.toLowerCase()));
       const matchesOmza = !searchOmza || note.omza_category === searchOmza;
-      return matchesSearch && matchesOmza;
+      const matchesTeacher = !searchTeacher || note.created_by_name === searchTeacher;
+      return matchesSearch && matchesOmza && matchesTeacher;
     });
   };
 
@@ -150,20 +199,54 @@ export default function ProjectNotesDetailPage({
     );
   }
 
-  const projectTitle = context.title;
+  const responsibleTeacherId = context.settings?.responsible_teacher_id ?? null;
+
+  // Derive unique teachers from all notes for the teacher filter
+  const noteAuthors = Array.from(
+    new Map(
+      allNotes
+        .filter(n => n.created_by_name)
+        .map(n => [n.created_by, n.created_by_name as string])
+    ).entries()
+  ).map(([id, name]) => ({ id, name }));
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* PAGE HEADER */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              Aantekeningen – {projectTitle}
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm max-w-xl">
-              Centrale plek voor observaties, snelnotities en koppeling aan OMZA
-            </p>
+        <header className="px-6 py-5 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between gap-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-semibold text-gray-500 whitespace-nowrap">Aantekeningen –</span>
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editableTitle}
+                onChange={(e) => setEditableTitle(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
+                disabled={isSavingTitle}
+                className="text-lg md:text-2xl font-semibold tracking-tight text-gray-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 min-w-[8rem] w-full max-w-sm disabled:opacity-60"
+                title="Klik om de projecttitel te bewerken"
+                aria-label="Projecttitel"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 ml-1">
+              <label className="text-xs text-slate-500 whitespace-nowrap">Verantwoordelijk docent:</label>
+              <select
+                value={responsibleTeacherId ?? ""}
+                onChange={(e) => handleResponsibleTeacherChange(e.target.value)}
+                className="text-xs bg-transparent border-b border-slate-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-700 cursor-pointer"
+                aria-label="Verantwoordelijk docent"
+              >
+                <option value="">— kies docent —</option>
+                {courseTeachers.map((t) => (
+                  <option key={t.teacher_id} value={t.teacher_id}>
+                    {t.teacher_name ?? `Docent ${t.teacher_id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex items-center gap-2 md:self-center">
             <button 
@@ -200,6 +283,19 @@ export default function ProjectNotesDetailPage({
                 </option>
               ))}
             </select>
+            <select
+              value={searchTeacher}
+              onChange={(e) => setSearchTeacher(e.target.value)}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-slate-700"
+              aria-label="Filter op docent"
+            >
+              <option value="">Alle docenten</option>
+              {noteAuthors.map(({ id, name }) => (
+                <option key={id} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -214,6 +310,7 @@ export default function ProjectNotesDetailPage({
               notes={getNotesForTeam(team)}
               search={search}
               searchOmza={searchOmza}
+              searchTeacher={searchTeacher}
               initialOpen={teamHasSearchMatches(team)}
               onNoteSaved={handleNoteSaved}
             />
