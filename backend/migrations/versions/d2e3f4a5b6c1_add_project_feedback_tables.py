@@ -1,7 +1,7 @@
 """Add project feedback tables
 
 Revision ID: d2e3f4a5b6c1
-Revises: (a2b3c4d5e6f7, b1c2d3e4f5a6)
+Revises: b1c2d3e4f5a6
 Create Date: 2026-03-22 12:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "d2e3f4a5b6c1"
-down_revision = ("a2b3c4d5e6f7", "b1c2d3e4f5a6")
+down_revision = "b1c2d3e4f5a6"
 branch_labels = None
 depends_on = None
 
