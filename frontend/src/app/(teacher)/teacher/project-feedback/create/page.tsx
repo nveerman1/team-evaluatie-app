@@ -55,7 +55,7 @@ function CreateFeedbackRoundInner() {
   useEffect(() => {
     async function load() {
       try {
-        const resp = await projectService.listProjects({ per_page: 200 });
+        const resp = await projectService.listProjects({ per_page: 100 });
         setProjects(resp.items || []);
       } catch (e: any) {
         setError(e?.message || "Laden mislukt");

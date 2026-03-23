@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---------- Questions ----------
@@ -66,8 +66,15 @@ class ProjectFeedbackRoundDetail(ProjectFeedbackRoundOut):
 
 class AnswerIn(BaseModel):
     question_id: int
-    rating_value: Optional[int] = Field(None, ge=1, le=10)
+    rating_value: Optional[int] = None
     text_value: Optional[str] = None
+
+    @field_validator("rating_value")
+    @classmethod
+    def validate_rating(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and not (1 <= v <= 10):
+            raise ValueError("rating_value must be between 1 and 10")
+        return v
 
 
 class ProjectFeedbackSubmission(BaseModel):
