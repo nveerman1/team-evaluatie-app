@@ -1263,7 +1263,10 @@ def batch_create_update_scores(
 
     # Save general comment to the team record if a team_number is provided
     # (allow any value including None/empty to support clearing the comment)
-    if payload.team_number is not None and "general_comment" in payload.model_fields_set:
+    if (
+        payload.team_number is not None
+        and "general_comment" in payload.model_fields_set
+    ):
         from app.infra.db.models import ProjectAssessmentTeam
 
         assessment_team = (
