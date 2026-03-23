@@ -136,6 +136,14 @@ from .submissions import AssignmentSubmission, SubmissionEvent
 # External evaluators
 from .external import ExternalEvaluator
 
+# Project feedback
+from .project_feedback import (
+    ProjectFeedbackRound,
+    ProjectFeedbackQuestion,
+    ProjectFeedbackResponse,
+    ProjectFeedbackAnswer,
+)
+
 # System models
 from .system import (
     FeedbackSummary,
@@ -236,6 +244,11 @@ __all__ = [
     "SubmissionEvent",
     # External
     "ExternalEvaluator",
+    # Project feedback
+    "ProjectFeedbackRound",
+    "ProjectFeedbackQuestion",
+    "ProjectFeedbackResponse",
+    "ProjectFeedbackAnswer",
     # System
     "FeedbackSummary",
     "SummaryGenerationJob",
