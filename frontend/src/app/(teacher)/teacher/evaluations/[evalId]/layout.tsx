@@ -111,7 +111,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
   // Define tabs for the navigation
   const tabs = [
     { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalId}/dashboard` },
-    { id: "assessment", label: "Beoordeling", href: `/teacher/evaluations/${evalId}/assessment` },
+    { id: "assessment", label: "Projectbeoordeling", href: `/teacher/evaluations/${evalId}/assessment` },
     { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalId}/feedback` },
     { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalId}/reflections` },
     { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalId}/settings` },

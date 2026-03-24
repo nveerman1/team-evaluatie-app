@@ -581,10 +581,11 @@ class TestAdminStudentsCRUDNewFields:
         db.query.return_value.filter.return_value.first.return_value = None
 
         # Mock the _course_name_subquery used in the response section
-        with patch(
-            "app.api.v1.routers.admin_students._course_name_subquery"
-        ) as mock_csub, patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
+        with (
+            patch(
+                "app.api.v1.routers.admin_students._course_name_subquery"
+            ) as mock_csub,
+            patch("app.api.v1.routers.admin_students._set_user_course_enrollment"),
         ):
             mock_csub.return_value.c.course_name.label.return_value = MagicMock()
             mock_csub.return_value.c.user_id = MagicMock()
@@ -619,8 +620,9 @@ class TestAdminStudentsCRUDNewFields:
         current_user = self._make_current_user()
         db = MagicMock()
 
-        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
+        with (
+            patch("app.api.v1.routers.admin_students._course_name_subquery"),
+            patch("app.api.v1.routers.admin_students._set_user_course_enrollment"),
         ):
             db.query.return_value.filter.return_value.first.return_value = None
 
@@ -686,8 +688,9 @@ class TestAdminStudentsCRUDNewFields:
             "last_name": "Vries",
         }
 
-        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
-            "app.api.v1.routers.admin_students._set_user_course_enrollment"
+        with (
+            patch("app.api.v1.routers.admin_students._course_name_subquery"),
+            patch("app.api.v1.routers.admin_students._set_user_course_enrollment"),
         ):
             result = update_admin_student(
                 student_id=42,
@@ -735,12 +738,16 @@ class TestAdminStudentsCSVExport:
 
         db = MagicMock()
 
-        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
-            "app.api.v1.routers.admin_students._apply_filters",
-            return_value=db.query.return_value,
-        ), patch(
-            "app.api.v1.routers.admin_students._apply_sort",
-            return_value=db.query.return_value,
+        with (
+            patch("app.api.v1.routers.admin_students._course_name_subquery"),
+            patch(
+                "app.api.v1.routers.admin_students._apply_filters",
+                return_value=db.query.return_value,
+            ),
+            patch(
+                "app.api.v1.routers.admin_students._apply_sort",
+                return_value=db.query.return_value,
+            ),
         ):
             # Build a fake row with named attributes
             FakeRow = type(
@@ -792,12 +799,16 @@ class TestAdminStudentsCSVExport:
 
         db = MagicMock()
 
-        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
-            "app.api.v1.routers.admin_students._apply_filters",
-            return_value=db.query.return_value,
-        ), patch(
-            "app.api.v1.routers.admin_students._apply_sort",
-            return_value=db.query.return_value,
+        with (
+            patch("app.api.v1.routers.admin_students._course_name_subquery"),
+            patch(
+                "app.api.v1.routers.admin_students._apply_filters",
+                return_value=db.query.return_value,
+            ),
+            patch(
+                "app.api.v1.routers.admin_students._apply_sort",
+                return_value=db.query.return_value,
+            ),
         ):
             FakeRow = type(
                 "FakeRow",

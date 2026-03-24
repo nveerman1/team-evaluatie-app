@@ -450,10 +450,13 @@ class TestUpdateTeamStatusSubproject:
 
         payload = ProjectPlanTeamUpdate(status="go")
 
-        with patch(
-            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
-            return_value=pp,
-        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+        with (
+            patch(
+                "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+                return_value=pp,
+            ),
+            patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()),
+        ):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
@@ -492,10 +495,13 @@ class TestUpdateTeamStatusSubproject:
 
         payload = ProjectPlanTeamUpdate(status="go")
 
-        with patch(
-            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
-            return_value=pp,
-        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+        with (
+            patch(
+                "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+                return_value=pp,
+            ),
+            patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()),
+        ):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
@@ -522,10 +528,13 @@ class TestUpdateTeamStatusSubproject:
 
         payload = ProjectPlanTeamUpdate(status="go")
 
-        with patch(
-            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
-            return_value=pp,
-        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+        with (
+            patch(
+                "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+                return_value=pp,
+            ),
+            patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()),
+        ):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
@@ -551,10 +560,13 @@ class TestUpdateTeamStatusSubproject:
 
         payload = ProjectPlanTeamUpdate(status="go")
 
-        with patch(
-            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
-            return_value=pp,
-        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+        with (
+            patch(
+                "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+                return_value=pp,
+            ),
+            patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()),
+        ):
             # Should NOT raise an HTTPException
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
@@ -584,10 +596,13 @@ class TestUpdateTeamStatusSubproject:
         # Send enum value (as Pydantic would parse it from the request)
         payload = ProjectPlanTeamUpdate(status=PlanStatus.GO)
 
-        with patch(
-            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
-            return_value=pp,
-        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+        with (
+            patch(
+                "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+                return_value=pp,
+            ),
+            patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()),
+        ):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
@@ -619,10 +634,13 @@ class TestUpdateTeamStatusSubproject:
 
         payload = ProjectPlanTeamUpdate(status="go")
 
-        with patch(
-            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
-            return_value=pp,
-        ), patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()):
+        with (
+            patch(
+                "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+                return_value=pp,
+            ),
+            patch("app.api.v1.routers.projectplans._team_to_out", return_value=Mock()),
+        ):
             update_team_status(
                 projectplan_id=1, team_id=2, payload=payload, db=db, user=user
             )
