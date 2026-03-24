@@ -69,7 +69,7 @@ def _verify_teacher_course_access(db: Session, user: User, course_id: int) -> No
                 TeacherCourse.course_id == course_id,
                 TeacherCourse.teacher_id == user.id,
                 TeacherCourse.school_id == user.school_id,
-                TeacherCourse.is_active == True,
+                TeacherCourse.is_active,
             )
         ).scalar_one_or_none()
 
@@ -141,7 +141,7 @@ def list_trainings(
 
     # Students can only see active trainings
     if user.role == "student":
-        query = query.where(SkillTraining.is_active == True)
+        query = query.where(SkillTraining.is_active)
     elif is_active is not None:
         # Teachers/admins can filter by is_active
         query = query.where(SkillTraining.is_active == is_active)
@@ -329,9 +329,7 @@ def get_progress_matrix(
     # Get all active trainings for school
     trainings_query = (
         select(SkillTraining)
-        .where(
-            SkillTraining.school_id == user.school_id, SkillTraining.is_active == True
-        )
+        .where(SkillTraining.school_id == user.school_id, SkillTraining.is_active)
         .options(
             joinedload(SkillTraining.competency_category),
             joinedload(SkillTraining.learning_objective),
@@ -344,7 +342,7 @@ def get_progress_matrix(
     # Get all students enrolled in the course
     enrollments_query = (
         select(CourseEnrollment)
-        .where(CourseEnrollment.course_id == course_id, CourseEnrollment.active == True)
+        .where(CourseEnrollment.course_id == course_id, CourseEnrollment.active)
         .options(joinedload(CourseEnrollment.student))
     )
 
@@ -439,7 +437,7 @@ def update_single_progress(
         select(CourseEnrollment).where(
             CourseEnrollment.student_id == student_id,
             CourseEnrollment.course_id == course_id,
-            CourseEnrollment.active == True,
+            CourseEnrollment.active,
         )
     ).scalar_one_or_none()
 
@@ -556,7 +554,7 @@ def bulk_update_progress(
             select(CourseEnrollment).where(
                 CourseEnrollment.student_id.in_(payload.student_ids),
                 CourseEnrollment.course_id == course_id,
-                CourseEnrollment.active == True,
+                CourseEnrollment.active,
             )
         )
         .scalars()
@@ -649,7 +647,7 @@ def get_my_trainings(
     enrollments = (
         db.execute(
             select(CourseEnrollment).where(
-                CourseEnrollment.student_id == user.id, CourseEnrollment.active == True
+                CourseEnrollment.student_id == user.id, CourseEnrollment.active
             )
         )
         .scalars()
@@ -666,9 +664,7 @@ def get_my_trainings(
     # Get all active trainings
     trainings_query = (
         select(SkillTraining)
-        .where(
-            SkillTraining.school_id == user.school_id, SkillTraining.is_active == True
-        )
+        .where(SkillTraining.school_id == user.school_id, SkillTraining.is_active)
         .options(
             joinedload(SkillTraining.competency_category),
             joinedload(SkillTraining.learning_objective),
@@ -751,7 +747,7 @@ def update_my_status(
     enrollment = (
         db.execute(
             select(CourseEnrollment).where(
-                CourseEnrollment.student_id == user.id, CourseEnrollment.active == True
+                CourseEnrollment.student_id == user.id, CourseEnrollment.active
             )
         )
         .scalars()

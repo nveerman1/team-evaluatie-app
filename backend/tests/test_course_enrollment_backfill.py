@@ -17,7 +17,7 @@ backend_dir = Path(__file__).parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from unittest.mock import Mock
+from unittest.mock import Mock  # noqa: E402
 
 # Try to import pytest, but make it optional for standalone runs
 try:
@@ -223,7 +223,7 @@ def test_enrollment_reactivation():
     if not existing_enrollment["active"]:
         existing_enrollment["active"] = True
 
-    assert existing_enrollment["active"] == True
+    assert existing_enrollment["active"]
 
 
 def test_idempotent_enrollment():

@@ -284,7 +284,7 @@ export default function ProjectNotesDetailPage({
         <section className="space-y-6">
           {context.teams.filter(team =>
             teamMatchesTeacherFilter(team) &&
-            (!search && !searchOmza ? true : teamHasSearchMatches(team))
+            ((!search && !searchOmza) || teamHasSearchMatches(team))
           ).map((team) => {
             const meta = teamMetadata[String(team.id)];
             return (

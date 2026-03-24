@@ -116,7 +116,6 @@ def list_students(
 
     # Get course enrollments for all users
     user_ids = [u.id for u in users]
-    course_name_map = {}
     user_to_course = {}
 
     if user_ids:

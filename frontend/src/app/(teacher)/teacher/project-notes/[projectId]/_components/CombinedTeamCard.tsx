@@ -194,7 +194,7 @@ export function CombinedTeamCard({
               onTeamMetaChange(team.id, { title: localTitle });
             }
           }}
-          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
           placeholder="Projecttitel…"
           className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-800 placeholder:font-normal placeholder:text-slate-400"
           title="Klik om de projecttitel in te stellen"

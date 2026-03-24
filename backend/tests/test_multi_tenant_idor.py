@@ -59,9 +59,7 @@ def test_project_query_includes_school_id():
 
     # Simulate query pattern that should include school_id
     query = db.query(Project)
-    filtered_query = query.filter(
-        Project.id == 123, Project.school_id == user.school_id
-    )
+    query.filter(Project.id == 123, Project.school_id == user.school_id)
 
     # Verify the filter was called with school_id
     assert user.school_id == 1
@@ -97,7 +95,7 @@ def test_project_team_queries_must_include_school_filter():
     project = Mock(spec=Project)
     project.school_id = 1
 
-    teams_query = db.query(ProjectTeam).filter(
+    db.query(ProjectTeam).filter(
         ProjectTeam.project_id == 123,
         ProjectTeam.school_id == user.school_id,  # Critical: school_id check
     )

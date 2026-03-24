@@ -15,10 +15,16 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from app.infra.db.models import User, Group, GroupMember, CourseEnrollment, Course
-from app.core.config import settings
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+from app.infra.db.models import (  # noqa: E402
+    User,
+    Group,
+    GroupMember,
+    CourseEnrollment,
+    Course,
+)
+from app.core.config import settings  # noqa: E402
 
 
 def backfill_course_enrollments(db: Session, dry_run: bool = True):
@@ -48,7 +54,7 @@ def backfill_course_enrollments(db: Session, dry_run: bool = True):
         db.query(GroupMember, Group.course_id, User.email, User.name, User.role)
         .join(Group, GroupMember.group_id == Group.id)
         .join(User, GroupMember.user_id == User.id)
-        .filter(GroupMember.active == True)
+        .filter(GroupMember.active)
         .all()
     )
 
