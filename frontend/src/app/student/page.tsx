@@ -72,7 +72,7 @@ const LEGACY_TAB_MAP: Record<string, string> = {
   attendance: "derde-blok",
   projectfeedback: "projectevaluatie",
   projectplannen: "projectplan",
-  projecten: "projectplan",
+  projecten: "beoordeling",
 };
 
 function resolveTab(raw: string | null): string {
