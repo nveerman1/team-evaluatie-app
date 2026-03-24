@@ -35,7 +35,7 @@ const TOP_NAV_ITEMS = [
 
 const SUB_NAV_ITEMS = {
   competenties: [
-    { id: "voortgang", label: "Voortgang", icon: TrendingUp },
+    { id: "voortgang", label: "Ontwikkeling", icon: TrendingUp },
     { id: "scans", label: "Competentiescan", icon: Target },
     { id: "trainingen", label: "Trainingen", icon: Dumbbell },
   ],
