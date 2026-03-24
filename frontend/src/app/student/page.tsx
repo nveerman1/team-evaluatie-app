@@ -6,11 +6,10 @@ import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessmen
 import { useStudentProjectPlans } from "@/hooks/useStudentProjectPlans";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import { Loading, ErrorMessage } from "@/components";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText, MessageSquare } from "lucide-react";
+import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText, MessageSquare, Dumbbell } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { ProjectPlanDashboardCard } from "@/components/student/dashboard/ProjectPlanDashboardCard";
@@ -22,7 +21,67 @@ import { SkillTrainingTab } from "@/components/student/dashboard/SkillTrainingTa
 import { ProjectFeedbackDashboardTab } from "@/components/student/dashboard/ProjectFeedbackDashboardTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Dumbbell } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// ── Navigation configuration ────────────────────────────────────────────────
+
+const TOP_NAV_ITEMS = [
+  { id: "overzicht", label: "Overzicht", icon: BarChart3 },
+  { id: "competenties", label: "Competenties", icon: Target, defaultSub: "scans" },
+  { id: "projecten", label: "Projecten", icon: Trophy, defaultSub: "projectplan" },
+  { id: "derde-blok", label: "3de blok", icon: Clock },
+] as const;
+
+const SUB_NAV_ITEMS = {
+  competenties: [
+    { id: "scans", label: "Competentiescan", icon: Target },
+    { id: "trainingen", label: "Trainingen", icon: Dumbbell },
+  ],
+  projecten: [
+    { id: "projectplan", label: "Projectplan", icon: FileText },
+    { id: "inleveren", label: "Inleveren", icon: Upload },
+    { id: "evaluaties", label: "360° feedback", icon: ClipboardCheck },
+    { id: "beoordeling", label: "Beoordeling", icon: Trophy },
+    { id: "projectevaluatie", label: "Projectevaluatie", icon: MessageSquare },
+  ],
+} as const;
+
+// Maps each leaf tab value to its parent top-nav id
+const TAB_PARENT: Record<string, string> = {
+  overzicht: "overzicht",
+  scans: "competenties",
+  trainingen: "competenties",
+  projectplan: "projecten",
+  inleveren: "projecten",
+  evaluaties: "projecten",
+  beoordeling: "projecten",
+  projectevaluatie: "projecten",
+  "derde-blok": "derde-blok",
+};
+
+// Default leaf tab for each top-nav item
+const TOP_NAV_DEFAULT: Record<string, string> = {
+  overzicht: "overzicht",
+  competenties: "scans",
+  projecten: "projectplan",
+  "derde-blok": "derde-blok",
+};
+
+// Backward-compatibility mapping for legacy tab values
+const LEGACY_TAB_MAP: Record<string, string> = {
+  attendance: "derde-blok",
+  projectfeedback: "projectevaluatie",
+  projectplannen: "projectplan",
+  projecten: "projectplan",
+};
+
+function resolveTab(raw: string | null): string {
+  if (!raw) return "overzicht";
+  if (LEGACY_TAB_MAP[raw]) return LEGACY_TAB_MAP[raw];
+  // If a top-nav id was passed directly, resolve to its default leaf
+  if (TOP_NAV_DEFAULT[raw] && !TAB_PARENT[raw]) return TOP_NAV_DEFAULT[raw];
+  return raw;
+}
 
 function StudentDashboardContent() {
   const { dashboard, loading, error } = useStudentDashboard();
@@ -42,21 +101,28 @@ function StudentDashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Tab state - check URL query parameter
+  // Tab state - resolve URL param (including legacy values)
   const tabFromUrl = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<string>(tabFromUrl || "overzicht");
+  const [activeTab, setActiveTab] = useState<string>(resolveTab(tabFromUrl));
 
   // Update active tab when URL changes
   useEffect(() => {
-    if (tabFromUrl) {
-      setActiveTab(tabFromUrl);
-    }
+    setActiveTab(resolveTab(tabFromUrl));
   }, [tabFromUrl]);
+
+  // Derive the active top-nav item from the current leaf tab
+  const activeTopNav = TAB_PARENT[activeTab] ?? "overzicht";
 
   // Handler to update both state and URL
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     router.push(`/student?tab=${value}`, { scroll: false });
+  };
+
+  // Clicking a top-nav item navigates to its default leaf tab
+  const handleTopNavClick = (topId: string) => {
+    const leafTab = TOP_NAV_DEFAULT[topId] ?? topId;
+    handleTabChange(leafTab);
   };
 
   // Memoize open and closed evaluations to avoid changing on every render
@@ -117,72 +183,61 @@ function StudentDashboardContent() {
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Navigation + content */}
         <div className="mt-6">
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm overflow-x-auto flex-nowrap">
-              <TabsTrigger
-                value="overzicht"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <BarChart3 className="mr-2 h-4 w-4" /> Overzicht
-              </TabsTrigger>
-              <TabsTrigger
-                value="scans"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <Target className="mr-2 h-4 w-4" /> Competentiescan
-              </TabsTrigger>
-              <TabsTrigger
-                value="trainingen"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <Dumbbell className="mr-2 h-4 w-4" /> Trainingen
-              </TabsTrigger>
-              <TabsTrigger
-                value="projectplannen"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <FileText className="mr-2 h-4 w-4" /> Projectplannen
-              </TabsTrigger>
-              <TabsTrigger
-                value="evaluaties"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <ClipboardCheck className="mr-2 h-4 w-4" /> Evaluaties
-              </TabsTrigger>
-              <TabsTrigger
-                value="inleveren"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <Upload className="mr-2 h-4 w-4" /> Inleveren
-              </TabsTrigger>
-              <TabsTrigger
-                value="projecten"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
-              </TabsTrigger>
-              <TabsTrigger
-                value="attendance"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-              >
-                <Clock className="mr-2 h-4 w-4" /> 3de Blok
-              </TabsTrigger>
-              <TabsTrigger
-                value="projectfeedback"
-                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm whitespace-nowrap"
-              >
-                <MessageSquare className="mr-2 h-4 w-4" /> Projectfeedback
-              </TabsTrigger>
-            </TabsList>
+          {/* ── Two-level navigation ────────────────────────────── */}
+          <div className="bg-white shadow-sm rounded-2xl overflow-hidden">
+            {/* Top navigation row */}
+            <div className="flex gap-1 p-1 overflow-x-auto flex-nowrap">
+            {TOP_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => handleTopNavClick(id)}
+                    className={cn(
+                      "relative rounded-xl px-4 h-9 flex items-center text-sm font-medium transition-colors whitespace-nowrap",
+                      activeTopNav === id
+                        ? "bg-slate-800 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    )}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {label}
+                  </button>
+                ))}
+            </div>
 
+            {/* Sub navigation row – only when the active top-nav has sub-items */}
+            {SUB_NAV_ITEMS[activeTopNav as keyof typeof SUB_NAV_ITEMS] && (
+              <div className="flex gap-1 px-1 pb-1 border-t border-slate-100 overflow-x-auto flex-nowrap">
+                {SUB_NAV_ITEMS[activeTopNav as keyof typeof SUB_NAV_ITEMS].map(
+                  ({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => handleTabChange(id)}
+                      className={cn(
+                        "relative rounded-lg px-3 h-8 flex items-center text-sm transition-colors whitespace-nowrap",
+                        activeTab === id
+                          ? "bg-slate-700 text-white shadow-sm"
+                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                      )}
+                    >
+                      <Icon className="mr-1.5 h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Tab content ─────────────────────────────────────── */}
+          <Tabs value={activeTab} className="mt-6">
             {/* OVERZICHT */}
-            <TabsContent value="overzicht" className="mt-6 space-y-4">
+            <TabsContent value="overzicht" className="space-y-4">
               {overviewLoading ? (
                 <Loading />
               ) : (
-                <OverviewTab 
+                <OverviewTab
                   peerResults={peerResults}
                   scans={overviewData.scans}
                   competencyProfile={overviewData.competencyProfile}
@@ -194,17 +249,17 @@ function StudentDashboardContent() {
             </TabsContent>
 
             {/* COMPETENTIESCAN */}
-            <TabsContent value="scans" className="mt-6 space-y-4">
+            <TabsContent value="scans" className="space-y-4">
               <CompetencyScanDashboardTab />
             </TabsContent>
 
             {/* TRAININGEN */}
-            <TabsContent value="trainingen" className="mt-6 space-y-4">
+            <TabsContent value="trainingen" className="space-y-4">
               <SkillTrainingTab />
             </TabsContent>
 
-            {/* PROJECTPLANNEN */}
-            <TabsContent value="projectplannen" className="mt-6 space-y-4">
+            {/* PROJECTPLAN */}
+            <TabsContent value="projectplan" className="space-y-4">
               <Card className="rounded-2xl border-slate-200 bg-slate-50">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2">
@@ -234,8 +289,41 @@ function StudentDashboardContent() {
               </div>
             </TabsContent>
 
-            {/* EVALUATIES */}
-            <TabsContent value="evaluaties" className="mt-6 space-y-4">
+            {/* INLEVEREN */}
+            <TabsContent value="inleveren" className="space-y-4">
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-slate-600" />
+                    <p className="text-sm font-semibold text-slate-900">Inleveringen</p>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Lever hier je documenten in voor projectbeoordelingen. Upload bestanden naar SharePoint en deel de links.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                {projectLoading ? (
+                  <Loading />
+                ) : projectError ? (
+                  <ErrorMessage message={projectError} />
+                ) : (projectAssessments || []).filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
+                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+                    <p className="text-slate-500">Nog geen projecten beschikbaar om in te leveren.</p>
+                  </div>
+                ) : (
+                  (projectAssessments || [])
+                    .filter(assessment => assessment.project_id !== null && assessment.project_id !== undefined)
+                    .map((assessment) => (
+                      <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
+                    ))
+                )}
+              </div>
+            </TabsContent>
+
+            {/* 360° FEEDBACK (was: Evaluaties) */}
+            <TabsContent value="evaluaties" className="space-y-4">
               {/* Compacte intro */}
               <Card className="rounded-2xl border-slate-200 bg-slate-50">
                 <CardContent className="p-5">
@@ -279,41 +367,8 @@ function StudentDashboardContent() {
               </div>
             </TabsContent>
 
-            {/* INLEVEREN */}
-            <TabsContent value="inleveren" className="mt-6 space-y-4">
-              <Card className="rounded-2xl border-slate-200 bg-slate-50">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2">
-                    <Upload className="h-4 w-4 text-slate-600" />
-                    <p className="text-sm font-semibold text-slate-900">Inleveringen</p>
-                  </div>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Lever hier je documenten in voor projectbeoordelingen. Upload bestanden naar SharePoint en deel de links.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-4">
-                {projectLoading ? (
-                  <Loading />
-                ) : projectError ? (
-                  <ErrorMessage message={projectError} />
-                ) : (projectAssessments || []).filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
-                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
-                    <p className="text-slate-500">Nog geen projecten beschikbaar om in te leveren.</p>
-                  </div>
-                ) : (
-                  (projectAssessments || [])
-                    .filter(assessment => assessment.project_id !== null && assessment.project_id !== undefined)
-                    .map((assessment) => (
-                      <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
-                    ))
-                )}
-              </div>
-            </TabsContent>
-
-            {/* PROJECTBEOORDELINGEN */}
-            <TabsContent value="projecten" className="mt-6 space-y-4">
+            {/* BEOORDELING (was: Projectbeoordelingen) */}
+            <TabsContent value="beoordeling" className="space-y-4">
               <Card className="rounded-2xl border-slate-200 bg-slate-50">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2">
@@ -345,13 +400,13 @@ function StudentDashboardContent() {
               </div>
             </TabsContent>
 
-            {/* ATTENDANCE / 3DE BLOK */}
-            <TabsContent value="attendance" className="mt-6 space-y-4">
+            {/* 3DE BLOK */}
+            <TabsContent value="derde-blok" className="space-y-4">
               <AttendanceTab />
             </TabsContent>
 
-            {/* PROJECTFEEDBACK */}
-            <TabsContent value="projectfeedback" className="mt-6 space-y-4">
+            {/* PROJECTEVALUATIE (was: Projectfeedback) */}
+            <TabsContent value="projectevaluatie" className="space-y-4">
               <ProjectFeedbackDashboardTab />
             </TabsContent>
           </Tabs>
