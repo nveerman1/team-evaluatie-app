@@ -293,7 +293,7 @@ export function VoortgangTab({
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                   {selectedScanId && (
                     <Button asChild variant="default" className="rounded-xl">
-                      <Link href={`/student/competency/scan/${selectedScanId}`}>
+                      <Link href={`/student/competency/scan/${encodeURIComponent(selectedScanId)}`}>
                         Bekijk deze scan <ChevronRight className="ml-1 h-4 w-4" />
                       </Link>
                     </Button>
@@ -329,7 +329,7 @@ export function VoortgangTab({
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {selectedScanId && (
                     <Button asChild variant="default" className="rounded-xl">
-                      <Link href={`/student/competency/scan/${selectedScanId}`}>
+                      <Link href={`/student/competency/scan/${encodeURIComponent(selectedScanId)}`}>
                         Bekijk deze scan <ChevronRight className="ml-1 h-4 w-4" />
                       </Link>
                     </Button>
@@ -349,7 +349,7 @@ export function VoortgangTab({
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                   {selectedScanId && (
                     <Button asChild variant="default" className="rounded-xl">
-                      <Link href={`/student/competency/scan/${selectedScanId}`}>
+                      <Link href={`/student/competency/scan/${encodeURIComponent(selectedScanId)}`}>
                         Bekijk deze scan <ChevronRight className="ml-1 h-4 w-4" />
                       </Link>
                     </Button>
