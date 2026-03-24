@@ -9,7 +9,6 @@ interface NotesOverviewAllProps {
   filter: string | null;
   search: string;
   searchOmza: string;
-  searchTeacher: string;
 }
 
 export function NotesOverviewAll({
@@ -18,7 +17,6 @@ export function NotesOverviewAll({
   filter,
   search,
   searchOmza,
-  searchTeacher,
 }: NotesOverviewAllProps) {
   // Filter notes based on filter, search, and OMZA
   let filteredNotes = notes;
@@ -42,11 +40,6 @@ export function NotesOverviewAll({
   // Filter by OMZA category
   if (searchOmza) {
     filteredNotes = filteredNotes.filter(n => n.omza_category === searchOmza);
-  }
-
-  // Filter by teacher (note author)
-  if (searchTeacher) {
-    filteredNotes = filteredNotes.filter(n => n.created_by_name === searchTeacher);
   }
 
   // Sort by date descending (newest first)

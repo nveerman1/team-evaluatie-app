@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
 import { CombinedTeamCard } from "./_components/CombinedTeamCard";
 import { projectNotesService, courseService } from "@/services";
@@ -9,6 +9,11 @@ import { TeacherCourse } from "@/dtos/course.dto";
 
 // OMZA categories
 const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+
+interface TeamMeta {
+  title?: string;
+  responsible_teacher_id?: number | null;
+}
 
 export default function ProjectNotesDetailPage({
   params,
@@ -22,14 +27,10 @@ export default function ProjectNotesDetailPage({
   const [allNotes, setAllNotes] = useState<ProjectNote[]>([]);
   const [courseTeachers, setCourseTeachers] = useState<TeacherCourse[]>([]);
 
-  // Editable project title
-  const [editableTitle, setEditableTitle] = useState<string>("");
-  const [isSavingTitle, setIsSavingTitle] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-
   // Filter states
   const [search, setSearch] = useState<string>("");
   const [searchOmza, setSearchOmza] = useState<string>("");
+  // Filter by responsible teacher (teacher_id as string, "" = all)
   const [searchTeacher, setSearchTeacher] = useState<string>("");
 
   const loadContext = useCallback(async () => {
@@ -37,7 +38,6 @@ export default function ProjectNotesDetailPage({
       setLoading(true);
       const data = await projectNotesService.getContext(Number(projectId));
       setContext(data);
-      setEditableTitle(data.title ?? "");
       // Load teachers for the course if available
       if (data.course_id) {
         try {
@@ -72,33 +72,33 @@ export default function ProjectNotesDetailPage({
     loadAllNotes();
   }, [loadAllNotes]);
 
-  const handleTitleSave = useCallback(async () => {
-    if (!context || editableTitle.trim() === context.title) return;
-    const trimmed = editableTitle.trim();
-    if (!trimmed) {
-      setEditableTitle(context.title);
-      return;
-    }
-    try {
-      setIsSavingTitle(true);
-      await projectNotesService.updateContext(Number(projectId), { title: trimmed });
-      setContext(prev => prev ? { ...prev, title: trimmed } : prev);
-    } catch (error) {
-      console.error("Failed to save title:", error);
-      setEditableTitle(context.title);
-    } finally {
-      setIsSavingTitle(false);
-    }
-  }, [context, editableTitle, projectId]);
-
-  const handleResponsibleTeacherChange = useCallback(async (teacherId: string) => {
+  /**
+   * Called by CombinedTeamCard when a team's title or responsible teacher changes.
+   * Persists the updated team_metadata to context.settings via the API.
+   */
+  const handleTeamMetaChange = useCallback(async (
+    teamId: number,
+    patch: { title?: string; responsibleTeacherId?: number | null },
+  ) => {
     if (!context) return;
-    const newSettings = { ...context.settings, responsible_teacher_id: teacherId ? Number(teacherId) : null };
+    const current = (context.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const key = String(teamId);
+    const updated = {
+      ...context.settings,
+      team_metadata: {
+        ...current,
+        [key]: {
+          ...current[key],
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.responsibleTeacherId !== undefined ? { responsible_teacher_id: patch.responsibleTeacherId } : {}),
+        },
+      },
+    };
     try {
-      await projectNotesService.updateContext(Number(projectId), { settings: newSettings });
-      setContext(prev => prev ? { ...prev, settings: newSettings } : prev);
+      await projectNotesService.updateContext(Number(projectId), { settings: updated });
+      setContext(prev => prev ? { ...prev, settings: updated } : prev);
     } catch (error) {
-      console.error("Failed to save responsible teacher:", error);
+      console.error("Failed to save team metadata:", error);
     }
   }, [context, projectId]);
 
@@ -167,9 +167,9 @@ export default function ProjectNotesDetailPage({
     });
   };
 
-  // Check if a team has search matches
+  // Returns true when the team should be initially expanded due to search/filter matches
   const teamHasSearchMatches = (team: TeamInfo): boolean => {
-    if (!search && !searchOmza && !searchTeacher) return false;
+    if (!search && !searchOmza) return false;
     
     const teamNotes = getNotesForTeam(team);
     return teamNotes.some(note => {
@@ -178,9 +178,18 @@ export default function ProjectNotesDetailPage({
         note.student_name?.toLowerCase().includes(search.toLowerCase()) ||
         team.members.some(m => m.toLowerCase().includes(search.toLowerCase()));
       const matchesOmza = !searchOmza || note.omza_category === searchOmza;
-      const matchesTeacher = !searchTeacher || note.created_by_name === searchTeacher;
-      return matchesSearch && matchesOmza && matchesTeacher;
+      return matchesSearch && matchesOmza;
     });
+  };
+
+  // Returns true when the team card should be hidden due to teacher filter
+  const teamMatchesTeacherFilter = (team: TeamInfo): boolean => {
+    if (!searchTeacher) return true;
+    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const meta = teamMeta[String(team.id)];
+    const responsibleId = meta?.responsible_teacher_id;
+    if (responsibleId == null) return false;
+    return String(responsibleId) === searchTeacher;
   };
 
   if (loading) {
@@ -199,54 +208,21 @@ export default function ProjectNotesDetailPage({
     );
   }
 
-  const responsibleTeacherId = context.settings?.responsible_teacher_id ?? null;
-
-  // Derive unique teachers from all notes for the teacher filter
-  const noteAuthors = Array.from(
-    new Map(
-      allNotes
-        .filter(n => n.created_by_name)
-        .map(n => [n.created_by, n.created_by_name as string])
-    ).entries()
-  ).map(([id, name]) => ({ id, name }));
+  // Per-team metadata from settings
+  const teamMetadata = (context.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* PAGE HEADER */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-5 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between gap-3">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-lg font-semibold text-gray-500 whitespace-nowrap">Aantekeningen –</span>
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={editableTitle}
-                onChange={(e) => setEditableTitle(e.target.value)}
-                onBlur={handleTitleSave}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
-                disabled={isSavingTitle}
-                className="text-lg md:text-2xl font-semibold tracking-tight text-gray-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 min-w-[8rem] w-full max-w-sm disabled:opacity-60"
-                title="Klik om de projecttitel te bewerken"
-                aria-label="Projecttitel"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 ml-1">
-              <label className="text-xs text-slate-500 whitespace-nowrap">Verantwoordelijk docent:</label>
-              <select
-                value={responsibleTeacherId ?? ""}
-                onChange={(e) => handleResponsibleTeacherChange(e.target.value)}
-                className="text-xs bg-transparent border-b border-slate-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-700 cursor-pointer"
-                aria-label="Verantwoordelijk docent"
-              >
-                <option value="">— kies docent —</option>
-                {courseTeachers.map((t) => (
-                  <option key={t.teacher_id} value={t.teacher_id}>
-                    {t.teacher_name ?? `Docent ${t.teacher_id}`}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Aantekeningen – {context.title}
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm max-w-xl">
+              Centrale plek voor observaties, snelnotities en koppeling aan OMZA
+            </p>
           </div>
           <div className="flex items-center gap-2 md:self-center">
             <button 
@@ -290,9 +266,9 @@ export default function ProjectNotesDetailPage({
               aria-label="Filter op docent"
             >
               <option value="">Alle docenten</option>
-              {noteAuthors.map(({ id, name }) => (
-                <option key={id} value={name}>
-                  {name}
+              {courseTeachers.map((t) => (
+                <option key={t.teacher_id} value={String(t.teacher_id)}>
+                  {t.teacher_name ?? `Docent ${t.teacher_id}`}
                 </option>
               ))}
             </select>
@@ -301,20 +277,26 @@ export default function ProjectNotesDetailPage({
 
         {/* TEAMS OVERVIEW */}
         <section className="space-y-6">
-          {context.teams.map((team) => (
-            <CombinedTeamCard
-              key={team.id}
-              contextId={Number(projectId)}
-              team={team}
-              students={context.students.filter(s => s.team_id === team.id)}
-              notes={getNotesForTeam(team)}
-              search={search}
-              searchOmza={searchOmza}
-              searchTeacher={searchTeacher}
-              initialOpen={teamHasSearchMatches(team)}
-              onNoteSaved={handleNoteSaved}
-            />
-          ))}
+          {context.teams.filter(teamMatchesTeacherFilter).map((team) => {
+            const meta = teamMetadata[String(team.id)];
+            return (
+              <CombinedTeamCard
+                key={team.id}
+                contextId={Number(projectId)}
+                team={team}
+                students={context.students.filter(s => s.team_id === team.id)}
+                notes={getNotesForTeam(team)}
+                search={search}
+                searchOmza={searchOmza}
+                courseTeachers={courseTeachers}
+                teamTitle={meta?.title ?? ""}
+                teamResponsibleTeacherId={meta?.responsible_teacher_id ?? null}
+                onTeamMetaChange={handleTeamMetaChange}
+                initialOpen={teamHasSearchMatches(team)}
+                onNoteSaved={handleNoteSaved}
+              />
+            );
+          })}
         </section>
       </main>
     </div>
