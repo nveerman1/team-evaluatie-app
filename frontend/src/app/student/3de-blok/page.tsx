@@ -8,7 +8,7 @@ export default function Student3deBlokPage() {
 
   useEffect(() => {
     // Redirect to student dashboard with attendance tab active
-    router.replace("/student?tab=attendance");
+    router.replace("/student?tab=derde-blok");
   }, [router]);
 
   return (

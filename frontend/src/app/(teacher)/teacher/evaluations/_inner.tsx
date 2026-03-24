@@ -258,12 +258,12 @@ export default function EvaluationsListInner() {
                     Dashboard
                   </Link>
 
-                  {/* Beoordeling button */}
+                  {/* Projectbeoordeling button */}
                   <Link
                     href={`/teacher/evaluations/${e.id}/assessment`}
                     className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
                   >
-                    Beoordeling
+                    Projectbeoordeling
                   </Link>
 
                   {/* Delete button - icon only */}

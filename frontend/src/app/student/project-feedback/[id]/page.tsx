@@ -180,7 +180,7 @@ export default function StudentFeedbackFormPage() {
           <p className={studentStyles.typography.infoText}>Je antwoorden zijn anoniem opgeslagen.</p>
           <button
             type="button"
-            onClick={() => router.push("/student?tab=projectfeedback")}
+            onClick={() => router.push("/student?tab=projectevaluatie")}
             className={studentStyles.buttons.primary + " mt-2 px-6 py-2 text-sm font-semibold text-white"}
           >
             ← Terug naar dashboard
@@ -197,7 +197,7 @@ export default function StudentFeedbackFormPage() {
         <header className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
           <div className={studentStyles.header.titleSection}>
             <div className="mb-1 text-sm text-white/60">
-              <Link href="/student?tab=projectfeedback" className="hover:text-white/90 transition-colors">
+              <Link href="/student?tab=projectevaluatie" className="hover:text-white/90 transition-colors">
                 ← Projectfeedback
               </Link>
             </div>
@@ -258,7 +258,7 @@ export default function StudentFeedbackFormPage() {
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
-                onClick={() => router.push("/student?tab=projectfeedback")}
+                onClick={() => router.push("/student?tab=projectevaluatie")}
                 className={studentStyles.buttons.secondary + " border border-slate-200 px-6 py-2 text-sm font-medium text-slate-700"}
               >
                 Annuleren

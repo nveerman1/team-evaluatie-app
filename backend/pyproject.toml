@@ -1,0 +1,12 @@
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+# F821: Undefined name – suppressed for SQLAlchemy model files that use
+# cross-module forward references inside Mapped["ModelName"] annotations.
+per-file-ignores = { "app/infra/db/models/*.py" = ["F821"] }

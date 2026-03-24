@@ -372,7 +372,7 @@ export default function ProjectPlanEditor() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => router.push("/student?tab=projectplannen")}
+                  onClick={() => router.push("/student?tab=projectplan")}
                   className="text-white/70 hover:text-white hover:bg-white/10"
                 >
                   ← Terug
