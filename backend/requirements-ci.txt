@@ -21,3 +21,4 @@ mypy
 pytest
 bandit
 pip-audit
+pygments

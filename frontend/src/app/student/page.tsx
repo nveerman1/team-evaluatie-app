@@ -9,7 +9,7 @@ import { Loading, ErrorMessage } from "@/components";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText, MessageSquare, Dumbbell } from "lucide-react";
+import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText, MessageSquare, Dumbbell, TrendingUp } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { ProjectPlanDashboardCard } from "@/components/student/dashboard/ProjectPlanDashboardCard";
@@ -19,6 +19,7 @@ import { CompetencyScanDashboardTab } from "@/components/student/dashboard/Compe
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
 import { SkillTrainingTab } from "@/components/student/dashboard/SkillTrainingTab";
 import { ProjectFeedbackDashboardTab } from "@/components/student/dashboard/ProjectFeedbackDashboardTab";
+import { VoortgangTab } from "@/components/student/dashboard/VoortgangTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const TOP_NAV_ITEMS = [
 
 const SUB_NAV_ITEMS = {
   competenties: [
+    { id: "voortgang", label: "Ontwikkeling", icon: TrendingUp },
     { id: "scans", label: "Competentiescan", icon: Target },
     { id: "trainingen", label: "Trainingen", icon: Dumbbell },
   ],
@@ -49,6 +51,7 @@ const SUB_NAV_ITEMS = {
 // Maps each leaf tab value to its parent top-nav id
 const TAB_PARENT: Record<string, string> = {
   overzicht: "overzicht",
+  voortgang: "competenties",
   scans: "competenties",
   trainingen: "competenties",
   projectplan: "projecten",
@@ -62,7 +65,7 @@ const TAB_PARENT: Record<string, string> = {
 // Default leaf tab for each top-nav item
 const TOP_NAV_DEFAULT: Record<string, string> = {
   overzicht: "overzicht",
-  competenties: "scans",
+  competenties: "voortgang",
   projecten: "projectplan",
   "derde-blok": "derde-blok",
 };
@@ -239,11 +242,21 @@ function StudentDashboardContent() {
               ) : (
                 <OverviewTab
                   peerResults={peerResults}
-                  scans={overviewData.scans}
-                  competencyProfile={overviewData.competencyProfile}
-                  learningGoals={overviewData.learningGoals}
                   reflections={overviewData.reflections}
                   projectResults={overviewData.projectResults}
+                />
+              )}
+            </TabsContent>
+
+            {/* VOORTGANG */}
+            <TabsContent value="voortgang" className="space-y-4">
+              {overviewLoading ? (
+                <Loading />
+              ) : (
+                <VoortgangTab
+                  peerResults={peerResults}
+                  competencyProfile={overviewData.competencyProfile}
+                  learningGoals={overviewData.learningGoals}
                 />
               )}
             </TabsContent>

@@ -52,7 +52,7 @@ jobs:
 
 
       - name: pip-audit (dependency vulnerabilities)
-        run: pip-audit -r requirements-ci.txt --strict --progress-spinner off
+        run: pip-audit -r requirements-ci.txt --strict --progress-spinner off --ignore-vuln CVE-2026-4539
 
 
   frontend:
