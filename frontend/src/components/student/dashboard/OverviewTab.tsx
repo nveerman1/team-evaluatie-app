@@ -1,6 +1,5 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatPill } from "./helpers";
 import {
   ChevronRight,
   ChevronDown,
@@ -134,13 +133,6 @@ export function OverviewTab({
               <p className="text-sm text-slate-600">
                 Jouw projectresultaten, evaluaties en reflecties.
               </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <StatPill
-                icon={<FileText className="h-4 w-4" />}
-                label="Reflecties"
-                value={`${reflections.length}`}
-              />
             </div>
           </div>
         </CardContent>
