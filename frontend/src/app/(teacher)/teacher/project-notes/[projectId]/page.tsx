@@ -282,7 +282,10 @@ export default function ProjectNotesDetailPage({
 
         {/* TEAMS OVERVIEW */}
         <section className="space-y-6">
-          {context.teams.filter(teamMatchesTeacherFilter).map((team) => {
+          {context.teams.filter(team =>
+            teamMatchesTeacherFilter(team) &&
+            (!search && !searchOmza ? true : teamHasSearchMatches(team))
+          ).map((team) => {
             const meta = teamMetadata[String(team.id)];
             return (
               <CombinedTeamCard
