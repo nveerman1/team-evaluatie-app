@@ -21,4 +21,4 @@ mypy
 pytest
 bandit
 pip-audit
-pygments<2.19
+pygments<2.18
