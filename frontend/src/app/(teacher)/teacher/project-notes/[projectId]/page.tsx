@@ -3,11 +3,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
 import { CombinedTeamCard } from "./_components/CombinedTeamCard";
-import { projectNotesService } from "@/services";
+import { projectNotesService, courseService } from "@/services";
 import { ProjectNotesContextDetail, ProjectNote, TeamInfo } from "@/dtos/project-notes.dto";
+import { TeacherCourse } from "@/dtos/course.dto";
 
 // OMZA categories
 const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+
+interface TeamMeta {
+  title?: string;
+  responsible_teacher_id?: number | null;
+}
 
 export default function ProjectNotesDetailPage({
   params,
@@ -19,16 +25,28 @@ export default function ProjectNotesDetailPage({
   const [context, setContext] = useState<ProjectNotesContextDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [allNotes, setAllNotes] = useState<ProjectNote[]>([]);
-  
+  const [courseTeachers, setCourseTeachers] = useState<TeacherCourse[]>([]);
+
   // Filter states
   const [search, setSearch] = useState<string>("");
   const [searchOmza, setSearchOmza] = useState<string>("");
+  // Filter by responsible teacher (teacher_id as string, "" = all)
+  const [searchTeacher, setSearchTeacher] = useState<string>("");
 
   const loadContext = useCallback(async () => {
     try {
       setLoading(true);
       const data = await projectNotesService.getContext(Number(projectId));
       setContext(data);
+      // Load teachers for the course if available
+      if (data.course_id) {
+        try {
+          const teachers = await courseService.getCourseTeachers(data.course_id);
+          setCourseTeachers(teachers);
+        } catch {
+          // Teachers not critical – ignore errors
+        }
+      }
     } catch (error) {
       console.error("Failed to load project context:", error);
     } finally {
@@ -53,6 +71,36 @@ export default function ProjectNotesDetailPage({
   const handleNoteSaved = useCallback(() => {
     loadAllNotes();
   }, [loadAllNotes]);
+
+  /**
+   * Called by CombinedTeamCard when a team's title or responsible teacher changes.
+   * Persists the updated team_metadata to context.settings via the API.
+   */
+  const handleTeamMetaChange = useCallback(async (
+    teamId: number,
+    patch: { title?: string; responsibleTeacherId?: number | null },
+  ) => {
+    if (!context) return;
+    const current = (context.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const key = String(teamId);
+    const updated = {
+      ...context.settings,
+      team_metadata: {
+        ...current,
+        [key]: {
+          ...current[key],
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.responsibleTeacherId !== undefined ? { responsible_teacher_id: patch.responsibleTeacherId } : {}),
+        },
+      },
+    };
+    try {
+      await projectNotesService.updateContext(Number(projectId), { settings: updated });
+      setContext(prev => prev ? { ...prev, settings: updated } : prev);
+    } catch (error) {
+      console.error("Failed to save team metadata:", error);
+    }
+  }, [context, projectId]);
 
   async function handleExport() {
     try {
@@ -119,10 +167,15 @@ export default function ProjectNotesDetailPage({
     });
   };
 
-  // Check if a team has search matches
+  // Returns true when the team should be initially expanded due to search/filter matches
   const teamHasSearchMatches = (team: TeamInfo): boolean => {
     if (!search && !searchOmza) return false;
-    
+
+    // Match against the team's saved project title
+    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const savedTitle = teamMeta[String(team.id)]?.title ?? "";
+    if (search && savedTitle.toLowerCase().includes(search.toLowerCase())) return true;
+
     const teamNotes = getNotesForTeam(team);
     return teamNotes.some(note => {
       const matchesSearch = !search || 
@@ -132,6 +185,16 @@ export default function ProjectNotesDetailPage({
       const matchesOmza = !searchOmza || note.omza_category === searchOmza;
       return matchesSearch && matchesOmza;
     });
+  };
+
+  // Returns true when the team card should be hidden due to teacher filter
+  const teamMatchesTeacherFilter = (team: TeamInfo): boolean => {
+    if (!searchTeacher) return true;
+    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const meta = teamMeta[String(team.id)];
+    const responsibleId = meta?.responsible_teacher_id;
+    if (responsibleId == null) return false;
+    return String(responsibleId) === searchTeacher;
   };
 
   if (loading) {
@@ -150,7 +213,8 @@ export default function ProjectNotesDetailPage({
     );
   }
 
-  const projectTitle = context.title;
+  // Per-team metadata from settings
+  const teamMetadata = (context.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -159,7 +223,7 @@ export default function ProjectNotesDetailPage({
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              Aantekeningen – {projectTitle}
+              Aantekeningen – {context.title}
             </h1>
             <p className="text-gray-600 mt-1 text-sm max-w-xl">
               Centrale plek voor observaties, snelnotities en koppeling aan OMZA
@@ -183,7 +247,7 @@ export default function ProjectNotesDetailPage({
           <div className="flex flex-wrap gap-2 items-center">
             <input
               type="text"
-              placeholder="Zoek op naam of in aantekeningen..."
+              placeholder="Zoek op projecttitel, naam of in aantekeningen..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-64 max-w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 shadow-sm"
@@ -200,24 +264,47 @@ export default function ProjectNotesDetailPage({
                 </option>
               ))}
             </select>
+            <select
+              value={searchTeacher}
+              onChange={(e) => setSearchTeacher(e.target.value)}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-slate-700"
+              aria-label="Filter op docent"
+            >
+              <option value="">Alle docenten</option>
+              {courseTeachers.map((t) => (
+                <option key={t.teacher_id} value={String(t.teacher_id)}>
+                  {t.teacher_name ?? `Docent ${t.teacher_id}`}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
         {/* TEAMS OVERVIEW */}
         <section className="space-y-6">
-          {context.teams.map((team) => (
-            <CombinedTeamCard
-              key={team.id}
-              contextId={Number(projectId)}
-              team={team}
-              students={context.students.filter(s => s.team_id === team.id)}
-              notes={getNotesForTeam(team)}
-              search={search}
-              searchOmza={searchOmza}
-              initialOpen={teamHasSearchMatches(team)}
-              onNoteSaved={handleNoteSaved}
-            />
-          ))}
+          {context.teams.filter(team =>
+            teamMatchesTeacherFilter(team) &&
+            ((!search && !searchOmza) || teamHasSearchMatches(team))
+          ).map((team) => {
+            const meta = teamMetadata[String(team.id)];
+            return (
+              <CombinedTeamCard
+                key={team.id}
+                contextId={Number(projectId)}
+                team={team}
+                students={context.students.filter(s => s.team_id === team.id)}
+                notes={getNotesForTeam(team)}
+                search={search}
+                searchOmza={searchOmza}
+                courseTeachers={courseTeachers}
+                teamTitle={meta?.title ?? ""}
+                teamResponsibleTeacherId={meta?.responsible_teacher_id ?? null}
+                onTeamMetaChange={handleTeamMetaChange}
+                initialOpen={teamHasSearchMatches(team)}
+                onNoteSaved={handleNoteSaved}
+              />
+            );
+          })}
         </section>
       </main>
     </div>

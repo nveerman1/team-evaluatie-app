@@ -36,7 +36,6 @@ from app.api.v1.schemas.projectplans import (
     ProjectPlanSectionOut,
     ProjectPlanSectionUpdate,
     ProjectPlanSectionStudentUpdate,
-    ClientData,
     SectionKey,
     LinkClientRequest,
     LinkClientAction,

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { StudentPill } from "./StudentPill";
 import { NotesOverviewAll } from "./NotesOverviewAll";
 import { TeamInfo, StudentInfo, ProjectNote } from "@/dtos/project-notes.dto";
+import { TeacherCourse } from "@/dtos/course.dto";
 import { projectNotesService } from "@/services";
 
 interface CombinedTeamCardProps {
@@ -13,10 +14,13 @@ interface CombinedTeamCardProps {
   notes: ProjectNote[];
   search: string;
   searchOmza: string;
+  courseTeachers: TeacherCourse[];
+  teamTitle: string;
+  teamResponsibleTeacherId: number | null;
+  onTeamMetaChange: (teamId: number, patch: { title?: string; responsibleTeacherId?: number | null }) => void;
   initialOpen?: boolean;
   onNoteSaved: () => void;
 }
-
 // Quick notes for teams with linked OMZA tags
 const QUICK_NOTES_TEAM: { text: string; omza: string | null }[] = [
   { text: "Werkt geconcentreerd als team", omza: "Organiseren" },
@@ -53,6 +57,10 @@ export function CombinedTeamCard({
   notes,
   search,
   searchOmza,
+  courseTeachers,
+  teamTitle,
+  teamResponsibleTeacherId,
+  onTeamMetaChange,
   initialOpen = false,
   onNoteSaved,
 }: CombinedTeamCardProps) {
@@ -62,6 +70,14 @@ export function CombinedTeamCard({
   const [filter, setFilter] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [omzaTags, setOmzaTags] = useState<string[]>([]);
+
+  // Local editable state for team metadata
+  const [localTitle, setLocalTitle] = useState(teamTitle);
+  const [localTeacherId, setLocalTeacherId] = useState<number | null>(teamResponsibleTeacherId);
+
+  // Keep local state in sync if props change (e.g. after parent reload)
+  useEffect(() => { setLocalTitle(teamTitle); }, [teamTitle]);
+  useEffect(() => { setLocalTeacherId(teamResponsibleTeacherId); }, [teamResponsibleTeacherId]);
 
   // Update isOpen when initialOpen changes (e.g., when search matches)
   useEffect(() => {
@@ -157,14 +173,59 @@ export function CombinedTeamCard({
       id={`team-${team.id}`}
       className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
     >
-      {/* Header with team name and toggle */}
-      <div className="flex items-start justify-between w-full bg-slate-200 px-4 py-3">
-        <button onClick={() => setIsOpen(!isOpen)} className="text-left flex-1">
-          <h3 className="text-sm font-semibold text-slate-900">{teamDisplayName}</h3>
+      {/* Header with team name, inline title, teacher dropdown, and toggle */}
+      <div className="flex items-center justify-between w-full bg-slate-200 px-4 py-2 gap-2">
+        {/* Team name – clicking opens/closes the card */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="text-left shrink-0"
+          aria-label={`${teamDisplayName} ${isOpen ? "inklappen" : "uitklappen"}`}
+        >
+          <h3 className="text-sm font-semibold text-slate-900 whitespace-nowrap">{teamDisplayName}</h3>
         </button>
-        <div className="flex items-center gap-1">
+
+        {/* Inline editable project title */}
+        <input
+          type="text"
+          value={localTitle}
+          onChange={(e) => setLocalTitle(e.target.value)}
+          onBlur={() => {
+            if (localTitle !== teamTitle) {
+              onTeamMetaChange(team.id, { title: localTitle });
+            }
+          }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
+          placeholder="Projecttitel…"
+          className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+          title="Klik om de projecttitel in te stellen"
+          aria-label="Projecttitel van dit team"
+        />
+
+        {/* Responsible teacher dropdown */}
+        <select
+          value={localTeacherId ?? ""}
+          onChange={(e) => {
+            const val = e.target.value ? Number(e.target.value) : null;
+            setLocalTeacherId(val);
+            onTeamMetaChange(team.id, { responsibleTeacherId: val });
+          }}
+          className="shrink-0 text-xs bg-transparent border-b border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-700 cursor-pointer max-w-[11rem]"
+          aria-label="Verantwoordelijk docent"
+        >
+          <option value="">Docent: —</option>
+          {courseTeachers.map((t) => (
+            <option key={t.teacher_id} value={t.teacher_id}>
+              {t.teacher_name ?? `Docent ${t.teacher_id}`}
+            </option>
+          ))}
+        </select>
+
+        {/* Toggle indicator */}
+        <div className="flex items-center gap-1 shrink-0">
           {saving && <span className="text-[10px] text-green-600">Opgeslagen ✓</span>}
-          <span className={`transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}>▸</span>
+          <button onClick={() => setIsOpen(!isOpen)} aria-label={isOpen ? "Inklappen" : "Uitklappen"}>
+            <span className={`inline-block transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}>▸</span>
+          </button>
         </div>
       </div>
       

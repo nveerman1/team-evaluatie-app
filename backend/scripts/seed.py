@@ -1385,18 +1385,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         db.refresh(window)
     print_success(f"Created {len(windows)} competency windows")
 
-    # Get competency categories
-    comp_categories = (
-        db.query(CompetencyCategory)
-        .filter(CompetencyCategory.school_id == school.id)
-        .all()
-    )
-
     # Get actual competencies (not just categories)
     # Competencies are created by migrations from templates
     competencies = (
         db.query(Competency)
-        .filter(Competency.school_id == school.id, Competency.active == True)
+        .filter(Competency.school_id == school.id, Competency.active)
         .all()
     )
 

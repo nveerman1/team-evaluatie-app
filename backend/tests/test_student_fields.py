@@ -735,9 +735,7 @@ class TestAdminStudentsCSVExport:
 
         db = MagicMock()
 
-        with patch(
-            "app.api.v1.routers.admin_students._course_name_subquery"
-        ) as mock_csub, patch(
+        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
             "app.api.v1.routers.admin_students._apply_filters",
             return_value=db.query.return_value,
         ), patch(
@@ -794,9 +792,7 @@ class TestAdminStudentsCSVExport:
 
         db = MagicMock()
 
-        with patch(
-            "app.api.v1.routers.admin_students._course_name_subquery"
-        ) as mock_csub, patch(
+        with patch("app.api.v1.routers.admin_students._course_name_subquery"), patch(
             "app.api.v1.routers.admin_students._apply_filters",
             return_value=db.query.return_value,
         ), patch(

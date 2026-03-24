@@ -6,7 +6,7 @@ Pure-function / mock-based tests — no real DB required.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from app.infra.db.models import (
@@ -16,7 +16,6 @@ from app.infra.db.models import (
     ProjectPlanTeam,
     ProjectPlanSection,
     ProjectTeam,
-    Project,
     Subproject,
     User,
 )

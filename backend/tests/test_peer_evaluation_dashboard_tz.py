@@ -9,11 +9,8 @@ with created_at (timezone-aware, from the Base model default).
 """
 
 import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import Mock, patch, MagicMock
-from collections import defaultdict
-
-from app.infra.db.models import User
+from datetime import datetime, timezone
+from unittest.mock import Mock
 
 
 class TestPeerEvaluationDashboardTimezone:
