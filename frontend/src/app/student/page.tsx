@@ -41,7 +41,7 @@ const SUB_NAV_ITEMS = {
     { id: "projectplan", label: "Projectplan", icon: FileText },
     { id: "inleveren", label: "Inleveren", icon: Upload },
     { id: "evaluaties", label: "360° feedback", icon: ClipboardCheck },
-    { id: "beoordeling", label: "Beoordeling", icon: Trophy },
+    { id: "beoordeling", label: "Projectbeoordeling", icon: Trophy },
     { id: "projectevaluatie", label: "Projectevaluatie", icon: MessageSquare },
   ],
 } as const;
