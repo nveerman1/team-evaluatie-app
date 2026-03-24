@@ -196,7 +196,7 @@ export function CombinedTeamCard({
           }}
           onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
           placeholder="Projecttitel…"
-          className="flex-1 min-w-0 text-sm bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-800 placeholder:text-slate-400"
+          className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-800 placeholder:font-normal placeholder:text-slate-400"
           title="Klik om de projecttitel in te stellen"
           aria-label="Projecttitel van dit team"
         />
