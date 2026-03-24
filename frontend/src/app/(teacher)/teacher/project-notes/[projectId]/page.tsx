@@ -170,7 +170,12 @@ export default function ProjectNotesDetailPage({
   // Returns true when the team should be initially expanded due to search/filter matches
   const teamHasSearchMatches = (team: TeamInfo): boolean => {
     if (!search && !searchOmza) return false;
-    
+
+    // Match against the team's saved project title
+    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const savedTitle = teamMeta[String(team.id)]?.title ?? "";
+    if (search && savedTitle.toLowerCase().includes(search.toLowerCase())) return true;
+
     const teamNotes = getNotesForTeam(team);
     return teamNotes.some(note => {
       const matchesSearch = !search || 
@@ -242,7 +247,7 @@ export default function ProjectNotesDetailPage({
           <div className="flex flex-wrap gap-2 items-center">
             <input
               type="text"
-              placeholder="Zoek op naam of in aantekeningen..."
+              placeholder="Zoek op projecttitel, naam of in aantekeningen..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-64 max-w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 shadow-sm"
