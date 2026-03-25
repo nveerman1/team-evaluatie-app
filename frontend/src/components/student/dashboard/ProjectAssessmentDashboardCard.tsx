@@ -13,6 +13,7 @@ export function ProjectAssessmentDashboardCard({
   const status = normalizeProjectAssessmentStatus(assessment.status);
   const isPublished = status === "published";
   const isOpen = status === "open";
+  const isClosed = status === "closed";
 
   const grade = (assessment.metadata_json as any)?.final_grade || (assessment.metadata_json as any)?.suggested_grade;
   const teamLabel = assessment.group_name || (assessment.team_number ? `Team ${assessment.team_number}` : "Onbekend");
@@ -25,16 +26,10 @@ export function ProjectAssessmentDashboardCard({
       : "bg-slate-100 text-slate-700 ring-slate-200";
   const barClass = isPublished ? "bg-emerald-500" : isOpen ? "bg-sky-500" : "bg-slate-300";
 
-  const actionLabel = isPublished ? "Bekijken" : "Zelfbeoordeling";
-  const actionHref = isPublished
-    ? `/student/project-assessments/${assessment.id}`
-    : `/student/project-assessments/${assessment.id}/self`;
+  const showProjectAssessmentButton = isPublished || isClosed;
 
   return (
-    <Link
-      href={actionHref}
-      className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-    >
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       <div className="flex items-stretch">
         {/* Coloured status bar */}
         <div className={`w-1.5 flex-shrink-0 ${barClass}`} />
@@ -64,15 +59,30 @@ export function ProjectAssessmentDashboardCard({
             </div>
           </div>
 
-          {/* Right: action button */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
-            <div className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-slate-800">
-              {actionLabel}
+          {/* Right: action buttons */}
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            {/* Zelfbeoordeling – always visible */}
+            <Link
+              href={`/student/project-assessments/${assessment.id}/self`}
+              className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Zelfbeoordeling
               <span className="ml-2">→</span>
-            </div>
+            </Link>
+
+            {/* Projectbeoordeling – only when published or closed */}
+            {showProjectAssessmentButton && (
+              <Link
+                href={`/student/project-assessments/${assessment.id}`}
+                className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Projectbeoordeling
+                <span className="ml-2">→</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
