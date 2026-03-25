@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
 
 type EvaluationLayoutContextType = {
   autoSaveLabel: string;
@@ -11,12 +17,20 @@ type EvaluationLayoutContextType = {
   setPublishGrades: (fn: (() => Promise<void>) | null) => void;
 };
 
-const EvaluationLayoutContext = createContext<EvaluationLayoutContextType | undefined>(undefined);
+const EvaluationLayoutContext = createContext<
+  EvaluationLayoutContextType | undefined
+>(undefined);
 
-export function EvaluationLayoutProvider({ children }: { children: ReactNode }) {
+export function EvaluationLayoutProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [autoSaveLabel, setAutoSaveLabel] = useState("");
   const [exportCsvUrl, setExportCsvUrl] = useState<string | null>(null);
-  const [publishGrades, setPublishGradesInternal] = useState<(() => Promise<void>) | null>(null);
+  const [publishGrades, setPublishGradesInternal] = useState<
+    (() => Promise<void>) | null
+  >(null);
 
   // Wrapper to properly handle function as state value
   const setPublishGrades = useCallback((fn: (() => Promise<void>) | null) => {
@@ -42,7 +56,9 @@ export function EvaluationLayoutProvider({ children }: { children: ReactNode }) 
 export function useEvaluationLayout() {
   const context = useContext(EvaluationLayoutContext);
   if (!context) {
-    throw new Error("useEvaluationLayout must be used within EvaluationLayoutProvider");
+    throw new Error(
+      "useEvaluationLayout must be used within EvaluationLayoutProvider",
+    );
   }
   return context;
 }

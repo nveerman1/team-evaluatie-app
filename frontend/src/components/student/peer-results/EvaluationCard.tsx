@@ -35,7 +35,7 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
 
   const teamContributionFactor = getTeamContributionFactor(
     data.teamContributionFactor,
-    data.gcfScore
+    data.gcfScore,
   );
 
   const teamContributionLabel =
@@ -46,10 +46,25 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
 
   // Use omzaAverages if provided, otherwise calculate from peers
   const omzaAverages = data.omzaAverages ?? [
-    { key: "O", label: OMZA_LABELS.organiseren, value: averages.organiseren, delta: 0 },
+    {
+      key: "O",
+      label: OMZA_LABELS.organiseren,
+      value: averages.organiseren,
+      delta: 0,
+    },
     { key: "M", label: OMZA_LABELS.meedoen, value: averages.meedoen, delta: 0 },
-    { key: "Z", label: OMZA_LABELS.zelfvertrouwen, value: averages.zelfvertrouwen, delta: 0 },
-    { key: "A", label: OMZA_LABELS.autonomie, value: averages.autonomie, delta: 0 },
+    {
+      key: "Z",
+      label: OMZA_LABELS.zelfvertrouwen,
+      value: averages.zelfvertrouwen,
+      delta: 0,
+    },
+    {
+      key: "A",
+      label: OMZA_LABELS.autonomie,
+      value: averages.autonomie,
+      delta: 0,
+    },
   ];
 
   return (
@@ -61,7 +76,9 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-slate-900">{data.title}</h2>
+            <h2 className="text-base font-semibold text-slate-900">
+              {data.title}
+            </h2>
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
                 data.status === "open"
@@ -153,7 +170,8 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
                 />
               </div>
               <p className="mt-1 text-[11px] text-slate-500">
-                Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
+                Factor waarmee de docent het groepscijfer corrigeert op basis
+                van peer-feedback.
               </p>
             </div>
           )}
@@ -163,11 +181,15 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
             <div className="rounded-xl border border-slate-100 bg-white p-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                 <span>Docent-beoordeling</span>
-                <span className="text-[11px] font-normal text-slate-400">Sprintgemiddelde</span>
+                <span className="text-[11px] font-normal text-slate-400">
+                  Sprintgemiddelde
+                </span>
               </div>
               <div className="mt-2 flex items-baseline justify-between">
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Eindcijfer
+                  </p>
                   <p className="text-2xl font-semibold text-slate-900">
                     {data.teacherGrade.toFixed(1)}
                   </p>
@@ -185,8 +207,12 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
                       key={key}
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
                     >
-                      <span className="text-[10px] font-semibold text-slate-700 mr-1">{key}</span>
-                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
+                      <span className="text-[10px] font-semibold text-slate-700 mr-1">
+                        {key}
+                      </span>
+                      <span
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}
+                      >
                         {getOmzaEmoji(value)}
                       </span>
                     </span>
@@ -201,7 +227,10 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
       {/* OMZA-balken (peer-feedback) */}
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         {omzaAverages.map((item) => (
-          <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+          <div
+            key={item.key}
+            className="rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+          >
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>{item.label}</span>
               <div className="text-right">
@@ -213,8 +242,8 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
                     item.delta > 0
                       ? "text-emerald-600"
                       : item.delta < 0
-                      ? "text-red-600"
-                      : "text-slate-500"
+                        ? "text-red-600"
+                        : "text-slate-500"
                   }`}
                 >
                   Δ {formatDelta(item.delta)} t.o.v. vorige scan
@@ -227,7 +256,9 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
                 style={{ width: `${(item.value / 4) * 100}%` }}
               />
             </div>
-            <p className="mt-1 text-[11px] text-slate-500">0 – 4 schaal uit peer-feedback.</p>
+            <p className="mt-1 text-[11px] text-slate-500">
+              0 – 4 schaal uit peer-feedback.
+            </p>
           </div>
         ))}
       </div>

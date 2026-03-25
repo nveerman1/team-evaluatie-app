@@ -39,14 +39,22 @@ export function usePeerOverview(filters?: PeerOverviewFilters) {
     setLoading(true);
     setError(null);
     try {
-      const response = await peerEvaluationOverviewService.getDashboard(filters);
+      const response =
+        await peerEvaluationOverviewService.getDashboard(filters);
       setData(response);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load peer overview data");
+      setError(
+        e instanceof Error ? e.message : "Failed to load peer overview data",
+      );
     } finally {
       setLoading(false);
     }
-  }, [filters?.studentName, filters?.courseId, filters?.projectId, filters?.period]);
+  }, [
+    filters?.studentName,
+    filters?.courseId,
+    filters?.projectId,
+    filters?.period,
+  ]);
 
   useEffect(() => {
     fetchData();

@@ -30,7 +30,7 @@ export function getErrorMessage(error: unknown): string {
 export function logError(error: unknown, context?: string): void {
   const message = getErrorMessage(error);
   console.error(context ? `[${context}] ${message}` : message, error);
-  
+
   // TODO: Send to backend logging service for production monitoring
   // if (process.env.NODE_ENV === 'production') {
   //   sendToLoggingService({ message, context, error });
@@ -42,7 +42,7 @@ export function logError(error: unknown, context?: string): void {
  */
 export async function handleApiError(response: Response): Promise<never> {
   let detail = "API request failed";
-  
+
   try {
     const data = await response.json();
     detail = data.detail || data.message || detail;
@@ -50,7 +50,7 @@ export async function handleApiError(response: Response): Promise<never> {
     // If response is not JSON, use status text
     detail = response.statusText || detail;
   }
-  
+
   throw new ApiException(detail, response.status, detail);
 }
 
@@ -59,15 +59,14 @@ export async function handleApiError(response: Response): Promise<never> {
  * Usage: const [data, error] = await safeAsync(() => apiCall());
  */
 export async function safeAsync<T>(
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<[T | null, Error | null]> {
   try {
     const result = await fn();
     return [result, null];
   } catch (error) {
-    const err = error instanceof Error 
-      ? error 
-      : new Error(getErrorMessage(error));
+    const err =
+      error instanceof Error ? error : new Error(getErrorMessage(error));
     return [null, err];
   }
 }

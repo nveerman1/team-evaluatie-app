@@ -66,7 +66,10 @@ if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
   // Only log once on initial load
   if (!(window as any).__API_BASE_URL_LOGGED__) {
     console.log("[API Client] baseURL:", baseURL);
-    console.log("[API Client] Full API endpoint example:", `${window.location.origin}${baseURL}/auth/me`);
+    console.log(
+      "[API Client] Full API endpoint example:",
+      `${window.location.origin}${baseURL}/auth/me`,
+    );
     (window as any).__API_BASE_URL_LOGGED__ = true;
   }
 }
@@ -85,9 +88,12 @@ const instance = axios.create({
 instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // Log all requests in development
   if (process.env.NODE_ENV === "development") {
-    console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.url}`, config.data);
+    console.log(
+      `[API REQUEST] ${config.method?.toUpperCase()} ${config.url}`,
+      config.data,
+    );
   }
-  
+
   // Alleen in de browser (SSR heeft geen storage)
   if (typeof window !== "undefined") {
     const email =
@@ -111,7 +117,10 @@ instance.interceptors.response.use(
   (res) => {
     // Log all responses in development
     if (process.env.NODE_ENV === "development") {
-      console.log(`[API RESPONSE] ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`, res.data);
+      console.log(
+        `[API RESPONSE] ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`,
+        res.data,
+      );
     }
     return res;
   },
@@ -119,11 +128,11 @@ instance.interceptors.response.use(
     // Don't log or handle canceled/aborted requests
     // Check multiple conditions for canceled requests
     if (
-      axios.isCancel(err) || 
-      err.code === 'ERR_CANCELED' || 
-      err.message === 'canceled' ||
-      err.name === 'CanceledError' ||
-      err.name === 'AbortError'
+      axios.isCancel(err) ||
+      err.code === "ERR_CANCELED" ||
+      err.message === "canceled" ||
+      err.name === "CanceledError" ||
+      err.name === "AbortError"
     ) {
       return Promise.reject(err);
     }
@@ -132,9 +141,10 @@ instance.interceptors.response.use(
 
     if (status === 401 || status === 403) {
       // Different messages for 401 vs 403
-      const friendlyMessage = status === 401
-        ? "Sessie verlopen. Log opnieuw in."
-        : "Geen toegang tot deze resource.";
+      const friendlyMessage =
+        status === 401
+          ? "Sessie verlopen. Log opnieuw in."
+          : "Geen toegang tot deze resource.";
       const originalMessage =
         (err.response?.data as any)?.detail || err.message || "Auth error";
 
@@ -150,9 +160,11 @@ instance.interceptors.response.use(
     // Netwerk/overige fouten één keer loggen
     // (bijv. 404/500 of geen response door netwerkfout)
     // Silently ignore 404 errors for /users/me endpoint - it's expected when not authenticated
-    const isUserMeNotFound = status === 404 && err.config?.url?.includes('/users/me');
+    const isUserMeNotFound =
+      status === 404 && err.config?.url?.includes("/users/me");
     // Silently ignore 404 for /my-response - expected when student hasn't submitted yet
-    const isMyResponseNotFound = status === 404 && err.config?.url?.includes('/my-response');
+    const isMyResponseNotFound =
+      status === 404 && err.config?.url?.includes("/my-response");
     if (!isUserMeNotFound && !isMyResponseNotFound) {
       const tag = err.response ? "[API ERROR]" : "[API NETWORK ERROR]";
       // eslint-disable-next-line no-console
@@ -166,37 +178,42 @@ instance.interceptors.response.use(
  * Helper for direct fetch() calls that need better error messages
  * Use this for endpoints not yet migrated to axios
  */
-export async function fetchWithErrorHandling(url: string, options?: RequestInit): Promise<Response> {
+export async function fetchWithErrorHandling(
+  url: string,
+  options?: RequestInit,
+): Promise<Response> {
   try {
     // Get X-User-Email from storage (same as axios interceptor)
     let xUserEmail: string | null = null;
-    if (typeof window !== 'undefined') {
-      xUserEmail = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
+    if (typeof window !== "undefined") {
+      xUserEmail =
+        localStorage.getItem("x_user_email") ||
+        sessionStorage.getItem("x_user_email");
     }
 
     const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...(options?.headers as Record<string, string> || {}),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...((options?.headers as Record<string, string>) || {}),
     };
 
     // Add X-User-Email header if available (for dev-login)
     if (xUserEmail) {
-      headers['X-User-Email'] = xUserEmail;
+      headers["X-User-Email"] = xUserEmail;
     }
 
     const response = await fetch(url, {
       ...options,
-      credentials: options?.credentials || 'include',
+      credentials: options?.credentials || "include",
       headers,
     });
 
     if (!response.ok) {
-      let errorBody = '';
+      let errorBody = "";
       try {
         const text = await response.text();
         errorBody = text.substring(0, 2000); // Trim to 2k max
-        
+
         // Try parsing as JSON for better error message
         try {
           const json = JSON.parse(text);
@@ -207,7 +224,7 @@ export async function fetchWithErrorHandling(url: string, options?: RequestInit)
           // Not JSON, use text
         }
       } catch {
-        errorBody = 'Could not read response body';
+        errorBody = "Could not read response body";
       }
 
       const errorInfo = {
@@ -218,7 +235,7 @@ export async function fetchWithErrorHandling(url: string, options?: RequestInit)
       };
 
       // Log to console for debugging
-      console.error('[FETCH ERROR]', errorInfo);
+      console.error("[FETCH ERROR]", errorInfo);
 
       // On 401: clear local auth state and redirect to login
       if (response.status === 401) {
@@ -227,21 +244,23 @@ export async function fetchWithErrorHandling(url: string, options?: RequestInit)
 
       // Throw error with details
       throw new Error(
-        `HTTP ${response.status} ${response.statusText}: ${errorBody}\nURL: ${url}`
+        `HTTP ${response.status} ${response.statusText}: ${errorBody}\nURL: ${url}`,
       );
     }
 
     return response;
   } catch (error) {
     // Network error or thrown error from above
-    if (error instanceof Error && error.message.includes('HTTP')) {
+    if (error instanceof Error && error.message.includes("HTTP")) {
       // Already formatted, rethrow
       throw error;
     }
-    
+
     // Network error
-    console.error('[NETWORK ERROR]', { url, error });
-    throw new Error(`Network error fetching ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("[NETWORK ERROR]", { url, error });
+    throw new Error(
+      `Network error fetching ${url}: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 

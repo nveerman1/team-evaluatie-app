@@ -1,36 +1,36 @@
 // DTOs for ProjectPlan (GO/NO-GO) feature
 
 export enum ProjectPlanStatus {
-  DRAFT = 'draft',
-  OPEN = 'open',
-  PUBLISHED = 'published',
-  CLOSED = 'closed',
+  DRAFT = "draft",
+  OPEN = "open",
+  PUBLISHED = "published",
+  CLOSED = "closed",
 }
 
 export enum PlanStatus {
-  CONCEPT = 'concept',
-  INGEDIEND = 'ingediend',
-  GO = 'go',
-  NO_GO = 'no-go',
+  CONCEPT = "concept",
+  INGEDIEND = "ingediend",
+  GO = "go",
+  NO_GO = "no-go",
 }
 
 export enum SectionKey {
-  CLIENT = 'client',
-  PROBLEM = 'problem',
-  GOAL = 'goal',
-  METHOD = 'method',
-  PLANNING = 'planning',
-  TASKS = 'tasks',
-  MOTIVATION = 'motivation',
-  RISKS = 'risks',
+  CLIENT = "client",
+  PROBLEM = "problem",
+  GOAL = "goal",
+  METHOD = "method",
+  PLANNING = "planning",
+  TASKS = "tasks",
+  MOTIVATION = "motivation",
+  RISKS = "risks",
 }
 
 export enum SectionStatus {
-  EMPTY = 'empty',
-  DRAFT = 'draft',
-  SUBMITTED = 'submitted',
-  APPROVED = 'approved',
-  REVISION = 'revision',
+  EMPTY = "empty",
+  DRAFT = "draft",
+  SUBMITTED = "submitted",
+  APPROVED = "approved",
+  REVISION = "revision",
 }
 
 export interface ClientData {
@@ -47,8 +47,8 @@ export interface ProjectPlanSection {
   status: SectionStatus;
   text?: string;
   client?: ClientData;
-  client_id?: number | null;  // Linked CMS Client ID (Feature A)
-  linked_organization?: string | null;  // Name of the linked CMS client
+  client_id?: number | null; // Linked CMS Client ID (Feature A)
+  linked_organization?: string | null; // Name of the linked CMS client
   teacher_note?: string;
   created_at: string;
   updated_at: string;
@@ -153,7 +153,7 @@ export interface ProjectPlanTeamOverviewItem {
 
 // Feature A: Client linking types
 
-export type LinkClientAction = 'match_existing' | 'create_new';
+export type LinkClientAction = "match_existing" | "create_new";
 
 export interface LinkClientRequest {
   action: LinkClientAction;

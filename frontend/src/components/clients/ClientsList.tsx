@@ -44,7 +44,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
         search: searchQuery || undefined,
         tags: selectedTag,
       });
-      
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -74,27 +74,36 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
   // Memoize unique tags calculation to avoid unnecessary recalculations
   const uniqueTags = useMemo(() => {
     return data?.items
-      ? Array.from(new Set(data.items.flatMap((client) => client.tags || [])))
-          .sort()
+      ? Array.from(
+          new Set(data.items.flatMap((client) => client.tags || [])),
+        ).sort()
       : [];
   }, [data]);
 
   // Memoize unique sectors calculation to avoid unnecessary recalculations
   const uniqueSectors = useMemo(() => {
     return data?.items
-      ? Array.from(new Set(data.items.map((client) => client.sector).filter((s): s is string => !!s)))
-          .sort()
+      ? Array.from(
+          new Set(
+            data.items
+              .map((client) => client.sector)
+              .filter((s): s is string => !!s),
+          ),
+        ).sort()
       : [];
   }, [data]);
 
   // Memoize filtered data to avoid unnecessary recalculations
   const filteredData = useMemo(() => {
-    return data ? {
-      ...data,
-      items: selectedSector !== "Alle" 
-        ? data.items.filter(client => client.sector === selectedSector)
-        : data.items
-    } : null;
+    return data
+      ? {
+          ...data,
+          items:
+            selectedSector !== "Alle"
+              ? data.items.filter((client) => client.sector === selectedSector)
+              : data.items,
+        }
+      : null;
   }, [data, selectedSector]);
 
   return (
@@ -103,7 +112,9 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
         {/* Expertise tags - inline with label */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Expertise-tags</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Expertise-tags
+          </span>
           {uniqueTags.length > 0 ? (
             <>
               {uniqueTags.map((tag) => (
@@ -130,7 +141,10 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               )}
             </>
           ) : (
-            <p className="text-xs text-slate-500">Geen tags gevonden. Tags worden toegevoegd bij het aanmaken van een opdrachtgever.</p>
+            <p className="text-xs text-slate-500">
+              Geen tags gevonden. Tags worden toegevoegd bij het aanmaken van
+              een opdrachtgever.
+            </p>
           )}
         </div>
 
@@ -195,27 +209,40 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
             aria-label="Exporteer naar CSV"
             className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> CSV
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
+            CSV
           </button>
         </div>
       </section>
 
       {loading && <div className="text-center py-8">Laden...</div>}
-      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">Fout: {error}</div>}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Fout: {error}
+        </div>
+      )}
 
       {filteredData && (
         <>
           <div className="text-sm text-slate-600">
-            {filteredData.items.length} opdrachtgever(s) {selectedSector !== "Alle" ? "getoond" : "gevonden"}
-            {data && selectedSector !== "Alle" && data.total !== filteredData.items.length && (
-              <span className="text-slate-500"> (van {data.total} totaal)</span>
-            )}
+            {filteredData.items.length} opdrachtgever(s){" "}
+            {selectedSector !== "Alle" ? "getoond" : "gevonden"}
+            {data &&
+              selectedSector !== "Alle" &&
+              data.total !== filteredData.items.length && (
+                <span className="text-slate-500">
+                  {" "}
+                  (van {data.total} totaal)
+                </span>
+              )}
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Organisatie</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    Organisatie
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">Contact</th>
                   <th className="px-4 py-3 text-left font-medium">Email</th>
                   <th className="px-4 py-3 text-left font-medium">Sector</th>
@@ -226,23 +253,41 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredData.items.map((client) => (
-                  <tr key={client.id} className="hover:bg-indigo-50/60 transition">
+                  <tr
+                    key={client.id}
+                    className="hover:bg-indigo-50/60 transition"
+                  >
                     <td className="px-4 py-3">
-                      <Link href={`/teacher/clients/${client.id}`} className="font-semibold text-slate-900 hover:underline">
+                      <Link
+                        href={`/teacher/clients/${client.id}`}
+                        className="font-semibold text-slate-900 hover:underline"
+                      >
                         {client.organization}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{client.contact_name || "-"}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{client.email || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{client.sector || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{client.level || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{client.projects_this_year}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {client.contact_name || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      {client.email || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {client.sector || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {client.level || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {client.projects_this_year}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
-                        client.active 
-                          ? "bg-emerald-100 text-emerald-700 ring-emerald-200" 
-                          : "bg-slate-100 text-slate-700 ring-slate-200"
-                      }`}>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
+                          client.active
+                            ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
+                            : "bg-slate-100 text-slate-700 ring-slate-200"
+                        }`}
+                      >
                         <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
                         {client.status}
                       </span>
@@ -255,9 +300,23 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
 
           {data && data.pages > 1 && (
             <div className="flex items-center justify-between">
-              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50">Vorige</button>
-              <span className="text-sm">Pagina {page} van {data.pages}</span>
-              <button onClick={() => setPage(Math.min(data.pages, page + 1))} disabled={page === data.pages} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50">Volgende</button>
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+                className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50"
+              >
+                Vorige
+              </button>
+              <span className="text-sm">
+                Pagina {page} van {data.pages}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(data.pages, page + 1))}
+                disabled={page === data.pages}
+                className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50"
+              >
+                Volgende
+              </button>
             </div>
           )}
         </>

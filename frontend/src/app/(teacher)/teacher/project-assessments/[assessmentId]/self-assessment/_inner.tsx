@@ -16,11 +16,11 @@ export default function ProjectAssessmentSelfInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProjectAssessmentSelfOverview | null>(null);
-  
+
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  
+
   // Track which teams are expanded
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
 
@@ -33,16 +33,14 @@ export default function ProjectAssessmentSelfInner() {
           assessmentId,
           searchQuery,
           sortBy,
-          sortOrder
+          sortOrder,
         );
         setData(result);
       } catch (e: any) {
         if (e instanceof ApiAuthError) {
           setError(e.originalMessage);
         } else {
-          setError(
-            e?.response?.data?.detail || e?.message || "Laden mislukt"
-          );
+          setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
         }
       } finally {
         setLoading(false);
@@ -70,7 +68,7 @@ export default function ProjectAssessmentSelfInner() {
   // Group criteria by category
   const groupedCriteria: Record<string, typeof data.criteria> = {};
   const categories: string[] = [];
-  
+
   data.criteria.forEach((c) => {
     const cat = c.category || "Overig";
     if (!groupedCriteria[cat]) {
@@ -82,7 +80,11 @@ export default function ProjectAssessmentSelfInner() {
 
   // Convert score to grade using curved mapping (matches backend calculation)
   // grade = 1 + (normalized ** 0.85) * 9
-  const scoreToGrade = (score: number, scaleMin: number, scaleMax: number): number => {
+  const scoreToGrade = (
+    score: number,
+    scaleMin: number,
+    scaleMax: number,
+  ): number => {
     const scaleRange = scaleMax - scaleMin;
     if (scaleRange <= 0) return 1.0;
     const clampedScore = Math.max(scaleMin, Math.min(scaleMax, score));
@@ -93,38 +95,45 @@ export default function ProjectAssessmentSelfInner() {
   };
 
   // Calculate weighted average scores per category for each team and convert to grades
-  const getTeamCategoryAverages = (team: typeof data.team_overviews[0]) => {
+  const getTeamCategoryAverages = (team: (typeof data.team_overviews)[0]) => {
     const categoryAverages: Record<string, number> = {};
-    
+
     categories.forEach((category) => {
       const categoryCriteria = groupedCriteria[category];
-      
+
       // Calculate weighted average for this category
       let totalWeight = 0;
       let weightedSum = 0;
-      
+
       categoryCriteria.forEach((criterion) => {
         const criterionScore = team.avg_criterion_scores.find(
-          (cs) => cs.criterion_id === criterion.id
+          (cs) => cs.criterion_id === criterion.id,
         );
-        if (criterionScore?.score !== null && criterionScore?.score !== undefined) {
+        if (
+          criterionScore?.score !== null &&
+          criterionScore?.score !== undefined
+        ) {
           const weight = criterion.weight || 1.0;
           weightedSum += criterionScore.score * weight;
           totalWeight += weight;
         }
       });
-      
+
       if (totalWeight > 0) {
         // Calculate weighted average score for this category
         const avgScore = weightedSum / totalWeight;
-        
+
         // Convert to grade (1-10) using curved mapping
-        const grade = scoreToGrade(avgScore, data.rubric_scale_min, data.rubric_scale_max);
-        
+        const grade = scoreToGrade(
+          avgScore,
+          data.rubric_scale_min,
+          data.rubric_scale_max,
+        );
+
         categoryAverages[category] = grade;
       }
     });
-    
+
     return categoryAverages;
   };
 
@@ -173,7 +182,10 @@ export default function ProjectAssessmentSelfInner() {
                   Ingevuld
                 </th>
                 {categories.map((category) => (
-                  <th key={category} className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
+                  <th
+                    key={category}
+                    className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600"
+                  >
                     {category}
                   </th>
                 ))}
@@ -197,7 +209,7 @@ export default function ProjectAssessmentSelfInner() {
                 data.team_overviews.map((team) => {
                   const isExpanded = expandedTeams.has(team.team_number);
                   const categoryAverages = getTeamCategoryAverages(team);
-                  
+
                   return (
                     <React.Fragment key={team.team_number}>
                       {/* Team row */}
@@ -221,15 +233,18 @@ export default function ProjectAssessmentSelfInner() {
                               team.completed_count === team.members.length
                                 ? "bg-emerald-100 text-emerald-700"
                                 : team.completed_count > 0
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-gray-100 text-gray-700"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-gray-100 text-gray-700"
                             }`}
                           >
                             {team.completed_count} / {team.members.length}
                           </span>
                         </td>
                         {categories.map((category) => (
-                          <td key={category} className="px-3 py-4 text-center text-sm font-medium text-gray-900">
+                          <td
+                            key={category}
+                            className="px-3 py-4 text-center text-sm font-medium text-gray-900"
+                          >
                             {categoryAverages[category]
                               ? categoryAverages[category].toFixed(1)
                               : "—"}
@@ -240,7 +255,9 @@ export default function ProjectAssessmentSelfInner() {
                         </td>
                         <td className="px-3 py-4 text-right">
                           <button
-                            onClick={() => toggleTeamExpansion(team.team_number)}
+                            onClick={() =>
+                              toggleTeamExpansion(team.team_number)
+                            }
                             className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
                           >
                             {isExpanded ? (
@@ -261,7 +278,10 @@ export default function ProjectAssessmentSelfInner() {
                       {/* Expanded student details */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={5 + categories.length} className="bg-gray-50 px-6 py-4">
+                          <td
+                            colSpan={5 + categories.length}
+                            className="bg-gray-50 px-6 py-4"
+                          >
                             <div className="space-y-4">
                               <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
                                 Individuele zelfbeoordelingen
@@ -282,7 +302,7 @@ export default function ProjectAssessmentSelfInner() {
                                           <p className="text-xs text-gray-500">
                                             Laatst bijgewerkt:{" "}
                                             {new Date(
-                                              student.updated_at
+                                              student.updated_at,
                                             ).toLocaleDateString("nl-NL")}
                                           </p>
                                         )}
@@ -292,8 +312,9 @@ export default function ProjectAssessmentSelfInner() {
                                           <>
                                             <p className="text-sm font-medium text-gray-700">
                                               Score:{" "}
-                                              {student.total_score?.toFixed(1) ||
-                                                "—"}
+                                              {student.total_score?.toFixed(
+                                                1,
+                                              ) || "—"}
                                             </p>
                                             <p className="text-sm font-semibold text-blue-600">
                                               Cijfer:{" "}
@@ -342,7 +363,7 @@ export default function ProjectAssessmentSelfInner() {
                                                 {criterionScore.comment || "—"}
                                               </td>
                                             </tr>
-                                          )
+                                          ),
                                         )}
                                       </tbody>
                                     </table>

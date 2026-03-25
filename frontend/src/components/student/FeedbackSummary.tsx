@@ -29,12 +29,17 @@ export function FeedbackSummary({
       setError(null);
       const data = await feedbackSummaryService.getStudentSummary(
         evaluationId,
-        studentId
+        studentId,
       );
       setSummary(data);
     } catch (err) {
-      const error = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError(error?.response?.data?.detail || error?.message || "Laden mislukt");
+      const error = err as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      setError(
+        error?.response?.data?.detail || error?.message || "Laden mislukt",
+      );
     } finally {
       setLoading(false);
     }
@@ -44,7 +49,7 @@ export function FeedbackSummary({
     try {
       const data = await feedbackSummaryService.getFeedbackQuotes(
         evaluationId,
-        studentId
+        studentId,
       );
       setQuotes(data.quotes || []);
     } catch {
@@ -64,13 +69,18 @@ export function FeedbackSummary({
       setError(null);
       const data = await feedbackSummaryService.regenerateSummary(
         evaluationId,
-        studentId
+        studentId,
       );
       setSummary(data);
     } catch (err) {
-      const error = err as { response?: { data?: { detail?: string } }; message?: string };
+      const error = err as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
       setError(
-        error?.response?.data?.detail || error?.message || "Regenereren mislukt"
+        error?.response?.data?.detail ||
+          error?.message ||
+          "Regenereren mislukt",
       );
     } finally {
       setRegenerating(false);

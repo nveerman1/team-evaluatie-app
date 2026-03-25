@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { peerEvaluationOverviewService, type ReflectionResponse } from "@/services/peer-evaluation-overview.service";
+import {
+  peerEvaluationOverviewService,
+  type ReflectionResponse,
+} from "@/services/peer-evaluation-overview.service";
 
 export type ReflectionFilters = {
   courseId?: number;
@@ -19,7 +22,8 @@ export function useReflections(filters?: ReflectionFilters) {
       try {
         setLoading(true);
         setError(null);
-        const result = await peerEvaluationOverviewService.getReflections(filters);
+        const result =
+          await peerEvaluationOverviewService.getReflections(filters);
         if (!cancelled) {
           setData(result);
         }

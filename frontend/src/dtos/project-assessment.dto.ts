@@ -1,7 +1,7 @@
 export type ProjectAssessmentOut = {
   id: number;
   school_id: number;
-  project_id: number;  // Required after refactor
+  project_id: number; // Required after refactor
   rubric_id: number;
   teacher_id?: number | null;
   external_evaluator_id?: number | null;
@@ -36,7 +36,7 @@ export type ProjectAssessmentListResponse = {
 };
 
 export type ProjectAssessmentCreate = {
-  project_id: number;  // Required - primary FK to project
+  project_id: number; // Required - primary FK to project
   rubric_id: number;
   title: string;
   version?: string | null;
@@ -66,7 +66,7 @@ export type ProjectAssessmentScoreCreate = {
   score: number;
   comment?: string | null;
   team_number?: number | null;
-  student_id?: number | null;  // If set, this is an individual student override
+  student_id?: number | null; // If set, this is an individual student override
 };
 
 export type ProjectAssessmentScoreBatchRequest = {
@@ -156,7 +156,7 @@ export type CriterionScore = {
   category?: string | null;
   score?: number | null;
   comment?: string | null;
-  is_override?: boolean;  // True if this is an individual student override
+  is_override?: boolean; // True if this is an individual student override
 };
 
 export type TeamScoreOverview = {

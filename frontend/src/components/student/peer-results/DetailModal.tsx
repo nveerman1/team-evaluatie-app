@@ -27,15 +27,18 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
   if (!open || !evaluation) return null;
 
-  const avg: Record<OmzaKey, number> = OMZA_KEYS.reduce((acc, k) => {
-    const list = evaluation.peers.map((p) => p.scores[k]).filter(Boolean);
-    acc[k] = round1(mean(list));
-    return acc;
-  }, {} as Record<OmzaKey, number>);
+  const avg: Record<OmzaKey, number> = OMZA_KEYS.reduce(
+    (acc, k) => {
+      const list = evaluation.peers.map((p) => p.scores[k]).filter(Boolean);
+      acc[k] = round1(mean(list));
+      return acc;
+    },
+    {} as Record<OmzaKey, number>,
+  );
 
   const teamContributionFactor = getTeamContributionFactor(
     evaluation.teamContributionFactor,
-    evaluation.gcfScore
+    evaluation.gcfScore,
   );
 
   const teamContributionLabel =
@@ -46,9 +49,19 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
   // Use omzaAverages if provided, otherwise calculate from peers
   const omzaAverages = evaluation.omzaAverages ?? [
-    { key: "O", label: OMZA_LABELS.organiseren, value: avg.organiseren, delta: 0 },
+    {
+      key: "O",
+      label: OMZA_LABELS.organiseren,
+      value: avg.organiseren,
+      delta: 0,
+    },
     { key: "M", label: OMZA_LABELS.meedoen, value: avg.meedoen, delta: 0 },
-    { key: "Z", label: OMZA_LABELS.zelfvertrouwen, value: avg.zelfvertrouwen, delta: 0 },
+    {
+      key: "Z",
+      label: OMZA_LABELS.zelfvertrouwen,
+      value: avg.zelfvertrouwen,
+      delta: 0,
+    },
     { key: "A", label: OMZA_LABELS.autonomie, value: avg.autonomie, delta: 0 },
   ];
 
@@ -58,7 +71,9 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
         {/* Modal header */}
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">{evaluation.title}</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {evaluation.title}
+            </h2>
             <p className="mt-1 text-xs text-slate-500">
               {evaluation.course} • Deadline:{" "}
               {evaluation.deadlineISO
@@ -111,7 +126,8 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                       AI-samenvatting
                     </p>
                     <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                      {evaluation.aiSummary || "Geen AI-samenvatting beschikbaar."}
+                      {evaluation.aiSummary ||
+                        "Geen AI-samenvatting beschikbaar."}
                     </p>
                   </div>
 
@@ -123,7 +139,8 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                       </span>
                     </div>
                     <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
-                      {evaluation.teacherComments || "Geen opmerkingen toegevoegd."}
+                      {evaluation.teacherComments ||
+                        "Geen opmerkingen toegevoegd."}
                     </p>
                   </div>
 
@@ -165,7 +182,9 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
                   {evaluation.teacherGrade !== undefined && (
                     <div className="rounded-xl border border-slate-100 bg-white p-3">
-                      <p className="text-xs font-semibold text-slate-700">Docentbeoordeling</p>
+                      <p className="text-xs font-semibold text-slate-700">
+                        Docentbeoordeling
+                      </p>
                       <div className="mt-2 flex items-baseline justify-between">
                         <div>
                           <p className="text-[11px] uppercase tracking-wide text-slate-500">
@@ -183,19 +202,23 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                       </div>
                       {evaluation.teacherOmza && (
                         <div className="mt-3 flex flex-wrap gap-1">
-                          {Object.entries(evaluation.teacherOmza).map(([key, value]) => (
-                            <span
-                              key={key}
-                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
-                            >
-                              <span className="text-[10px] font-semibold text-slate-700 mr-1">
-                                {key}
+                          {Object.entries(evaluation.teacherOmza).map(
+                            ([key, value]) => (
+                              <span
+                                key={key}
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
+                              >
+                                <span className="text-[10px] font-semibold text-slate-700 mr-1">
+                                  {key}
+                                </span>
+                                <span
+                                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}
+                                >
+                                  {getOmzaEmoji(value)}
+                                </span>
                               </span>
-                              <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
-                                {getOmzaEmoji(value)}
-                              </span>
-                            </span>
-                          ))}
+                            ),
+                          )}
                         </div>
                       )}
                     </div>
@@ -220,8 +243,8 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                             item.delta > 0
                               ? "text-emerald-600"
                               : item.delta < 0
-                              ? "text-red-600"
-                              : "text-slate-500"
+                                ? "text-red-600"
+                                : "text-slate-500"
                           }`}
                         >
                           Δ {formatDelta(item.delta)} t.o.v. vorige scan
@@ -247,15 +270,23 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
             <div className="space-y-3">
               {evaluation.peers && evaluation.peers.length > 0 ? (
                 evaluation.peers.map((peer, idx) => (
-                  <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                  <div
+                    key={idx}
+                    className="rounded-xl border border-slate-100 bg-slate-50/70 p-4"
+                  >
                     <div className="mb-2 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-slate-900">{peer.peerLabel}</h3>
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        {peer.peerLabel}
+                      </h3>
                     </div>
-                    
+
                     {/* OMZA scores */}
                     <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                       {OMZA_KEYS.map((key) => (
-                        <div key={key} className="rounded-lg border border-slate-200 bg-white p-2">
+                        <div
+                          key={key}
+                          className="rounded-lg border border-slate-200 bg-white p-2"
+                        >
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">
                             {OMZA_LABELS[key]}
                           </p>
@@ -265,11 +296,13 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Feedback notes */}
                     {peer.notes && (
                       <div className="rounded-lg border border-slate-200 bg-white p-3">
-                        <p className="text-xs font-medium text-slate-500 mb-1">Kernfeedback</p>
+                        <p className="text-xs font-medium text-slate-500 mb-1">
+                          Kernfeedback
+                        </p>
                         <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
                           {peer.notes}
                         </p>
@@ -290,10 +323,15 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
               {evaluation.reflection ? (
                 <>
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-900">Jouw reflectie</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Jouw reflectie
+                    </h3>
                     {evaluation.reflection.submittedAt && (
                       <span className="text-xs text-slate-500">
-                        Ingediend op {new Date(evaluation.reflection.submittedAt).toLocaleDateString("nl-NL")}
+                        Ingediend op{" "}
+                        {new Date(
+                          evaluation.reflection.submittedAt,
+                        ).toLocaleDateString("nl-NL")}
                       </span>
                     )}
                   </div>
@@ -315,8 +353,8 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
         {/* Modal footer */}
         <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3">
           <p className="text-xs text-slate-500">
-            Tip: gebruik deze resultaten bij het invullen van je reflectie en het bespreken met je
-            docent.
+            Tip: gebruik deze resultaten bij het invullen van je reflectie en
+            het bespreken met je docent.
           </p>
           <div className="flex gap-2">
             <button

@@ -11,29 +11,39 @@ interface ReflectionsSubTabProps {
 
 export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedReflections, setExpandedReflections] = useState<Set<number>>(new Set());
-  
-  const { data: reflections, loading, error } = useCompetencyReflections(filters);
+  const [expandedReflections, setExpandedReflections] = useState<Set<number>>(
+    new Set(),
+  );
+
+  const {
+    data: reflections,
+    loading,
+    error,
+  } = useCompetencyReflections(filters);
 
   // Client-side filtering for search (to avoid refetch on every keystroke)
-  const [filteredReflections, setFilteredReflections] = useState(reflections || []);
-  
+  const [filteredReflections, setFilteredReflections] = useState(
+    reflections || [],
+  );
+
   useEffect(() => {
     if (!reflections) {
       setFilteredReflections([]);
       return;
     }
-    
+
     if (!searchQuery.trim()) {
       setFilteredReflections(reflections);
       return;
     }
-    
+
     const query = searchQuery.toLowerCase();
-    const filtered = reflections.filter((reflection) => 
-      reflection.reflectionText.toLowerCase().includes(query) ||
-      reflection.studentName.toLowerCase().includes(query) ||
-      (reflection.className && reflection.className.toLowerCase().includes(query))
+    const filtered = reflections.filter(
+      (reflection) =>
+        reflection.reflectionText.toLowerCase().includes(query) ||
+        reflection.studentName.toLowerCase().includes(query) ||
+        (reflection.className &&
+          reflection.className.toLowerCase().includes(query)),
     );
     setFilteredReflections(filtered);
   }, [reflections, searchQuery]);
@@ -82,12 +92,24 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">Leerling</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Klas</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Categorie</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Scan</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Datum</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[350px]">Reflectie</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Leerling
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Klas
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Categorie
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Scan
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Datum
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[350px]">
+                    Reflectie
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -95,9 +117,12 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
                   const isExpanded = expandedReflections.has(reflection.id);
                   const text = reflection.reflectionText;
                   const shouldTruncate = text.length > 150;
-                  
+
                   return (
-                    <tr key={reflection.id} className="bg-white hover:bg-slate-50">
+                    <tr
+                      key={reflection.id}
+                      className="bg-white hover:bg-slate-50"
+                    >
                       <td className="px-5 py-3 text-sm text-slate-800 font-medium">
                         {reflection.studentName}
                       </td>
@@ -164,10 +189,12 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
       {/* Summary Stats */}
       <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
         <p className="text-sm text-slate-600">
-          <span className="font-semibold">{reflections.length}</span> reflecties gevonden
+          <span className="font-semibold">{reflections.length}</span> reflecties
+          gevonden
         </p>
         <p className="text-xs text-slate-500">
-          💡 Reflecties helpen docenten inzicht te krijgen in het leerproces van studenten
+          💡 Reflecties helpen docenten inzicht te krijgen in het leerproces van
+          studenten
         </p>
       </div>
     </div>

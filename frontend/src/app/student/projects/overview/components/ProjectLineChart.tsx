@@ -20,7 +20,7 @@ Chart.register(
   LinearScale,
   CategoryScale,
   Tooltip,
-  Legend
+  Legend,
 );
 
 export type ProjectGradeTrendPoint = {
@@ -75,14 +75,15 @@ export function ProjectLineChart({ data }: ProjectLineChartProps) {
           },
           tooltip: {
             callbacks: {
-              label: (ctx) => `Cijfer: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : 'N/A'}`,
+              label: (ctx) =>
+                `Cijfer: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : "N/A"}`,
             },
           },
         },
         scales: {
           x: {
             grid: { display: false },
-            ticks: { 
+            ticks: {
               font: { size: 10 },
               maxRotation: 45,
               minRotation: 0,
@@ -91,7 +92,7 @@ export function ProjectLineChart({ data }: ProjectLineChartProps) {
           y: {
             min: 1,
             max: 10,
-            ticks: { 
+            ticks: {
               stepSize: 1,
               font: { size: 11 },
             },

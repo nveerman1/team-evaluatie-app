@@ -31,14 +31,16 @@ export default function StudentOverviewTab() {
     selectedCourseId: null,
     selectedStudentId: null,
   });
-  
+
   const [courses, setCourses] = useState<CourseLite[]>([]);
   const [students, setStudents] = useState<CourseStudent[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [feedbackPanelOpen, setFeedbackPanelOpen] = useState(false);
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState<number | null>(null);
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<
+    number | null
+  >(null);
 
   // Fetch courses on mount
   useEffect(() => {
@@ -66,7 +68,9 @@ export default function StudentOverviewTab() {
 
       try {
         setLoadingStudents(true);
-        const studentsData = await courseService.getCourseStudents(filters.selectedCourseId);
+        const studentsData = await courseService.getCourseStudents(
+          filters.selectedCourseId,
+        );
         setStudents(studentsData);
       } catch (error) {
         console.error("Error fetching students:", error);
@@ -80,7 +84,7 @@ export default function StudentOverviewTab() {
 
   // Reset student when course changes
   useEffect(() => {
-    setFilters(prev => ({ ...prev, selectedStudentId: null }));
+    setFilters((prev) => ({ ...prev, selectedStudentId: null }));
     setSearchQuery("");
   }, [filters.selectedCourseId]);
 
@@ -88,28 +92,31 @@ export default function StudentOverviewTab() {
   const filteredStudents = useMemo(() => {
     if (!searchQuery) return students;
     const query = searchQuery.toLowerCase();
-    return students.filter(s => 
-      s.name.toLowerCase().includes(query) || 
-      (s.class_name && s.class_name.toLowerCase().includes(query))
+    return students.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        (s.class_name && s.class_name.toLowerCase().includes(query)),
     );
   }, [students, searchQuery]);
 
   // Current student index for navigation
   const currentStudentIndex = useMemo(() => {
     if (!filters.selectedStudentId || filteredStudents.length === 0) return -1;
-    return filteredStudents.findIndex(s => s.id === filters.selectedStudentId);
+    return filteredStudents.findIndex(
+      (s) => s.id === filters.selectedStudentId,
+    );
   }, [filters.selectedStudentId, filteredStudents]);
 
   // Get selected student
   const selectedStudent = useMemo(() => {
     if (!filters.selectedStudentId) return null;
-    return students.find(s => s.id === filters.selectedStudentId) || null;
+    return students.find((s) => s.id === filters.selectedStudentId) || null;
   }, [filters.selectedStudentId, students]);
 
   // Navigation handlers
   const handlePreviousStudent = useCallback(() => {
     if (currentStudentIndex > 0) {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         selectedStudentId: filteredStudents[currentStudentIndex - 1].id,
       }));
@@ -118,7 +125,7 @@ export default function StudentOverviewTab() {
 
   const handleNextStudent = useCallback(() => {
     if (currentStudentIndex < filteredStudents.length - 1) {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         selectedStudentId: filteredStudents[currentStudentIndex + 1].id,
       }));
@@ -142,9 +149,12 @@ export default function StudentOverviewTab() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Leerlingoverzicht</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Leerlingoverzicht
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Totaaloverzicht van één leerling: projecten, peerevaluaties, competenties en leerdoelen
+            Totaaloverzicht van één leerling: projecten, peerevaluaties,
+            competenties en leerdoelen
           </p>
         </div>
 
@@ -152,10 +162,19 @@ export default function StudentOverviewTab() {
         <div className="bg-gray-50 rounded-xl p-4">
           <div className="flex flex-wrap gap-4 items-center">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Selecteer vak</label>
+              <label className="block text-xs text-gray-600 mb-1">
+                Selecteer vak
+              </label>
               <select
                 value={filters.selectedCourseId || ""}
-                onChange={(e) => setFilters(prev => ({ ...prev, selectedCourseId: e.target.value ? Number(e.target.value) : null }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    selectedCourseId: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  }))
+                }
                 className="px-3 py-2 text-sm border rounded-lg min-w-[200px]"
                 disabled={loadingCourses}
               >
@@ -180,7 +199,9 @@ export default function StudentOverviewTab() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Leerlingoverzicht</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Leerlingoverzicht
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
             Selecteer een leerling om het overzicht te bekijken
           </p>
@@ -190,11 +211,20 @@ export default function StudentOverviewTab() {
         <div className="bg-gray-50 rounded-xl p-4">
           <div className="flex flex-wrap gap-4 items-center">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Selecteer vak</label>
+              <label className="block text-xs text-gray-600 mb-1">
+                Selecteer vak
+              </label>
               <div className="flex gap-2 items-center">
                 <select
                   value={filters.selectedCourseId || ""}
-                  onChange={(e) => setFilters(prev => ({ ...prev, selectedCourseId: e.target.value ? Number(e.target.value) : null }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      selectedCourseId: e.target.value
+                        ? Number(e.target.value)
+                        : null,
+                    }))
+                  }
                   className="px-3 py-2 text-sm border rounded-lg min-w-[200px]"
                 >
                   <option value="">Kies een vak...</option>
@@ -214,7 +244,9 @@ export default function StudentOverviewTab() {
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Zoek leerling</label>
+              <label className="block text-xs text-gray-600 mb-1">
+                Zoek leerling
+              </label>
               <input
                 type="text"
                 value={searchQuery}
@@ -232,7 +264,9 @@ export default function StudentOverviewTab() {
             <div className="p-8 text-center text-gray-500">Laden...</div>
           ) : filteredStudents.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {searchQuery ? "Geen leerlingen gevonden voor deze zoekopdracht" : "Geen leerlingen gevonden in dit vak"}
+              {searchQuery
+                ? "Geen leerlingen gevonden voor deze zoekopdracht"
+                : "Geen leerlingen gevonden in dit vak"}
             </div>
           ) : (
             <table className="w-full">
@@ -250,7 +284,12 @@ export default function StudentOverviewTab() {
                 {filteredStudents.map((student) => (
                   <tr
                     key={student.id}
-                    onClick={() => setFilters(prev => ({ ...prev, selectedStudentId: student.id }))}
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        selectedStudentId: student.id,
+                      }))
+                    }
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <td className="px-4 py-3 text-sm text-gray-900">
@@ -288,11 +327,20 @@ export default function StudentOverviewTab() {
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex gap-4 items-center">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Selecteer vak</label>
+              <label className="block text-xs text-gray-600 mb-1">
+                Selecteer vak
+              </label>
               <div className="flex gap-2 items-center">
                 <select
                   value={filters.selectedCourseId || ""}
-                  onChange={(e) => setFilters(prev => ({ ...prev, selectedCourseId: e.target.value ? Number(e.target.value) : null }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      selectedCourseId: e.target.value
+                        ? Number(e.target.value)
+                        : null,
+                    }))
+                  }
                   className="px-3 py-2 text-sm border rounded-lg min-w-[200px]"
                 >
                   {courses.map((course) => (
@@ -304,7 +352,9 @@ export default function StudentOverviewTab() {
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Zoek leerling</label>
+              <label className="block text-xs text-gray-600 mb-1">
+                Zoek leerling
+              </label>
               <input
                 type="text"
                 value={searchQuery}
@@ -338,15 +388,15 @@ export default function StudentOverviewTab() {
       </div>
 
       {/* A) Project Results */}
-      <ProjectResultsSection 
-        studentId={filters.selectedStudentId} 
+      <ProjectResultsSection
+        studentId={filters.selectedStudentId}
         studentName={selectedStudent?.name || ""}
-        courseId={filters.selectedCourseId} 
+        courseId={filters.selectedCourseId}
       />
 
       {/* B) Evaluations Heatmap - Full width */}
-      <EvaluationHeatmapSection 
-        studentId={filters.selectedStudentId} 
+      <EvaluationHeatmapSection
+        studentId={filters.selectedStudentId}
         studentName={selectedStudent?.name || ""}
         courseId={filters.selectedCourseId}
         onEvaluationClick={handleEvaluationClick}
@@ -354,21 +404,21 @@ export default function StudentOverviewTab() {
 
       {/* C) OMZA Trend (left) + Competency Profile (right) - two columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <OMZATrendSection 
-          studentId={filters.selectedStudentId} 
+        <OMZATrendSection
+          studentId={filters.selectedStudentId}
           courseId={filters.selectedCourseId}
         />
-        
-        <CompetencyProfileSection 
-          studentId={filters.selectedStudentId} 
-          courseId={filters.selectedCourseId} 
+
+        <CompetencyProfileSection
+          studentId={filters.selectedStudentId}
+          courseId={filters.selectedCourseId}
         />
       </div>
 
       {/* E) Learning Objectives */}
-      <LearningObjectivesSection 
-        studentId={filters.selectedStudentId} 
-        courseId={filters.selectedCourseId} 
+      <LearningObjectivesSection
+        studentId={filters.selectedStudentId}
+        courseId={filters.selectedCourseId}
       />
 
       {/* F) Skill Trainings */}
@@ -378,9 +428,9 @@ export default function StudentOverviewTab() {
       />
 
       {/* G) Reflections */}
-      <ReflectionsSection 
-        studentId={filters.selectedStudentId} 
-        courseId={filters.selectedCourseId} 
+      <ReflectionsSection
+        studentId={filters.selectedStudentId}
+        courseId={filters.selectedCourseId}
       />
 
       {/* Feedback Side Panel */}

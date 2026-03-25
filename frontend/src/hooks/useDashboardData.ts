@@ -125,7 +125,11 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       setKpisData(kpis);
     } catch (e: any) {
       // Don't set error state for canceled requests
-      if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
+      if (
+        e.name !== "AbortError" &&
+        e.name !== "CanceledError" &&
+        e.message !== "canceled"
+      ) {
         setErr(errorMsg(e, "Ophalen van dashboarddata mislukte"));
         setDashboard(null);
         setFlagsArr([]);
@@ -149,10 +153,10 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       setKpisData(null);
       return;
     }
-    
+
     const controller = new AbortController();
     void fetchAll(evaluationId, controller.signal);
-    
+
     return () => controller.abort();
   }, [evaluationId, fetchAll]);
 

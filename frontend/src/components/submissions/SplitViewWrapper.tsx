@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import { submissionService } from '@/services/submission.service';
-import { SubmissionOut } from '@/dtos/submission.dto';
-import { DocumentPane } from '@/components/submissions/DocumentPane';
+import React, { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { submissionService } from "@/services/submission.service";
+import { SubmissionOut } from "@/dtos/submission.dto";
+import { DocumentPane } from "@/components/submissions/DocumentPane";
 
 interface SplitViewWrapperProps {
   children: React.ReactNode;
@@ -12,10 +12,14 @@ interface SplitViewWrapperProps {
   teamNumber?: number;
 }
 
-const PANE_WIDTH_KEY = 'documentPaneWidth';
+const PANE_WIDTH_KEY = "documentPaneWidth";
 const DEFAULT_PANE_WIDTH = 50; // percentage
 
-export function SplitViewWrapper({ children, assessmentId, teamNumber }: SplitViewWrapperProps) {
+export function SplitViewWrapper({
+  children,
+  assessmentId,
+  teamNumber,
+}: SplitViewWrapperProps) {
   const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
   const [paneWidth, setPaneWidth] = useState(DEFAULT_PANE_WIDTH);
   const [showPane, setShowPane] = useState(true);
@@ -45,14 +49,15 @@ export function SplitViewWrapper({ children, assessmentId, teamNumber }: SplitVi
   const loadSubmissionsForTeam = async () => {
     try {
       // Get all submissions for the assessment
-      const data = await submissionService.getSubmissionsForAssessment(assessmentId);
+      const data =
+        await submissionService.getSubmissionsForAssessment(assessmentId);
       // Filter for current team
       const teamSubmissions = data.items
-        .filter(item => item.team_number === teamNumber)
-        .map(item => item.submission);
+        .filter((item) => item.team_number === teamNumber)
+        .map((item) => item.submission);
       setSubmissions(teamSubmissions);
     } catch (err) {
-      console.error('Failed to load submissions:', err);
+      console.error("Failed to load submissions:", err);
     }
   };
 
@@ -64,10 +69,10 @@ export function SplitViewWrapper({ children, assessmentId, teamNumber }: SplitVi
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      
+
       const containerWidth = window.innerWidth;
       const newWidth = ((containerWidth - e.clientX) / containerWidth) * 100;
-      
+
       // Constrain between 20% and 70%
       const constrainedWidth = Math.max(20, Math.min(70, newWidth));
       savePaneWidth(constrainedWidth);
@@ -78,11 +83,11 @@ export function SplitViewWrapper({ children, assessmentId, teamNumber }: SplitVi
     };
 
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
       };
     }
   }, [isResizing]);
@@ -96,26 +101,20 @@ export function SplitViewWrapper({ children, assessmentId, teamNumber }: SplitVi
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Main content area */}
-      <div 
-        className="overflow-auto"
-        style={{ width: `${contentWidth}%` }}
-      >
+      <div className="overflow-auto" style={{ width: `${contentWidth}%` }}>
         {children}
       </div>
 
       {/* Resizable divider */}
       <div
         className={`w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize ${
-          isResizing ? 'bg-blue-500' : ''
+          isResizing ? "bg-blue-500" : ""
         }`}
         onMouseDown={handleMouseDown}
       />
 
       {/* Document pane */}
-      <div 
-        className="overflow-hidden"
-        style={{ width: `${paneWidth}%` }}
-      >
+      <div className="overflow-hidden" style={{ width: `${paneWidth}%` }}>
         <DocumentPane
           submissions={submissions}
           teamId={teamNumber}

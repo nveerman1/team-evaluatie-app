@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ExternalLink, FileText, Presentation, ChevronLeft, ChevronRight } from 'lucide-react';
-import { SubmissionOut } from '@/dtos/submission.dto';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ExternalLink,
+  FileText,
+  Presentation,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { SubmissionOut } from "@/dtos/submission.dto";
 
 interface DocumentPaneProps {
   submissions: SubmissionOut[];
@@ -13,14 +19,22 @@ interface DocumentPaneProps {
   onClose?: () => void;
 }
 
-export function DocumentPane({ submissions, teamId, assessmentId, onClose }: DocumentPaneProps) {
-  const [selectedDocType, setSelectedDocType] = useState<'report' | 'slides'>('report');
+export function DocumentPane({
+  submissions,
+  teamId,
+  assessmentId,
+  onClose,
+}: DocumentPaneProps) {
+  const [selectedDocType, setSelectedDocType] = useState<"report" | "slides">(
+    "report",
+  );
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const reportSubmission = submissions.find((s) => s.doc_type === 'report');
-  const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
-  
-  const currentSubmission = selectedDocType === 'report' ? reportSubmission : slidesSubmission;
+  const reportSubmission = submissions.find((s) => s.doc_type === "report");
+  const slidesSubmission = submissions.find((s) => s.doc_type === "slides");
+
+  const currentSubmission =
+    selectedDocType === "report" ? reportSubmission : slidesSubmission;
 
   if (isCollapsed) {
     return (
@@ -60,18 +74,18 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
       {/* Document type toggle */}
       <div className="flex gap-2 p-4 border-b border-gray-200">
         <Button
-          variant={selectedDocType === 'report' ? 'default' : 'secondary'}
+          variant={selectedDocType === "report" ? "default" : "secondary"}
           size="sm"
-          onClick={() => setSelectedDocType('report')}
+          onClick={() => setSelectedDocType("report")}
           className="flex items-center gap-2"
         >
           <FileText className="h-4 w-4" />
           Verslag
         </Button>
         <Button
-          variant={selectedDocType === 'slides' ? 'default' : 'secondary'}
+          variant={selectedDocType === "slides" ? "default" : "secondary"}
           size="sm"
-          onClick={() => setSelectedDocType('slides')}
+          onClick={() => setSelectedDocType("slides")}
           className="flex items-center gap-2"
         >
           <Presentation className="h-4 w-4" />
@@ -85,17 +99,24 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Status: {currentSubmission.status}</p>
+                <p className="text-sm font-medium">
+                  Status: {currentSubmission.status}
+                </p>
                 {currentSubmission.submitted_at && (
                   <p className="text-xs text-muted-foreground">
-                    Ingeleverd op: {new Date(currentSubmission.submitted_at).toLocaleString('nl-NL')}
+                    Ingeleverd op:{" "}
+                    {new Date(currentSubmission.submitted_at).toLocaleString(
+                      "nl-NL",
+                    )}
                   </p>
                 )}
               </div>
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => window.open(currentSubmission.url || '', '_blank')}
+                onClick={() =>
+                  window.open(currentSubmission.url || "", "_blank")
+                }
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Open in nieuw tabblad
@@ -112,7 +133,8 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
                   <div className="text-center space-y-2">
                     <ExternalLink className="h-8 w-8 mx-auto text-gray-400" />
                     <p className="text-sm text-gray-600">
-                      Klik op "Open in nieuw tabblad" om het document te bekijken
+                      Klik op "Open in nieuw tabblad" om het document te
+                      bekijken
                     </p>
                     <p className="text-xs text-gray-500">
                       {currentSubmission.url}
@@ -122,18 +144,20 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
               </CardContent>
             </Card>
 
-            {currentSubmission.status === 'access_requested' && (
+            {currentSubmission.status === "access_requested" && (
               <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                 <p className="text-sm text-yellow-800 font-medium">
-                  ⚠️ Je hebt aangegeven dat je het document niet kunt openen. Studenten zijn op de hoogte gesteld.
+                  ⚠️ Je hebt aangegeven dat je het document niet kunt openen.
+                  Studenten zijn op de hoogte gesteld.
                 </p>
               </div>
             )}
 
-            {currentSubmission.status === 'broken' && (
+            {currentSubmission.status === "broken" && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-800 font-medium">
-                  ❌ Je hebt aangegeven dat de link niet werkt. Studenten zijn op de hoogte gesteld.
+                  ❌ Je hebt aangegeven dat de link niet werkt. Studenten zijn
+                  op de hoogte gesteld.
                 </p>
               </div>
             )}

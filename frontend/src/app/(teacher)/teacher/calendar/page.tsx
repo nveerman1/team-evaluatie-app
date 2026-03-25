@@ -2,12 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { evaluationService, projectService, competencyService, taskService } from "@/services";
+import {
+  evaluationService,
+  projectService,
+  competencyService,
+  taskService,
+} from "@/services";
 import type { ProjectListItem } from "@/dtos/project.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
 
-type EventType = "project_start" | "project_end" | "peer_deadline_review" | "peer_deadline_reflection" | "competency_deadline" | "project_note" | "reminder" | "task_opdrachtgever" | "task_docent" | "task_project";
+type EventType =
+  | "project_start"
+  | "project_end"
+  | "peer_deadline_review"
+  | "peer_deadline_reflection"
+  | "competency_deadline"
+  | "project_note"
+  | "reminder"
+  | "task_opdrachtgever"
+  | "task_docent"
+  | "task_project";
 
 type CalendarEvent = {
   id: string;
@@ -66,7 +81,9 @@ export default function CalendarPage() {
   const [selectedEventType, setSelectedEventType] = useState<string>("all");
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [courses, setCourses] = useState<{ id: number; name: string }[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null,
+  );
 
   useEffect(() => {
     loadCalendarData();
@@ -75,12 +92,13 @@ export default function CalendarPage() {
   async function loadCalendarData() {
     setLoading(true);
     try {
-      const [evalsData, projectsData, windowsData, tasksData] = await Promise.all([
-        evaluationService.getEvaluations({}),
-        projectService.listProjects({ per_page: 100 }),
-        competencyService.getWindows("open"),
-        taskService.listTasks({ status: "open", per_page: 100 }),
-      ]);
+      const [evalsData, projectsData, windowsData, tasksData] =
+        await Promise.all([
+          evaluationService.getEvaluations({}),
+          projectService.listProjects({ per_page: 100 }),
+          competencyService.getWindows("open"),
+          taskService.listTasks({ status: "open", per_page: 100 }),
+        ]);
 
       const evaluations = Array.isArray(evalsData) ? evalsData : [];
       const projectsList = projectsData?.items || [];
@@ -101,7 +119,9 @@ export default function CalendarPage() {
           courseMap.set(p.course_id, `Course ${p.course_id}`);
         }
       });
-      setCourses(Array.from(courseMap.entries()).map(([id, name]) => ({ id, name })));
+      setCourses(
+        Array.from(courseMap.entries()).map(([id, name]) => ({ id, name })),
+      );
 
       // Generate calendar events
       const calendarEvents: CalendarEvent[] = [];
@@ -115,9 +135,16 @@ export default function CalendarPage() {
             description: `Project begint`,
             date: new Date(project.start_date),
             type: "project_start",
-            status: project.status === "active" ? "in_progress" : project.status === "completed" ? "completed" : "not_started",
+            status:
+              project.status === "active"
+                ? "in_progress"
+                : project.status === "completed"
+                  ? "completed"
+                  : "not_started",
             projectName: project.title,
-            courseName: project.course_id ? `Course ${project.course_id}` : undefined,
+            courseName: project.course_id
+              ? `Course ${project.course_id}`
+              : undefined,
             link: `/teacher/projects/${project.id}`,
             metadata: { projectId: project.id, courseId: project.course_id },
           });
@@ -130,9 +157,16 @@ export default function CalendarPage() {
             description: `Project eindigt`,
             date: new Date(project.end_date),
             type: "project_end",
-            status: project.status === "completed" ? "completed" : new Date(project.end_date) < new Date() ? "completed" : "not_started",
+            status:
+              project.status === "completed"
+                ? "completed"
+                : new Date(project.end_date) < new Date()
+                  ? "completed"
+                  : "not_started",
             projectName: project.title,
-            courseName: project.course_id ? `Course ${project.course_id}` : undefined,
+            courseName: project.course_id
+              ? `Course ${project.course_id}`
+              : undefined,
             link: `/teacher/projects/${project.id}`,
             metadata: { projectId: project.id, courseId: project.course_id },
           });
@@ -151,10 +185,18 @@ export default function CalendarPage() {
             description: `Peer-evaluatie review deadline`,
             date: new Date(reviewDeadline),
             type: "peer_deadline_review",
-            status: evaluation.status === "closed" ? "completed" : evaluation.status === "open" ? "in_progress" : "not_started",
+            status:
+              evaluation.status === "closed"
+                ? "completed"
+                : evaluation.status === "open"
+                  ? "in_progress"
+                  : "not_started",
             courseName: evaluation.cluster,
             link: `/teacher/evaluations/${evaluation.id}/dashboard`,
-            metadata: { evaluationId: evaluation.id, courseId: evaluation.course_id },
+            metadata: {
+              evaluationId: evaluation.id,
+              courseId: evaluation.course_id,
+            },
           });
         }
 
@@ -165,10 +207,18 @@ export default function CalendarPage() {
             description: `Reflectie deadline`,
             date: new Date(reflectionDeadline),
             type: "peer_deadline_reflection",
-            status: evaluation.status === "closed" ? "completed" : evaluation.status === "open" ? "in_progress" : "not_started",
+            status:
+              evaluation.status === "closed"
+                ? "completed"
+                : evaluation.status === "open"
+                  ? "in_progress"
+                  : "not_started",
             courseName: evaluation.cluster,
             link: `/teacher/evaluations/${evaluation.id}/dashboard`,
-            metadata: { evaluationId: evaluation.id, courseId: evaluation.course_id },
+            metadata: {
+              evaluationId: evaluation.id,
+              courseId: evaluation.course_id,
+            },
           });
         }
       });
@@ -182,8 +232,15 @@ export default function CalendarPage() {
             description: `Competentiescan deadline`,
             date: new Date(window.end_date),
             type: "competency_deadline",
-            status: window.status === "closed" ? "completed" : window.status === "open" ? "in_progress" : "not_started",
-            courseName: window.course_id ? `Course ${window.course_id}` : undefined,
+            status:
+              window.status === "closed"
+                ? "completed"
+                : window.status === "open"
+                  ? "in_progress"
+                  : "not_started",
+            courseName: window.course_id
+              ? `Course ${window.course_id}`
+              : undefined,
             link: `/teacher/competencies/windows/${window.id}`,
             metadata: { windowId: window.id, courseId: window.course_id },
           });
@@ -194,12 +251,15 @@ export default function CalendarPage() {
       tasks.forEach((task) => {
         if (task.due_date) {
           const taskType = `task_${task.type}` as EventType;
-          const statusMap: Record<string, "not_started" | "in_progress" | "completed"> = {
+          const statusMap: Record<
+            string,
+            "not_started" | "in_progress" | "completed"
+          > = {
             open: "in_progress",
             done: "completed",
             dismissed: "completed",
           };
-          
+
           calendarEvents.push({
             id: `task-${task.id}`,
             title: task.title,
@@ -231,10 +291,16 @@ export default function CalendarPage() {
 
   // Filter events based on selected filters
   const filteredEvents = events.filter((event) => {
-    if (selectedProject !== "all" && event.metadata?.projectId?.toString() !== selectedProject) {
+    if (
+      selectedProject !== "all" &&
+      event.metadata?.projectId?.toString() !== selectedProject
+    ) {
       return false;
     }
-    if (selectedCourse !== "all" && event.metadata?.courseId?.toString() !== selectedCourse) {
+    if (
+      selectedCourse !== "all" &&
+      event.metadata?.courseId?.toString() !== selectedCourse
+    ) {
       return false;
     }
     if (selectedEventType !== "all" && event.type !== selectedEventType) {
@@ -309,7 +375,9 @@ export default function CalendarPage() {
           <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
             {/* View Mode Selector */}
             <div>
-              <p className="uppercase text-xs tracking-wide font-semibold text-slate-500 mb-2">Weergave</p>
+              <p className="uppercase text-xs tracking-wide font-semibold text-slate-500 mb-2">
+                Weergave
+              </p>
               <div className="inline-flex bg-slate-100 rounded-full p-1 text-xs font-medium">
                 <button
                   onClick={() => setViewMode("month")}
@@ -340,7 +408,9 @@ export default function CalendarPage() {
 
             {/* Project Filter */}
             <div className="space-y-1 text-sm">
-              <label className="text-xs font-medium text-slate-500">Project</label>
+              <label className="text-xs font-medium text-slate-500">
+                Project
+              </label>
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
@@ -357,7 +427,9 @@ export default function CalendarPage() {
 
             {/* Course Filter */}
             <div className="space-y-1 text-sm">
-              <label className="text-xs font-medium text-slate-500">Vak / klas</label>
+              <label className="text-xs font-medium text-slate-500">
+                Vak / klas
+              </label>
               <select
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
@@ -374,7 +446,9 @@ export default function CalendarPage() {
 
             {/* Event Type Filter */}
             <div className="space-y-1 text-sm">
-              <label className="text-xs font-medium text-slate-500">Type event</label>
+              <label className="text-xs font-medium text-slate-500">
+                Type event
+              </label>
               <select
                 value={selectedEventType}
                 onChange={(e) => setSelectedEventType(e.target.value)}
@@ -383,9 +457,15 @@ export default function CalendarPage() {
                 <option value="all">Alle events</option>
                 <option value="project_start">Project start</option>
                 <option value="project_end">Project einde</option>
-                <option value="peer_deadline_review">Peer-evaluatie deadline</option>
-                <option value="peer_deadline_reflection">Reflectie deadline</option>
-                <option value="competency_deadline">Competentiescan deadline</option>
+                <option value="peer_deadline_review">
+                  Peer-evaluatie deadline
+                </option>
+                <option value="peer_deadline_reflection">
+                  Reflectie deadline
+                </option>
+                <option value="competency_deadline">
+                  Competentiescan deadline
+                </option>
               </select>
             </div>
           </section>
@@ -452,11 +532,16 @@ export default function CalendarPage() {
               <div className="text-right text-sm">
                 <p className="font-semibold">
                   {viewMode === "month"
-                    ? currentDate.toLocaleDateString("nl-NL", { month: "long", year: "numeric" })
+                    ? currentDate.toLocaleDateString("nl-NL", {
+                        month: "long",
+                        year: "numeric",
+                      })
                     : `Week van ${currentDate.toLocaleDateString("nl-NL")}`}
                 </p>
                 {viewMode === "month" && (
-                  <p className="text-xs text-slate-500">Zaterdag en zondag zijn verborgen</p>
+                  <p className="text-xs text-slate-500">
+                    Zaterdag en zondag zijn verborgen
+                  </p>
                 )}
               </div>
             </div>
@@ -467,9 +552,17 @@ export default function CalendarPage() {
             {viewMode === "agenda" ? (
               <AgendaView events={viewEvents} onEventClick={setSelectedEvent} />
             ) : viewMode === "week" ? (
-              <WeekView events={viewEvents} currentDate={currentDate} onEventClick={setSelectedEvent} />
+              <WeekView
+                events={viewEvents}
+                currentDate={currentDate}
+                onEventClick={setSelectedEvent}
+              />
             ) : (
-              <MonthView events={viewEvents} currentDate={currentDate} onEventClick={setSelectedEvent} />
+              <MonthView
+                events={viewEvents}
+                currentDate={currentDate}
+                onEventClick={setSelectedEvent}
+              />
             )}
 
             {/* Legend Section */}
@@ -508,18 +601,29 @@ export default function CalendarPage() {
 
       {/* Event Detail Modal */}
       {selectedEvent && (
-        <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
       )}
     </div>
   );
 }
 
 // Agenda View Component
-function AgendaView({ events, onEventClick }: { events: CalendarEvent[]; onEventClick: (event: CalendarEvent) => void }) {
+function AgendaView({
+  events,
+  onEventClick,
+}: {
+  events: CalendarEvent[];
+  onEventClick: (event: CalendarEvent) => void;
+}) {
   if (events.length === 0) {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-slate-500 text-center py-8">Geen aankomende events.</p>
+        <p className="text-slate-500 text-center py-8">
+          Geen aankomende events.
+        </p>
       </div>
     );
   }
@@ -535,30 +639,38 @@ function AgendaView({ events, onEventClick }: { events: CalendarEvent[]; onEvent
               event.status === "completed"
                 ? "bg-emerald-50 border-emerald-200"
                 : event.status === "in_progress"
-                ? "bg-amber-50 border-amber-200"
-                : "bg-slate-50 border-slate-200"
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-slate-50 border-slate-200"
             }`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xl">{EVENT_ICONS[event.type]}</span>
-                  <h3 className="font-semibold text-slate-900">{event.title}</h3>
+                  <h3 className="font-semibold text-slate-900">
+                    {event.title}
+                  </h3>
                   {event.status && (
                     <span
                       className={`text-xs px-2 py-1 rounded-full ${
                         event.status === "completed"
                           ? "bg-emerald-100 text-emerald-700"
                           : event.status === "in_progress"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-100 text-slate-700"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-slate-100 text-slate-700"
                       }`}
                     >
-                      {event.status === "completed" ? "✓ Afgerond" : event.status === "in_progress" ? "⏳ Bezig" : "○ Niet gestart"}
+                      {event.status === "completed"
+                        ? "✓ Afgerond"
+                        : event.status === "in_progress"
+                          ? "⏳ Bezig"
+                          : "○ Niet gestart"}
                     </span>
                   )}
                 </div>
-                <div className="text-sm text-slate-600 mb-1">{event.description}</div>
+                <div className="text-sm text-slate-600 mb-1">
+                  {event.description}
+                </div>
                 <div className="text-xs text-slate-500">
                   {formatDate(event.date.toISOString())}
                   {event.courseName && ` • ${event.courseName}`}
@@ -577,7 +689,15 @@ function AgendaView({ events, onEventClick }: { events: CalendarEvent[]; onEvent
 }
 
 // Week View Component (Weekdays Only - Monday to Friday)
-function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent[]; currentDate: Date; onEventClick: (event: CalendarEvent) => void }) {
+function WeekView({
+  events,
+  currentDate,
+  onEventClick,
+}: {
+  events: CalendarEvent[];
+  currentDate: Date;
+  onEventClick: (event: CalendarEvent) => void;
+}) {
   // Find the Monday of the current week
   const startOfWeek = new Date(currentDate);
   const day = startOfWeek.getDay();
@@ -616,7 +736,9 @@ function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent
                 isToday ? "border-blue-500 bg-blue-50" : "border-slate-200"
               }`}
             >
-              <div className={`text-center mb-3 ${isToday ? "text-blue-700" : ""}`}>
+              <div
+                className={`text-center mb-3 ${isToday ? "text-blue-700" : ""}`}
+              >
                 <div className="text-xs font-medium text-slate-500">
                   {day.toLocaleDateString("nl-NL", { weekday: "short" })}
                 </div>
@@ -631,8 +753,8 @@ function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent
                       event.status === "completed"
                         ? "border-l-emerald-500 bg-emerald-50"
                         : event.status === "in_progress"
-                        ? "border-l-amber-500 bg-amber-50"
-                        : "border-l-slate-400 bg-slate-50"
+                          ? "border-l-amber-500 bg-amber-50"
+                          : "border-l-slate-400 bg-slate-50"
                     }`}
                     title={`${event.title} - ${event.description}`}
                   >
@@ -651,7 +773,15 @@ function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent
 }
 
 // Month View Component (Weekdays Only - Monday to Friday)
-function MonthView({ events, currentDate, onEventClick }: { events: CalendarEvent[]; currentDate: Date; onEventClick: (event: CalendarEvent) => void }) {
+function MonthView({
+  events,
+  currentDate,
+  onEventClick,
+}: {
+  events: CalendarEvent[];
+  currentDate: Date;
+  onEventClick: (event: CalendarEvent) => void;
+}) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -700,10 +830,14 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
             <div
               key={i}
               className={`rounded-xl border p-2 h-[100px] text-[10px] ${
-                isToday ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-slate-50"
+                isToday
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-slate-200 bg-slate-50"
               }`}
             >
-              <span className={`block text-slate-600 font-medium mb-1 ${isToday ? "text-blue-700" : ""}`}>
+              <span
+                className={`block text-slate-600 font-medium mb-1 ${isToday ? "text-blue-700" : ""}`}
+              >
                 {day.getDate()}
               </span>
               <div className="space-y-1">
@@ -715,8 +849,8 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
                       event.status === "completed"
                         ? "border-l-emerald-500 bg-emerald-50"
                         : event.status === "in_progress"
-                        ? "border-l-amber-500 bg-amber-50"
-                        : "border-l-slate-400 bg-slate-100"
+                          ? "border-l-amber-500 bg-amber-50"
+                          : "border-l-slate-400 bg-slate-100"
                     }`}
                     title={`${event.title} - ${event.description}`}
                   >
@@ -726,7 +860,9 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
                   </div>
                 ))}
                 {dayEvents.length > 2 && (
-                  <div className="text-[9px] text-slate-500 text-center">+{dayEvents.length - 2}</div>
+                  <div className="text-[9px] text-slate-500 text-center">
+                    +{dayEvents.length - 2}
+                  </div>
                 )}
               </div>
             </div>
@@ -738,19 +874,36 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
 }
 
 // Event Detail Modal Component
-function EventDetailModal({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
+function EventDetailModal({
+  event,
+  onClose,
+}: {
+  event: CalendarEvent;
+  onClose: () => void;
+}) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <span className="text-3xl">{EVENT_ICONS[event.type]}</span>
             <div>
               <h2 className="text-xl font-semibold">{event.title}</h2>
-              <p className="text-sm text-gray-600">{EVENT_LABELS[event.type]}</p>
+              <p className="text-sm text-gray-600">
+                {EVENT_LABELS[event.type]}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          >
             ×
           </button>
         </div>
@@ -758,12 +911,16 @@ function EventDetailModal({ event, onClose }: { event: CalendarEvent; onClose: (
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 mb-1">Beschrijving</p>
-            <p className="text-gray-800">{event.description || "Geen beschrijving"}</p>
+            <p className="text-gray-800">
+              {event.description || "Geen beschrijving"}
+            </p>
           </div>
 
           <div>
             <p className="text-sm text-gray-600 mb-1">Datum</p>
-            <p className="text-gray-800">{formatDate(event.date.toISOString())}</p>
+            <p className="text-gray-800">
+              {formatDate(event.date.toISOString())}
+            </p>
           </div>
 
           {event.projectName && (
@@ -788,11 +945,15 @@ function EventDetailModal({ event, onClose }: { event: CalendarEvent; onClose: (
                   event.status === "completed"
                     ? "bg-green-100 text-green-800"
                     : event.status === "in_progress"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-gray-100 text-gray-800"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-gray-100 text-gray-800"
                 }`}
               >
-                {event.status === "completed" ? "✓ Afgerond" : event.status === "in_progress" ? "⏳ Bezig" : "○ Niet gestart"}
+                {event.status === "completed"
+                  ? "✓ Afgerond"
+                  : event.status === "in_progress"
+                    ? "⏳ Bezig"
+                    : "○ Niet gestart"}
               </span>
             </div>
           )}

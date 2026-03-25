@@ -42,7 +42,10 @@ export const rubricImportService = {
   /**
    * Preview CSV import without saving to database
    */
-  async preview(file: File, subjectId?: number | null): Promise<CsvPreviewResult> {
+  async preview(
+    file: File,
+    subjectId?: number | null,
+  ): Promise<CsvPreviewResult> {
     const formData = new FormData();
     formData.append("file", file);
     const params = subjectId ? `?subject_id=${subjectId}` : "";
@@ -57,7 +60,10 @@ export const rubricImportService = {
   /**
    * Import rubrics from CSV file
    */
-  async importCsv(file: File, subjectId?: number | null): Promise<CsvImportResult> {
+  async importCsv(
+    file: File,
+    subjectId?: number | null,
+  ): Promise<CsvImportResult> {
     const formData = new FormData();
     formData.append("file", file);
     const params = subjectId ? `?subject_id=${subjectId}` : "";

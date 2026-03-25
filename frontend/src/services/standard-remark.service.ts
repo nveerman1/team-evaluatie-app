@@ -20,11 +20,11 @@ export interface ListStandardRemarksParams {
  * List standard remarks with optional filters
  */
 export async function listStandardRemarks(
-  params?: ListStandardRemarksParams
+  params?: ListStandardRemarksParams,
 ): Promise<StandardRemarkListResponse> {
   const response = await api.get<StandardRemarkListResponse>(
     "/templates/standard-remarks",
-    { params }
+    { params },
   );
   return response.data;
 }
@@ -32,9 +32,11 @@ export async function listStandardRemarks(
 /**
  * Get a single standard remark by ID
  */
-export async function getStandardRemark(id: number): Promise<StandardRemarkDto> {
+export async function getStandardRemark(
+  id: number,
+): Promise<StandardRemarkDto> {
   const response = await api.get<StandardRemarkDto>(
-    `/templates/standard-remarks/${id}`
+    `/templates/standard-remarks/${id}`,
   );
   return response.data;
 }
@@ -43,11 +45,11 @@ export async function getStandardRemark(id: number): Promise<StandardRemarkDto> 
  * Create a new standard remark
  */
 export async function createStandardRemark(
-  data: StandardRemarkCreateDto
+  data: StandardRemarkCreateDto,
 ): Promise<StandardRemarkDto> {
   const response = await api.post<StandardRemarkDto>(
     "/templates/standard-remarks",
-    data
+    data,
   );
   return response.data;
 }
@@ -57,11 +59,11 @@ export async function createStandardRemark(
  */
 export async function updateStandardRemark(
   id: number,
-  data: StandardRemarkUpdateDto
+  data: StandardRemarkUpdateDto,
 ): Promise<StandardRemarkDto> {
   const response = await api.patch<StandardRemarkDto>(
     `/templates/standard-remarks/${id}`,
-    data
+    data,
   );
   return response.data;
 }

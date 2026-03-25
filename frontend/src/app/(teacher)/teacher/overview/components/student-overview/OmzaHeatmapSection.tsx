@@ -13,9 +13,9 @@ import {
   Legend,
 } from "chart.js";
 import { peerEvaluationOverviewService } from "@/services/peer-evaluation-overview.service";
-import type { 
+import type {
   StudentHeatmapRow,
-  OmzaTrendDataPoint
+  OmzaTrendDataPoint,
 } from "@/services/peer-evaluation-overview.service";
 
 // Register Chart.js components
@@ -26,7 +26,7 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 interface EvaluationHeatmapSectionProps {
@@ -44,11 +44,21 @@ function getScoreColor(score: number | null): string {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
-export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClick }: EvaluationHeatmapSectionProps) {
-  const [studentData, setStudentData] = useState<StudentHeatmapRow | null>(null);
+export function EvaluationHeatmapSection({
+  studentId,
+  courseId,
+  onEvaluationClick,
+}: EvaluationHeatmapSectionProps) {
+  const [studentData, setStudentData] = useState<StudentHeatmapRow | null>(
+    null,
+  );
   const [trendData, setTrendData] = useState<OmzaTrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,9 +71,11 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
         });
 
         // Find student in heatmap data
-        const student = response.heatmapData.find(s => s.student_id === studentId);
+        const student = response.heatmapData.find(
+          (s) => s.student_id === studentId,
+        );
         setStudentData(student || null);
-        
+
         // Set trend data for OMZA chart
         setTrendData(response.trendData);
       } catch (error) {
@@ -135,11 +147,15 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
     return (
       <>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">OMZA Trend</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            OMZA Trend
+          </h3>
           <div className="animate-pulse h-64 bg-gray-200 rounded"></div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Evaluaties Heatmap</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Evaluaties Heatmap
+          </h3>
           <div className="animate-pulse space-y-2">
             <div className="h-10 bg-gray-200 rounded"></div>
             <div className="h-10 bg-gray-200 rounded"></div>
@@ -155,7 +171,9 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">OMZA Trend</h3>
         {trendData.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">Geen trend data beschikbaar</p>
+          <p className="text-gray-500 text-center py-4">
+            Geen trend data beschikbaar
+          </p>
         ) : (
           <div className="h-64">
             <Line data={chartData} options={chartOptions} />
@@ -165,9 +183,15 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
 
       {/* Evaluaties Heatmap */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Evaluaties Heatmap</h3>
-        {!studentData || !studentData.evaluations || studentData.evaluations.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">Geen evaluaties gevonden</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Evaluaties Heatmap
+        </h3>
+        {!studentData ||
+        !studentData.evaluations ||
+        studentData.evaluations.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">
+            Geen evaluaties gevonden
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed">
@@ -198,27 +222,47 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
                     className="hover:bg-gray-50 cursor-pointer"
                   >
                     <td className="px-4 py-3 text-sm">
-                      <div className="line-clamp-1 text-gray-900">{evaluation.label}</div>
-                      <div className="text-xs text-gray-500">{formatDate(evaluation.date)}</div>
+                      <div className="line-clamp-1 text-gray-900">
+                        {evaluation.label}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatDate(evaluation.date)}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['O'])}`}>
-                        {evaluation.scores['O'] ? evaluation.scores['O'].toFixed(1) : "-"}
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores["O"])}`}
+                      >
+                        {evaluation.scores["O"]
+                          ? evaluation.scores["O"].toFixed(1)
+                          : "-"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['M'])}`}>
-                        {evaluation.scores['M'] ? evaluation.scores['M'].toFixed(1) : "-"}
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores["M"])}`}
+                      >
+                        {evaluation.scores["M"]
+                          ? evaluation.scores["M"].toFixed(1)
+                          : "-"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['Z'])}`}>
-                        {evaluation.scores['Z'] ? evaluation.scores['Z'].toFixed(1) : "-"}
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores["Z"])}`}
+                      >
+                        {evaluation.scores["Z"]
+                          ? evaluation.scores["Z"].toFixed(1)
+                          : "-"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['A'])}`}>
-                        {evaluation.scores['A'] ? evaluation.scores['A'].toFixed(1) : "-"}
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores["A"])}`}
+                      >
+                        {evaluation.scores["A"]
+                          ? evaluation.scores["A"].toFixed(1)
+                          : "-"}
                       </span>
                     </td>
                   </tr>

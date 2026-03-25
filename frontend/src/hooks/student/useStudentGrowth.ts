@@ -43,7 +43,7 @@ export function useStudentGrowth() {
     try {
       const result = await studentService.regenerateGrowthSummary();
       setData((prev) =>
-        prev ? { ...prev, ai_summary: result.ai_summary } : prev
+        prev ? { ...prev, ai_summary: result.ai_summary } : prev,
       );
     } catch (e: unknown) {
       if (e instanceof ApiAuthError) {

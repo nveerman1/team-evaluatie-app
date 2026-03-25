@@ -15,11 +15,15 @@ export default function ReflectiesTabPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  
+
   // Filter and search state
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "with_goal" | "without_goal">("all");
-  const [sort, setSort] = useState<"name_asc" | "name_desc" | "date_new" | "date_old">("name_asc");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "with_goal" | "without_goal"
+  >("all");
+  const [sort, setSort] = useState<
+    "name_asc" | "name_desc" | "date_new" | "date_old"
+  >("name_asc");
 
   const loadData = useCallback(async () => {
     try {
@@ -51,15 +55,16 @@ export default function ReflectiesTabPage() {
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toLowerCase();
-    
+
     const arr = data.items.filter((r) => {
       // Status filter
       if (statusFilter === "with_goal" && !r.goal_id) return false;
       if (statusFilter === "without_goal" && r.goal_id) return false;
-      
+
       // Search query
       if (q) {
-        const hay = `${r.user_name ?? ""} ${r.text ?? ""} ${r.goal_text ?? ""}`.toLowerCase();
+        const hay =
+          `${r.user_name ?? ""} ${r.text ?? ""} ${r.goal_text ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -93,7 +98,9 @@ export default function ReflectiesTabPage() {
   if (!data) return <ErrorMessage message="Data not found" />;
 
   const withGoalCount = data.items.filter((i) => i.goal_id).length;
-  const achievedCount = data.items.filter((i) => i.goal_achieved === true).length;
+  const achievedCount = data.items.filter(
+    (i) => i.goal_achieved === true,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -102,7 +109,10 @@ export default function ReflectiesTabPage() {
         <Tile label="Totaal reflecties" value={data.items.length} />
         <Tile label="Met gekoppeld leerdoel" value={withGoalCount} />
         <Tile label="Doel behaald" value={achievedCount} />
-        <Tile label="Zonder leerdoel" value={data.items.length - withGoalCount} />
+        <Tile
+          label="Zonder leerdoel"
+          value={data.items.length - withGoalCount}
+        />
       </section>
 
       {/* Filters */}
@@ -116,7 +126,9 @@ export default function ReflectiesTabPage() {
         <select
           className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as typeof statusFilter)
+          }
         >
           <option value="all">Alle reflecties</option>
           <option value="with_goal">Met leerdoel</option>
@@ -184,7 +196,9 @@ export default function ReflectiesTabPage() {
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-600">
                         {item.submitted_at
-                          ? new Date(item.submitted_at).toLocaleDateString("nl-NL")
+                          ? new Date(item.submitted_at).toLocaleDateString(
+                              "nl-NL",
+                            )
                           : "–"}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-800">
@@ -193,7 +207,9 @@ export default function ReflectiesTabPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-600">
-                        {item.goal_text ? truncateText(item.goal_text, 50) : "–"}
+                        {item.goal_text
+                          ? truncateText(item.goal_text, 50)
+                          : "–"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {item.goal_achieved != null ? (

@@ -38,11 +38,11 @@ export default function SubjectAssignmentModal({
         per_page: 100,
         is_active: true,
       });
-      
+
       // Filter out courses already assigned to teacher
       const assignedIds = new Set(teacher?.courses.map((c) => c.id) || []);
       const available = response.courses.filter((c) => !assignedIds.has(c.id));
-      
+
       setAvailableCourses(
         available.map((c) => ({
           id: c.id,
@@ -50,7 +50,7 @@ export default function SubjectAssignmentModal({
           code: c.code,
           level: c.level,
           year: c.year,
-        }))
+        })),
       );
     } catch (err) {
       setError("Kon vakken niet laden");
@@ -90,9 +90,7 @@ export default function SubjectAssignmentModal({
         setAvailableCourses([...availableCourses, course]);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Kon vak niet verwijderen"
-      );
+      setError(err instanceof Error ? err.message : "Kon vak niet verwijderen");
     } finally {
       setIsSubmitting(false);
     }

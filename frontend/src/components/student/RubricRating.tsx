@@ -27,9 +27,7 @@ export function RubricRating({
         </h3>
         <span className="inline-flex items-baseline gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
           <span className="font-medium text-slate-700">Score</span>
-          <span className="text-slate-400">
-            {value} / 5
-          </span>
+          <span className="text-slate-400">{value} / 5</span>
         </span>
       </div>
 

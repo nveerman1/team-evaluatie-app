@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
-import { ProjectAssessmentScoresOverview, ProjectAssessmentStudentsOverview } from "@/dtos";
+import {
+  ProjectAssessmentScoresOverview,
+  ProjectAssessmentStudentsOverview,
+} from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 
 type ViewMode = "teams" | "students";
@@ -19,8 +22,11 @@ export default function ScoresOverviewInner() {
   const [viewMode, setViewMode] = useState<ViewMode>("teams");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<ProjectAssessmentScoresOverview | null>(null);
-  const [studentsData, setStudentsData] = useState<ProjectAssessmentStudentsOverview | null>(null);
+  const [data, setData] = useState<ProjectAssessmentScoresOverview | null>(
+    null,
+  );
+  const [studentsData, setStudentsData] =
+    useState<ProjectAssessmentStudentsOverview | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -38,14 +44,20 @@ export default function ScoresOverviewInner() {
     setLoading(true);
     setError(null);
     try {
-      const result = await projectAssessmentService.getScoresOverview(assessmentId);
+      const result =
+        await projectAssessmentService.getScoresOverview(assessmentId);
       setData(result);
     } catch (e: unknown) {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        const err = e as { response?: { data?: { detail?: string } }; message?: string };
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
+        );
       }
     } finally {
       setLoading(false);
@@ -56,14 +68,20 @@ export default function ScoresOverviewInner() {
     setLoading(true);
     setError(null);
     try {
-      const result = await projectAssessmentService.getStudentsOverview(assessmentId);
+      const result =
+        await projectAssessmentService.getStudentsOverview(assessmentId);
       setStudentsData(result);
     } catch (e: unknown) {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        const err = e as { response?: { data?: { detail?: string } }; message?: string };
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
+        );
       }
     } finally {
       setLoading(false);
@@ -83,10 +101,10 @@ export default function ScoresOverviewInner() {
     criterionId: number,
     newScore: number,
     comment?: string,
-    studentId?: number  // If provided, saves as individual student override
+    studentId?: number, // If provided, saves as individual student override
   ) {
     if (!data && !studentsData) return;
-    
+
     setSaving(true);
     try {
       await projectAssessmentService.batchUpdateScores(assessmentId, {
@@ -96,11 +114,11 @@ export default function ScoresOverviewInner() {
             score: newScore,
             comment: comment || null,
             team_number: teamNumber,
-            student_id: studentId || null,  // null for team score, set for individual override
+            student_id: studentId || null, // null for team score, set for individual override
           },
         ],
       });
-      
+
       // Reload data to get updated scores
       if (viewMode === "teams") {
         await loadTeamsData();
@@ -109,7 +127,10 @@ export default function ScoresOverviewInner() {
       }
       setEditingCell(null);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
       alert(err?.response?.data?.detail || err?.message || "Opslaan mislukt");
     } finally {
       setSaving(false);
@@ -120,7 +141,7 @@ export default function ScoresOverviewInner() {
     criterionId: number,
     currentScore?: number,
     teamNumber?: number,
-    studentId?: number
+    studentId?: number,
   ) {
     setEditingCell({ teamNumber, studentId, criterionId });
     setEditValue(currentScore?.toString() || "");
@@ -129,7 +150,11 @@ export default function ScoresOverviewInner() {
   function handleCellBlur() {
     if (editingCell && editValue && currentData) {
       const score = parseFloat(editValue);
-      if (!isNaN(score) && score >= currentData.rubric_scale_min && score <= currentData.rubric_scale_max) {
+      if (
+        !isNaN(score) &&
+        score >= currentData.rubric_scale_min &&
+        score <= currentData.rubric_scale_max
+      ) {
         // Scores are stored as integers, so round the value
         const finalScore = Math.round(score);
         // Pass studentId for individual overrides in students view
@@ -138,7 +163,7 @@ export default function ScoresOverviewInner() {
           editingCell.criterionId,
           finalScore,
           undefined,
-          editingCell.studentId
+          editingCell.studentId,
         );
       } else {
         setEditingCell(null);
@@ -151,12 +176,12 @@ export default function ScoresOverviewInner() {
   // Helper function to navigate to adjacent cell
   function navigateToAdjacentCell(indexOffset: number) {
     if (!editingCell || !currentData) return;
-    
+
     const currentCriterionIndex = currentData.criteria.findIndex(
-      (c) => c.id === editingCell.criterionId
+      (c) => c.id === editingCell.criterionId,
     );
     const targetIndex = currentCriterionIndex + indexOffset;
-    
+
     // Check if target index is within bounds
     if (targetIndex >= 0 && targetIndex < currentData.criteria.length) {
       const targetCriterion = currentData.criteria[targetIndex];
@@ -165,7 +190,7 @@ export default function ScoresOverviewInner() {
           targetCriterion.id,
           undefined,
           editingCell.teamNumber,
-          editingCell.studentId
+          editingCell.studentId,
         );
       }, TAB_NAVIGATION_DELAY_MS);
     }
@@ -175,7 +200,7 @@ export default function ScoresOverviewInner() {
     if (e.key === "Enter" || e.key === "Tab") {
       e.preventDefault();
       handleCellBlur();
-      
+
       // Move to next/previous cell on Tab/Shift+Tab
       if (e.key === "Tab") {
         navigateToAdjacentCell(e.shiftKey ? -1 : 1);
@@ -187,10 +212,18 @@ export default function ScoresOverviewInner() {
 
   function exportToCSV() {
     if (viewMode === "teams" && data) {
-      const headers = ["Team", "Teamleden", ...data.criteria.map((c) => c.name), "Totaalscore", "Cijfer"];
+      const headers = [
+        "Team",
+        "Teamleden",
+        ...data.criteria.map((c) => c.name),
+        "Totaalscore",
+        "Cijfer",
+      ];
       const rows = data.team_scores.map((team) => {
         const members = team.members.map((m) => m.name).join("; ");
-        const scores = team.criterion_scores.map((cs) => cs.score?.toString() || "—");
+        const scores = team.criterion_scores.map(
+          (cs) => cs.score?.toString() || "—",
+        );
         return [
           team.team_name,
           members,
@@ -203,7 +236,13 @@ export default function ScoresOverviewInner() {
       const csvContent =
         headers.join(",") +
         "\n" +
-        rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+        rows
+          .map((row) =>
+            row
+              .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+              .join(","),
+          )
+          .join("\n");
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
@@ -214,7 +253,16 @@ export default function ScoresOverviewInner() {
       // Revoke the object URL to prevent memory leaks
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else if (viewMode === "students" && studentsData) {
-      const headers = ["Team", "Leerlingnummer", "Naam", "Voornaam", "Tussenvoegsel", "Achternaam", "Klas", "Cijfer"];
+      const headers = [
+        "Team",
+        "Leerlingnummer",
+        "Naam",
+        "Voornaam",
+        "Tussenvoegsel",
+        "Achternaam",
+        "Klas",
+        "Cijfer",
+      ];
       const rows = studentsData.student_scores.map((student) => {
         return [
           student.team_name || "—",
@@ -231,7 +279,13 @@ export default function ScoresOverviewInner() {
       const csvContent =
         headers.join(",") +
         "\n" +
-        rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+        rows
+          .map((row) =>
+            row
+              .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+              .join(","),
+          )
+          .join("\n");
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
@@ -243,14 +297,16 @@ export default function ScoresOverviewInner() {
     }
   }
 
-
-
-  function getScoreColor(score: number | null | undefined, scale_min: number, scale_max: number): string {
+  function getScoreColor(
+    score: number | null | undefined,
+    scale_min: number,
+    scale_max: number,
+  ): string {
     if (score === null || score === undefined) return "";
-    
+
     const range = scale_max - scale_min;
     const normalized = (score - scale_min) / range;
-    
+
     if (normalized < 0.4) return "bg-red-100 text-red-800";
     if (normalized < 0.7) return "bg-orange-100 text-orange-800";
     return "bg-green-100 text-green-800";
@@ -258,13 +314,13 @@ export default function ScoresOverviewInner() {
 
   if (loading) return <Loading />;
   if (error && !data && !studentsData) return <ErrorMessage message={error} />;
-  
+
   const currentData = viewMode === "teams" ? data : studentsData;
   if (!currentData) return <ErrorMessage message="Geen data gevonden" />;
 
   // Filter and sort based on view mode
   let filteredItems: any[] = [];
-  
+
   if (viewMode === "teams" && data) {
     // Filter teams based on search
     filteredItems = data.team_scores;
@@ -272,7 +328,9 @@ export default function ScoresOverviewInner() {
       const query = searchQuery.toLowerCase();
       filteredItems = filteredItems.filter((t) => {
         const teamMatch = t.team_name.toLowerCase().includes(query);
-        const membersMatch = t.members.some((m: any) => m.name.toLowerCase().includes(query));
+        const membersMatch = t.members.some((m: any) =>
+          m.name.toLowerCase().includes(query),
+        );
         return teamMatch || membersMatch;
       });
     }
@@ -280,7 +338,7 @@ export default function ScoresOverviewInner() {
     // Apply sorting for teams
     filteredItems = [...filteredItems].sort((a, b) => {
       let comparison = 0;
-      
+
       if (sortBy === "team") {
         comparison = a.team_number - b.team_number;
       } else if (sortBy === "total") {
@@ -298,11 +356,15 @@ export default function ScoresOverviewInner() {
       } else {
         // Sort by specific criterion
         const criterionId = parseInt(sortBy.replace("criterion-", ""), 10);
-        const aScore = a.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)?.score || 0;
-        const bScore = b.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)?.score || 0;
+        const aScore =
+          a.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)
+            ?.score || 0;
+        const bScore =
+          b.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)
+            ?.score || 0;
         comparison = aScore - bScore;
       }
-      
+
       return sortOrder === "asc" ? comparison : -comparison;
     });
   } else if (viewMode === "students" && studentsData) {
@@ -321,7 +383,7 @@ export default function ScoresOverviewInner() {
     // Apply sorting for students
     filteredItems = [...filteredItems].sort((a, b) => {
       let comparison = 0;
-      
+
       if (sortBy === "name") {
         comparison = a.student_name.localeCompare(b.student_name);
       } else if (sortBy === "class") {
@@ -347,11 +409,15 @@ export default function ScoresOverviewInner() {
       } else {
         // Sort by specific criterion
         const criterionId = parseInt(sortBy.replace("criterion-", ""), 10);
-        const aScore = a.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)?.score || 0;
-        const bScore = b.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)?.score || 0;
+        const aScore =
+          a.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)
+            ?.score || 0;
+        const bScore =
+          b.criterion_scores.find((cs: any) => cs.criterion_id === criterionId)
+            ?.score || 0;
         comparison = aScore - bScore;
       }
-      
+
       return sortOrder === "asc" ? comparison : -comparison;
     });
   }
@@ -395,7 +461,9 @@ export default function ScoresOverviewInner() {
         {/* Action buttons */}
         <div className="flex gap-2 flex-wrap">
           <button
-            onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
+            onClick={() =>
+              viewMode === "teams" ? loadTeamsData() : loadStudentsData()
+            }
             className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
             disabled={loading}
           >
@@ -417,7 +485,11 @@ export default function ScoresOverviewInner() {
         <div className="flex flex-wrap gap-3 items-center">
           <input
             className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder={viewMode === "teams" ? "Zoek op teamnaam of leerling..." : "Zoek op naam, team of klas..."}
+            placeholder={
+              viewMode === "teams"
+                ? "Zoek op teamnaam of leerling..."
+                : "Zoek op naam, team of klas..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -431,11 +503,12 @@ export default function ScoresOverviewInner() {
                 <option value="team">Teamnummer</option>
                 <option value="total">Totaalscore</option>
                 <option value="grade">Cijfer</option>
-                {data && data.criteria.map((c) => (
-                  <option key={c.id} value={`criterion-${c.id}`}>
-                    {c.name}
-                  </option>
-                ))}
+                {data &&
+                  data.criteria.map((c) => (
+                    <option key={c.id} value={`criterion-${c.id}`}>
+                      {c.name}
+                    </option>
+                  ))}
               </>
             ) : (
               <>
@@ -444,11 +517,12 @@ export default function ScoresOverviewInner() {
                 <option value="team">Team</option>
                 <option value="grade">Cijfer</option>
                 <option value="total">Totaalscore</option>
-                {studentsData && studentsData.criteria.map((c) => (
-                  <option key={c.id} value={`criterion-${c.id}`}>
-                    {c.name}
-                  </option>
-                ))}
+                {studentsData &&
+                  studentsData.criteria.map((c) => (
+                    <option key={c.id} value={`criterion-${c.id}`}>
+                      {c.name}
+                    </option>
+                  ))}
               </>
             )}
           </select>
@@ -464,356 +538,439 @@ export default function ScoresOverviewInner() {
       {/* Scores Table - styled like OMZA */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          {viewMode === "teams" && data && (() => {
-            // Group criteria by category, preserving order from data.criteria
-            const grouped: Record<string, typeof data.criteria> = {};
-            const categories: string[] = [];
-            
-            data.criteria.forEach((c) => {
-              const cat = c.category || "Overig";
-              if (!grouped[cat]) {
-                grouped[cat] = [];
-                categories.push(cat);  // Preserve first appearance order
-              }
-              grouped[cat].push(c);
-            });
+          {viewMode === "teams" &&
+            data &&
+            (() => {
+              // Group criteria by category, preserving order from data.criteria
+              const grouped: Record<string, typeof data.criteria> = {};
+              const categories: string[] = [];
 
-            return (
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                {/* Category header row */}
-                <tr>
-                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
-                    Team
-                  </th>
-                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
-                    Teamleden
-                  </th>
-                  {categories.map((category) => (
-                    <th
-                      key={category}
-                      colSpan={grouped[category].length}
-                      className="px-4 py-2 text-center text-xs font-semibold text-gray-700 bg-gray-100 border-l border-r border-gray-200"
-                    >
-                      {category}
-                    </th>
-                  ))}
-                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide border-l border-gray-200">
-                    Totaal
-                  </th>
-                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide">
-                    Cijfer
-                  </th>
-                </tr>
-                {/* Criterion header row */}
-                <tr>
-                  {data.criteria.map((criterion) => (
-                    <th
-                      key={criterion.id}
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 min-w-[100px] border-t border-gray-200"
-                    >
-                      {criterion.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={data.criteria.length + 4}
-                      className="px-5 py-8 text-center text-gray-500"
-                    >
-                      Geen teams gevonden voor dit filter
-                    </td>
-                  </tr>
-                )}
-                {filteredItems.map((team: typeof data.team_scores[0]) => (
-                <tr
-                  key={team.team_number}
-                  className="bg-white hover:bg-gray-50"
-                >
-                  <td className="px-5 py-3 font-medium sticky left-0 bg-white">
-                    <Link
-                      href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {team.team_name}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="text-sm text-gray-600">
-                      {team.members.map((m) => m.name).join(", ")}
-                    </div>
-                  </td>
-                  {team.criterion_scores.map((cs) => {
-                    const isEditing =
-                      editingCell?.teamNumber === team.team_number &&
-                      editingCell?.criterionId === cs.criterion_id;
+              data.criteria.forEach((c) => {
+                const cat = c.category || "Overig";
+                if (!grouped[cat]) {
+                  grouped[cat] = [];
+                  categories.push(cat); // Preserve first appearance order
+                }
+                grouped[cat].push(c);
+              });
 
-                    return (
-                      <td
-                        key={cs.criterion_id}
-                        className="px-4 py-3 text-center"
+              return (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    {/* Category header row */}
+                    <tr>
+                      <th
+                        rowSpan={2}
+                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50"
                       >
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min={data.rubric_scale_min}
-                            max={data.rubric_scale_max}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={handleCellBlur}
-                            onKeyDown={handleCellKeyDown}
-                            autoFocus
-                            className="w-16 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            disabled={saving}
-                          />
-                        ) : (
-                          <button
-                            onClick={() =>
-                              handleCellClick(
-                                cs.criterion_id,
-                                cs.score !== null ? cs.score : undefined,
-                                team.team_number,
-                                undefined  // no studentId for team scores
-                              )
-                            }
-                            tabIndex={0}
-                            className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
-                              cs.score !== null && cs.score !== undefined
-                                ? getScoreColor(cs.score, data.rubric_scale_min, data.rubric_scale_max)
-                                : "border-gray-200 text-gray-400 bg-gray-50"
-                            }`}
-                            title={cs.comment || "Klik om score in te voeren"}
-                          >
-                            {cs.score !== null && cs.score !== undefined ? cs.score : "—"}
-                          </button>
-                        )}
-                      </td>
-                    );
-                  })}
-                  <td className="px-4 py-3 text-center font-medium text-gray-900">
-                    {team.total_score !== null && team.total_score !== undefined
-                      ? team.total_score.toFixed(1)
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-center font-medium text-gray-900">
-                    {team.grade !== null && team.grade !== undefined
-                      ? team.grade.toFixed(1)
-                      : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {/* Statistics Footer */}
-            {data.team_scores.length > 0 && (
-              <tfoot className="bg-gray-50 border-t border-gray-200 font-medium">
-                <tr>
-                  <td className="px-5 py-3 sticky left-0 bg-gray-50 text-xs font-semibold text-gray-700">
-                    Gemiddelde
-                  </td>
-                  <td className="px-5 py-3"></td>
-                  {data.criteria.map((criterion) => (
-                    <td key={criterion.id} className="px-4 py-3 text-center text-sm">
-                      {data.statistics.average_per_criterion[criterion.name]?.toFixed(1) || "—"}
-                    </td>
-                  ))}
-                  <td className="px-4 py-3 text-center text-sm">
-                    {(() => {
-                      const validScores = data.team_scores
-                        .filter(t => t.total_score !== null && t.total_score !== undefined)
-                        .map(t => t.total_score as number);
-                      if (validScores.length === 0) return "—";
-                      const avg = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
-                      return avg.toFixed(1);
-                    })()}
-                  </td>
-                  <td className="px-4 py-3"></td>
-                </tr>
-              </tfoot>
-            )}
-            </table>
-            );
-          })()}
-
-          {viewMode === "students" && studentsData && (() => {
-            // Group criteria by category, preserving order from studentsData.criteria
-            const grouped: Record<string, typeof studentsData.criteria> = {};
-            const categories: string[] = [];
-            
-            studentsData.criteria.forEach((c) => {
-              const cat = c.category || "Overig";
-              if (!grouped[cat]) {
-                grouped[cat] = [];
-                categories.push(cat);  // Preserve first appearance order
-              }
-              grouped[cat].push(c);
-            });
-
-            return (
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                {/* Category header row */}
-                <tr>
-                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
-                    Team
-                  </th>
-                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
-                    Leerling
-                  </th>
-                  <th rowSpan={2} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[80px]">
-                    Klas
-                  </th>
-                  {categories.map((category) => (
-                    <th
-                      key={category}
-                      colSpan={grouped[category].length}
-                      className="px-4 py-2 text-center text-xs font-semibold text-gray-700 bg-gray-100 border-l border-r border-gray-200"
-                    >
-                      {category}
-                    </th>
-                  ))}
-                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide border-l border-gray-200">
-                    Totaal
-                  </th>
-                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide">
-                    Cijfer
-                  </th>
-                </tr>
-                {/* Criterion header row */}
-                <tr>
-                  {studentsData.criteria.map((criterion) => (
-                    <th
-                      key={criterion.id}
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 min-w-[100px] border-t border-gray-200"
-                    >
-                      {criterion.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={studentsData.criteria.length + 5}
-                      className="px-5 py-8 text-center text-gray-500"
-                    >
-                      Geen leerlingen gevonden voor dit filter
-                    </td>
-                  </tr>
-                )}
-                {filteredItems.map((student: typeof studentsData.student_scores[0]) => (
-                  <tr
-                    key={student.student_id}
-                    className="bg-white hover:bg-gray-50"
-                  >
-                    <td className="px-5 py-3 sticky left-0 bg-white">
-                      {student.team_name ? (
-                        <Link
-                          href={`/teacher/project-assessments/${assessmentId}/edit?team=${student.team_number}`}
-                          className="text-blue-600 hover:underline"
+                        Team
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]"
+                      >
+                        Teamleden
+                      </th>
+                      {categories.map((category) => (
+                        <th
+                          key={category}
+                          colSpan={grouped[category].length}
+                          className="px-4 py-2 text-center text-xs font-semibold text-gray-700 bg-gray-100 border-l border-r border-gray-200"
                         >
-                          {student.team_name}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-5 py-3 font-medium text-gray-900">
-                      {student.student_name}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-600">
-                      {student.class_name || "—"}
-                    </td>
-                    {student.criterion_scores.map((cs) => {
-                      // In students view, we edit by studentId
-                      const isEditing =
-                        editingCell?.studentId === student.student_id &&
-                        editingCell?.criterionId === cs.criterion_id;
-
-                      return (
+                          {category}
+                        </th>
+                      ))}
+                      <th
+                        rowSpan={2}
+                        className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide border-l border-gray-200"
+                      >
+                        Totaal
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide"
+                      >
+                        Cijfer
+                      </th>
+                    </tr>
+                    {/* Criterion header row */}
+                    <tr>
+                      {data.criteria.map((criterion) => (
+                        <th
+                          key={criterion.id}
+                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 min-w-[100px] border-t border-gray-200"
+                        >
+                          {criterion.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredItems.length === 0 && (
+                      <tr>
                         <td
-                          key={cs.criterion_id}
-                          className="px-4 py-3 text-center"
+                          colSpan={data.criteria.length + 4}
+                          className="px-5 py-8 text-center text-gray-500"
                         >
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min={studentsData.rubric_scale_min}
-                              max={studentsData.rubric_scale_max}
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={handleCellBlur}
-                              onKeyDown={handleCellKeyDown}
-                              autoFocus
-                              className="w-16 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              disabled={saving}
-                            />
-                          ) : (
-                            <button
-                              onClick={() => {
-                                // Save as individual student override
-                                handleCellClick(
-                                  cs.criterion_id,
-                                  cs.score !== null ? cs.score : undefined,
-                                  student.team_number ?? undefined,
-                                  student.student_id
-                                );
-                              }}
-                              tabIndex={0}
-                              className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
-                                cs.score !== null && cs.score !== undefined
-                                  ? getScoreColor(cs.score, studentsData.rubric_scale_min, studentsData.rubric_scale_max)
-                                  : "border-gray-200 text-gray-400 bg-gray-50"
-                              } ${cs.is_override ? "ring-2 ring-purple-400" : ""}`}
-                              title={cs.is_override ? "Individuele aanpassing" : (cs.comment || "Klik om score aan te passen")}
-                            >
-                              {cs.score !== null && cs.score !== undefined ? cs.score : "—"}
-                              {cs.is_override && <span className="ml-1 text-purple-600">✱</span>}
-                            </button>
-                          )}
+                          Geen teams gevonden voor dit filter
                         </td>
-                      );
-                    })}
-                    <td className="px-4 py-3 text-center font-medium text-gray-900">
-                      {student.total_score !== null && student.total_score !== undefined
-                        ? student.total_score.toFixed(1)
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center font-medium text-gray-900">
-                      {student.grade !== null && student.grade !== undefined
-                        ? student.grade.toFixed(1)
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              {/* Statistics Footer */}
-              {studentsData.student_scores.length > 0 && (
-                <tfoot className="bg-gray-50 border-t border-gray-200 font-medium">
-                  <tr>
-                    <td className="px-5 py-3 sticky left-0 bg-gray-50"></td>
-                    <td className="px-5 py-3 text-xs font-semibold text-gray-700">
-                      Gemiddelde
-                    </td>
-                    <td className="px-3 py-3"></td>
-                    {studentsData.criteria.map((criterion) => (
-                      <td key={criterion.id} className="px-4 py-3 text-center text-sm">
-                        {studentsData.statistics.average_per_criterion[criterion.name]?.toFixed(1) || "—"}
-                      </td>
+                      </tr>
+                    )}
+                    {filteredItems.map((team: (typeof data.team_scores)[0]) => (
+                      <tr
+                        key={team.team_number}
+                        className="bg-white hover:bg-gray-50"
+                      >
+                        <td className="px-5 py-3 font-medium sticky left-0 bg-white">
+                          <Link
+                            href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {team.team_name}
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-sm text-gray-600">
+                            {team.members.map((m) => m.name).join(", ")}
+                          </div>
+                        </td>
+                        {team.criterion_scores.map((cs) => {
+                          const isEditing =
+                            editingCell?.teamNumber === team.team_number &&
+                            editingCell?.criterionId === cs.criterion_id;
+
+                          return (
+                            <td
+                              key={cs.criterion_id}
+                              className="px-4 py-3 text-center"
+                            >
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  min={data.rubric_scale_min}
+                                  max={data.rubric_scale_max}
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onBlur={handleCellBlur}
+                                  onKeyDown={handleCellKeyDown}
+                                  autoFocus
+                                  className="w-16 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  disabled={saving}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    handleCellClick(
+                                      cs.criterion_id,
+                                      cs.score !== null ? cs.score : undefined,
+                                      team.team_number,
+                                      undefined, // no studentId for team scores
+                                    )
+                                  }
+                                  tabIndex={0}
+                                  className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
+                                    cs.score !== null && cs.score !== undefined
+                                      ? getScoreColor(
+                                          cs.score,
+                                          data.rubric_scale_min,
+                                          data.rubric_scale_max,
+                                        )
+                                      : "border-gray-200 text-gray-400 bg-gray-50"
+                                  }`}
+                                  title={
+                                    cs.comment || "Klik om score in te voeren"
+                                  }
+                                >
+                                  {cs.score !== null && cs.score !== undefined
+                                    ? cs.score
+                                    : "—"}
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 text-center font-medium text-gray-900">
+                          {team.total_score !== null &&
+                          team.total_score !== undefined
+                            ? team.total_score.toFixed(1)
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-center font-medium text-gray-900">
+                          {team.grade !== null && team.grade !== undefined
+                            ? team.grade.toFixed(1)
+                            : "—"}
+                        </td>
+                      </tr>
                     ))}
-                    <td className="px-4 py-3 text-center text-sm"></td>
-                    <td className="px-4 py-3 text-center text-sm">
-                      {studentsData.statistics.average_grade?.toFixed(1) || "—"}
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-            );
-          })()}
+                  </tbody>
+                  {/* Statistics Footer */}
+                  {data.team_scores.length > 0 && (
+                    <tfoot className="bg-gray-50 border-t border-gray-200 font-medium">
+                      <tr>
+                        <td className="px-5 py-3 sticky left-0 bg-gray-50 text-xs font-semibold text-gray-700">
+                          Gemiddelde
+                        </td>
+                        <td className="px-5 py-3"></td>
+                        {data.criteria.map((criterion) => (
+                          <td
+                            key={criterion.id}
+                            className="px-4 py-3 text-center text-sm"
+                          >
+                            {data.statistics.average_per_criterion[
+                              criterion.name
+                            ]?.toFixed(1) || "—"}
+                          </td>
+                        ))}
+                        <td className="px-4 py-3 text-center text-sm">
+                          {(() => {
+                            const validScores = data.team_scores
+                              .filter(
+                                (t) =>
+                                  t.total_score !== null &&
+                                  t.total_score !== undefined,
+                              )
+                              .map((t) => t.total_score as number);
+                            if (validScores.length === 0) return "—";
+                            const avg =
+                              validScores.reduce(
+                                (sum, score) => sum + score,
+                                0,
+                              ) / validScores.length;
+                            return avg.toFixed(1);
+                          })()}
+                        </td>
+                        <td className="px-4 py-3"></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              );
+            })()}
+
+          {viewMode === "students" &&
+            studentsData &&
+            (() => {
+              // Group criteria by category, preserving order from studentsData.criteria
+              const grouped: Record<string, typeof studentsData.criteria> = {};
+              const categories: string[] = [];
+
+              studentsData.criteria.forEach((c) => {
+                const cat = c.category || "Overig";
+                if (!grouped[cat]) {
+                  grouped[cat] = [];
+                  categories.push(cat); // Preserve first appearance order
+                }
+                grouped[cat].push(c);
+              });
+
+              return (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    {/* Category header row */}
+                    <tr>
+                      <th
+                        rowSpan={2}
+                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50"
+                      >
+                        Team
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]"
+                      >
+                        Leerling
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[80px]"
+                      >
+                        Klas
+                      </th>
+                      {categories.map((category) => (
+                        <th
+                          key={category}
+                          colSpan={grouped[category].length}
+                          className="px-4 py-2 text-center text-xs font-semibold text-gray-700 bg-gray-100 border-l border-r border-gray-200"
+                        >
+                          {category}
+                        </th>
+                      ))}
+                      <th
+                        rowSpan={2}
+                        className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide border-l border-gray-200"
+                      >
+                        Totaal
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide"
+                      >
+                        Cijfer
+                      </th>
+                    </tr>
+                    {/* Criterion header row */}
+                    <tr>
+                      {studentsData.criteria.map((criterion) => (
+                        <th
+                          key={criterion.id}
+                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 min-w-[100px] border-t border-gray-200"
+                        >
+                          {criterion.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredItems.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={studentsData.criteria.length + 5}
+                          className="px-5 py-8 text-center text-gray-500"
+                        >
+                          Geen leerlingen gevonden voor dit filter
+                        </td>
+                      </tr>
+                    )}
+                    {filteredItems.map(
+                      (student: (typeof studentsData.student_scores)[0]) => (
+                        <tr
+                          key={student.student_id}
+                          className="bg-white hover:bg-gray-50"
+                        >
+                          <td className="px-5 py-3 sticky left-0 bg-white">
+                            {student.team_name ? (
+                              <Link
+                                href={`/teacher/project-assessments/${assessmentId}/edit?team=${student.team_number}`}
+                                className="text-blue-600 hover:underline"
+                              >
+                                {student.team_name}
+                              </Link>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-5 py-3 font-medium text-gray-900">
+                            {student.student_name}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600">
+                            {student.class_name || "—"}
+                          </td>
+                          {student.criterion_scores.map((cs) => {
+                            // In students view, we edit by studentId
+                            const isEditing =
+                              editingCell?.studentId === student.student_id &&
+                              editingCell?.criterionId === cs.criterion_id;
+
+                            return (
+                              <td
+                                key={cs.criterion_id}
+                                className="px-4 py-3 text-center"
+                              >
+                                {isEditing ? (
+                                  <input
+                                    type="number"
+                                    min={studentsData.rubric_scale_min}
+                                    max={studentsData.rubric_scale_max}
+                                    value={editValue}
+                                    onChange={(e) =>
+                                      setEditValue(e.target.value)
+                                    }
+                                    onBlur={handleCellBlur}
+                                    onKeyDown={handleCellKeyDown}
+                                    autoFocus
+                                    className="w-16 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    disabled={saving}
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      // Save as individual student override
+                                      handleCellClick(
+                                        cs.criterion_id,
+                                        cs.score !== null
+                                          ? cs.score
+                                          : undefined,
+                                        student.team_number ?? undefined,
+                                        student.student_id,
+                                      );
+                                    }}
+                                    tabIndex={0}
+                                    className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
+                                      cs.score !== null &&
+                                      cs.score !== undefined
+                                        ? getScoreColor(
+                                            cs.score,
+                                            studentsData.rubric_scale_min,
+                                            studentsData.rubric_scale_max,
+                                          )
+                                        : "border-gray-200 text-gray-400 bg-gray-50"
+                                    } ${cs.is_override ? "ring-2 ring-purple-400" : ""}`}
+                                    title={
+                                      cs.is_override
+                                        ? "Individuele aanpassing"
+                                        : cs.comment ||
+                                          "Klik om score aan te passen"
+                                    }
+                                  >
+                                    {cs.score !== null && cs.score !== undefined
+                                      ? cs.score
+                                      : "—"}
+                                    {cs.is_override && (
+                                      <span className="ml-1 text-purple-600">
+                                        ✱
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="px-4 py-3 text-center font-medium text-gray-900">
+                            {student.total_score !== null &&
+                            student.total_score !== undefined
+                              ? student.total_score.toFixed(1)
+                              : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-center font-medium text-gray-900">
+                            {student.grade !== null &&
+                            student.grade !== undefined
+                              ? student.grade.toFixed(1)
+                              : "—"}
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                  {/* Statistics Footer */}
+                  {studentsData.student_scores.length > 0 && (
+                    <tfoot className="bg-gray-50 border-t border-gray-200 font-medium">
+                      <tr>
+                        <td className="px-5 py-3 sticky left-0 bg-gray-50"></td>
+                        <td className="px-5 py-3 text-xs font-semibold text-gray-700">
+                          Gemiddelde
+                        </td>
+                        <td className="px-3 py-3"></td>
+                        {studentsData.criteria.map((criterion) => (
+                          <td
+                            key={criterion.id}
+                            className="px-4 py-3 text-center text-sm"
+                          >
+                            {studentsData.statistics.average_per_criterion[
+                              criterion.name
+                            ]?.toFixed(1) || "—"}
+                          </td>
+                        ))}
+                        <td className="px-4 py-3 text-center text-sm"></td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          {studentsData.statistics.average_grade?.toFixed(1) ||
+                            "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              );
+            })()}
         </div>
       </div>
 

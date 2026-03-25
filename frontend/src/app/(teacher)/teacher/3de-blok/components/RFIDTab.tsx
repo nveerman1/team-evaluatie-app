@@ -14,13 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Pagination } from "@/components/ui/pagination";
 import {
-  Pagination,
-} from "@/components/ui/pagination";
-import { 
-  CreditCard, 
-  Plus, 
-  Trash2, 
+  CreditCard,
+  Plus,
+  Trash2,
   Search,
   ShieldCheck,
   ShieldX,
@@ -29,7 +27,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Users
+  Users,
 } from "lucide-react";
 import { rfidService } from "@/services/attendance.service";
 import { fetchWithErrorHandling } from "@/lib/api";
@@ -55,11 +53,16 @@ export default function RFIDTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [openRowId, setOpenRowId] = useState<number | null>(null);
-  const [addDialogStudent, setAddDialogStudent] = useState<StudentRow | null>(null);
-  const [newCardData, setNewCardData] = useState({ uid: "", label: DEFAULT_CARD_LABEL });
+  const [addDialogStudent, setAddDialogStudent] = useState<StudentRow | null>(
+    null,
+  );
+  const [newCardData, setNewCardData] = useState({
+    uid: "",
+    label: DEFAULT_CARD_LABEL,
+  });
   const [submitting, setSubmitting] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const pageSize = 50;
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -78,16 +81,18 @@ export default function RFIDTab() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams({
         page: String(page),
         per_page: String(pageSize),
         ...(debouncedSearchQuery.trim() && { q: debouncedSearchQuery.trim() }),
       });
-      
-      const response = await fetchWithErrorHandling(`/api/v1/attendance/students?${params}`);
+
+      const response = await fetchWithErrorHandling(
+        `/api/v1/attendance/students?${params}`,
+      );
       const data = await response.json();
-      
+
       setStudents(data.items || []);
       setTotal(data.total || 0);
       setTotalPages(data.total_pages || 1);
@@ -112,7 +117,7 @@ export default function RFIDTab() {
         label: newCardData.label || undefined,
         is_active: true,
       });
-      
+
       setAddDialogStudent(null);
       setNewCardData({ uid: "", label: DEFAULT_CARD_LABEL });
       await fetchStudentsAndCards();
@@ -150,10 +155,10 @@ export default function RFIDTab() {
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
       setSortKey(key);
-      setSortDir('asc');
+      setSortDir("asc");
     }
   };
 
@@ -161,9 +166,11 @@ export default function RFIDTab() {
     if (sortKey !== key) {
       return <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-40" />;
     }
-    return sortDir === 'asc' 
-      ? <ArrowUp className="h-3.5 w-3.5 ml-1" />
-      : <ArrowDown className="h-3.5 w-3.5 ml-1" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 ml-1" />
+    );
   };
 
   const rows = useMemo(() => {
@@ -171,7 +178,10 @@ export default function RFIDTab() {
     return sortRows(studentRows, sortKey, sortDir);
   }, [students, sortKey, sortDir]);
 
-  const totalCards = useMemo(() => students.reduce((acc, s) => acc + s.cards.length, 0), [students]);
+  const totalCards = useMemo(
+    () => students.reduce((acc, s) => acc + s.cards.length, 0),
+    [students],
+  );
 
   return (
     <div className="space-y-6">
@@ -187,7 +197,9 @@ export default function RFIDTab() {
           <Users className="h-3.5 w-3.5" />
           {total} leerlingen
         </Badge>
-        <Badge variant="secondary" className="rounded-full">{totalCards} kaarten</Badge>
+        <Badge variant="secondary" className="rounded-full">
+          {totalCards} kaarten
+        </Badge>
         {rows.length > 0 && (
           <Badge variant="secondary" className="rounded-full">
             Toont {rows.length} van {total} studenten
@@ -206,9 +218,9 @@ export default function RFIDTab() {
             className="pl-9"
           />
         </div>
-        <Button 
-          variant="secondary" 
-          className="h-9" 
+        <Button
+          variant="secondary"
+          className="h-9"
           onClick={() => setSearchQuery("")}
           disabled={!searchQuery.trim()}
         >
@@ -221,25 +233,25 @@ export default function RFIDTab() {
         {/* Table header */}
         <div className="grid grid-cols-12 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <button
-            onClick={() => handleSort('name')}
+            onClick={() => handleSort("name")}
             className="col-span-5 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
             <span>LEERLING</span>
-            {getSortIcon('name')}
+            {getSortIcon("name")}
           </button>
           <button
-            onClick={() => handleSort('className')}
+            onClick={() => handleSort("className")}
             className="col-span-2 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
             <span>KLAS</span>
-            {getSortIcon('className')}
+            {getSortIcon("className")}
           </button>
           <button
-            onClick={() => handleSort('cardCount')}
+            onClick={() => handleSort("cardCount")}
             className="col-span-2 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
             <span>KAARTEN</span>
-            {getSortIcon('cardCount')}
+            {getSortIcon("cardCount")}
           </button>
           <div className="col-span-3 text-right">ACTIES</div>
         </div>
@@ -259,140 +271,180 @@ export default function RFIDTab() {
             </div>
           ) : (
             rows.map((row) => {
-            const isOpen = openRowId === row.id;
-            const primaryHint = getPrimaryCardHint(row.cards);
+              const isOpen = openRowId === row.id;
+              const primaryHint = getPrimaryCardHint(row.cards);
 
-            return (
-              <div key={row.id} className="group">
-                {/* Row */}
-                <div
-                  onClick={() => setOpenRowId(isOpen ? null : row.id)}
-                  className="grid w-full grid-cols-12 items-center px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
-                >
-                  <div className="col-span-5 flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
-                      {getInitials(row.name)}
+              return (
+                <div key={row.id} className="group">
+                  {/* Row */}
+                  <div
+                    onClick={() => setOpenRowId(isOpen ? null : row.id)}
+                    className="grid w-full grid-cols-12 items-center px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="col-span-5 flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                        {getInitials(row.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="truncate text-sm font-medium text-slate-900">
+                            {row.name}
+                          </div>
+                          {row.cards.length === 0 && (
+                            <Badge
+                              variant="outline"
+                              className="rounded-full text-[11px] border-slate-300 text-slate-600"
+                            >
+                              Geen kaart
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="truncate text-sm font-medium text-slate-900">{row.name}</div>
-                        {row.cards.length === 0 && (
-                          <Badge variant="outline" className="rounded-full text-[11px] border-slate-300 text-slate-600">
-                            Geen kaart
-                          </Badge>
+
+                    <div className="col-span-2">
+                      {row.className ? (
+                        <Badge
+                          variant="secondary"
+                          className="rounded-full bg-slate-100 text-slate-700"
+                        >
+                          {row.className}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-slate-500">—</span>
+                      )}
+                    </div>
+
+                    <div className="col-span-2">
+                      <div className="text-sm font-medium text-slate-900">
+                        {row.cards.length}
+                      </div>
+                      <div className="truncate text-xs text-slate-500">
+                        {primaryHint}
+                      </div>
+                    </div>
+
+                    <div
+                      className="col-span-3 flex items-center justify-end gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAddDialogStudent(row);
+                          setNewCardData({
+                            uid: "",
+                            label: DEFAULT_CARD_LABEL,
+                          });
+                        }}
+                      >
+                        <Plus className="mr-1.5 h-4 w-4" />
+                        Kaart toevoegen
+                      </Button>
+                      <div className="text-slate-500">
+                        {isOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="col-span-2">
-                    {row.className ? (
-                      <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-700">{row.className}</Badge>
-                    ) : (
-                      <span className="text-xs text-slate-500">—</span>
-                    )}
-                  </div>
-
-                  <div className="col-span-2">
-                    <div className="text-sm font-medium text-slate-900">{row.cards.length}</div>
-                    <div className="truncate text-xs text-slate-500">{primaryHint}</div>
-                  </div>
-
-                  <div className="col-span-3 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAddDialogStudent(row);
-                        setNewCardData({ uid: "", label: DEFAULT_CARD_LABEL });
-                      }}
-                    >
-                      <Plus className="mr-1.5 h-4 w-4" />
-                      Kaart toevoegen
-                    </Button>
-                    <div className="text-slate-500">
-                      {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded details */}
-                {isOpen && (
-                  <div className="bg-slate-50 px-3 py-3 border-t border-slate-200">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <div className="text-xs text-slate-600">
-                        Kaarten van <span className="font-medium text-slate-900">{row.name}</span>
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Tip: koppel meerdere kaarten (backup) en deactiveer i.p.v. verwijderen.
-                      </div>
-                    </div>
-
-                    <Separator className="my-3 bg-slate-200" />
-
-                    {row.cards.length === 0 ? (
-                      <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                        <div className="font-medium text-slate-900">Geen kaarten gekoppeld</div>
+                  {/* Expanded details */}
+                  {isOpen && (
+                    <div className="bg-slate-50 px-3 py-3 border-t border-slate-200">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div className="text-xs text-slate-600">
+                          Kaarten van{" "}
+                          <span className="font-medium text-slate-900">
+                            {row.name}
+                          </span>
+                        </div>
                         <div className="text-xs text-slate-500">
-                          Voeg een kaart toe om in-/uitchecken via RFID te activeren.
+                          Tip: koppel meerdere kaarten (backup) en deactiveer
+                          i.p.v. verwijderen.
                         </div>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {row.cards.map((card) => (
-                          <div
-                            key={card.id}
-                            className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 md:flex-row md:items-center md:justify-between"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <div className="font-mono text-sm font-semibold tracking-tight text-slate-900">{card.uid}</div>
-                                {card.is_active ? (
-                                  <Badge className="gap-1 rounded-full px-2 py-0.5 text-[11px] bg-blue-600 text-white">
-                                    <ShieldCheck className="h-3.5 w-3.5" />
-                                    Actief
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="gap-1 rounded-full px-2 py-0.5 text-[11px] bg-slate-100 text-slate-700">
-                                    <ShieldX className="h-3.5 w-3.5" />
-                                    Inactief
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500">{card.label || "—"}</div>
-                            </div>
 
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="secondary" 
-                                className="h-8 bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                onClick={() => handleToggleActive(card.id, card.is_active)}
-                              >
-                                {card.is_active ? "Deactiveren" : "Activeren"}
-                              </Button>
-                              <Button 
-                                size="icon" 
-                                variant="outline" 
-                                className="h-8 w-8 border-slate-300" 
-                                title="Verwijderen"
-                                onClick={() => handleDeleteCard(card.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                      <Separator className="my-3 bg-slate-200" />
+
+                      {row.cards.length === 0 ? (
+                        <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                          <div className="font-medium text-slate-900">
+                            Geen kaarten gekoppeld
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
+                          <div className="text-xs text-slate-500">
+                            Voeg een kaart toe om in-/uitchecken via RFID te
+                            activeren.
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {row.cards.map((card) => (
+                            <div
+                              key={card.id}
+                              className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 md:flex-row md:items-center md:justify-between"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <div className="font-mono text-sm font-semibold tracking-tight text-slate-900">
+                                    {card.uid}
+                                  </div>
+                                  {card.is_active ? (
+                                    <Badge className="gap-1 rounded-full px-2 py-0.5 text-[11px] bg-blue-600 text-white">
+                                      <ShieldCheck className="h-3.5 w-3.5" />
+                                      Actief
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      variant="secondary"
+                                      className="gap-1 rounded-full px-2 py-0.5 text-[11px] bg-slate-100 text-slate-700"
+                                    >
+                                      <ShieldX className="h-3.5 w-3.5" />
+                                      Inactief
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {card.label || "—"}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8 bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                  onClick={() =>
+                                    handleToggleActive(card.id, card.is_active)
+                                  }
+                                >
+                                  {card.is_active ? "Deactiveren" : "Activeren"}
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-8 w-8 border-slate-300"
+                                  title="Verwijderen"
+                                  onClick={() => handleDeleteCard(card.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -407,12 +459,19 @@ export default function RFIDTab() {
       )}
 
       {/* Add card dialog */}
-      <Dialog open={!!addDialogStudent} onOpenChange={(v) => !v && setAddDialogStudent(null)}>
+      <Dialog
+        open={!!addDialogStudent}
+        onOpenChange={(v) => !v && setAddDialogStudent(null)}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Kaart toevoegen</DialogTitle>
             <DialogDescription>
-              Koppel een RFID UID aan <span className="font-medium text-foreground">{addDialogStudent?.name}</span>.
+              Koppel een RFID UID aan{" "}
+              <span className="font-medium text-foreground">
+                {addDialogStudent?.name}
+              </span>
+              .
             </DialogDescription>
           </DialogHeader>
 
@@ -422,11 +481,17 @@ export default function RFIDTab() {
               <Input
                 id="uid"
                 value={newCardData.uid}
-                onChange={(e) => setNewCardData({ ...newCardData, uid: e.target.value.toUpperCase() })}
+                onChange={(e) =>
+                  setNewCardData({
+                    ...newCardData,
+                    uid: e.target.value.toUpperCase(),
+                  })
+                }
                 placeholder="Bijv. ABC123DEF456"
               />
               <p className="text-xs text-muted-foreground">
-                Tip: scan met je device en plak de UID hier, of typ hem over van de kaart. UID wordt automatisch in hoofdletters omgezet.
+                Tip: scan met je device en plak de UID hier, of typ hem over van
+                de kaart. UID wordt automatisch in hoofdletters omgezet.
               </p>
             </div>
 
@@ -435,14 +500,20 @@ export default function RFIDTab() {
               <Input
                 id="label"
                 value={newCardData.label}
-                onChange={(e) => setNewCardData({ ...newCardData, label: e.target.value })}
+                onChange={(e) =>
+                  setNewCardData({ ...newCardData, label: e.target.value })
+                }
                 placeholder="Hoofdkaart / Backup kaart"
               />
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="secondary" onClick={() => setAddDialogStudent(null)} disabled={submitting}>
+            <Button
+              variant="secondary"
+              onClick={() => setAddDialogStudent(null)}
+              disabled={submitting}
+            >
               Annuleren
             </Button>
             <Button

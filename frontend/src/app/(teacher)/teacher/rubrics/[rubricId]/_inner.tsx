@@ -91,7 +91,7 @@ export default function EditRubricPageInner() {
       const totalPct = items.reduce((s, it) => s + (Number(it.weight) || 0), 0);
       if (Math.abs(totalPct - 100) > 1) {
         throw new Error(
-          `Totale weging is ${totalPct.toFixed(1)}%, moet 100% zijn (±1%). Pas de wegingen aan.`
+          `Totale weging is ${totalPct.toFixed(1)}%, moet 100% zijn (±1%). Pas de wegingen aan.`,
         );
       }
       // ensure all descriptors have level1..level5; convert weights from % to 0-1
@@ -400,7 +400,9 @@ export default function EditRubricPageInner() {
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-t bg-gray-50">
             <div className="text-sm text-gray-600">
               Som wegingen:{" "}
-              <span className={`font-medium ${Math.abs(totalWeight - 100) <= 1 ? "text-green-600" : "text-orange-600"}`}>
+              <span
+                className={`font-medium ${Math.abs(totalWeight - 100) <= 1 ? "text-green-600" : "text-orange-600"}`}
+              >
                 {totalWeight.toFixed(1)}%
               </span>{" "}
               (streef 100%)

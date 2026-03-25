@@ -7,8 +7,12 @@ export const OMZA_LABELS: Record<OmzaKey, string> = {
   autonomie: "Autonomie",
 };
 
-export const OMZA_KEYS: OmzaKey[] = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"];
-
+export const OMZA_KEYS: OmzaKey[] = [
+  "organiseren",
+  "meedoen",
+  "zelfvertrouwen",
+  "autonomie",
+];
 
 export function mean(values: number[]): number {
   if (!values.length) return 0;
@@ -52,7 +56,7 @@ export function formatDelta(delta: number): string {
 // Get teamContributionFactor - gcfScore now comes directly as 0.90-1.10
 export function getTeamContributionFactor(
   teamContributionFactor: number | null | undefined,
-  gcfScore: number | null | undefined
+  gcfScore: number | null | undefined,
 ): number | null {
   if (teamContributionFactor != null) return teamContributionFactor;
   if (gcfScore != null) return gcfScore; // gcfScore is already in 0.90-1.10 range

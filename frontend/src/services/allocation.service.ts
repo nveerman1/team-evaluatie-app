@@ -15,10 +15,7 @@ export const allocationService = {
   /**
    * Submit scores for an allocation
    */
-  async submitScores(
-    allocationId: number,
-    items: ScoreItem[],
-  ): Promise<void> {
+  async submitScores(allocationId: number, items: ScoreItem[]): Promise<void> {
     await api.post(`/allocations/${allocationId}/scores`, { items });
   },
 };

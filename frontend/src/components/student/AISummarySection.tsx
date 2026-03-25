@@ -16,8 +16,10 @@ export function AISummarySection({
   fallbackSummary,
   useAsync = true,
 }: AISummarySectionProps) {
-  console.log(`[AISummarySection] Rendering with evaluationId=${evaluationId}, studentId=${studentId}, useAsync=${useAsync}`);
-  
+  console.log(
+    `[AISummarySection] Rendering with evaluationId=${evaluationId}, studentId=${studentId}, useAsync=${useAsync}`,
+  );
+
   const {
     summary,
     status,
@@ -31,18 +33,26 @@ export function AISummarySection({
     pollingInterval: 3000,
   });
 
-  console.log(`[AISummarySection] Hook state: status=${status}, summary=${summary ? 'present' : 'null'}, error=${error}, isPolling=${isPolling}`);
+  console.log(
+    `[AISummarySection] Hook state: status=${status}, summary=${summary ? "present" : "null"}, error=${error}, isPolling=${isPolling}`,
+  );
 
   const displaySummary = summary || fallbackSummary;
 
   // Show loading state only if we don't have any summary yet
-  const isLoading = (status === "loading" || status === "queued" || status === "processing") && !displaySummary;
+  const isLoading =
+    (status === "loading" || status === "queued" || status === "processing") &&
+    !displaySummary;
 
   return (
     <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/80 p-3 flex flex-col">
       <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
         <span>AI-samenvatting</span>
-        <StatusBadge status={status} isPolling={isPolling} method={generationMethod} />
+        <StatusBadge
+          status={status}
+          isPolling={isPolling}
+          method={generationMethod}
+        />
       </div>
 
       {isLoading ? (
@@ -51,11 +61,11 @@ export function AISummarySection({
             <LoadingSpinner />
           </div>
           <p className="text-sm text-slate-600 mb-1">
-            {status === "queued" 
+            {status === "queued"
               ? "Samenvatting wordt in de wachtrij geplaatst..."
               : status === "processing"
-              ? "AI genereert je samenvatting..."
-              : "Samenvatting laden..."}
+                ? "AI genereert je samenvatting..."
+                : "Samenvatting laden..."}
           </p>
           {isPolling && (
             <p className="text-xs text-slate-400">
@@ -66,8 +76,18 @@ export function AISummarySection({
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-6">
           <div className="mb-3 text-red-500">
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="h-8 w-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
           <p className="text-sm text-slate-700 mb-2 text-center">
@@ -78,37 +98,56 @@ export function AISummarySection({
             onClick={retryGeneration}
             className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 transition-colors"
           >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg
+              className="h-3 w-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
             Opnieuw proberen
           </button>
         </div>
       ) : displaySummary ? (
-        <p className="text-sm leading-relaxed text-slate-700">{displaySummary}</p>
+        <p className="text-sm leading-relaxed text-slate-700">
+          {displaySummary}
+        </p>
       ) : (
         <p className="text-sm leading-relaxed text-slate-500 italic">
-          Nog geen AI-samenvatting beschikbaar. Deze wordt gegenereerd zodra er peer-feedback is ontvangen.
+          Nog geen AI-samenvatting beschikbaar. Deze wordt gegenereerd zodra er
+          peer-feedback is ontvangen.
         </p>
       )}
     </div>
   );
 }
 
-function StatusBadge({ 
-  status, 
-  isPolling, 
-  method 
-}: { 
-  status: string; 
+function StatusBadge({
+  status,
+  isPolling,
+  method,
+}: {
+  status: string;
   isPolling: boolean;
   method: string | null;
 }) {
   if (status === "loading" || status === "queued" || status === "processing") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-700">
-        {isPolling && <span className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" />}
-        {status === "queued" ? "In wachtrij" : status === "processing" ? "Genereren" : "Laden"}
+        {isPolling && (
+          <span className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" />
+        )}
+        {status === "queued"
+          ? "In wachtrij"
+          : status === "processing"
+            ? "Genereren"
+            : "Laden"}
       </span>
     );
   }

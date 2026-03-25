@@ -39,7 +39,7 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 export default function StatistiekenTab() {
@@ -51,7 +51,7 @@ export default function StatistiekenTab() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [projects, setProjects] = useState<{ id: number; title: string }[]>([]);
-  
+
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [weekly, setWeekly] = useState<WeeklyStats[]>([]);
   const [daily, setDaily] = useState<DailyStats[]>([]);
@@ -76,7 +76,8 @@ export default function StatistiekenTab() {
       ]);
       setCourses(coursesData);
       // ProjectListResponse has an 'items' field, not a direct array
-      const projectsData = projectsResponse.data?.items || projectsResponse.data || [];
+      const projectsData =
+        projectsResponse.data?.items || projectsResponse.data || [];
       setProjects(Array.isArray(projectsData) ? projectsData : []);
     } catch (err) {
       console.error("Error fetching dropdown data:", err);
@@ -87,7 +88,7 @@ export default function StatistiekenTab() {
   const fetchStatistics = async () => {
     try {
       setLoading(true);
-      
+
       const params = {
         period,
         ...(courseId && { course_id: courseId }),
@@ -96,15 +97,21 @@ export default function StatistiekenTab() {
 
       const topBottomMode = onlyLast4Weeks ? "4w" : "scope";
 
-      const [summaryData, weeklyData, dailyData, heatmapData, signalsData, topBottomData] =
-        await Promise.all([
-          attendanceService.getStatsSummary(params),
-          attendanceService.getStatsWeekly(params),
-          attendanceService.getStatsDaily(params),
-          attendanceService.getStatsHeatmap(params),
-          attendanceService.getStatsSignals(params),
-          attendanceService.getStatsTopBottom({ ...params, mode: topBottomMode }),
-        ]);
+      const [
+        summaryData,
+        weeklyData,
+        dailyData,
+        heatmapData,
+        signalsData,
+        topBottomData,
+      ] = await Promise.all([
+        attendanceService.getStatsSummary(params),
+        attendanceService.getStatsWeekly(params),
+        attendanceService.getStatsDaily(params),
+        attendanceService.getStatsHeatmap(params),
+        attendanceService.getStatsSignals(params),
+        attendanceService.getStatsTopBottom({ ...params, mode: topBottomMode }),
+      ]);
 
       setSummary(summaryData);
       setWeekly(weeklyData);
@@ -156,7 +163,10 @@ export default function StatistiekenTab() {
     labels: ["School", "Extern (goedgekeurd)"],
     datasets: [
       {
-        data: [summary?.school_blocks || 0, summary?.extern_approved_blocks || 0],
+        data: [
+          summary?.school_blocks || 0,
+          summary?.extern_approved_blocks || 0,
+        ],
         backgroundColor: ["#3b82f6", "#f59e0b"],
         borderWidth: 0,
       },
@@ -201,10 +211,15 @@ export default function StatistiekenTab() {
   const heatmapMatrix: number[][] = Array(5)
     .fill(0)
     .map(() => Array(11).fill(0));
-  
+
   if (heatmap) {
     heatmap.cells.forEach((cell) => {
-      if (cell.weekday >= 0 && cell.weekday < 5 && cell.hour >= 8 && cell.hour <= 18) {
+      if (
+        cell.weekday >= 0 &&
+        cell.weekday < 5 &&
+        cell.hour >= 8 &&
+        cell.hour <= 18
+      ) {
         heatmapMatrix[cell.weekday][cell.hour - 8] = cell.avg_students;
       }
     });
@@ -243,7 +258,9 @@ export default function StatistiekenTab() {
             <select
               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
               value={courseId || ""}
-              onChange={(e) => setCourseId(e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                setCourseId(e.target.value ? parseInt(e.target.value) : null)
+              }
             >
               <option value="">Alle vakken</option>
               {courses.map((c) => (
@@ -256,7 +273,9 @@ export default function StatistiekenTab() {
             <select
               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
               value={projectId || ""}
-              onChange={(e) => setProjectId(e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                setProjectId(e.target.value ? parseInt(e.target.value) : null)
+              }
             >
               <option value="">Alle projecten</option>
               {projects.map((p) => (
@@ -279,10 +298,15 @@ export default function StatistiekenTab() {
         {/* Donut Chart */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-900">School vs Extern</h3>
+            <h3 className="text-sm font-semibold text-slate-900">
+              School vs Extern
+            </h3>
             <p className="text-xs text-slate-500">Verdeling van blokken</p>
           </div>
-          <div className="flex items-center justify-center" style={{ height: "250px" }}>
+          <div
+            className="flex items-center justify-center"
+            style={{ height: "250px" }}
+          >
             <Doughnut
               data={donutData}
               options={{
@@ -314,8 +338,12 @@ export default function StatistiekenTab() {
         {/* Weekly Trend */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-900">Totale aanwezigheid per week</h3>
-            <p className="text-xs text-slate-500">School + goedgekeurd extern</p>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Totale aanwezigheid per week
+            </h3>
+            <p className="text-xs text-slate-500">
+              School + goedgekeurd extern
+            </p>
           </div>
           <div style={{ height: "250px" }}>
             <Line
@@ -359,8 +387,12 @@ export default function StatistiekenTab() {
         {/* Daily Bar Chart */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-900">Aantal aanwezigen per dag</h3>
-            <p className="text-xs text-slate-500">Unieke leerlingen met school check-in</p>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Aantal aanwezigen per dag
+            </h3>
+            <p className="text-xs text-slate-500">
+              Unieke leerlingen met school check-in
+            </p>
           </div>
           <div style={{ height: "250px" }}>
             <Bar
@@ -405,7 +437,9 @@ export default function StatistiekenTab() {
       {/* Heatmap */}
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-slate-900">Aanwezigheidsheatmap (gemiddeld)</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            Aanwezigheidsheatmap (gemiddeld)
+          </h3>
           <p className="text-xs text-slate-500">
             School check-ins geaggregeerd over laatste 4 weken
           </p>
@@ -460,18 +494,25 @@ export default function StatistiekenTab() {
               <TrendingDown className="h-4 w-4 text-amber-600" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-slate-900">Veel extern, weinig school</h4>
-              <p className="text-xs text-slate-500">Extern ≥4u, school ≤2 blokken</p>
+              <h4 className="text-sm font-semibold text-slate-900">
+                Veel extern, weinig school
+              </h4>
+              <p className="text-xs text-slate-500">
+                Extern ≥4u, school ≤2 blokken
+              </p>
             </div>
           </div>
           <div className="space-y-2">
-            {signals?.extern_low_school && signals.extern_low_school.length > 0 ? (
+            {signals?.extern_low_school &&
+            signals.extern_low_school.length > 0 ? (
               signals.extern_low_school.map((s, index) => (
                 <div
                   key={`extern-low-school-${s.student_id}-${index}`}
                   className="rounded-lg bg-slate-50 p-2 text-xs ring-1 ring-slate-200"
                 >
-                  <div className="font-medium text-slate-900">{s.student_name}</div>
+                  <div className="font-medium text-slate-900">
+                    {s.student_name}
+                  </div>
                   <div className="text-slate-600">
                     {s.course && <span className="mr-2">{s.course}</span>}
                     <span className="text-amber-700">{s.value_text}</span>
@@ -491,8 +532,12 @@ export default function StatistiekenTab() {
               <TrendingUp className="h-4 w-4 text-blue-600" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-slate-900">Veel in afwachting</h4>
-              <p className="text-xs text-slate-500">≥3 pending extern registraties</p>
+              <h4 className="text-sm font-semibold text-slate-900">
+                Veel in afwachting
+              </h4>
+              <p className="text-xs text-slate-500">
+                ≥3 pending extern registraties
+              </p>
             </div>
           </div>
           <div className="space-y-2">
@@ -502,7 +547,9 @@ export default function StatistiekenTab() {
                   key={`many-pending-${s.student_id}-${index}`}
                   className="rounded-lg bg-slate-50 p-2 text-xs ring-1 ring-slate-200"
                 >
-                  <div className="font-medium text-slate-900">{s.student_name}</div>
+                  <div className="font-medium text-slate-900">
+                    {s.student_name}
+                  </div>
                   <div className="text-slate-600">
                     {s.course && <span className="mr-2">{s.course}</span>}
                     <span className="text-blue-700">{s.value_text}</span>
@@ -522,8 +569,12 @@ export default function StatistiekenTab() {
               <TrendingDown className="h-4 w-4 text-rose-600" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-slate-900">Lange open check-ins</h4>
-              <p className="text-xs text-slate-500">Open ≥12 uur zonder check-out</p>
+              <h4 className="text-sm font-semibold text-slate-900">
+                Lange open check-ins
+              </h4>
+              <p className="text-xs text-slate-500">
+                Open ≥12 uur zonder check-out
+              </p>
             </div>
           </div>
           <div className="space-y-2">
@@ -533,7 +584,9 @@ export default function StatistiekenTab() {
                   key={`long-open-${s.student_id}-${index}`}
                   className="rounded-lg bg-slate-50 p-2 text-xs ring-1 ring-slate-200"
                 >
-                  <div className="font-medium text-slate-900">{s.student_name}</div>
+                  <div className="font-medium text-slate-900">
+                    {s.student_name}
+                  </div>
                   <div className="text-slate-600">
                     {s.course && <span className="mr-2">{s.course}</span>}
                     <span className="text-rose-700">{s.value_text}</span>
@@ -551,8 +604,12 @@ export default function StatistiekenTab() {
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Top & Bottom betrokkenheid</h3>
-            <p className="text-xs text-slate-500">Gerangschikt op totaal blokken</p>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Top & Bottom betrokkenheid
+            </h3>
+            <p className="text-xs text-slate-500">
+              Gerangschikt op totaal blokken
+            </p>
           </div>
           <label className="flex items-center gap-2 text-xs">
             <input
@@ -581,7 +638,9 @@ export default function StatistiekenTab() {
                       {i + 1}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-slate-900">{s.student_name}</div>
+                      <div className="font-medium text-slate-900">
+                        {s.student_name}
+                      </div>
                       <div className="text-slate-600">{s.course}</div>
                     </div>
                     <div className="shrink-0 font-semibold text-emerald-700">
@@ -611,7 +670,9 @@ export default function StatistiekenTab() {
                       {i + 1}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-slate-900">{s.student_name}</div>
+                      <div className="font-medium text-slate-900">
+                        {s.student_name}
+                      </div>
                       <div className="text-slate-600">{s.course}</div>
                     </div>
                     <div className="shrink-0 font-semibold text-slate-700">

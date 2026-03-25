@@ -33,7 +33,9 @@ export default function CreateWindowPage() {
   });
   const [courses, setCourses] = useState<Course[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
-  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>([]);
+  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>(
+    [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,10 @@ export default function CreateWindowPage() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
@@ -115,7 +120,7 @@ export default function CreateWindowPage() {
     try {
       setSubmitting(true);
       setError(null);
-      
+
       // Store selected competencies in settings
       const dataToSubmit = {
         ...formData,
@@ -124,7 +129,7 @@ export default function CreateWindowPage() {
           selected_competency_ids: selectedCompetencies,
         },
       };
-      
+
       await competencyService.createWindow(dataToSubmit);
       router.push("/teacher/competencies");
     } catch (err) {
@@ -184,15 +189,15 @@ export default function CreateWindowPage() {
 
           {/* Course Dropdown */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Vak
-            </label>
+            <label className="block text-sm font-medium mb-2">Vak</label>
             <select
               value={formData.course_id || ""}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  course_id: e.target.value ? Number(e.target.value) : undefined,
+                  course_id: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
                 })
               }
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -263,7 +268,11 @@ export default function CreateWindowPage() {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
               >
-                <span className={selectedCompetencies.length === 0 ? "text-gray-500" : ""}>
+                <span
+                  className={
+                    selectedCompetencies.length === 0 ? "text-gray-500" : ""
+                  }
+                >
                   {getSelectedCompetenciesText()}
                 </span>
                 <svg
@@ -272,7 +281,12 @@ export default function CreateWindowPage() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
 
@@ -280,7 +294,8 @@ export default function CreateWindowPage() {
                 <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
                   {competencies.length === 0 ? (
                     <div className="p-3 text-gray-500 text-sm">
-                      Geen competenties beschikbaar. Maak eerst competenties aan.
+                      Geen competenties beschikbaar. Maak eerst competenties
+                      aan.
                     </div>
                   ) : (
                     <div className="py-1">
@@ -395,7 +410,8 @@ export default function CreateWindowPage() {
                     Externe beoordelaars toestaan
                   </span>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    Leerlingen kunnen externen (bijv. opdrachtgever, coach) uitnodigen om hun competenties te beoordelen
+                    Leerlingen kunnen externen (bijv. opdrachtgever, coach)
+                    uitnodigen om hun competenties te beoordelen
                   </p>
                 </div>
               </label>
@@ -418,7 +434,8 @@ export default function CreateWindowPage() {
                         ...formData,
                         settings: {
                           ...formData.settings,
-                          max_invites_per_subject: parseInt(e.target.value) || 3,
+                          max_invites_per_subject:
+                            parseInt(e.target.value) || 3,
                         },
                       })
                     }
@@ -459,7 +476,9 @@ export default function CreateWindowPage() {
                     Naam leerling tonen aan externe
                   </label>
                   <select
-                    value={formData.settings?.show_subject_name_to_external || "full"}
+                    value={
+                      formData.settings?.show_subject_name_to_external || "full"
+                    }
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -472,7 +491,9 @@ export default function CreateWindowPage() {
                     className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="full">Volledige naam</option>
-                    <option value="partial">Gedeeltelijk (bijv. &quot;Anna J.&quot;)</option>
+                    <option value="partial">
+                      Gedeeltelijk (bijv. &quot;Anna J.&quot;)
+                    </option>
                     <option value="none">Anoniem</option>
                   </select>
                 </div>

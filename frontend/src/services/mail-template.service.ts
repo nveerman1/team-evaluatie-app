@@ -15,10 +15,10 @@ export interface ListMailTemplatesOptions {
 }
 
 export async function listMailTemplates(
-  options?: ListMailTemplatesOptions
+  options?: ListMailTemplatesOptions,
 ): Promise<MailTemplateDto[]> {
   const params = new URLSearchParams();
-  
+
   if (options?.subject_id !== undefined && options.subject_id !== null) {
     params.append("subject_id", options.subject_id.toString());
   }
@@ -34,7 +34,7 @@ export async function listMailTemplates(
   if (options?.per_page) {
     params.append("per_page", options.per_page.toString());
   }
-  
+
   const url = `/templates/mail-templates${params.toString() ? `?${params.toString()}` : ""}`;
   const response = await api.get<MailTemplateListResponse>(url);
   return response.data.templates || [];
@@ -42,28 +42,28 @@ export async function listMailTemplates(
 
 export async function getMailTemplate(id: number): Promise<MailTemplateDto> {
   const response = await api.get<MailTemplateDto>(
-    `/templates/mail-templates/${id}`
+    `/templates/mail-templates/${id}`,
   );
   return response.data;
 }
 
 export async function createMailTemplate(
-  data: MailTemplateCreateDto
+  data: MailTemplateCreateDto,
 ): Promise<MailTemplateDto> {
   const response = await api.post<MailTemplateDto>(
     `/templates/mail-templates`,
-    data
+    data,
   );
   return response.data;
 }
 
 export async function updateMailTemplate(
   id: number,
-  data: MailTemplateUpdateDto
+  data: MailTemplateUpdateDto,
 ): Promise<MailTemplateDto> {
   const response = await api.patch<MailTemplateDto>(
     `/templates/mail-templates/${id}`,
-    data
+    data,
   );
   return response.data;
 }

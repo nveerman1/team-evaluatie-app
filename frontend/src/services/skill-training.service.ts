@@ -33,7 +33,7 @@ export const skillTrainingService = {
 
   async updateTraining(
     id: number,
-    data: SkillTrainingUpdate
+    data: SkillTrainingUpdate,
   ): Promise<SkillTraining> {
     const response = await api.patch(`/skill-trainings/${id}`, data);
     return response.data;
@@ -43,14 +43,16 @@ export const skillTrainingService = {
 
   async getProgressMatrix(
     courseId: number,
-    className?: string
+    className?: string,
   ): Promise<TeacherProgressMatrixResponse> {
     const params = new URLSearchParams();
     params.append("course_id", String(courseId));
     if (className) {
       params.append("class_name", className);
     }
-    const response = await api.get(`/skill-trainings/progress?${params.toString()}`);
+    const response = await api.get(
+      `/skill-trainings/progress?${params.toString()}`,
+    );
     return response.data;
   },
 
@@ -59,7 +61,7 @@ export const skillTrainingService = {
     trainingId: number,
     courseId: number,
     status: SkillTrainingStatus,
-    note?: string
+    note?: string,
   ): Promise<SkillTrainingProgress> {
     const params = new URLSearchParams();
     params.append("course_id", String(courseId));
@@ -68,14 +70,14 @@ export const skillTrainingService = {
       params.append("note", note);
     }
     const response = await api.patch(
-      `/skill-trainings/progress/${studentId}/${trainingId}?${params.toString()}`
+      `/skill-trainings/progress/${studentId}/${trainingId}?${params.toString()}`,
     );
     return response.data;
   },
 
   async bulkUpdateProgress(
     courseId: number,
-    data: BulkProgressUpdate
+    data: BulkProgressUpdate,
   ): Promise<void> {
     const params = new URLSearchParams();
     params.append("course_id", String(courseId));
@@ -91,11 +93,11 @@ export const skillTrainingService = {
 
   async updateMyStatus(
     trainingId: number,
-    data: StudentStatusUpdate
+    data: StudentStatusUpdate,
   ): Promise<SkillTrainingProgress> {
     const response = await api.patch(
       `/skill-trainings/me/skill-trainings/${trainingId}`,
-      data
+      data,
     );
     return response.data;
   },

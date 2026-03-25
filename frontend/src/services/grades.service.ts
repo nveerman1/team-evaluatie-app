@@ -7,7 +7,11 @@ import {
 } from "@/dtos/grades.dto";
 
 export const gradesService = {
-  async listGrades(evaluationId: number, signal?: AbortSignal, courseId?: number) {
+  async listGrades(
+    evaluationId: number,
+    signal?: AbortSignal,
+    courseId?: number,
+  ) {
     const q = new URLSearchParams({ evaluation_id: String(evaluationId) });
     if (courseId != null) q.set("course_id", String(courseId));
     const { data } = await api.get<PublishedGradeOut[]>(

@@ -44,7 +44,9 @@ export default function PeerFeedbackResultsPage() {
     // - Generate PDF with all evaluation results
     // - Include scores, feedback, and reflections
     console.warn("Export functionality not yet implemented");
-    alert("Export functionaliteit is nog niet geïmplementeerd. Neem contact op met je docent voor een overzicht.");
+    alert(
+      "Export functionaliteit is nog niet geïmplementeerd. Neem contact op met je docent voor een overzicht.",
+    );
   };
 
   const openDetails = (ev: EvaluationResult) => {

@@ -35,7 +35,9 @@ export function StudentFeedbackPanel({
   const [students, setStudents] = useState<CourseStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [studentsError, setStudentsError] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
+    null,
+  );
   // "all" = all senders, "self" = self-assessment, or stringified from_student_id for peer
   const [selectedSenderKey, setSelectedSenderKey] = useState<string>("self");
 
@@ -51,10 +53,18 @@ export function StudentFeedbackPanel({
     setStudentsError(null);
     courseService
       .getCourseStudents(courseId)
-      .then((data) => { if (mounted) setStudents(data); })
-      .catch((err) => { if (mounted) setStudentsError(err?.message || "Laden mislukt"); })
-      .finally(() => { if (mounted) setStudentsLoading(false); });
-    return () => { mounted = false; };
+      .then((data) => {
+        if (mounted) setStudents(data);
+      })
+      .catch((err) => {
+        if (mounted) setStudentsError(err?.message || "Laden mislukt");
+      })
+      .finally(() => {
+        if (mounted) setStudentsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [courseId]);
 
   // Reset sender selection when recipient changes
@@ -63,9 +73,10 @@ export function StudentFeedbackPanel({
   }, [selectedStudentId]);
 
   // Load aggregated feedback for this evaluation
-  const { data: feedbackData, loading: feedbackLoading } = useAggregatedFeedback({
-    evaluationId: evalId,
-  });
+  const { data: feedbackData, loading: feedbackLoading } =
+    useAggregatedFeedback({
+      evaluationId: evalId,
+    });
 
   // Index of selected student in list (for prev/next)
   const selectedIndex =
@@ -89,10 +100,16 @@ export function StudentFeedbackPanel({
     const items = feedbackData.feedbackItems.filter(
       (item) => item.student_id === selectedStudentId,
     );
-    const options: SenderOption[] = [{ key: "self", label: "Zelf (self-assessment)" }];
+    const options: SenderOption[] = [
+      { key: "self", label: "Zelf (self-assessment)" },
+    ];
     const seen = new Set<number>();
     for (const item of items) {
-      if (item.feedback_type === "peer" && item.from_student_id != null && !seen.has(item.from_student_id)) {
+      if (
+        item.feedback_type === "peer" &&
+        item.from_student_id != null &&
+        !seen.has(item.from_student_id)
+      ) {
         seen.add(item.from_student_id);
         options.push({
           key: String(item.from_student_id),
@@ -103,10 +120,13 @@ export function StudentFeedbackPanel({
     return options;
   }, [selectedStudentId, feedbackData]);
 
-  const senderIndex = senderOptions.findIndex((o) => o.key === selectedSenderKey);
+  const senderIndex = senderOptions.findIndex(
+    (o) => o.key === selectedSenderKey,
+  );
 
   const goPrevSender = useCallback(() => {
-    if (senderIndex > 0) setSelectedSenderKey(senderOptions[senderIndex - 1].key);
+    if (senderIndex > 0)
+      setSelectedSenderKey(senderOptions[senderIndex - 1].key);
   }, [senderIndex, senderOptions]);
 
   const goNextSender = useCallback(() => {
@@ -129,7 +149,10 @@ export function StudentFeedbackPanel({
     const startWidth = width;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(280, Math.min(maxWidth, startWidth + (e.clientX - startX)));
+      const newWidth = Math.max(
+        280,
+        Math.min(maxWidth, startWidth + (e.clientX - startX)),
+      );
       onWidthChange?.(newWidth);
     };
 
@@ -166,7 +189,11 @@ export function StudentFeedbackPanel({
               type="button"
               onClick={() => onFocusViewChange?.("notes")}
               disabled={!hasNotes}
-              title={hasNotes ? undefined : "Geen project gekoppeld aan deze evaluatie"}
+              title={
+                hasNotes
+                  ? undefined
+                  : "Geen project gekoppeld aan deze evaluatie"
+              }
               className={`rounded-md px-2 py-1 text-xs font-medium transition ${focusView === "notes" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"}`}
             >
               📋 Aantekeningen
@@ -199,7 +226,9 @@ export function StudentFeedbackPanel({
                 <select
                   value={selectedStudentId ?? ""}
                   onChange={(e) =>
-                    setSelectedStudentId(e.target.value ? Number(e.target.value) : null)
+                    setSelectedStudentId(
+                      e.target.value ? Number(e.target.value) : null,
+                    )
                   }
                   className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   disabled={studentsLoading}
@@ -229,7 +258,9 @@ export function StudentFeedbackPanel({
                 <button
                   type="button"
                   onClick={goNext}
-                  disabled={selectedIndex < 0 || selectedIndex >= students.length - 1}
+                  disabled={
+                    selectedIndex < 0 || selectedIndex >= students.length - 1
+                  }
                   className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-sm disabled:opacity-40 hover:bg-slate-50"
                   title="Volgende leerling"
                 >
@@ -237,7 +268,9 @@ export function StudentFeedbackPanel({
                 </button>
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-xs text-slate-500 whitespace-nowrap shrink-0">Feedback van:</span>
+                <span className="text-xs text-slate-500 whitespace-nowrap shrink-0">
+                  Feedback van:
+                </span>
                 <select
                   value={selectedSenderKey}
                   onChange={(e) => setSelectedSenderKey(e.target.value)}
@@ -271,7 +304,11 @@ export function StudentFeedbackPanel({
                 <button
                   type="button"
                   onClick={goNextSender}
-                  disabled={!selectedStudentId || senderIndex < 0 || senderIndex >= senderOptions.length - 1}
+                  disabled={
+                    !selectedStudentId ||
+                    senderIndex < 0 ||
+                    senderIndex >= senderOptions.length - 1
+                  }
                   className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-sm disabled:opacity-40 hover:bg-slate-50"
                   title="Volgende afzender"
                 >
@@ -285,24 +322,35 @@ export function StudentFeedbackPanel({
         {/* Feedback content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {studentsLoading && (
-            <p className="text-sm text-slate-500 text-center py-4">Leerlingen laden...</p>
+            <p className="text-sm text-slate-500 text-center py-4">
+              Leerlingen laden...
+            </p>
           )}
           {studentsError && (
-            <p className="text-sm text-red-500 text-center py-4">{studentsError}</p>
-          )}
-          {!studentsLoading && !studentsError && courseId && !selectedStudentId && (
-            <p className="text-sm text-slate-500 text-center py-4">
-              Selecteer een leerling om feedback te bekijken.
+            <p className="text-sm text-red-500 text-center py-4">
+              {studentsError}
             </p>
           )}
+          {!studentsLoading &&
+            !studentsError &&
+            courseId &&
+            !selectedStudentId && (
+              <p className="text-sm text-slate-500 text-center py-4">
+                Selecteer een leerling om feedback te bekijken.
+              </p>
+            )}
           {selectedStudentId && feedbackLoading && (
-            <p className="text-sm text-slate-500 text-center py-4">Feedback laden...</p>
-          )}
-          {selectedStudentId && !feedbackLoading && studentFeedback.length === 0 && (
             <p className="text-sm text-slate-500 text-center py-4">
-              Geen feedback gevonden voor deze leerling.
+              Feedback laden...
             </p>
           )}
+          {selectedStudentId &&
+            !feedbackLoading &&
+            studentFeedback.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-4">
+                Geen feedback gevonden voor deze leerling.
+              </p>
+            )}
           {selectedStudentId &&
             !feedbackLoading &&
             studentFeedback.map((item) => (
@@ -346,13 +394,17 @@ export function StudentFeedbackPanel({
                           )}
                         </div>
                         {c.feedback && (
-                          <p className="text-sm text-slate-700 leading-5">{c.feedback}</p>
+                          <p className="text-sm text-slate-700 leading-5">
+                            {c.feedback}
+                          </p>
                         )}
                       </li>
                     ))}
                   </ul>
                 ) : item.combined_feedback ? (
-                  <p className="text-sm text-slate-700 leading-5">{item.combined_feedback}</p>
+                  <p className="text-sm text-slate-700 leading-5">
+                    {item.combined_feedback}
+                  </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">Geen inhoud</p>
                 )}

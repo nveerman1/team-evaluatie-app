@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import Link from "next/link";
 import { useNumericEvalId } from "@/lib/id";
 import { omzaService } from "@/services/omza.service";
@@ -61,8 +67,8 @@ function LevelSelector({
                 ? label === "!!"
                   ? "border-rose-500 bg-rose-100 text-rose-700 shadow-sm"
                   : label === "!"
-                  ? "border-amber-400 bg-amber-100 text-amber-700 shadow-sm"
-                  : "border-green-500 bg-green-100 text-green-700 shadow-sm"
+                    ? "border-amber-400 bg-amber-100 text-amber-700 shadow-sm"
+                    : "border-green-500 bg-green-100 text-green-700 shadow-sm"
                 : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700")
             }
             aria-label={ICON_DESCRIPTIONS[index]}
@@ -90,7 +96,9 @@ function OmzaQuickCommentsGrid({
   addStandardComment: (category: string, text: string) => void;
   deleteStandardComment: (commentId: string) => void;
 }) {
-  const [newCommentTexts, setNewCommentTexts] = useState<Record<string, string>>({});
+  const [newCommentTexts, setNewCommentTexts] = useState<
+    Record<string, string>
+  >({});
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -115,7 +123,9 @@ function OmzaQuickCommentsGrid({
                     <button
                       type="button"
                       className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
-                      onClick={() => appendStandardComment(studentId, comment.text)}
+                      onClick={() =>
+                        appendStandardComment(studentId, comment.text)
+                      }
                     >
                       {comment.text}
                     </button>
@@ -142,7 +152,10 @@ function OmzaQuickCommentsGrid({
                 placeholder="Nieuwe opmerking..."
                 value={newCommentText}
                 onChange={(e) =>
-                  setNewCommentTexts((prev) => ({ ...prev, [cat]: e.target.value }))
+                  setNewCommentTexts((prev) => ({
+                    ...prev,
+                    [cat]: e.target.value,
+                  }))
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newCommentText.trim()) {
@@ -183,7 +196,10 @@ type Row = {
   prefix: string | null;
   lastName: string | null;
   // OMZA
-  categoryScores: Record<string, { peer_avg: number | null; self_avg: number | null }>;
+  categoryScores: Record<
+    string,
+    { peer_avg: number | null; self_avg: number | null }
+  >;
   teacherComment: string | null;
   // Grades
   gcf: number;
@@ -209,9 +225,15 @@ export default function CombinedAssessmentInner() {
   const [courseId, setCourseId] = useState<number | null>(null);
   const [evaluationTitle, setEvaluationTitle] = useState<string | null>(null);
 
-  const [teacherScores, setTeacherScores] = useState<Record<string, number | null>>({});
-  const [teacherComments, setTeacherComments] = useState<Record<string, string>>({});
-  const [standardComments, setStandardComments] = useState<Record<string, StandardComment[]>>({});
+  const [teacherScores, setTeacherScores] = useState<
+    Record<string, number | null>
+  >({});
+  const [teacherComments, setTeacherComments] = useState<
+    Record<string, string>
+  >({});
+  const [standardComments, setStandardComments] = useState<
+    Record<string, StandardComment[]>
+  >({});
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
   // Filters
@@ -224,7 +246,9 @@ export default function CombinedAssessmentInner() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   // Auto-save state
-  const [autoSaveState, setAutoSaveState] = useState<"idle" | "saving" | "saved" | "error">("saved");
+  const [autoSaveState, setAutoSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("saved");
 
   // Focus mode
   const { focusMode, setFocusMode } = useEvaluationFocusMode();
@@ -271,12 +295,18 @@ export default function CombinedAssessmentInner() {
   }, [focusMode, setFocusMode, evalIdStr, projectId, notesWidth]);
 
   // Saving indicators
-  const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
+  const [savingComments, setSavingComments] = useState<Record<string, boolean>>(
+    {},
+  );
   const [toast, setToast] = useState<string | null>(null);
 
   // Debounce refs
-  const scoreTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const commentTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const scoreTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
+  const commentTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track whether grade data has unsaved changes
   const isDirty = useRef(false);
@@ -327,7 +357,9 @@ export default function CombinedAssessmentInner() {
         );
 
         // Merge OMZA + grades by student_id
-        const omzaMap = new Map(omzaData.students.map((s) => [s.student_id, s]));
+        const omzaMap = new Map(
+          omzaData.students.map((s) => [s.student_id, s]),
+        );
         const gradesMap = new Map(items.map((i) => [i.user_id, i]));
 
         // Collect all user IDs from both sources
@@ -341,17 +373,21 @@ export default function CombinedAssessmentInner() {
 
           merged.push({
             user_id: uid,
-            name: omzaStudent?.student_name ?? gradeItem?.user_name ?? String(uid),
+            name:
+              omzaStudent?.student_name ?? gradeItem?.user_name ?? String(uid),
             teamNumber:
               omzaStudent?.team_number ?? gradeItem?.team_number ?? null,
-            className:
-              omzaStudent?.class_name ?? gradeItem?.class_name ?? null,
-            studentNumber: omzaStudent?.student_number ?? gradeItem?.student_number ?? null,
+            className: omzaStudent?.class_name ?? gradeItem?.class_name ?? null,
+            studentNumber:
+              omzaStudent?.student_number ?? gradeItem?.student_number ?? null,
             firstName: omzaStudent?.first_name ?? gradeItem?.first_name ?? null,
             prefix: omzaStudent?.prefix ?? gradeItem?.prefix ?? null,
             lastName: omzaStudent?.last_name ?? gradeItem?.last_name ?? null,
             categoryScores: omzaData.categories.reduce<
-              Record<string, { peer_avg: number | null; self_avg: number | null }>
+              Record<
+                string,
+                { peer_avg: number | null; self_avg: number | null }
+              >
             >((acc, cat) => {
               const cs = omzaStudent?.category_scores[cat];
               acc[cat] = {
@@ -392,7 +428,9 @@ export default function CombinedAssessmentInner() {
           err.name !== "CanceledError" &&
           err.message !== "canceled"
         ) {
-          setError(err?.response?.data?.detail ?? err?.message ?? "Laden mislukt");
+          setError(
+            err?.response?.data?.detail ?? err?.message ?? "Laden mislukt",
+          );
         }
       })
       .finally(() => setLoading(false));
@@ -424,7 +462,11 @@ export default function CombinedAssessmentInner() {
     const overrides = Object.fromEntries(
       rows.map((r) => [
         r.user_id,
-        { grade: r.override ?? null, reason: null, rowGroupGrade: r.rowGroupGrade ?? null },
+        {
+          grade: r.override ?? null,
+          reason: null,
+          rowGroupGrade: r.rowGroupGrade ?? null,
+        },
       ]),
     );
     try {
@@ -475,9 +517,15 @@ export default function CombinedAssessmentInner() {
       scoreTimeouts.current[key] = setTimeout(() => {
         if (evalIdNum == null) return;
         omzaService
-          .saveTeacherScore(evalIdNum, { student_id: studentId, category, score: level })
+          .saveTeacherScore(evalIdNum, {
+            student_id: studentId,
+            category,
+            score: level,
+          })
           .then(() => showToast("Docentscore opgeslagen"))
-          .catch((err) => showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`));
+          .catch((err) =>
+            showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`),
+          );
       }, 500);
     },
     [evalIdNum, showToast],
@@ -490,15 +538,23 @@ export default function CombinedAssessmentInner() {
       setTeacherComments((prev) => ({ ...prev, [studentId]: value }));
 
       const key = String(studentId);
-      if (commentTimeouts.current[key]) clearTimeout(commentTimeouts.current[key]);
+      if (commentTimeouts.current[key])
+        clearTimeout(commentTimeouts.current[key]);
       commentTimeouts.current[key] = setTimeout(() => {
         if (evalIdNum == null) return;
         setSavingComments((prev) => ({ ...prev, [key]: true }));
         omzaService
-          .saveTeacherComment(evalIdNum, { student_id: studentId, comment: value })
+          .saveTeacherComment(evalIdNum, {
+            student_id: studentId,
+            comment: value,
+          })
           .then(() => showToast("Docentopmerking opgeslagen"))
-          .catch((err) => showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`))
-          .finally(() => setSavingComments((prev) => ({ ...prev, [key]: false })));
+          .catch((err) =>
+            showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`),
+          )
+          .finally(() =>
+            setSavingComments((prev) => ({ ...prev, [key]: false })),
+          );
       }, 500);
     },
     [evalIdNum, showToast],
@@ -526,7 +582,9 @@ export default function CombinedAssessmentInner() {
           }));
           showToast("Standaardopmerking toegevoegd");
         })
-        .catch((err) => showToast(`Fout bij toevoegen: ${err?.message || "Onbekende fout"}`));
+        .catch((err) =>
+          showToast(`Fout bij toevoegen: ${err?.message || "Onbekende fout"}`),
+        );
     },
     [evalIdNum, showToast],
   );
@@ -546,7 +604,11 @@ export default function CombinedAssessmentInner() {
           });
           showToast("Standaardopmerking verwijderd");
         })
-        .catch((err) => showToast(`Fout bij verwijderen: ${err?.message || "Onbekende fout"}`));
+        .catch((err) =>
+          showToast(
+            `Fout bij verwijderen: ${err?.message || "Onbekende fout"}`,
+          ),
+        );
     },
     [evalIdNum, showToast],
   );
@@ -555,7 +617,11 @@ export default function CombinedAssessmentInner() {
 
   const applyPeerScoresAll = useCallback(async () => {
     if (!evalIdNum) return;
-    const updates: Array<{ student_id: number; category: string; score: number }> = [];
+    const updates: Array<{
+      student_id: number;
+      category: string;
+      score: number;
+    }> = [];
     const newScores = { ...teacherScores };
 
     rows.forEach((row) => {
@@ -582,7 +648,7 @@ export default function CombinedAssessmentInner() {
         const chunk = updates.slice(i, i + chunkSize);
         await Promise.all(
           chunk.map((update) =>
-            omzaService.saveTeacherScore(evalIdNum, update)
+            omzaService.saveTeacherScore(evalIdNum, update),
           ),
         );
       }
@@ -598,7 +664,16 @@ export default function CombinedAssessmentInner() {
   function exportAssessmentCSV() {
     if (filteredSorted.length === 0) return;
 
-    const headers = ["Team", "Leerlingnummer", "Naam", "Voornaam", "Tussenvoegsel", "Achternaam", "Klas", "Cijfer"];
+    const headers = [
+      "Team",
+      "Leerlingnummer",
+      "Naam",
+      "Voornaam",
+      "Tussenvoegsel",
+      "Achternaam",
+      "Klas",
+      "Cijfer",
+    ];
     const rows = filteredSorted.map((r) => [
       r.teamNumber != null ? String(r.teamNumber) : "—",
       r.studentNumber || "",
@@ -613,34 +688,45 @@ export default function CombinedAssessmentInner() {
     const csvContent =
       headers.join(",") +
       "\n" +
-      rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      rows
+        .map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+        )
+        .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
     const safeTitle = evaluationTitle
-      ? (evaluationTitle.replace(/[/\\<>:"|?*]/g, "") || evalIdStr)
+      ? evaluationTitle.replace(/[/\\<>:"|?*]/g, "") || evalIdStr
       : evalIdStr;
     link.download = `Peer Evaluatie - ${safeTitle}.csv`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function handleUpdateTeamGroupGrade(teamNumber: number | null | undefined, value: string) {
+  function handleUpdateTeamGroupGrade(
+    teamNumber: number | null | undefined,
+    value: string,
+  ) {
     if (teamNumber == null) return;
     isDirty.current = true;
     setAutoSaveState("saving");
     if (value.trim() === "") {
       setRows((all) =>
-        all.map((x) => (x.teamNumber === teamNumber ? { ...x, rowGroupGrade: null } : x)),
+        all.map((x) =>
+          x.teamNumber === teamNumber ? { ...x, rowGroupGrade: null } : x,
+        ),
       );
       return;
     }
     const num = Number(value.replace(",", "."));
     const newGrade = Number.isNaN(num) ? null : num;
     setRows((all) =>
-      all.map((x) => (x.teamNumber === teamNumber ? { ...x, rowGroupGrade: newGrade } : x)),
+      all.map((x) =>
+        x.teamNumber === teamNumber ? { ...x, rowGroupGrade: newGrade } : x,
+      ),
     );
   }
 
@@ -648,18 +734,24 @@ export default function CombinedAssessmentInner() {
     isDirty.current = true;
     setAutoSaveState("saving");
     if (value.trim() === "") {
-      setRows((all) => all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)));
+      setRows((all) =>
+        all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)),
+      );
       return;
     }
     const num = Number(value.replace(",", "."));
     const newVal = Number.isNaN(num) ? null : num;
-    setRows((all) => all.map((x) => (x.user_id === userId ? { ...x, override: newVal } : x)));
+    setRows((all) =>
+      all.map((x) => (x.user_id === userId ? { ...x, override: newVal } : x)),
+    );
   }
 
   function handleClearOverride(userId: number) {
     isDirty.current = true;
     setAutoSaveState("saving");
-    setRows((all) => all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)));
+    setRows((all) =>
+      all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)),
+    );
   }
 
   // ── sort ──────────────────────────────────────────────────────────────────
@@ -695,8 +787,10 @@ export default function CombinedAssessmentInner() {
   const filteredSorted = useMemo(() => {
     const q = searchName.trim().toLowerCase();
     let list = rows.filter((r) => {
-      const teamMatch = filterTeam === "all" || String(r.teamNumber ?? "–") === filterTeam;
-      const classMatch = filterClass === "all" || String(r.className ?? "–") === filterClass;
+      const teamMatch =
+        filterTeam === "all" || String(r.teamNumber ?? "–") === filterTeam;
+      const classMatch =
+        filterClass === "all" || String(r.className ?? "–") === filterClass;
       const nameMatch = q === "" || r.name.toLowerCase().includes(q);
       return teamMatch && classMatch && nameMatch;
     });
@@ -704,10 +798,19 @@ export default function CombinedAssessmentInner() {
       list = [...list].sort((a, b) => {
         let va: string | number = 0;
         let vb: string | number = 0;
-        if (sortBy === "team") { va = a.teamNumber ?? -1; vb = b.teamNumber ?? -1; }
-        else if (sortBy === "name") { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
-        else if (sortBy === "class") { va = a.className ?? ""; vb = b.className ?? ""; }
-        else if (sortBy === "final") { va = finalGrade(a); vb = finalGrade(b); }
+        if (sortBy === "team") {
+          va = a.teamNumber ?? -1;
+          vb = b.teamNumber ?? -1;
+        } else if (sortBy === "name") {
+          va = a.name.toLowerCase();
+          vb = b.name.toLowerCase();
+        } else if (sortBy === "class") {
+          va = a.className ?? "";
+          vb = b.className ?? "";
+        } else if (sortBy === "final") {
+          va = finalGrade(a);
+          vb = finalGrade(b);
+        }
         if (va < vb) return sortDir === "asc" ? -1 : 1;
         if (va > vb) return sortDir === "asc" ? 1 : -1;
         return 0;
@@ -722,7 +825,8 @@ export default function CombinedAssessmentInner() {
     return {
       hasData: list.length > 0,
       avgGcf: list.reduce((s, r) => s + r.gcf, 0) / count,
-      avgGroupGrade: list.reduce((s, r) => s + (r.rowGroupGrade ?? 0), 0) / count,
+      avgGroupGrade:
+        list.reduce((s, r) => s + (r.rowGroupGrade ?? 0), 0) / count,
       avgFinal: list.reduce((s, r) => s + finalGrade(r), 0) / count,
     };
   }, [filteredSorted]);
@@ -748,7 +852,9 @@ export default function CombinedAssessmentInner() {
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 animate-fade-in">
-          <div className="bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg">{toast}</div>
+          <div className="bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg">
+            {toast}
+          </div>
         </div>
       )}
 
@@ -837,12 +943,16 @@ export default function CombinedAssessmentInner() {
               width={notesWidth}
               maxWidth={maxNotesWidth}
               onWidthChange={setNotesWidth}
-              focusView={focusView === "notes" && !projectId ? "feedback" : focusView}
+              focusView={
+                focusView === "notes" && !projectId ? "feedback" : focusView
+              }
               onFocusViewChange={setFocusView}
               hasNotes={!!projectId}
             />
           )}
-          {focusMode && (focusView === "feedback" || (focusView === "notes" && !projectId)) &&
+          {focusMode &&
+            (focusView === "feedback" ||
+              (focusView === "notes" && !projectId)) &&
             evalIdNum != null && (
               <StudentFeedbackPanel
                 evalId={evalIdNum}
@@ -875,7 +985,9 @@ export default function CombinedAssessmentInner() {
                         >
                           <div className="flex items-center gap-1">
                             Team
-                            {sortBy === "team" && <span>{sortDir === "asc" ? "↑" : "↓"}</span>}
+                            {sortBy === "team" && (
+                              <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                            )}
                           </div>
                         </th>
                         {/* Student */}
@@ -885,7 +997,9 @@ export default function CombinedAssessmentInner() {
                         >
                           <div className="flex items-center gap-1">
                             Leerling
-                            {sortBy === "name" && <span>{sortDir === "asc" ? "↑" : "↓"}</span>}
+                            {sortBy === "name" && (
+                              <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                            )}
                           </div>
                         </th>
                         {/* Klas */}
@@ -895,7 +1009,9 @@ export default function CombinedAssessmentInner() {
                         >
                           <div className="flex items-center gap-1">
                             Klas
-                            {sortBy === "class" && <span>{sortDir === "asc" ? "↑" : "↓"}</span>}
+                            {sortBy === "class" && (
+                              <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                            )}
                           </div>
                         </th>
                         {/* OMZA categories */}
@@ -925,7 +1041,9 @@ export default function CombinedAssessmentInner() {
                         >
                           <div className="flex items-center justify-end gap-1">
                             Eindcijfer
-                            {sortBy === "final" && <span>{sortDir === "asc" ? "↑" : "↓"}</span>}
+                            {sortBy === "final" && (
+                              <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                            )}
                           </div>
                         </th>
                       </tr>
@@ -934,11 +1052,19 @@ export default function CombinedAssessmentInner() {
                     <tbody className="divide-y divide-gray-100">
                       {filteredSorted.map((r) => {
                         const isExpanded = expandedRow === r.user_id;
-                        const hasComment = !!(teacherComments[r.user_id] || r.teacherComment);
+                        const hasComment = !!(
+                          teacherComments[r.user_id] || r.teacherComment
+                        );
 
                         return (
                           <React.Fragment key={r.user_id}>
-                            <tr className={isExpanded ? "bg-indigo-50/40" : "bg-white hover:bg-gray-50"}>
+                            <tr
+                              className={
+                                isExpanded
+                                  ? "bg-indigo-50/40"
+                                  : "bg-white hover:bg-gray-50"
+                              }
+                            >
                               {/* Team pill */}
                               <td className="px-4 py-3 align-middle text-xs text-gray-500">
                                 {r.teamNumber != null && (
@@ -960,7 +1086,9 @@ export default function CombinedAssessmentInner() {
                                     type="button"
                                     className="inline-flex items-center rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-50"
                                     onClick={() =>
-                                      setExpandedRow(isExpanded ? null : r.user_id)
+                                      setExpandedRow(
+                                        isExpanded ? null : r.user_id,
+                                      )
                                     }
                                     title="Docentopmerking"
                                   >
@@ -978,26 +1106,39 @@ export default function CombinedAssessmentInner() {
                                 const teacherVal = teacherScores[key] ?? null;
                                 const cs = r.categoryScores[cat];
                                 const peerStr =
-                                  cs?.peer_avg != null ? cs.peer_avg.toFixed(1) : "—";
+                                  cs?.peer_avg != null
+                                    ? cs.peer_avg.toFixed(1)
+                                    : "—";
                                 const selfStr =
-                                  cs?.self_avg != null ? cs.self_avg.toFixed(1) : "—";
+                                  cs?.self_avg != null
+                                    ? cs.self_avg.toFixed(1)
+                                    : "—";
                                 const fullLabel = CATEGORY_LABELS[cat] || cat;
 
                                 return (
-                                  <td key={cat} className="px-2 py-3 align-middle">
+                                  <td
+                                    key={cat}
+                                    className="px-2 py-3 align-middle"
+                                  >
                                     <div className="relative group flex justify-center">
                                       <div className="rounded-lg bg-slate-50 border border-slate-200 px-1.5 py-1">
                                         <LevelSelector
                                           value={teacherVal}
                                           onChange={(level) =>
-                                            handleScoreChange(r.user_id, cat, level)
+                                            handleScoreChange(
+                                              r.user_id,
+                                              cat,
+                                              level,
+                                            )
                                           }
                                         />
                                       </div>
                                       {/* Tooltip */}
                                       <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                                         <div className="rounded-lg bg-gray-900 text-white text-[11px] px-2.5 py-2 shadow-lg whitespace-nowrap">
-                                          <p className="font-semibold mb-1">{fullLabel}</p>
+                                          <p className="font-semibold mb-1">
+                                            {fullLabel}
+                                          </p>
                                           <p>Peer gem.: {peerStr}</p>
                                           <p>Self score: {selfStr}</p>
                                         </div>
@@ -1018,8 +1159,8 @@ export default function CombinedAssessmentInner() {
                                     r.gcf < 0.9
                                       ? "text-red-600"
                                       : r.gcf !== 1
-                                      ? "text-amber-600"
-                                      : "text-gray-800"
+                                        ? "text-amber-600"
+                                        : "text-gray-800"
                                   }`}
                                 >
                                   {r.gcf.toFixed(2)}
@@ -1031,12 +1172,16 @@ export default function CombinedAssessmentInner() {
                                   type="text"
                                   className="w-20 text-right rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
                                   value={
-                                    r.rowGroupGrade != null && !Number.isNaN(r.rowGroupGrade)
+                                    r.rowGroupGrade != null &&
+                                    !Number.isNaN(r.rowGroupGrade)
                                       ? r.rowGroupGrade.toFixed(1)
                                       : ""
                                   }
                                   onChange={(e) =>
-                                    handleUpdateTeamGroupGrade(r.teamNumber, e.target.value)
+                                    handleUpdateTeamGroupGrade(
+                                      r.teamNumber,
+                                      e.target.value,
+                                    )
                                   }
                                 />
                               </td>
@@ -1049,21 +1194,29 @@ export default function CombinedAssessmentInner() {
                                       r.override != null
                                         ? "border-blue-300 bg-blue-50"
                                         : finalGrade(r) === 0
-                                        ? "border-amber-300 bg-amber-50"
-                                        : "border-gray-300 bg-white"
+                                          ? "border-amber-300 bg-amber-50"
+                                          : "border-gray-300 bg-white"
                                     }`}
                                     value={
-                                      r.override != null && !Number.isNaN(r.override)
+                                      r.override != null &&
+                                      !Number.isNaN(r.override)
                                         ? r.override.toFixed(1)
                                         : finalGrade(r).toFixed(1)
                                     }
-                                    onChange={(e) => handleUpdateOverride(r.user_id, e.target.value)}
+                                    onChange={(e) =>
+                                      handleUpdateOverride(
+                                        r.user_id,
+                                        e.target.value,
+                                      )
+                                    }
                                   />
                                   {r.override != null && (
                                     <button
                                       type="button"
                                       className="text-xs text-gray-400 hover:text-red-600"
-                                      onClick={() => handleClearOverride(r.user_id)}
+                                      onClick={() =>
+                                        handleClearOverride(r.user_id)
+                                      }
                                       title="Verwijder individuele override"
                                     >
                                       ✕
@@ -1076,23 +1229,31 @@ export default function CombinedAssessmentInner() {
                             {/* Expanded comment row */}
                             {isExpanded && (
                               <tr className="bg-indigo-50/60">
-                                <td colSpan={colSpan} className="px-5 pb-4 pt-0">
+                                <td
+                                  colSpan={colSpan}
+                                  className="px-5 pb-4 pt-0"
+                                >
                                   <div className="pt-2 flex flex-col gap-3">
                                     <div className="flex items-center justify-between">
                                       <p className="text-xs font-medium text-gray-700">
                                         Docentopmerking voor {r.name}
                                       </p>
                                       <span className="text-[11px] text-gray-500">
-                                        Tip: klik op een quick comment om deze toe te voegen.
+                                        Tip: klik op een quick comment om deze
+                                        toe te voegen.
                                       </span>
                                     </div>
                                     <OmzaQuickCommentsGrid
                                       categories={categories}
                                       standardComments={standardComments}
                                       studentId={r.user_id}
-                                      appendStandardComment={appendStandardComment}
+                                      appendStandardComment={
+                                        appendStandardComment
+                                      }
                                       addStandardComment={addStandardComment}
-                                      deleteStandardComment={deleteStandardComment}
+                                      deleteStandardComment={
+                                        deleteStandardComment
+                                      }
                                     />
                                     <div className="mt-3">
                                       <textarea
@@ -1101,12 +1262,19 @@ export default function CombinedAssessmentInner() {
                                         placeholder="Eigen notitie of motivatie over het samenwerken in dit project…"
                                         value={teacherComments[r.user_id] || ""}
                                         onChange={(e) =>
-                                          handleCommentChange(r.user_id, e.target.value)
+                                          handleCommentChange(
+                                            r.user_id,
+                                            e.target.value,
+                                          )
                                         }
-                                        disabled={savingComments[String(r.user_id)]}
+                                        disabled={
+                                          savingComments[String(r.user_id)]
+                                        }
                                       />
                                       {savingComments[String(r.user_id)] && (
-                                        <span className="text-[10px] text-gray-500">Opslaan...</span>
+                                        <span className="text-[10px] text-gray-500">
+                                          Opslaan...
+                                        </span>
                                       )}
                                     </div>
                                   </div>
@@ -1144,14 +1312,17 @@ export default function CombinedAssessmentInner() {
                 <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
                   <p className="mb-2 font-medium">Leeswijzer</p>
                   <p>
-                    De OMZA-knoppen geven per categorie het niveau aan dat jij als docent inschat.
-                    Beweeg de muis over een OMZA-cel om peer- en selfscores te zien.
-                    Het <span className="font-medium">groepscijfer</span> vul je per team in en
-                    geldt voor alle leerlingen in dat team. De{" "}
-                    <span className="font-medium">GCF</span> is gebaseerd op peer- en
-                    self-evaluaties. Het <span className="font-medium">eindcijfer</span> is
-                    groepscijfer × GCF (afgerond op één decimaal). Je kunt het eindcijfer handmatig
-                    corrigeren; klik ✕ om een override te verwijderen.
+                    De OMZA-knoppen geven per categorie het niveau aan dat jij
+                    als docent inschat. Beweeg de muis over een OMZA-cel om
+                    peer- en selfscores te zien. Het{" "}
+                    <span className="font-medium">groepscijfer</span> vul je per
+                    team in en geldt voor alle leerlingen in dat team. De{" "}
+                    <span className="font-medium">GCF</span> is gebaseerd op
+                    peer- en self-evaluaties. Het{" "}
+                    <span className="font-medium">eindcijfer</span> is
+                    groepscijfer × GCF (afgerond op één decimaal). Je kunt het
+                    eindcijfer handmatig corrigeren; klik ✕ om een override te
+                    verwijderen.
                   </p>
                 </div>
               </section>

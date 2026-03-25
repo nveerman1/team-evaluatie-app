@@ -53,7 +53,9 @@ export default function OverviewFilters({
         {/* Academic Year */}
         {showAcademicYear && (
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Academisch Jaar
+            </label>
             <select
               className="w-full px-3 py-2 text-sm border rounded-lg"
               value={filters.academicYear || ""}
@@ -142,7 +144,9 @@ export default function OverviewFilters({
         {/* Search Student */}
         {showSearch && (
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Zoek leerling</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Zoek leerling
+            </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -157,7 +161,7 @@ export default function OverviewFilters({
           </div>
         )}
       </div>
-      
+
       {/* Additional controls (e.g., toggles for AllItemsTab) */}
       {children && <div className="mt-4">{children}</div>}
     </div>

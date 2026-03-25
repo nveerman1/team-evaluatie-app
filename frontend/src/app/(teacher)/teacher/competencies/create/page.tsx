@@ -56,14 +56,18 @@ export default function CreateCompetencyPage() {
         router.push("/teacher/competencies");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create competency");
+      setError(
+        err instanceof Error ? err.message : "Failed to create competency",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   // Get color for selected category
-  const selectedCategory = categories.find(c => c.id === formData.category_id);
+  const selectedCategory = categories.find(
+    (c) => c.id === formData.category_id,
+  );
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
@@ -90,7 +94,9 @@ export default function CreateCompetencyPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      category_id: e.target.value ? Number(e.target.value) : undefined,
+                      category_id: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     })
                   }
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -106,7 +112,9 @@ export default function CreateCompetencyPage() {
                   <div className="flex items-center gap-2">
                     <div
                       className="w-4 h-4 rounded"
-                      style={{ backgroundColor: selectedCategory.color || "#3B82F6" }}
+                      style={{
+                        backgroundColor: selectedCategory.color || "#3B82F6",
+                      }}
                     />
                     <span className="text-sm text-gray-600">
                       {selectedCategory.description || "Geen beschrijving"}
@@ -116,7 +124,8 @@ export default function CreateCompetencyPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500 italic">
-                Nog geen categorieën beschikbaar. Deze worden automatisch aangemaakt.
+                Nog geen categorieën beschikbaar. Deze worden automatisch
+                aangemaakt.
               </p>
             )}
           </div>

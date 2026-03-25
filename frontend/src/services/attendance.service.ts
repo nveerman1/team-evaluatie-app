@@ -159,7 +159,10 @@ export const attendanceService = {
     page?: number;
     per_page?: number;
   }): Promise<AttendanceEventListResponse> {
-    const response = await api.get<AttendanceEventListResponse>("/attendance/events", { params });
+    const response = await api.get<AttendanceEventListResponse>(
+      "/attendance/events",
+      { params },
+    );
     return response.data;
   },
 
@@ -174,8 +177,14 @@ export const attendanceService = {
   /**
    * Update an attendance event
    */
-  async updateEvent(eventId: number, data: Partial<AttendanceEvent>): Promise<AttendanceEvent> {
-    const response = await api.patch<AttendanceEvent>(`/attendance/events/${eventId}`, data);
+  async updateEvent(
+    eventId: number,
+    data: Partial<AttendanceEvent>,
+  ): Promise<AttendanceEvent> {
+    const response = await api.patch<AttendanceEvent>(
+      `/attendance/events/${eventId}`,
+      data,
+    );
     return response.data;
   },
 
@@ -197,7 +206,10 @@ export const attendanceService = {
    * Create external work registration
    */
   async createExternalWork(data: ExternalWorkCreate): Promise<AttendanceEvent> {
-    const response = await api.post<AttendanceEvent>("/attendance/external", data);
+    const response = await api.post<AttendanceEvent>(
+      "/attendance/external",
+      data,
+    );
     return response.data;
   },
 
@@ -205,15 +217,24 @@ export const attendanceService = {
    * Approve external work
    */
   async approveExternalWork(eventId: number): Promise<AttendanceEvent> {
-    const response = await api.patch<AttendanceEvent>(`/attendance/external/${eventId}/approve`, {});
+    const response = await api.patch<AttendanceEvent>(
+      `/attendance/external/${eventId}/approve`,
+      {},
+    );
     return response.data;
   },
 
   /**
    * Reject external work
    */
-  async rejectExternalWork(eventId: number, reason?: string): Promise<AttendanceEvent> {
-    const response = await api.patch<AttendanceEvent>(`/attendance/external/${eventId}/reject`, { reason });
+  async rejectExternalWork(
+    eventId: number,
+    reason?: string,
+  ): Promise<AttendanceEvent> {
+    const response = await api.patch<AttendanceEvent>(
+      `/attendance/external/${eventId}/reject`,
+      { reason },
+    );
     return response.data;
   },
 
@@ -221,7 +242,9 @@ export const attendanceService = {
    * Bulk approve external work
    */
   async bulkApproveExternalWork(eventIds: number[]): Promise<void> {
-    await api.post("/attendance/external/bulk-approve", { event_ids: eventIds });
+    await api.post("/attendance/external/bulk-approve", {
+      event_ids: eventIds,
+    });
   },
 
   /**
@@ -230,7 +253,9 @@ export const attendanceService = {
   async getMyAttendance(params?: {
     project_id?: number;
   }): Promise<AttendanceTotals> {
-    const response = await api.get<AttendanceTotals>("/attendance/me", { params });
+    const response = await api.get<AttendanceTotals>("/attendance/me", {
+      params,
+    });
     return response.data;
   },
 
@@ -260,7 +285,9 @@ export const attendanceService = {
     course_id?: number;
     project_id?: number;
   }): Promise<StatsSummary> {
-    const response = await api.get<StatsSummary>("/attendance/stats/summary", { params });
+    const response = await api.get<StatsSummary>("/attendance/stats/summary", {
+      params,
+    });
     return response.data;
   },
 
@@ -272,7 +299,9 @@ export const attendanceService = {
     course_id?: number;
     project_id?: number;
   }): Promise<WeeklyStats[]> {
-    const response = await api.get<WeeklyStats[]>("/attendance/stats/weekly", { params });
+    const response = await api.get<WeeklyStats[]>("/attendance/stats/weekly", {
+      params,
+    });
     return response.data;
   },
 
@@ -284,7 +313,9 @@ export const attendanceService = {
     course_id?: number;
     project_id?: number;
   }): Promise<DailyStats[]> {
-    const response = await api.get<DailyStats[]>("/attendance/stats/daily", { params });
+    const response = await api.get<DailyStats[]>("/attendance/stats/daily", {
+      params,
+    });
     return response.data;
   },
 
@@ -296,7 +327,9 @@ export const attendanceService = {
     course_id?: number;
     project_id?: number;
   }): Promise<HeatmapData> {
-    const response = await api.get<HeatmapData>("/attendance/stats/heatmap", { params });
+    const response = await api.get<HeatmapData>("/attendance/stats/heatmap", {
+      params,
+    });
     return response.data;
   },
 
@@ -308,7 +341,9 @@ export const attendanceService = {
     course_id?: number;
     project_id?: number;
   }): Promise<SignalsData> {
-    const response = await api.get<SignalsData>("/attendance/stats/signals", { params });
+    const response = await api.get<SignalsData>("/attendance/stats/signals", {
+      params,
+    });
     return response.data;
   },
 
@@ -321,7 +356,10 @@ export const attendanceService = {
     project_id?: number;
     mode: string;
   }): Promise<TopBottomData> {
-    const response = await api.get<TopBottomData>("/attendance/stats/top-bottom", { params });
+    const response = await api.get<TopBottomData>(
+      "/attendance/stats/top-bottom",
+      { params },
+    );
     return response.data;
   },
 };
@@ -338,7 +376,10 @@ export const rfidService = {
   /**
    * Create new RFID card for user
    */
-  async createCard(userId: number, data: { uid: string; label?: string; is_active?: boolean }): Promise<RFIDCard> {
+  async createCard(
+    userId: number,
+    data: { uid: string; label?: string; is_active?: boolean },
+  ): Promise<RFIDCard> {
     const response = await api.post<RFIDCard>(`/rfid/${userId}`, data);
     return response.data;
   },
@@ -346,7 +387,10 @@ export const rfidService = {
   /**
    * Update RFID card
    */
-  async updateCard(cardId: number, data: { label?: string; is_active?: boolean }): Promise<RFIDCard> {
+  async updateCard(
+    cardId: number,
+    data: { label?: string; is_active?: boolean },
+  ): Promise<RFIDCard> {
     const response = await api.patch<RFIDCard>(`/rfid/${cardId}`, data);
     return response.data;
   },

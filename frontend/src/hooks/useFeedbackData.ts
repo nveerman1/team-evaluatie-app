@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { peerEvaluationOverviewService } from "@/services/peer-evaluation-overview.service";
-import type {
-  FeedbackItem,
-} from "@/services/peer-evaluation-overview.service";
+import type { FeedbackItem } from "@/services/peer-evaluation-overview.service";
 
 export type { FeedbackItem };
 
@@ -39,7 +37,14 @@ export function useFeedbackData(filters?: FeedbackFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters?.courseId, filters?.projectId, filters?.category, filters?.sentiment, filters?.searchText, filters?.riskOnly]);
+  }, [
+    filters?.courseId,
+    filters?.projectId,
+    filters?.category,
+    filters?.sentiment,
+    filters?.searchText,
+    filters?.riskOnly,
+  ]);
 
   useEffect(() => {
     fetchData();

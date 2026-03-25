@@ -20,7 +20,9 @@ export function EvaluationReflectionSection({
   } | null>(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle",
+  );
   const [justSubmitted, setJustSubmitted] = useState(false);
 
   useEffect(() => {
@@ -40,7 +42,10 @@ export function EvaluationReflectionSection({
       .finally(() => setLoading(false));
   }, [evaluationId]);
 
-  const wordCount = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount =
+    text.trim().length === 0
+      ? 0
+      : text.trim().split(/\s+/).filter(Boolean).length;
   const isValid = wordCount >= minWords && wordCount <= maxWords;
   const submitted = !!reflection?.submitted_at;
 
@@ -85,7 +90,8 @@ export function EvaluationReflectionSection({
           Stap 2: Jouw reflectie op dit resultaat
         </h2>
         <p className="mt-1 text-sm text-slate-600">
-          Na het bekijken van je feedback en scores is het tijd om te reflecteren.
+          Na het bekijken van je feedback en scores is het tijd om te
+          reflecteren.
         </p>
       </div>
 
@@ -94,7 +100,8 @@ export function EvaluationReflectionSection({
         <p className="text-sm text-blue-800">
           <strong>Reflecteer op je samenwerking en wat je hebt geleerd.</strong>
           <br />
-          Wat ging goed? Wat zou je volgende keer anders doen? Hoe heb je bijgedragen aan het team?
+          Wat ging goed? Wat zou je volgende keer anders doen? Hoe heb je
+          bijgedragen aan het team?
         </p>
       </div>
 
@@ -119,7 +126,9 @@ export function EvaluationReflectionSection({
       {/* Reflection Text Area */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-slate-900">Jouw reflectie</label>
+          <label className="text-sm font-medium text-slate-900">
+            Jouw reflectie
+          </label>
           <div className="flex items-center gap-3">
             <span className={`text-sm font-medium ${getWordCountColor()}`}>
               {wordCount} / {minWords}-{maxWords} woorden

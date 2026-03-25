@@ -35,10 +35,13 @@ const SectionsManagement = forwardRef((props, ref) => {
             const courses = await subjectService.getSubjectCourses(subject.id);
             counts[subject.id] = courses.length;
           } catch (err) {
-            console.error(`Failed to load courses for subject ${subject.id}:`, err);
+            console.error(
+              `Failed to load courses for subject ${subject.id}:`,
+              err,
+            );
             counts[subject.id] = 0;
           }
-        })
+        }),
       );
       setCourseCounts(counts);
     } catch (err) {
@@ -57,7 +60,7 @@ const SectionsManagement = forwardRef((props, ref) => {
   const handleDeleteSubject = async (subjectId: number) => {
     if (
       !confirm(
-        "Weet je zeker dat je deze sectie wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden."
+        "Weet je zeker dat je deze sectie wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden.",
       )
     ) {
       return;
@@ -106,7 +109,8 @@ const SectionsManagement = forwardRef((props, ref) => {
       {!loading && !error && (
         <>
           <div className="text-sm text-gray-600">
-            {subjects.length} {subjects.length === 1 ? "sectie" : "secties"} gevonden
+            {subjects.length} {subjects.length === 1 ? "sectie" : "secties"}{" "}
+            gevonden
           </div>
 
           {subjects.length === 0 ? (

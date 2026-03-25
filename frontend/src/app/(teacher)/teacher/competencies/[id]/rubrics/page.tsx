@@ -37,7 +37,7 @@ export default function CompetencyRubricsPage() {
         competencyService.getRubricLevels(competencyId),
       ]);
       setCompetency(comp);
-      
+
       // Initialize rubric levels for the scale if none exist
       if (levels.length === 0) {
         const initialLevels: RubricLevel[] = [];
@@ -61,9 +61,7 @@ export default function CompetencyRubricsPage() {
 
   const handleUpdateLevel = (level: number, field: string, value: string) => {
     setRubricLevels((prev) =>
-      prev.map((rl) =>
-        rl.level === level ? { ...rl, [field]: value } : rl
-      )
+      prev.map((rl) => (rl.level === level ? { ...rl, [field]: value } : rl)),
     );
   };
 
@@ -95,13 +93,13 @@ export default function CompetencyRubricsPage() {
           // Create new
           const created = await competencyService.createRubricLevel(
             competencyId,
-            data
+            data,
           );
           // Update the level with the new id
           setRubricLevels((prev) =>
             prev.map((rl) =>
-              rl.level === level.level ? { ...rl, id: created.id } : rl
-            )
+              rl.level === level.level ? { ...rl, id: created.id } : rl,
+            ),
           );
         }
       }
@@ -109,7 +107,7 @@ export default function CompetencyRubricsPage() {
       router.push("/teacher/competencies");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to save rubric levels"
+        err instanceof Error ? err.message : "Failed to save rubric levels",
       );
     } finally {
       setSaving(false);

@@ -1,13 +1,23 @@
 "use client";
 
 import { useParams, usePathname } from "next/navigation";
-import { useState, useEffect, ReactNode, useCallback, createContext, useContext } from "react";
+import {
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+  createContext,
+  useContext,
+} from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { evaluationService } from "@/services";
 import { Evaluation, EvalStatus } from "@/dtos/evaluation.dto";
 import { Loading, ErrorMessage, StatusToggle } from "@/components";
-import { EvaluationLayoutProvider, useEvaluationLayout } from "./EvaluationLayoutContext";
+import {
+  EvaluationLayoutProvider,
+  useEvaluationLayout,
+} from "./EvaluationLayoutContext";
 
 type LayoutProps = {
   children: ReactNode;
@@ -50,8 +60,13 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        const err = e as { response?: { data?: { detail?: string } }; message?: string };
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
+        );
       }
     } finally {
       setLoading(false);
@@ -71,10 +86,10 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
   // Handle status change from toggle
   async function handleStatusChange(newStatus: string) {
     if (!data || publishing) return;
-    
+
     // Don't do anything if status is the same
     if (data.status === newStatus) return;
-    
+
     setPublishing(true);
     try {
       // If changing to closed status and on grades page with publishGrades function
@@ -82,23 +97,33 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
         await publishGrades();
         showToast("Cijfers gepubliceerd!");
       }
-      
-      await evaluationService.updateStatus(Number(evalId), newStatus as EvalStatus);
-      
+
+      await evaluationService.updateStatus(
+        Number(evalId),
+        newStatus as EvalStatus,
+      );
+
       // Reload data to get updated status
       await loadData();
-      
+
       const statusLabels: Record<string, string> = {
         draft: "concept",
         open: "open",
-        closed: "gepubliceerd"
+        closed: "gepubliceerd",
       };
       if (newStatus !== "closed" || !publishGrades) {
         showToast(`Status gewijzigd naar "${statusLabels[newStatus]}"`);
       }
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      showToast(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Status wijzigen mislukt",
+      );
     } finally {
       setPublishing(false);
     }
@@ -110,11 +135,31 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
 
   // Define tabs for the navigation
   const tabs = [
-    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalId}/dashboard` },
-    { id: "assessment", label: "Projectbeoordeling", href: `/teacher/evaluations/${evalId}/assessment` },
-    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalId}/feedback` },
-    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalId}/reflections` },
-    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalId}/settings` },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      href: `/teacher/evaluations/${evalId}/dashboard`,
+    },
+    {
+      id: "assessment",
+      label: "Projectbeoordeling",
+      href: `/teacher/evaluations/${evalId}/assessment`,
+    },
+    {
+      id: "feedback",
+      label: "Feedback",
+      href: `/teacher/evaluations/${evalId}/feedback`,
+    },
+    {
+      id: "reflections",
+      label: "Reflecties",
+      href: `/teacher/evaluations/${evalId}/reflections`,
+    },
+    {
+      id: "settings",
+      label: "Instellingen",
+      href: `/teacher/evaluations/${evalId}/settings`,
+    },
   ];
 
   return (
@@ -134,7 +179,9 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
           <div className="mb-4">
             <Link
               href="/teacher/evaluations"
-              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+              prefetch={
+                process.env.NODE_ENV === "production" ? false : undefined
+              }
               className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ← Terug naar overzicht
@@ -145,14 +192,10 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
               <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
                 {data.title}
               </h1>
-              <p className="text-gray-600 mt-1 text-sm">
-                Evaluatie #{data.id}
-              </p>
+              <p className="text-gray-600 mt-1 text-sm">Evaluatie #{data.id}</p>
               {/* Auto-save label above toggle */}
               {autoSaveLabel && (
-                <p className="text-xs text-gray-500 mt-2">
-                  {autoSaveLabel}
-                </p>
+                <p className="text-xs text-gray-500 mt-2">{autoSaveLabel}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -181,7 +224,9 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 py-6 space-y-6 ${focusMode ? 'w-full max-w-none px-4 sm:px-6' : 'max-w-6xl mx-auto px-4 sm:px-6'}`}>
+      <div
+        className={`transition-all duration-300 py-6 space-y-6 ${focusMode ? "w-full max-w-none px-4 sm:px-6" : "max-w-6xl mx-auto px-4 sm:px-6"}`}
+      >
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
           <nav className="flex gap-6 text-sm" aria-label="Tabs">
@@ -192,7 +237,9 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
                 <Link
                   key={tab.id}
                   href={tab.href}
-                  prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+                  prefetch={
+                    process.env.NODE_ENV === "production" ? false : undefined
+                  }
                   className={`py-3 border-b-2 -mb-px transition-colors ${
                     isActive
                       ? "border-blue-600 text-blue-700 font-medium"

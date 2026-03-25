@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -25,11 +24,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { studentStyles } from "@/styles/student-dashboard.styles";
-import { 
-  attendanceService, 
-  type AttendanceEvent, 
-  type AttendanceTotals, 
-  type Project 
+import {
+  attendanceService,
+  type AttendanceEvent,
+  type AttendanceTotals,
+  type Project,
 } from "@/services/attendance.service";
 
 type PeriodFilter = "week" | "maand" | "alles";
@@ -42,22 +41,22 @@ function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  
+
   const parts: string[] = [];
   if (hours > 0) parts.push(`${hours}`);
-  parts.push(minutes.toString().padStart(hours > 0 ? 2 : 1, '0'));
-  parts.push(secs.toString().padStart(2, '0'));
-  
-  return parts.join(':');
+  parts.push(minutes.toString().padStart(hours > 0 ? 2 : 1, "0"));
+  parts.push(secs.toString().padStart(2, "0"));
+
+  return parts.join(":");
 }
 
 function formatDateTime(isoString: string): string {
   const date = new Date(isoString);
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
@@ -83,7 +82,15 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function Kpi({ label, value, tone }: { label: string; value: string; tone?: "neutral" | "success" | "accent" | "warn" }) {
+function Kpi({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "success" | "accent" | "warn";
+}) {
   const toneClass =
     tone === "success"
       ? "text-emerald-700"
@@ -94,20 +101,32 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "neu
           : "text-slate-900";
 
   return (
-    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-      <CardContent className="p-4">
-        <div className="text-xs font-medium text-slate-600">{label}</div>
-        <div className={`mt-1 text-2xl font-semibold tracking-tight ${toneClass}`}>{value}</div>
-      </CardContent>
-    </Card>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-medium text-slate-600">{label}</div>
+      <div
+        className={`mt-1 text-2xl font-semibold tracking-tight ${toneClass}`}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
-function TableShell({ title, icon, right }: { title: string; icon: React.ReactNode; right?: React.ReactNode }) {
+function TableShell({
+  title,
+  icon,
+  right,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  right?: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <div className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 text-slate-700">{icon}</div>
+        <div className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 text-slate-700">
+          {icon}
+        </div>
         <div className="text-base font-semibold text-slate-900">{title}</div>
       </div>
       {right}
@@ -126,7 +145,7 @@ function SmallHelp({ children }: { children: React.ReactNode }) {
 export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const [period, setPeriod] = useState<PeriodFilter>("alles");
   const [showNewExternal, setShowNewExternal] = useState(false);
   const [expandedRejectId, setExpandedRejectId] = useState<number | null>(null);
@@ -135,11 +154,13 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Get project_id from URL params
   const projectIdFromUrl = searchParams.get("project_id");
-  const [projectFilter, setProjectFilter] = useState<string>(projectIdFromUrl || "");
-  
+  const [projectFilter, setProjectFilter] = useState<string>(
+    projectIdFromUrl || "",
+  );
+
   const [formData, setFormData] = useState({
     location: "Thuis",
     description: "",
@@ -174,18 +195,20 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       // Prepare params for totals request
-      const totalsParams = projectFilter ? { project_id: parseInt(projectFilter, 10) } : undefined;
-      
+      const totalsParams = projectFilter
+        ? { project_id: parseInt(projectFilter, 10) }
+        : undefined;
+
       // Fetch totals
       const totalsData = await attendanceService.getMyAttendance(totalsParams);
       setTotals(totalsData);
-      
+
       // Fetch events
       const now = new Date();
       let startDate: string | undefined;
-      
+
       if (period === "week") {
         const weekAgo = new Date(now);
         weekAgo.setDate(weekAgo.getDate() - 7);
@@ -195,7 +218,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         startDate = monthAgo.toISOString();
       }
-      
+
       // Prepare event list params
       const eventsParams: {
         start_date?: string;
@@ -204,11 +227,11 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
         start_date: startDate,
         per_page: 50,
       };
-      
-      // Note: We don't filter events by project_id because the backend 
+
+      // Note: We don't filter events by project_id because the backend
       // doesn't support that for students, and we want to show all events
       // in the time period. The totals are filtered by project date range.
-      
+
       const eventsData = await attendanceService.listEvents(eventsParams);
       setEvents(eventsData.events);
     } catch (error) {
@@ -220,29 +243,34 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
 
   const handleProjectFilterChange = (value: string) => {
     setProjectFilter(value);
-    
+
     // Update URL params
     const currentParams = new URLSearchParams(window.location.search);
     const currentTab = currentParams.get("tab");
-    
+
     if (value) {
       currentParams.set("project_id", value);
     } else {
       currentParams.delete("project_id");
     }
-    
+
     // Preserve the tab parameter
     if (currentTab) {
       currentParams.set("tab", currentTab);
     }
-    
+
     router.push(`/student?${currentParams.toString()}`, { scroll: false });
   };
 
   const handleSubmitExternalWork = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.start || !formData.end || !formData.location || !formData.description) {
+
+    if (
+      !formData.start ||
+      !formData.end ||
+      !formData.location ||
+      !formData.description
+    ) {
       alert("Vul alle velden in");
       return;
     }
@@ -255,7 +283,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
         location: formData.location,
         description: formData.description,
       });
-      
+
       setShowNewExternal(false);
       setFormData({
         location: "Thuis",
@@ -274,11 +302,11 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
 
   // Split events into school sessions and external work
   const schoolSessions = useMemo(() => {
-    return events.filter(e => !e.is_external && e.check_out !== null);
+    return events.filter((e) => !e.is_external && e.check_out !== null);
   }, [events]);
 
   const externalWork = useMemo(() => {
-    return events.filter(e => e.is_external);
+    return events.filter((e) => e.is_external);
   }, [events]);
 
   // Filter by search query
@@ -297,57 +325,49 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
 
   return (
     <>
-      {/* Info card */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50 shadow-none">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl bg-white border border-slate-200 text-slate-700">
-                <Timer className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-900">3de Blok – Aanwezigheid</div>
-                <p className="mt-1 text-sm text-slate-600">
-                  Bekijk je gewerkte tijd op school en registreer extern werk (bijv. thuis of bij een opdrachtgever).
-                </p>
-                <div className="mt-2">
-                  <SmallHelp>75 min = 1 lesblok. Extern werk telt pas mee na goedkeuring.</SmallHelp>
-                </div>
-              </div>
+      {/* Top card — contains all sub-sections */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+        {/* Header row */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl bg-slate-100 text-slate-700">
+              <Timer className="h-4 w-4" />
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={period === "week" ? "default" : "secondary"}
-                className={`rounded-xl ${period === "week" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
-                size="sm"
-                onClick={() => setPeriod("week")}
-              >
-                Deze week
-              </Button>
-              <Button
-                variant={period === "maand" ? "default" : "secondary"}
-                className={`rounded-xl ${period === "maand" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
-                size="sm"
-                onClick={() => setPeriod("maand")}
-              >
-                Deze maand
-              </Button>
-              <Button
-                variant={period === "alles" ? "default" : "secondary"}
-                className={`rounded-xl ${period === "alles" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
-                size="sm"
-                onClick={() => setPeriod("alles")}
-              >
-                Alles
-              </Button>
+            <div>
+              <div className="text-lg font-semibold text-slate-900">
+                3de Blok – Aanwezigheid
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Bekijk je gewerkte tijd op school en registreer extern werk
+                (bijv. thuis of bij een opdrachtgever).
+              </p>
+              <div className="mt-2">
+                <SmallHelp>
+                  75 min = 1 lesblok. Extern werk telt pas mee na goedkeuring.
+                </SmallHelp>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          {/* Period filter pills */}
+          <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1 shrink-0">
+            {(["week", "maand", "alles"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  period === p
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {p === "week" ? "Week" : p === "maand" ? "Maand" : "Alles"}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {/* Project filter */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-4">
+        {/* Project filter */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <label className="text-sm font-medium text-slate-900 shrink-0">
               Filter op project:
@@ -359,97 +379,115 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
             >
               <option value="">Alle projecten</option>
               {projects.map((project) => {
-                let dateRange = '';
+                let dateRange = "";
                 try {
                   if (project.start_date && project.end_date) {
                     const startDate = new Date(project.start_date);
                     const endDate = new Date(project.end_date);
-                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                      dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
+                    if (
+                      !isNaN(startDate.getTime()) &&
+                      !isNaN(endDate.getTime())
+                    ) {
+                      dateRange = ` (${startDate.toLocaleDateString("nl-NL")} - ${endDate.toLocaleDateString("nl-NL")})`;
                     }
                   } else if (project.start_date) {
                     const startDate = new Date(project.start_date);
                     if (!isNaN(startDate.getTime())) {
-                      dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
+                      dateRange = ` (vanaf ${startDate.toLocaleDateString("nl-NL")})`;
                     }
                   }
                 } catch (error) {
-                  // Date parsing errors are non-critical - the project title will still display
-                  // without the date range, which is acceptable fallback behavior
+                  // Date parsing errors are non-critical
                 }
                 return (
                   <option key={project.id} value={project.id}>
-                    {project.title}{dateRange}
+                    {project.title}
+                    {dateRange}
                   </option>
                 );
               })}
             </select>
             {projectFilter && (
               <SmallHelp>
-                Totalen en blokken tonen alleen gegevens binnen de projectperiode.
+                Totalen en blokken tonen alleen gegevens binnen de
+                projectperiode.
               </SmallHelp>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* KPI grid */}
-      {totals && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Kpi 
-            label="Schooltijd" 
-            value={formatDuration(totals.total_school_seconds)} 
-            tone="neutral" 
-          />
-          <Kpi 
-            label="Externe tijd (goedgekeurd)" 
-            value={formatDuration(totals.total_external_approved_seconds)} 
-            tone="success" 
-          />
-          <Kpi 
-            label="Totaal" 
-            value={formatDuration(totals.total_school_seconds + totals.total_external_approved_seconds)} 
-            tone="accent" 
-          />
-          <Kpi 
-            label="Lesblokken (75 min)" 
-            value={totals.lesson_blocks.toFixed(1)} 
-            tone="warn" 
-          />
         </div>
-      )}
 
-      {/* Sessions */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-5 space-y-4">
-          <TableShell 
-            title="Aanwezigheidssessies" 
-            icon={<Clock className="h-4 w-4" />} 
-            right={<SmallHelp>Nieuwste bovenaan</SmallHelp>} 
+        {/* KPI grid */}
+        {totals && (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi
+              label="Schooltijd"
+              value={formatDuration(totals.total_school_seconds)}
+              tone="neutral"
+            />
+            <Kpi
+              label="Externe tijd (goedgekeurd)"
+              value={formatDuration(totals.total_external_approved_seconds)}
+              tone="success"
+            />
+            <Kpi
+              label="Totaal"
+              value={formatDuration(
+                totals.total_school_seconds +
+                  totals.total_external_approved_seconds,
+              )}
+              tone="accent"
+            />
+            <Kpi
+              label="Lesblokken (75 min)"
+              value={totals.lesson_blocks.toFixed(1)}
+              tone="warn"
+            />
+          </div>
+        )}
+
+        {/* Sessions */}
+        <div className="space-y-4">
+          <TableShell
+            title="Aanwezigheidssessies"
+            icon={<Clock className="h-4 w-4" />}
+            right={<SmallHelp>Nieuwste bovenaan</SmallHelp>}
           />
-
           <div className="overflow-hidden rounded-2xl border border-slate-200">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-slate-600">
                   <th className="px-4 py-3 text-left font-medium">Check-in</th>
                   <th className="px-4 py-3 text-left font-medium">Check-out</th>
-                  <th className="px-4 py-3 text-right font-medium">Gewerkte tijd</th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    Gewerkte tijd
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {schoolSessions.map((s) => (
-                  <tr key={s.id} className="border-t border-slate-200 hover:bg-slate-50">
-                    <td className="px-4 py-3 text-slate-900">{formatDateTime(s.check_in)}</td>
-                    <td className="px-4 py-3 text-slate-900">{s.check_out ? formatDateTime(s.check_out) : "—"}</td>
+                  <tr
+                    key={s.id}
+                    className="border-t border-slate-200 hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-3 text-slate-900">
+                      {formatDateTime(s.check_in)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-900">
+                      {s.check_out ? formatDateTime(s.check_out) : "—"}
+                    </td>
                     <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {s.duration_seconds ? formatDuration(s.duration_seconds) : "—"}
+                      {s.duration_seconds
+                        ? formatDuration(s.duration_seconds)
+                        : "—"}
                     </td>
                   </tr>
                 ))}
                 {schoolSessions.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-4 py-6 text-center text-slate-600">
+                    <td
+                      colSpan={3}
+                      className="px-4 py-6 text-center text-slate-600"
+                    >
                       Geen sessies gevonden.
                     </td>
                   </tr>
@@ -457,12 +495,10 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* External work */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-5 space-y-4">
+        {/* External work */}
+        <div className="space-y-4">
           <TableShell
             title="Externe werkregistraties"
             icon={<Briefcase className="h-4 w-4" />}
@@ -476,13 +512,14 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
               </Button>
             }
           />
-
           <div className="overflow-hidden rounded-2xl border border-slate-200">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-slate-600">
                   <th className="px-4 py-3 text-left font-medium">Locatie</th>
-                  <th className="px-4 py-3 text-left font-medium">Omschrijving</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    Omschrijving
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">Start</th>
                   <th className="px-4 py-3 text-left font-medium">Eind</th>
                   <th className="px-4 py-3 text-right font-medium">Status</th>
@@ -497,32 +534,50 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                       <tr
                         className={`border-t border-slate-200 hover:bg-slate-50 ${isRejected ? "cursor-pointer" : ""}`}
                         onClick={() => {
-                          if (isRejected) setExpandedRejectId(expanded ? null : e.id);
+                          if (isRejected)
+                            setExpandedRejectId(expanded ? null : e.id);
                         }}
-                        title={isRejected ? "Klik om reden te bekijken" : undefined}
+                        title={
+                          isRejected ? "Klik om reden te bekijken" : undefined
+                        }
                       >
-                        <td className="px-4 py-3 text-slate-900">{e.location || "—"}</td>
-                        <td className="px-4 py-3 text-slate-900">{e.description || "—"}</td>
-                        <td className="px-4 py-3 text-slate-900 tabular-nums">{formatDateTime(e.check_in)}</td>
+                        <td className="px-4 py-3 text-slate-900">
+                          {e.location || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-900">
+                          {e.description || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-900 tabular-nums">
+                          {formatDateTime(e.check_in)}
+                        </td>
                         <td className="px-4 py-3 text-slate-900 tabular-nums">
                           {e.check_out ? formatDateTime(e.check_out) : "—"}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="inline-flex items-center justify-end">
-                            <StatusPill status={e.approval_status || "pending"} />
+                            <StatusPill
+                              status={e.approval_status || "pending"}
+                            />
                           </div>
                         </td>
                       </tr>
                       {isRejected && expanded && (
                         <tr className="border-t border-slate-200 bg-rose-50/40">
-                          <td colSpan={5} className="px-4 py-3 text-sm text-slate-700">
+                          <td
+                            colSpan={5}
+                            className="px-4 py-3 text-sm text-slate-700"
+                          >
                             <div className="flex items-start gap-2">
                               <div className="mt-0.5 grid h-8 w-8 place-items-center rounded-xl bg-white border border-rose-200 text-rose-700">
                                 <XCircle className="h-4 w-4" />
                               </div>
                               <div>
-                                <div className="text-sm font-semibold text-slate-900">Waarom afgekeurd?</div>
-                                <p className="mt-1 text-sm text-slate-700">{e.description || "Geen reden meegegeven."}</p>
+                                <div className="text-sm font-semibold text-slate-900">
+                                  Waarom afgekeurd?
+                                </div>
+                                <p className="mt-1 text-sm text-slate-700">
+                                  {e.description || "Geen reden meegegeven."}
+                                </p>
                               </div>
                             </div>
                           </td>
@@ -533,7 +588,10 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                 })}
                 {externalWork.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-slate-600">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-slate-600"
+                    >
                       Geen registraties gevonden.
                     </td>
                   </tr>
@@ -541,12 +599,13 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
               </tbody>
             </table>
           </div>
-
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <SmallHelp>Klik op een afgekeurde registratie om de reden te bekijken.</SmallHelp>
+            <SmallHelp>
+              Klik op een afgekeurde registratie om de reden te bekijken.
+            </SmallHelp>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Modal: nieuwe registratie */}
       <Dialog open={showNewExternal} onOpenChange={setShowNewExternal}>
@@ -556,32 +615,48 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
           </DialogHeader>
           <form onSubmit={handleSubmitExternalWork} className="space-y-4">
             <div className="grid gap-3">
-              <label className="text-sm font-medium text-slate-900">Locatie</label>
+              <label className="text-sm font-medium text-slate-900">
+                Locatie
+              </label>
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant={formData.location === "Thuis" ? "default" : "secondary"}
+                  variant={
+                    formData.location === "Thuis" ? "default" : "secondary"
+                  }
                   className={`rounded-xl ${formData.location === "Thuis" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
                   size="sm"
-                  onClick={() => setFormData({ ...formData, location: "Thuis" })}
+                  onClick={() =>
+                    setFormData({ ...formData, location: "Thuis" })
+                  }
                 >
                   Thuis
                 </Button>
                 <Button
                   type="button"
-                  variant={formData.location === "Opdrachtgever" ? "default" : "secondary"}
+                  variant={
+                    formData.location === "Opdrachtgever"
+                      ? "default"
+                      : "secondary"
+                  }
                   className={`rounded-xl ${formData.location === "Opdrachtgever" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
                   size="sm"
-                  onClick={() => setFormData({ ...formData, location: "Opdrachtgever" })}
+                  onClick={() =>
+                    setFormData({ ...formData, location: "Opdrachtgever" })
+                  }
                 >
                   Opdrachtgever
                 </Button>
                 <Button
                   type="button"
-                  variant={formData.location === "Anders" ? "default" : "secondary"}
+                  variant={
+                    formData.location === "Anders" ? "default" : "secondary"
+                  }
                   className={`rounded-xl ${formData.location === "Anders" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
                   size="sm"
-                  onClick={() => setFormData({ ...formData, location: "Anders" })}
+                  onClick={() =>
+                    setFormData({ ...formData, location: "Anders" })
+                  }
                 >
                   Anders
                 </Button>
@@ -589,39 +664,51 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-900">Omschrijving</label>
+              <label className="text-sm font-medium text-slate-900">
+                Omschrijving
+              </label>
               <Textarea
                 className="rounded-2xl border-slate-200 min-h-[100px]"
                 placeholder="Bijv. interview, bouwen, documenteren…"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 required
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-slate-900">Start</label>
+                <label className="text-sm font-medium text-slate-900">
+                  Start
+                </label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                   <Input
                     type="datetime-local"
                     className="h-10 rounded-2xl border-slate-200 pl-9"
                     value={formData.start}
-                    onChange={(e) => setFormData({ ...formData, start: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, start: e.target.value })
+                    }
                     required
                   />
                 </div>
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-slate-900">Eind</label>
+                <label className="text-sm font-medium text-slate-900">
+                  Eind
+                </label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                   <Input
                     type="datetime-local"
                     className="h-10 rounded-2xl border-slate-200 pl-9"
                     value={formData.end}
-                    onChange={(e) => setFormData({ ...formData, end: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, end: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -634,9 +721,12 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                   <Info className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-slate-900">Na opslaan</div>
+                  <div className="text-sm font-semibold text-slate-900">
+                    Na opslaan
+                  </div>
                   <p className="mt-1 text-sm text-slate-600">
-                    Je registratie komt op <b>In afwachting</b> te staan. Extern werk telt pas mee na goedkeuring.
+                    Je registratie komt op <b>In afwachting</b> te staan. Extern
+                    werk telt pas mee na goedkeuring.
                   </p>
                 </div>
               </div>

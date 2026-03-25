@@ -11,15 +11,25 @@ import { listMailTemplates } from "@/services/mail-template.service";
 import type { MailTemplateDto } from "@/dtos/mail-template.dto";
 
 // Helper function for building mailto links
-function buildMailto({ to, subject, body }: { to: string; subject: string; body: string }) {
+function buildMailto({
+  to,
+  subject,
+  body,
+}: {
+  to: string;
+  subject: string;
+  body: string;
+}) {
   return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 export default function ClientDetailPage() {
   const params = useParams();
   const clientId = parseInt(params.clientId as string);
-  
-  const [activeTab, setActiveTab] = useState<"logboek" | "projecten" | "documenten" | "communicatie">("logboek");
+
+  const [activeTab, setActiveTab] = useState<
+    "logboek" | "projecten" | "documenten" | "communicatie"
+  >("logboek");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -28,7 +38,7 @@ export default function ClientDetailPage() {
   const { data: logsData, refetch: refetchLogs } = useClientLogs(clientId);
 
   const handleEditSuccess = () => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
 
   const handleNoteSuccess = () => {
@@ -104,18 +114,24 @@ export default function ClientDetailPage() {
           </button>
           <button
             onClick={async () => {
-              if (confirm(`Weet je zeker dat je ${c.organization} wilt ${c.active ? 'archiveren' : 'activeren'}?`)) {
+              if (
+                confirm(
+                  `Weet je zeker dat je ${c.organization} wilt ${c.active ? "archiveren" : "activeren"}?`,
+                )
+              ) {
                 try {
-                  await clientService.updateClient(client.id, { active: !c.active });
-                  setRefreshKey(prev => prev + 1);
+                  await clientService.updateClient(client.id, {
+                    active: !c.active,
+                  });
+                  setRefreshKey((prev) => prev + 1);
                 } catch (err) {
-                  alert('Fout bij bijwerken van status');
+                  alert("Fout bij bijwerken van status");
                 }
               }
             }}
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
-            {c.active ? 'Verplaats naar archief' : 'Activeer'}
+            {c.active ? "Verplaats naar archief" : "Activeer"}
           </button>
           <button
             onClick={() => setIsNoteModalOpen(true)}
@@ -171,7 +187,12 @@ export default function ClientDetailPage() {
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
-              onClick={() => window.open(buildMailto({ to: c.email || "", subject: "", body: "" }), '_self')}
+              onClick={() =>
+                window.open(
+                  buildMailto({ to: c.email || "", subject: "", body: "" }),
+                  "_self",
+                )
+              }
               className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100"
             >
               Mail openen
@@ -215,7 +236,12 @@ export default function ClientDetailPage() {
           </nav>
         </div>
         <div className="px-4 pb-4 pt-3">
-          {activeTab === "logboek" && <LogboekTab logs={logsData?.items || []} onAddNote={() => setIsNoteModalOpen(true)} />}
+          {activeTab === "logboek" && (
+            <LogboekTab
+              logs={logsData?.items || []}
+              onAddNote={() => setIsNoteModalOpen(true)}
+            />
+          )}
           {activeTab === "projecten" && <ProjectenTab clientId={clientId} />}
           {activeTab === "documenten" && <DocumentenTab />}
           {activeTab === "communicatie" && <CommunicatieTab client={client} />}
@@ -249,16 +275,28 @@ function KpiCard({
         {label}
       </span>
       <div className="mt-1 flex items-baseline gap-1">
-        <span className="text-base font-semibold text-slate-900 line-clamp-2">{value}</span>
+        <span className="text-base font-semibold text-slate-900 line-clamp-2">
+          {value}
+        </span>
       </div>
-      {sublabel && <span className="mt-1 text-[11px] text-slate-500">{sublabel}</span>}
+      {sublabel && (
+        <span className="mt-1 text-[11px] text-slate-500">{sublabel}</span>
+      )}
     </div>
   );
 }
 
 // Collaboration Overview Card with real API data
 function CollaborationOverviewCard({ clientId }: { clientId: number }) {
-  const [projects, setProjects] = useState<{ id: number; title: string; role: string; start_date?: string; end_date?: string; }[]>([]);
+  const [projects, setProjects] = useState<
+    {
+      id: number;
+      title: string;
+      role: string;
+      start_date?: string;
+      end_date?: string;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -279,21 +317,21 @@ function CollaborationOverviewCard({ clientId }: { clientId: number }) {
   // Calculate latest active year from projects
   const getLatestYear = () => {
     if (projects.length === 0) return "-";
-    
+
     const years = projects
-      .map(p => {
+      .map((p) => {
         const endDate = p.end_date ? new Date(p.end_date) : null;
         const startDate = p.start_date ? new Date(p.start_date) : null;
         return endDate || startDate;
       })
       .filter((date): date is Date => date !== null)
-      .map(date => date.getFullYear());
-    
+      .map((date) => date.getFullYear());
+
     if (years.length === 0) return "-";
-    
+
     const maxYear = Math.max(...years);
     const minYear = Math.min(...years);
-    
+
     if (maxYear === minYear) return maxYear.toString();
     return `${minYear}–${maxYear}`;
   };
@@ -311,7 +349,9 @@ function CollaborationOverviewCard({ clientId }: { clientId: number }) {
   if (loading) {
     return (
       <div className="flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-        <h2 className="text-sm font-semibold text-slate-900">Overzicht samenwerking</h2>
+        <h2 className="text-sm font-semibold text-slate-900">
+          Overzicht samenwerking
+        </h2>
         <p className="mt-1 text-xs text-slate-500">Laden...</p>
       </div>
     );
@@ -319,7 +359,9 @@ function CollaborationOverviewCard({ clientId }: { clientId: number }) {
 
   return (
     <div className="flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <h2 className="text-sm font-semibold text-slate-900">Overzicht samenwerking</h2>
+      <h2 className="text-sm font-semibold text-slate-900">
+        Overzicht samenwerking
+      </h2>
       <p className="mt-1 text-xs text-slate-500">
         Samenvatting van alle projecten en samenwerking met deze opdrachtgever.
       </p>
@@ -329,10 +371,7 @@ function CollaborationOverviewCard({ clientId }: { clientId: number }) {
           value={projects.length.toString()}
           sublabel="Sinds start samenwerking"
         />
-        <KpiCard
-          label="Laatste jaar actief"
-          value={getLatestYear()}
-        />
+        <KpiCard label="Laatste jaar actief" value={getLatestYear()} />
         <KpiCard
           label="Relatiestatus"
           value={getRelationshipStatus()}
@@ -344,14 +383,23 @@ function CollaborationOverviewCard({ clientId }: { clientId: number }) {
 }
 
 // TAB: Logboek
-function LogboekTab({ logs, onAddNote }: { logs: any[], onAddNote: () => void }) {
+function LogboekTab({
+  logs,
+  onAddNote,
+}: {
+  logs: any[];
+  onAddNote: () => void;
+}) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Contactmomenten & notities</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            Contactmomenten & notities
+          </h3>
           <p className="text-xs text-slate-500">
-            Houd bij welke afspraken, mails en opmerkingen er zijn bij deze opdrachtgever.
+            Houd bij welke afspraken, mails en opmerkingen er zijn bij deze
+            opdrachtgever.
           </p>
         </div>
         <button
@@ -374,10 +422,10 @@ function LogboekTab({ logs, onAddNote }: { logs: any[], onAddNote: () => void })
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-slate-500">
-                  {new Date(item.created_at).toLocaleDateString('nl-NL')}
+                  {new Date(item.created_at).toLocaleDateString("nl-NL")}
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  {item.log_type} · {item.author_name || 'Docent'}
+                  {item.log_type} · {item.author_name || "Docent"}
                 </p>
               </div>
               <p className="mt-1 text-sm text-slate-900">{item.text}</p>
@@ -395,7 +443,9 @@ function ProjectenTab({ clientId }: { clientId: number }) {
   const [loading, setLoading] = useState(true);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [allProjects, setAllProjects] = useState<any[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+    null,
+  );
   const [linkingProject, setLinkingProject] = useState(false);
 
   // Fetch linked projects
@@ -426,7 +476,7 @@ function ProjectenTab({ clientId }: { clientId: number }) {
 
   async function handleLinkProject() {
     if (!selectedProjectId) return;
-    
+
     try {
       setLinkingProject(true);
       await clientService.linkProjectToClient(clientId, selectedProjectId);
@@ -434,7 +484,8 @@ function ProjectenTab({ clientId }: { clientId: number }) {
       setShowLinkModal(false);
       setSelectedProjectId(null);
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.detail || "Fout bij koppelen van project";
+      const errorMessage =
+        err?.response?.data?.detail || "Fout bij koppelen van project";
       alert(errorMessage);
     } finally {
       setLinkingProject(false);
@@ -456,9 +507,12 @@ function ProjectenTab({ clientId }: { clientId: number }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Projecten met deze opdrachtgever</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            Projecten met deze opdrachtgever
+          </h3>
           <p className="text-xs text-slate-500">
-            Overzicht van alle projecten waaraan deze opdrachtgever heeft meegewerkt.
+            Overzicht van alle projecten waaraan deze opdrachtgever heeft
+            meegewerkt.
           </p>
         </div>
         <button
@@ -510,7 +564,9 @@ function ProjectenTab({ clientId }: { clientId: number }) {
                 <tr key={p.id} className="transition hover:bg-slate-50">
                   <td className="px-4 py-3 text-sm font-medium text-slate-900">
                     <button
-                      onClick={() => window.location.href = `/teacher/projects/${p.id}`}
+                      onClick={() =>
+                        (window.location.href = `/teacher/projects/${p.id}`)
+                      }
                       className="text-left hover:underline"
                     >
                       {p.title}
@@ -518,14 +574,26 @@ function ProjectenTab({ clientId }: { clientId: number }) {
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-700">{p.role}</td>
                   <td className="px-4 py-3 text-sm text-slate-700">
-                    {p.start_date ? new Date(p.start_date).toLocaleDateString('nl-NL', { month: 'short', year: 'numeric' }) : ''}
-                    {p.start_date && p.end_date ? ' – ' : ''}
-                    {p.end_date ? new Date(p.end_date).toLocaleDateString('nl-NL', { month: 'short', year: 'numeric' }) : ''}
+                    {p.start_date
+                      ? new Date(p.start_date).toLocaleDateString("nl-NL", {
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : ""}
+                    {p.start_date && p.end_date ? " – " : ""}
+                    {p.end_date
+                      ? new Date(p.end_date).toLocaleDateString("nl-NL", {
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : ""}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-600">
                     <div className="flex flex-wrap gap-1">
                       <button
-                        onClick={() => window.location.href = `/teacher/projects/${p.id}`}
+                        onClick={() =>
+                          (window.location.href = `/teacher/projects/${p.id}`)
+                        }
                         className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
                       >
                         Project openen
@@ -550,20 +618,24 @@ function ProjectenTab({ clientId }: { clientId: number }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-6">
             <h2 className="text-lg font-semibold mb-4">Project koppelen</h2>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
                 Selecteer een project
               </label>
               <select
                 value={selectedProjectId || ""}
-                onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) =>
+                  setSelectedProjectId(
+                    e.target.value ? Number(e.target.value) : null,
+                  )
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="">Kies een project...</option>
                 {allProjects
-                  .filter(proj => !projects.some(p => p.id === proj.id))
-                  .map(proj => (
+                  .filter((proj) => !projects.some((p) => p.id === proj.id))
+                  .map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.title}
                     </option>
@@ -605,7 +677,8 @@ function DocumentenTab() {
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Documenten</h3>
           <p className="text-xs text-slate-500">
-            Upload hier samenwerkingsovereenkomsten, projectbeschrijvingen en andere documenten.
+            Upload hier samenwerkingsovereenkomsten, projectbeschrijvingen en
+            andere documenten.
           </p>
         </div>
         <button className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700">
@@ -613,7 +686,9 @@ function DocumentenTab() {
         </button>
       </div>
       <div className="rounded-xl bg-slate-50 px-3 py-8 text-center shadow-sm ring-1 ring-slate-100">
-        <p className="text-sm text-slate-500">Geen documenten beschikbaar (mockdata)</p>
+        <p className="text-sm text-slate-500">
+          Geen documenten beschikbaar (mockdata)
+        </p>
       </div>
     </div>
   );
@@ -648,34 +723,34 @@ function CommunicatieTab({ client }: { client: any }) {
   // Helper function to replace template variables
   const replaceTemplateVariables = (text: string): string => {
     return text
-      .replace(/\{contactName\}/g, client.contact_name || 'opdrachtgever')
-      .replace(/\{organization\}/g, client.organization || '')
-      .replace(/\{email\}/g, client.email || '');
+      .replace(/\{contactName\}/g, client.contact_name || "opdrachtgever")
+      .replace(/\{organization\}/g, client.organization || "")
+      .replace(/\{email\}/g, client.email || "");
   };
 
   const generateEmail = () => {
-    const template = mailTemplates.find(t => t.type === selectedTemplate);
+    const template = mailTemplates.find((t) => t.type === selectedTemplate);
     if (!template) {
       setEmailPreview("");
       return;
     }
-    
+
     // Use template body and replace variables
     const body = replaceTemplateVariables(template.body);
     setEmailPreview(body);
   };
 
   const handleOpenInOutlook = () => {
-    const template = mailTemplates.find(t => t.type === selectedTemplate);
-    const subject = template ? replaceTemplateVariables(template.subject) : '';
-    
+    const template = mailTemplates.find((t) => t.type === selectedTemplate);
+    const subject = template ? replaceTemplateVariables(template.subject) : "";
+
     const mailtoLink = buildMailto({
       to: client.email || "",
       subject,
       body: emailPreview,
     });
-    
-    window.open(mailtoLink, '_self');
+
+    window.open(mailtoLink, "_self");
     console.log("Log entry added: Mail verzonden via Outlook");
   };
 
@@ -689,7 +764,12 @@ function CommunicatieTab({ client }: { client: any }) {
           </p>
         </div>
         <button
-          onClick={() => window.open(buildMailto({ to: client.email || "", subject: "", body: "" }), '_self')}
+          onClick={() =>
+            window.open(
+              buildMailto({ to: client.email || "", subject: "", body: "" }),
+              "_self",
+            )
+          }
           className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
         >
           Mail openen in Outlook
@@ -704,12 +784,15 @@ function CommunicatieTab({ client }: { client: any }) {
         ) : mailTemplates.length === 0 ? (
           <div className="text-sm text-slate-500">
             Geen actieve templates beschikbaar. Maak templates aan in{" "}
-            <Link href="/teacher/admin/templates?tab=mail" className="text-indigo-600 hover:underline">
+            <Link
+              href="/teacher/admin/templates?tab=mail"
+              className="text-indigo-600 hover:underline"
+            >
               Template beheer
             </Link>
           </div>
         ) : (
-          <select 
+          <select
             value={selectedTemplate}
             onChange={(e) => setSelectedTemplate(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
@@ -725,7 +808,7 @@ function CommunicatieTab({ client }: { client: any }) {
 
       {/* Generate button */}
       {mailTemplates.length > 0 && (
-        <button 
+        <button
           onClick={generateEmail}
           className="w-full rounded-lg border border-indigo-500 bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
         >
@@ -737,7 +820,9 @@ function CommunicatieTab({ client }: { client: any }) {
       {emailPreview && (
         <>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">Mail preview</label>
+            <label className="text-xs font-medium text-slate-600">
+              Mail preview
+            </label>
             <textarea
               value={emailPreview}
               onChange={(e) => setEmailPreview(e.target.value)}
@@ -747,7 +832,7 @@ function CommunicatieTab({ client }: { client: any }) {
           </div>
 
           {/* Open in Outlook button */}
-          <button 
+          <button
             onClick={handleOpenInOutlook}
             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
           >

@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { X, ChevronLeft } from "lucide-react";
 import { peerEvaluationOverviewService } from "@/services/peer-evaluation-overview.service";
-import type { 
+import type {
   AggregatedFeedbackItem,
-  TeacherFeedbackItem 
+  TeacherFeedbackItem,
 } from "@/services/peer-evaluation-overview.service";
 
 interface FeedbackSidePanelProps {
@@ -18,39 +18,56 @@ interface FeedbackSidePanelProps {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
-export function FeedbackSidePanel({ 
-  isOpen, 
-  onClose, 
-  studentId, 
+export function FeedbackSidePanel({
+  isOpen,
+  onClose,
+  studentId,
   courseId,
-  initialEvaluationId 
+  initialEvaluationId,
 }: FeedbackSidePanelProps) {
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState<number | null>(initialEvaluationId || null);
-  const [peerEvaluations, setPeerEvaluations] = useState<AggregatedFeedbackItem[]>([]);
-  const [teacherFeedback, setTeacherFeedback] = useState<TeacherFeedbackItem[]>([]);
-  const [selectedFeedback, setSelectedFeedback] = useState<AggregatedFeedbackItem[]>([]);
-  const [selectedTeacherFeedback, setSelectedTeacherFeedback] = useState<TeacherFeedbackItem | null>(null);
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<
+    number | null
+  >(initialEvaluationId || null);
+  const [peerEvaluations, setPeerEvaluations] = useState<
+    AggregatedFeedbackItem[]
+  >([]);
+  const [teacherFeedback, setTeacherFeedback] = useState<TeacherFeedbackItem[]>(
+    [],
+  );
+  const [selectedFeedback, setSelectedFeedback] = useState<
+    AggregatedFeedbackItem[]
+  >([]);
+  const [selectedTeacherFeedback, setSelectedTeacherFeedback] =
+    useState<TeacherFeedbackItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch evaluation lists
   useEffect(() => {
     async function fetchEvaluationLists() {
       if (!isOpen) return;
-      
+
       try {
         setLoading(true);
         const [peerResp, teacherResp] = await Promise.all([
           peerEvaluationOverviewService.getAggregatedFeedback({ courseId }),
           peerEvaluationOverviewService.getTeacherFeedback({ courseId }),
         ]);
-        
+
         // Filter for this student
-        const studentPeer = peerResp.feedbackItems.filter(f => f.student_id === studentId);
-        const studentTeacher = teacherResp.feedbackItems.filter(f => f.student_id === studentId);
-        
+        const studentPeer = peerResp.feedbackItems.filter(
+          (f) => f.student_id === studentId,
+        );
+        const studentTeacher = teacherResp.feedbackItems.filter(
+          (f) => f.student_id === studentId,
+        );
+
         setPeerEvaluations(studentPeer);
         setTeacherFeedback(studentTeacher);
       } catch (error) {
@@ -72,9 +89,13 @@ export function FeedbackSidePanel({
   // Load evaluation detail when selected
   useEffect(() => {
     if (selectedEvaluationId) {
-      const peer = peerEvaluations.filter(p => p.evaluation_id === selectedEvaluationId);
-      const teacher = teacherFeedback.find(t => t.evaluation_id === selectedEvaluationId);
-      
+      const peer = peerEvaluations.filter(
+        (p) => p.evaluation_id === selectedEvaluationId,
+      );
+      const teacher = teacherFeedback.find(
+        (t) => t.evaluation_id === selectedEvaluationId,
+      );
+
       setSelectedFeedback(peer);
       setSelectedTeacherFeedback(teacher || null);
     }
@@ -89,29 +110,37 @@ export function FeedbackSidePanel({
   if (!isOpen) return null;
 
   // Group peer evaluations by evaluation_id for the list view
-  const peerEvalGroups = peerEvaluations.reduce((acc, item) => {
-    if (!acc[item.evaluation_id]) {
-      acc[item.evaluation_id] = {
-        evaluation_id: item.evaluation_id,
-        project_name: item.project_name,
-        date: item.date,
-        count: 0,
-      };
-    }
-    acc[item.evaluation_id].count++;
-    return acc;
-  }, {} as Record<number, { evaluation_id: number; project_name: string; date: string; count: number }>);
+  const peerEvalGroups = peerEvaluations.reduce(
+    (acc, item) => {
+      if (!acc[item.evaluation_id]) {
+        acc[item.evaluation_id] = {
+          evaluation_id: item.evaluation_id,
+          project_name: item.project_name,
+          date: item.date,
+          count: 0,
+        };
+      }
+      acc[item.evaluation_id].count++;
+      return acc;
+    },
+    {} as Record<
+      number,
+      {
+        evaluation_id: number;
+        project_name: string;
+        date: string;
+        count: number;
+      }
+    >,
+  );
 
   const peerEvalList = Object.values(peerEvalGroups);
 
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/30 z-40"
-        onClick={onClose}
-      />
-      
+      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
+
       {/* Side Panel */}
       <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl z-50 overflow-y-auto">
         <div className="p-6 space-y-6">
@@ -146,16 +175,25 @@ export function FeedbackSidePanel({
 
               {/* Peer Feedback */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Peerfeedback</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Peerfeedback
+                </h3>
                 {selectedFeedback.length === 0 ? (
-                  <p className="text-gray-500 text-sm">Geen peerfeedback beschikbaar</p>
+                  <p className="text-gray-500 text-sm">
+                    Geen peerfeedback beschikbaar
+                  </p>
                 ) : (
                   <div className="space-y-4">
                     {selectedFeedback.map((item, idx) => (
-                      <div key={idx} className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div
+                        key={idx}
+                        className="bg-gray-50 rounded-lg p-4 space-y-2"
+                      >
                         <div className="flex items-center justify-between">
                           <div className="font-medium text-gray-900">
-                            {item.feedback_type === "self" ? "Zelf" : `Van: ${item.from_student_name || "Anoniem"}`}
+                            {item.feedback_type === "self"
+                              ? "Zelf"
+                              : `Van: ${item.from_student_name || "Anoniem"}`}
                           </div>
                           <div className="flex gap-2">
                             {item.score_O && (
@@ -193,9 +231,13 @@ export function FeedbackSidePanel({
 
               {/* Teacher Feedback */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Docentfeedback</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Docentfeedback
+                </h3>
                 {!selectedTeacherFeedback ? (
-                  <p className="text-gray-500 text-sm">Geen docentfeedback beschikbaar</p>
+                  <p className="text-gray-500 text-sm">
+                    Geen docentfeedback beschikbaar
+                  </p>
                 ) : (
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <div className="flex gap-2 flex-wrap">
@@ -234,9 +276,13 @@ export function FeedbackSidePanel({
             <div className="space-y-6">
               {/* Peer Evaluations Table */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Peerevaluaties</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Peerevaluaties
+                </h3>
                 {peerEvalList.length === 0 ? (
-                  <p className="text-gray-500 text-sm">Geen peerevaluaties gevonden</p>
+                  <p className="text-gray-500 text-sm">
+                    Geen peerevaluaties gevonden
+                  </p>
                 ) : (
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
@@ -257,7 +303,9 @@ export function FeedbackSidePanel({
                         {peerEvalList.map((item) => (
                           <tr
                             key={item.evaluation_id}
-                            onClick={() => setSelectedEvaluationId(item.evaluation_id)}
+                            onClick={() =>
+                              setSelectedEvaluationId(item.evaluation_id)
+                            }
                             className="hover:bg-gray-50 cursor-pointer"
                           >
                             <td className="px-4 py-3 text-sm text-gray-900">
@@ -279,9 +327,13 @@ export function FeedbackSidePanel({
 
               {/* Teacher Feedback Table */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Docentfeedback</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Docentfeedback
+                </h3>
                 {teacherFeedback.length === 0 ? (
-                  <p className="text-gray-500 text-sm">Geen docentfeedback gevonden</p>
+                  <p className="text-gray-500 text-sm">
+                    Geen docentfeedback gevonden
+                  </p>
                 ) : (
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
@@ -302,7 +354,9 @@ export function FeedbackSidePanel({
                         {teacherFeedback.map((item) => (
                           <tr
                             key={item.id}
-                            onClick={() => setSelectedEvaluationId(item.evaluation_id)}
+                            onClick={() =>
+                              setSelectedEvaluationId(item.evaluation_id)
+                            }
                             className="hover:bg-gray-50 cursor-pointer"
                           >
                             <td className="px-4 py-3 text-sm text-gray-900">

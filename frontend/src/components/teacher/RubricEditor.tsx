@@ -77,16 +77,15 @@ export default function RubricEditor({
     new Set(
       scope === "peer"
         ? PEER_CATEGORIES.map((c) => c.value)
-        : PROJECT_CATEGORIES.map((c) => c.value)
-    )
+        : PROJECT_CATEGORIES.map((c) => c.value),
+    ),
   );
   const [learningObjectives, setLearningObjectives] = useState<
     LearningObjectiveDto[]
   >([]);
   const [isMounted, setIsMounted] = useState(false);
 
-  const categories =
-    scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
+  const categories = scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
 
   // DnD sensors for criteria reordering within categories
   const sensors = useSensors(
@@ -97,7 +96,7 @@ export default function RubricEditor({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Set mounted state to avoid hydration issues
@@ -154,14 +153,9 @@ export default function RubricEditor({
     onItemsChange(items.filter((_, i) => i !== idx));
   };
 
-  const updateCriterion = (
-    idx: number,
-    updates: Partial<CriterionItem>
-  ) => {
+  const updateCriterion = (idx: number, updates: Partial<CriterionItem>) => {
     onItemsChange(
-      items.map((it, i) =>
-        i === idx ? { ...it, ...updates } : it
-      )
+      items.map((it, i) => (i === idx ? { ...it, ...updates } : it)),
     );
   };
 
@@ -181,10 +175,10 @@ export default function RubricEditor({
 
       // Find old and new positions within the category
       const oldCategoryIndex = categoryItems.findIndex(
-        ({ index }) => index === active.id
+        ({ index }) => index === active.id,
       );
       const newCategoryIndex = categoryItems.findIndex(
-        ({ index }) => index === over.id
+        ({ index }) => index === over.id,
       );
 
       if (oldCategoryIndex === -1 || newCategoryIndex === -1) return;
@@ -193,7 +187,7 @@ export default function RubricEditor({
       const reorderedCategoryItems = arrayMove(
         categoryItems,
         oldCategoryIndex,
-        newCategoryIndex
+        newCategoryIndex,
       );
 
       // Create a map of original index to new order within category
@@ -226,15 +220,18 @@ export default function RubricEditor({
 
       onItemsChange(sortedItems);
     },
-    [items, categories, onItemsChange]
+    [items, categories, onItemsChange],
   );
 
   const itemsByCategory = useMemo(() => {
-    const grouped: Record<string, Array<CriterionItem & { index: number }>> = {};
+    const grouped: Record<
+      string,
+      Array<CriterionItem & { index: number }>
+    > = {};
     categories.forEach((cat) => {
       grouped[cat.value] = [];
     });
-    
+
     items.forEach((item, index) => {
       const cat = item.category || "";
       // Only add to grouped if category exists in our predefined categories
@@ -242,24 +239,25 @@ export default function RubricEditor({
         grouped[cat].push({ ...item, index });
       }
     });
-    
+
     return grouped;
   }, [items, categories]);
 
   const weightsByCategory = useMemo(() => {
     const weights: Record<string, number> = {};
     categories.forEach((cat) => {
-      weights[cat.value] = itemsByCategory[cat.value]?.reduce(
-        (sum, it) => sum + (Number(it.weight) || 0),
-        0
-      ) || 0;
+      weights[cat.value] =
+        itemsByCategory[cat.value]?.reduce(
+          (sum, it) => sum + (Number(it.weight) || 0),
+          0,
+        ) || 0;
     });
     return weights;
   }, [itemsByCategory, categories]);
 
   const totalWeight = useMemo(
     () => items.reduce((sum, it) => sum + (Number(it.weight) || 0), 0),
-    [items]
+    [items],
   );
 
   return (
@@ -284,7 +282,9 @@ export default function RubricEditor({
                 aria-expanded={isExpanded}
                 aria-controls={`panel-${cat.value}`}
               >
-                <span className="text-sm font-bold uppercase tracking-wide text-slate-700">{cat.value}</span>
+                <span className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                  {cat.value}
+                </span>
                 <span className="text-xs font-medium text-slate-500 ml-1">
                   ({categoryItems.length})
                 </span>
@@ -323,7 +323,8 @@ export default function RubricEditor({
                   >
                     {categoryItems.length === 0 ? (
                       <div className="px-4 py-8 text-center text-gray-500">
-                        Geen criteria. Klik op &quot;+ Criterium&quot; om toe te voegen.
+                        Geen criteria. Klik op &quot;+ Criterium&quot; om toe te
+                        voegen.
                       </div>
                     ) : (
                       categoryItems.map((item) => (
@@ -351,7 +352,13 @@ export default function RubricEditor({
           <div className="flex items-center gap-6">
             <div className="text-sm">
               <span className="text-gray-600">Totale weging: </span>
-              <strong className={Math.abs(totalWeight - 100) <= 1 ? "text-green-600" : "text-orange-600"}>
+              <strong
+                className={
+                  Math.abs(totalWeight - 100) <= 1
+                    ? "text-green-600"
+                    : "text-orange-600"
+                }
+              >
                 {totalWeight.toFixed(1)}%
               </strong>
               <span className="text-gray-500 ml-2">
@@ -413,7 +420,7 @@ function SortableCriterionCard({
   };
 
   const selectedObjectives = learningObjectives.filter((lo) =>
-    item.learning_objective_ids?.includes(lo.id)
+    item.learning_objective_ids?.includes(lo.id),
   );
 
   const toggleObjective = (loId: number) => {
@@ -460,7 +467,7 @@ function SortableCriterionCard({
           placeholder="Criterium naam"
           aria-label="Criterium naam"
         />
-        
+
         {/* Learning Objectives Dropdown */}
         {learningObjectives.length > 0 && (
           <div className="relative">
@@ -468,7 +475,9 @@ function SortableCriterionCard({
               type="button"
               onClick={() => setShowObjectiveDropdown(!showObjectiveDropdown)}
               className={`p-2 rounded-lg border hover:bg-gray-50 ${
-                selectedObjectives.length > 0 ? "bg-blue-50 border-blue-300" : ""
+                selectedObjectives.length > 0
+                  ? "bg-blue-50 border-blue-300"
+                  : ""
               }`}
               title="Leerdoelen koppelen"
               aria-label="Leerdoelen koppelen"
@@ -480,7 +489,7 @@ function SortableCriterionCard({
                 </span>
               )}
             </button>
-            
+
             {showObjectiveDropdown && (
               <>
                 {/* Backdrop to close dropdown */}
@@ -488,12 +497,14 @@ function SortableCriterionCard({
                   className="fixed inset-0 z-10"
                   onClick={() => setShowObjectiveDropdown(false)}
                 />
-                
+
                 {/* Dropdown content */}
                 <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
                   <div className="p-3 border-b bg-gray-50">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Leerdoelen selecteren</span>
+                      <span className="text-sm font-medium">
+                        Leerdoelen selecteren
+                      </span>
                       <button
                         type="button"
                         onClick={() => setShowObjectiveDropdown(false)}
@@ -505,12 +516,17 @@ function SortableCriterionCard({
                   </div>
                   <div className="p-2">
                     {learningObjectives.map((lo) => {
-                      const isSelected = item.learning_objective_ids?.includes(lo.id) ?? false;
-                      const typeLabel = lo.is_template ? "🏛️" : lo.objective_type === "teacher" ? "👤" : "👥";
-                      const typeBg = lo.is_template 
-                        ? "bg-amber-100 text-amber-800" 
-                        : lo.objective_type === "teacher" 
-                          ? "bg-emerald-100 text-emerald-800" 
+                      const isSelected =
+                        item.learning_objective_ids?.includes(lo.id) ?? false;
+                      const typeLabel = lo.is_template
+                        ? "🏛️"
+                        : lo.objective_type === "teacher"
+                          ? "👤"
+                          : "👥";
+                      const typeBg = lo.is_template
+                        ? "bg-amber-100 text-amber-800"
+                        : lo.objective_type === "teacher"
+                          ? "bg-emerald-100 text-emerald-800"
                           : "bg-cyan-100 text-cyan-800";
                       return (
                         <label
@@ -525,7 +541,11 @@ function SortableCriterionCard({
                           />
                           <div className="flex-1 text-sm">
                             <div className="font-medium flex items-center gap-2">
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${typeBg}`}>{typeLabel}</span>
+                              <span
+                                className={`text-xs px-1.5 py-0.5 rounded ${typeBg}`}
+                              >
+                                {typeLabel}
+                              </span>
                               {lo.domain}.{lo.order} - {lo.title}
                             </div>
                             {lo.description && (
@@ -576,10 +596,10 @@ function SortableCriterionCard({
       {selectedObjectives.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pl-8">
           {selectedObjectives.map((lo) => {
-            const typeBg = lo.is_template 
-              ? "bg-amber-100 text-amber-700" 
-              : lo.objective_type === "teacher" 
-                ? "bg-emerald-100 text-emerald-700" 
+            const typeBg = lo.is_template
+              ? "bg-amber-100 text-amber-700"
+              : lo.objective_type === "teacher"
+                ? "bg-emerald-100 text-emerald-700"
                 : "bg-cyan-100 text-cyan-700";
             return (
               <span
@@ -599,7 +619,7 @@ function SortableCriterionCard({
         {(["level1", "level2", "level3", "level4", "level5"] as const).map(
           (level, idx) => {
             const text = String(item.descriptors?.[level] ?? "");
-            
+
             return (
               <div key={level} className="space-y-1">
                 <label className="block text-xs font-medium text-gray-600">
@@ -608,13 +628,15 @@ function SortableCriterionCard({
                 <textarea
                   className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-y min-h-[96px] bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white transition"
                   value={text}
-                  onChange={(e) => handleDescriptorChange(level, e.target.value)}
+                  onChange={(e) =>
+                    handleDescriptorChange(level, e.target.value)
+                  }
                   placeholder={`Beschrijving niveau ${idx + 1}`}
                   aria-label={`Niveau ${idx + 1} beschrijving`}
                 />
               </div>
             );
-          }
+          },
         )}
       </div>
     </article>

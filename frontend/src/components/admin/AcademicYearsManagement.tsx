@@ -27,7 +27,9 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showTransitionWizard, setShowTransitionWizard] = useState(false);
-  const [prefilledSourceYearId, setPrefilledSourceYearId] = useState<number | null>(null);
+  const [prefilledSourceYearId, setPrefilledSourceYearId] = useState<
+    number | null
+  >(null);
   const [formData, setFormData] = useState<AcademicYearFormData>({
     label: "",
     start_date: "",
@@ -57,11 +59,16 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
         if (showCreateForm) {
           handleCancel();
         } else if (archiveDialog.isOpen) {
-          setArchiveDialog({ isOpen: false, yearId: null, yearLabel: "", confirmed: false });
+          setArchiveDialog({
+            isOpen: false,
+            yearId: null,
+            yearLabel: "",
+            confirmed: false,
+          });
         }
       }
     };
-    
+
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [showCreateForm, archiveDialog.isOpen]);
@@ -99,7 +106,7 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
     } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
-          "Kon academisch jaar niet aanmaken. Probeer het opnieuw."
+          "Kon academisch jaar niet aanmaken. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);
@@ -137,12 +144,17 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
     setError(null);
     try {
       await academicYearService.archiveAcademicYear(archiveDialog.yearId);
-      setArchiveDialog({ isOpen: false, yearId: null, yearLabel: "", confirmed: false });
+      setArchiveDialog({
+        isOpen: false,
+        yearId: null,
+        yearLabel: "",
+        confirmed: false,
+      });
       loadAcademicYears();
     } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
-          "Kon academisch jaar niet archiveren. Probeer het opnieuw."
+          "Kon academisch jaar niet archiveren. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);
@@ -153,14 +165,17 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
     <div className="space-y-6">
       {/* Create Form Modal */}
       {showCreateForm && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-year-title"
         >
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 id="create-year-title" className="mb-4 text-xl font-bold text-gray-900">
+            <h3
+              id="create-year-title"
+              className="mb-4 text-xl font-bold text-gray-900"
+            >
               Nieuw Academisch Jaar
             </h3>
 
@@ -249,14 +264,17 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
 
       {/* Archive Confirmation Dialog */}
       {archiveDialog.isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
           role="dialog"
           aria-modal="true"
           aria-labelledby="archive-dialog-title"
         >
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 id="archive-dialog-title" className="mb-4 text-xl font-bold text-gray-900">
+            <h3
+              id="archive-dialog-title"
+              className="mb-4 text-xl font-bold text-gray-900"
+            >
               Academisch jaar archiveren
             </h3>
 
@@ -267,8 +285,9 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
             )}
 
             <p className="mb-4 text-sm text-gray-700">
-              Dit schooljaar <strong>{archiveDialog.yearLabel}</strong> wordt alleen-lezen. 
-              Historische gegevens blijven behouden, maar er kunnen geen wijzigingen meer worden aangebracht.
+              Dit schooljaar <strong>{archiveDialog.yearLabel}</strong> wordt
+              alleen-lezen. Historische gegevens blijven behouden, maar er
+              kunnen geen wijzigingen meer worden aangebracht.
             </p>
 
             <div className="mb-6 flex items-start">
@@ -276,10 +295,18 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
                 type="checkbox"
                 id="archive-confirm-checkbox"
                 checked={archiveDialog.confirmed}
-                onChange={(e) => setArchiveDialog({ ...archiveDialog, confirmed: e.target.checked })}
+                onChange={(e) =>
+                  setArchiveDialog({
+                    ...archiveDialog,
+                    confirmed: e.target.checked,
+                  })
+                }
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="archive-confirm-checkbox" className="ml-2 text-sm text-gray-700">
+              <label
+                htmlFor="archive-confirm-checkbox"
+                className="ml-2 text-sm text-gray-700"
+              >
                 Ik begrijp dat dit niet ongedaan kan worden gemaakt
               </label>
             </div>
@@ -289,14 +316,19 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
                 type="button"
                 variant="secondary"
                 onClick={() => {
-                  setArchiveDialog({ isOpen: false, yearId: null, yearLabel: "", confirmed: false });
+                  setArchiveDialog({
+                    isOpen: false,
+                    yearId: null,
+                    yearLabel: "",
+                    confirmed: false,
+                  });
                   setError(null);
                 }}
                 disabled={submitting}
               >
                 Annuleren
               </Button>
-              <Button 
+              <Button
                 onClick={handleArchiveConfirm}
                 disabled={!archiveDialog.confirmed || submitting}
               >
@@ -352,38 +384,63 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
                           {year.label}
                         </div>
                         {year.is_archived && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          <Badge
+                            variant="secondary"
+                            className="flex items-center gap-1"
+                          >
+                            <svg
+                              className="h-3 w-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                              />
                             </svg>
                             Gearchiveerd
                           </Badge>
                         )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        {new Date(year.start_date).toLocaleDateString("nl-NL")} -{" "}
-                        {new Date(year.end_date).toLocaleDateString("nl-NL")}
+                        {new Date(year.start_date).toLocaleDateString("nl-NL")}{" "}
+                        - {new Date(year.end_date).toLocaleDateString("nl-NL")}
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Actions Menu */}
                   <div className="relative">
                     <button
-                      onClick={() => setOpenMenuId(openMenuId === year.id ? null : year.id)}
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === year.id ? null : year.id)
+                      }
                       className="p-2 hover:bg-gray-100 rounded-md transition-colors"
                       aria-label="Acties"
                     >
-                      <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      <svg
+                        className="h-5 w-5 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                        />
                       </svg>
                     </button>
-                    
+
                     {openMenuId === year.id && (
                       <>
                         {/* Backdrop to close menu */}
-                        <div 
-                          className="fixed inset-0 z-10" 
+                        <div
+                          className="fixed inset-0 z-10"
                           onClick={() => setOpenMenuId(null)}
                         />
                         <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">

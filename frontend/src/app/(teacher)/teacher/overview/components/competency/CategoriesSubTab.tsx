@@ -10,7 +10,8 @@ interface CategoriesSubTabProps {
 }
 
 export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
-  const { data: overviewData, loading: overviewLoading } = useCompetencyOverview(filters);
+  const { data: overviewData, loading: overviewLoading } =
+    useCompetencyOverview(filters);
 
   if (overviewLoading) return <Loading />;
   if (!overviewData) return <ErrorMessage message="Geen data beschikbaar" />;
@@ -39,30 +40,42 @@ export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div>
-                    <h3 className="text-xl font-semibold text-slate-900">{category.name}</h3>
-                    <p className="text-slate-500 mt-1">Samenvatting voor de geselecteerde klas(sen)</p>
+                    <h3 className="text-xl font-semibold text-slate-900">
+                      {category.name}
+                    </h3>
+                    <p className="text-slate-500 mt-1">
+                      Samenvatting voor de geselecteerde klas(sen)
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-4">
                     <div className="bg-slate-50 rounded-xl px-4 py-3 text-center min-w-[100px]">
                       <p className="text-xs text-slate-500">Gemiddelde</p>
-                      <p className="text-2xl font-bold text-slate-900">{category.averageScore.toFixed(1)}</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {category.averageScore.toFixed(1)}
+                      </p>
                     </div>
                     <div className="bg-slate-50 rounded-xl px-4 py-3 text-center min-w-[100px]">
                       <p className="text-xs text-slate-500">Trend</p>
-                      <p className={`text-2xl font-bold ${getTrendColor(category.trendDelta)}`}>
-                        {category.trendDelta !== null 
-                          ? (category.trendDelta > 0 ? "+" : "") + category.trendDelta.toFixed(1)
-                          : "–"
-                        }
-                        {" "}{getTrendArrow(category.trendDelta)}
+                      <p
+                        className={`text-2xl font-bold ${getTrendColor(category.trendDelta)}`}
+                      >
+                        {category.trendDelta !== null
+                          ? (category.trendDelta > 0 ? "+" : "") +
+                            category.trendDelta.toFixed(1)
+                          : "–"}{" "}
+                        {getTrendArrow(category.trendDelta)}
                       </p>
                     </div>
                     <div className="bg-slate-50 rounded-xl px-4 py-3 text-center min-w-[100px]">
                       <p className="text-xs text-slate-500">Studenten</p>
                       <p className="text-2xl font-bold text-slate-900">
-                        <span className="text-green-600">{category.numStudentsUp}</span>
+                        <span className="text-green-600">
+                          {category.numStudentsUp}
+                        </span>
                         {" / "}
-                        <span className="text-red-600">{category.numStudentsDown}</span>
+                        <span className="text-red-600">
+                          {category.numStudentsDown}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -71,57 +84,91 @@ export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
 
               {/* Score Distribution for this category */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h4 className="text-lg font-semibold text-slate-900 mb-4">Scoreverdeling - {category.name}</h4>
+                <h4 className="text-lg font-semibold text-slate-900 mb-4">
+                  Scoreverdeling - {category.name}
+                </h4>
                 <div className="flex items-end gap-4 h-48">
                   {[1, 2, 3, 4, 5].map((score) => {
                     // Calculate count for this score from heatmap data
-                    const count = overviewData.heatmapRows.reduce((total, row) => {
-                      const categoryScores = Object.entries(row.scores)
-                        .filter(([_, s]) => s !== null && Math.round(s) === score)
-                        .length;
-                      return total + categoryScores;
-                    }, 0);
-                    
-                    const maxCount = Math.max(...[1, 2, 3, 4, 5].map(s => {
-                      return overviewData.heatmapRows.reduce((total, row) => {
-                        const categoryScores = Object.entries(row.scores)
-                          .filter(([_, val]) => val !== null && Math.round(val) === s)
-                          .length;
+                    const count = overviewData.heatmapRows.reduce(
+                      (total, row) => {
+                        const categoryScores = Object.entries(
+                          row.scores,
+                        ).filter(
+                          ([_, s]) => s !== null && Math.round(s) === score,
+                        ).length;
                         return total + categoryScores;
-                      }, 0);
-                    }), 1);
-                    
+                      },
+                      0,
+                    );
+
+                    const maxCount = Math.max(
+                      ...[1, 2, 3, 4, 5].map((s) => {
+                        return overviewData.heatmapRows.reduce((total, row) => {
+                          const categoryScores = Object.entries(
+                            row.scores,
+                          ).filter(
+                            ([_, val]) => val !== null && Math.round(val) === s,
+                          ).length;
+                          return total + categoryScores;
+                        }, 0);
+                      }),
+                      1,
+                    );
+
                     const heightPercent = (count / maxCount) * 100;
                     return (
-                      <div key={score} className="flex-1 flex flex-col items-center">
-                        <div 
+                      <div
+                        key={score}
+                        className="flex-1 flex flex-col items-center"
+                      >
+                        <div
                           className="w-full bg-blue-500 rounded-t-lg transition-all hover:bg-blue-600"
-                          style={{ height: `${heightPercent}%`, minHeight: count > 0 ? "8px" : "0" }}
+                          style={{
+                            height: `${heightPercent}%`,
+                            minHeight: count > 0 ? "8px" : "0",
+                          }}
                         />
-                        <div className="text-sm font-medium text-slate-700 mt-2">{score}</div>
-                        <div className="text-xs text-slate-500">{count} ll.</div>
+                        <div className="text-sm font-medium text-slate-700 mt-2">
+                          {score}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {count} ll.
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-                <p className="text-xs text-slate-500 mt-4 text-center">Aantal leerlingen per score (1-5)</p>
+                <p className="text-xs text-slate-500 mt-4 text-center">
+                  Aantal leerlingen per score (1-5)
+                </p>
               </div>
 
               {/* Risk Students for this category */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-200 bg-orange-50">
-                  <h4 className="text-lg font-semibold text-orange-800">Risicoleerlingen - {category.name}</h4>
-                  <p className="text-sm text-orange-600">Leerlingen met lage scores of negatieve trend in deze categorie</p>
+                  <h4 className="text-lg font-semibold text-orange-800">
+                    Risicoleerlingen - {category.name}
+                  </h4>
+                  <p className="text-sm text-orange-600">
+                    Leerlingen met lage scores of negatieve trend in deze
+                    categorie
+                  </p>
                 </div>
                 {/* Filter students with low scores or negative trend in this category */}
                 {(() => {
                   const riskStudents = overviewData.heatmapRows
-                    .map(row => {
-                      const categoryScores = Object.entries(row.scores)
-                        .filter(([_, score]) => score !== null && score < 3);
-                      
+                    .map((row) => {
+                      const categoryScores = Object.entries(row.scores).filter(
+                        ([_, score]) => score !== null && score < 3,
+                      );
+
                       if (categoryScores.length > 0) {
-                        const avgScore = categoryScores.reduce((sum, [_, score]) => sum + (score || 0), 0) / categoryScores.length;
+                        const avgScore =
+                          categoryScores.reduce(
+                            (sum, [_, score]) => sum + (score || 0),
+                            0,
+                          ) / categoryScores.length;
                         return {
                           studentId: row.studentId,
                           name: row.name,
@@ -140,29 +187,49 @@ export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
                       <table className="min-w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-50">
                           <tr>
-                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">Leerling</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Klas</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Laatste score</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Trend</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Actie</th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                              Leerling
+                            </th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                              Klas
+                            </th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                              Laatste score
+                            </th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                              Trend
+                            </th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                              Actie
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {riskStudents.map((student) => (
-                            <tr key={student.studentId} className="bg-white hover:bg-slate-50">
-                              <td className="px-5 py-3 text-sm text-slate-800 font-medium">{student.name}</td>
-                              <td className="px-4 py-3 text-center text-sm text-slate-600">{student.className || "–"}</td>
+                            <tr
+                              key={student.studentId}
+                              className="bg-white hover:bg-slate-50"
+                            >
+                              <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                                {student.name}
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-slate-600">
+                                {student.className || "–"}
+                              </td>
                               <td className="px-4 py-3 text-center">
                                 <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold bg-orange-100 text-orange-700">
                                   {student.lastScore.toFixed(1)}
                                 </span>
                               </td>
-                              <td className={`px-4 py-3 text-center text-sm font-medium ${getTrendColor(student.trendDelta)}`}>
-                                {student.trendDelta !== null && typeof student.trendDelta === 'number'
-                                  ? (student.trendDelta > 0 ? "+" : "") + student.trendDelta.toFixed(1)
-                                  : "–"
-                                }
-                                {" "}{getTrendArrow(student.trendDelta)}
+                              <td
+                                className={`px-4 py-3 text-center text-sm font-medium ${getTrendColor(student.trendDelta)}`}
+                              >
+                                {student.trendDelta !== null &&
+                                typeof student.trendDelta === "number"
+                                  ? (student.trendDelta > 0 ? "+" : "") +
+                                    student.trendDelta.toFixed(1)
+                                  : "–"}{" "}
+                                {getTrendArrow(student.trendDelta)}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <Link

@@ -20,9 +20,7 @@ export function useStudentResults(userId: number) {
       setResults(data);
     } catch (e: any) {
       setError(
-        e?.response?.data?.detail ||
-          e?.message ||
-          "Could not load results"
+        e?.response?.data?.detail || e?.message || "Could not load results",
       );
     } finally {
       setLoading(false);

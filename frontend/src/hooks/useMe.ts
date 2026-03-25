@@ -8,7 +8,7 @@ import { User } from "@/dtos";
 /**
  * Hook to check authentication status and get current user.
  * Automatically redirects to login page on 401 errors.
- * 
+ *
  * This is the primary authentication check hook that should be used
  * in protected pages/components to ensure user is authenticated.
  */

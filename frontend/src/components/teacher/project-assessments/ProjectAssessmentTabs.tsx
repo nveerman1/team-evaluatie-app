@@ -4,33 +4,67 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { id: "overview", label: "Overzicht", href: (id: string) => `/teacher/project-assessments/${id}/overview` },
-  { id: "submissions", label: "Inleveringen", href: (id: string) => `/teacher/project-assessments/${id}/submissions` },
-  { id: "edit", label: "Rubric invullen", href: (id: string) => `/teacher/project-assessments/${id}/edit` },
-  { id: "scores", label: "Scores", href: (id: string) => `/teacher/project-assessments/${id}/scores` },
-  { id: "reflections", label: "Reflecties", href: (id: string) => `/teacher/project-assessments/${id}/reflections` },
-  { id: "self-assessment", label: "Zelfbeoordeling", href: (id: string) => `/teacher/project-assessments/${id}/self-assessment` },
-  { id: "external", label: "Externe beoordeling", href: (id: string) => `/teacher/project-assessments/${id}/external` },
-  { id: "settings", label: "Bewerken", href: (id: string) => `/teacher/project-assessments/${id}/settings` },
+  {
+    id: "overview",
+    label: "Overzicht",
+    href: (id: string) => `/teacher/project-assessments/${id}/overview`,
+  },
+  {
+    id: "submissions",
+    label: "Inleveringen",
+    href: (id: string) => `/teacher/project-assessments/${id}/submissions`,
+  },
+  {
+    id: "edit",
+    label: "Rubric invullen",
+    href: (id: string) => `/teacher/project-assessments/${id}/edit`,
+  },
+  {
+    id: "scores",
+    label: "Scores",
+    href: (id: string) => `/teacher/project-assessments/${id}/scores`,
+  },
+  {
+    id: "reflections",
+    label: "Reflecties",
+    href: (id: string) => `/teacher/project-assessments/${id}/reflections`,
+  },
+  {
+    id: "self-assessment",
+    label: "Zelfbeoordeling",
+    href: (id: string) => `/teacher/project-assessments/${id}/self-assessment`,
+  },
+  {
+    id: "external",
+    label: "Externe beoordeling",
+    href: (id: string) => `/teacher/project-assessments/${id}/external`,
+  },
+  {
+    id: "settings",
+    label: "Bewerken",
+    href: (id: string) => `/teacher/project-assessments/${id}/settings`,
+  },
 ];
 
 type ProjectAssessmentTabsProps = {
   assessmentId: string;
 };
 
-export function ProjectAssessmentTabs({ assessmentId }: ProjectAssessmentTabsProps) {
+export function ProjectAssessmentTabs({
+  assessmentId,
+}: ProjectAssessmentTabsProps) {
   const pathname = usePathname();
 
   // Determine active tab based on pathname
   const getActiveTab = () => {
     if (!pathname) return "overview";
-    
+
     // Use regex to extract the segment after /project-assessments/{id}/
     const match = pathname.match(/\/project-assessments\/[^/]+\/([^/?]+)/);
     const tabSegment = match?.[1];
-    
+
     // Match the segment to a valid tab id from the tabs array
-    return tabs.find(tab => tab.id === tabSegment)?.id || "overview";
+    return tabs.find((tab) => tab.id === tabSegment)?.id || "overview";
   };
 
   const activeTab = getActiveTab();
@@ -44,7 +78,9 @@ export function ProjectAssessmentTabs({ assessmentId }: ProjectAssessmentTabsPro
             <Link
               key={tab.id}
               href={tab.href(assessmentId)}
-              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+              prefetch={
+                process.env.NODE_ENV === "production" ? false : undefined
+              }
               className={`
                 py-4 px-1 border-b-2 font-medium text-sm transition-colors
                 ${

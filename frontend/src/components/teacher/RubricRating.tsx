@@ -24,7 +24,10 @@ export function RubricRating({
   onCommentChange,
 }: RubricRatingProps) {
   // Create array of levels based on scale
-  const levels = Array.from({ length: scaleMax - scaleMin + 1 }, (_, i) => scaleMin + i);
+  const levels = Array.from(
+    { length: scaleMax - scaleMin + 1 },
+    (_, i) => scaleMin + i,
+  );
 
   return (
     <div className="p-5 border-2 rounded-xl bg-white space-y-4 hover:border-blue-300 transition-colors">
@@ -35,9 +38,7 @@ export function RubricRating({
           <div className="text-3xl font-bold text-blue-600">
             {value || scaleMin}
           </div>
-          <div className="text-xs text-gray-500">
-            / {scaleMax}
-          </div>
+          <div className="text-xs text-gray-500">/ {scaleMax}</div>
         </div>
       </div>
 
@@ -60,7 +61,10 @@ export function RubricRating({
             <tr>
               {levels.map((level) => {
                 const isSelected = value === level;
-                const descriptor = descriptors?.[`level${level}`] || descriptors?.[level.toString()] || "";
+                const descriptor =
+                  descriptors?.[`level${level}`] ||
+                  descriptors?.[level.toString()] ||
+                  "";
 
                 return (
                   <td

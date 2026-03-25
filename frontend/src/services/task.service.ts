@@ -56,10 +56,10 @@ export const taskService = {
     const to = task.email_to || task.client_email || "";
     const cc = task.email_cc || "";
     const subject = encodeURIComponent(task.title || "");
-    
+
     // Build email body with task context
     let bodyParts: string[] = [];
-    
+
     if (task.project_name) {
       bodyParts.push(`Project: ${task.project_name}`);
     }
@@ -77,19 +77,19 @@ export const taskService = {
       bodyParts.push("");
       bodyParts.push(task.description);
     }
-    
+
     bodyParts.push("");
     bodyParts.push("---");
     bodyParts.push("Deze email is gegenereerd vanuit de Team Evaluatie App.");
-    
+
     const body = encodeURIComponent(bodyParts.join("\n"));
-    
+
     let mailtoUrl = `mailto:${to}?subject=${subject}&body=${body}`;
-    
+
     if (cc) {
       mailtoUrl += `&cc=${cc}`;
     }
-    
+
     return mailtoUrl;
   },
 };

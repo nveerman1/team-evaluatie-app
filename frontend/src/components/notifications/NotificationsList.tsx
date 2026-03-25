@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { notificationService } from '@/services/notification.service';
-import { NotificationOut } from '@/dtos/notification.dto';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { notificationService } from "@/services/notification.service";
+import { NotificationOut } from "@/dtos/notification.dto";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface NotificationsListProps {
   onNotificationRead?: () => void;
@@ -16,15 +16,17 @@ function getRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (seconds < 60) return 'zojuist';
+
+  if (seconds < 60) return "zojuist";
   if (seconds < 3600) return `${Math.floor(seconds / 60)} minuten geleden`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} uur geleden`;
   if (seconds < 2592000) return `${Math.floor(seconds / 86400)} dagen geleden`;
-  return date.toLocaleDateString('nl-NL');
+  return date.toLocaleDateString("nl-NL");
 }
 
-export function NotificationsList({ onNotificationRead }: NotificationsListProps) {
+export function NotificationsList({
+  onNotificationRead,
+}: NotificationsListProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationOut[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export function NotificationsList({ onNotificationRead }: NotificationsListProps
       const data = await notificationService.getNotifications(false, 20);
       setNotifications(data.items);
     } catch (err) {
-      console.error('Failed to load notifications:', err);
+      console.error("Failed to load notifications:", err);
     } finally {
       setLoading(false);
     }
@@ -52,12 +54,14 @@ export function NotificationsList({ onNotificationRead }: NotificationsListProps
         await notificationService.markAsRead(notification.id);
         setNotifications((prev) =>
           prev.map((n) =>
-            n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n
-          )
+            n.id === notification.id
+              ? { ...n, read_at: new Date().toISOString() }
+              : n,
+          ),
         );
         onNotificationRead?.();
       } catch (err) {
-        console.error('Failed to mark as read:', err);
+        console.error("Failed to mark as read:", err);
       }
     }
 
@@ -71,11 +75,14 @@ export function NotificationsList({ onNotificationRead }: NotificationsListProps
     try {
       await notificationService.markAllAsRead();
       setNotifications((prev) =>
-        prev.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+        prev.map((n) => ({
+          ...n,
+          read_at: n.read_at || new Date().toISOString(),
+        })),
       );
       onNotificationRead?.();
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      console.error("Failed to mark all as read:", err);
     }
   };
 
@@ -113,7 +120,7 @@ export function NotificationsList({ onNotificationRead }: NotificationsListProps
           <div
             key={notification.id}
             className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-              !notification.read_at ? 'bg-blue-50' : ''
+              !notification.read_at ? "bg-blue-50" : ""
             }`}
             onClick={() => handleNotificationClick(notification)}
           >
@@ -124,7 +131,9 @@ export function NotificationsList({ onNotificationRead }: NotificationsListProps
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm">{notification.title}</p>
                 {notification.body && (
-                  <p className="text-sm text-muted-foreground mt-1">{notification.body}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {notification.body}
+                  </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-2">
                   {getRelativeTime(notification.created_at)}

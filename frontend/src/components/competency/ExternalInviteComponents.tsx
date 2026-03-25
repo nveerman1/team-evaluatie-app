@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { competencyService } from "@/services/competency.service";
-import type { 
-  ExternalInvite, 
-  ExternalInviteCreate, 
-  Competency 
+import type {
+  ExternalInvite,
+  ExternalInviteCreate,
+  Competency,
 } from "@/dtos/competency.dto";
 
 interface ExternalInviteModalProps {
@@ -27,7 +27,9 @@ export function ExternalInviteModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
-  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>([]);
+  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>(
+    [],
+  );
   const [loadingCompetencies, setLoadingCompetencies] = useState(true);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function ExternalInviteModal({
     setSelectedCompetencies((prev) =>
       prev.includes(competencyId)
         ? prev.filter((id) => id !== competencyId)
-        : [...prev, competencyId]
+        : [...prev, competencyId],
     );
   };
 
@@ -86,7 +88,7 @@ export function ExternalInviteModal({
     // Better email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const validEmails = emails.filter(
-      (email) => email.trim() && emailRegex.test(email.trim())
+      (email) => email.trim() && emailRegex.test(email.trim()),
     );
 
     if (validEmails.length === 0) {
@@ -96,18 +98,20 @@ export function ExternalInviteModal({
 
     // Check for invalid emails
     const invalidEmails = emails.filter(
-      (email) => email.trim() && !emailRegex.test(email.trim())
+      (email) => email.trim() && !emailRegex.test(email.trim()),
     );
     if (invalidEmails.length > 0) {
       setError(
-        `Ongeldig e-mailformaat: ${invalidEmails.join(", ")}. Corrigeer dit en probeer opnieuw.`
+        `Ongeldig e-mailformaat: ${invalidEmails.join(", ")}. Corrigeer dit en probeer opnieuw.`,
       );
       return;
     }
 
     // Validate that at least one competency is selected
     if (selectedCompetencies.length === 0) {
-      setError("Selecteer ten minste één competentie voor de externe beoordelaar om te beoordelen.");
+      setError(
+        "Selecteer ten minste één competentie voor de externe beoordelaar om te beoordelen.",
+      );
       return;
     }
 
@@ -127,7 +131,8 @@ export function ExternalInviteModal({
       onClose();
     } catch (err: any) {
       setError(
-        err.response?.data?.detail || "Aanmaken uitnodigingen mislukt. Probeer het opnieuw."
+        err.response?.data?.detail ||
+          "Aanmaken uitnodigingen mislukt. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);
@@ -165,8 +170,9 @@ export function ExternalInviteModal({
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
             <p className="text-sm text-yellow-800">
               <strong>Privacy Melding:</strong> Je deelt een beoordelingsverzoek
-              met een externe persoon. Nodig alleen mensen uit die je vertrouwt. Zij ontvangen
-              een eenmalige link om jouw competenties te beoordelen.
+              met een externe persoon. Nodig alleen mensen uit die je vertrouwt.
+              Zij ontvangen een eenmalige link om jouw competenties te
+              beoordelen.
             </p>
           </div>
 
@@ -262,7 +268,9 @@ export function ExternalInviteModal({
                   </button>
                 </div>
                 {loadingCompetencies ? (
-                  <div className="text-sm text-gray-500">Competenties laden...</div>
+                  <div className="text-sm text-gray-500">
+                    Competenties laden...
+                  </div>
                 ) : (
                   <div className="border border-gray-300 rounded-md p-3 max-h-60 overflow-y-auto">
                     {competencies.length === 0 ? (
@@ -299,7 +307,8 @@ export function ExternalInviteModal({
                   </div>
                 )}
                 <div className="mt-1 text-xs text-gray-600">
-                  {selectedCompetencies.length} van {competencies.length} geselecteerd
+                  {selectedCompetencies.length} van {competencies.length}{" "}
+                  geselecteerd
                 </div>
               </div>
 
@@ -309,9 +318,13 @@ export function ExternalInviteModal({
                   Wat gebeurt er nu?
                 </h3>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Uitnodigingen worden verstuurd naar de opgegeven e-mailadressen</li>
                   <li>
-                    • Elke uitnodiging bevat een unieke, eenmalig te gebruiken link
+                    • Uitnodigingen worden verstuurd naar de opgegeven
+                    e-mailadressen
+                  </li>
+                  <li>
+                    • Elke uitnodiging bevat een unieke, eenmalig te gebruiken
+                    link
                   </li>
                   <li>• Links verlopen na 14 dagen</li>
                   <li>
@@ -319,7 +332,8 @@ export function ExternalInviteModal({
                     competenties om te beoordelen
                   </li>
                   <li>
-                    • Je ziet alleen de gecombineerde scores van externe beoordelaars
+                    • Je ziet alleen de gecombineerde scores van externe
+                    beoordelaars
                   </li>
                 </ul>
               </div>
@@ -371,7 +385,7 @@ export function ExternalInviteList({
       setError(null);
       const data = await competencyService.getExternalInvites(
         windowId,
-        subjectUserId
+        subjectUserId,
       );
       setInvites(data);
     } catch (err: any) {
@@ -429,7 +443,8 @@ export function ExternalInviteList({
   if (invites.length === 0) {
     return (
       <div className="text-sm text-gray-600">
-        Nog geen externe uitnodigingen. Klik op &quot;Nodig Externen Uit&quot; om uitnodigingen te versturen.
+        Nog geen externe uitnodigingen. Klik op &quot;Nodig Externen Uit&quot;
+        om uitnodigingen te versturen.
       </div>
     );
   }
@@ -459,7 +474,9 @@ export function ExternalInviteList({
         <tbody className="bg-white divide-y divide-gray-200">
           {invites.map((invite) => (
             <tr key={invite.id}>
-              <td className="px-4 py-2 text-sm text-gray-900">{invite.email}</td>
+              <td className="px-4 py-2 text-sm text-gray-900">
+                {invite.email}
+              </td>
               <td className="px-4 py-2">{getStatusBadge(invite.status)}</td>
               <td className="px-4 py-2 text-sm text-gray-600">
                 {invite.sent_at

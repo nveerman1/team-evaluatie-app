@@ -12,10 +12,10 @@ export const feedbackSummaryService = {
    */
   async getStudentSummary(
     evaluationId: number,
-    studentId: number
+    studentId: number,
   ): Promise<FeedbackSummaryResponse> {
     const { data } = await api.get<FeedbackSummaryResponse>(
-      `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}`
+      `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}`,
     );
     return data;
   },
@@ -25,10 +25,10 @@ export const feedbackSummaryService = {
    */
   async queueSummaryGeneration(
     evaluationId: number,
-    studentId: number
+    studentId: number,
   ): Promise<JobStatusResponse> {
     const { data } = await api.post<JobStatusResponse>(
-      `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}/queue`
+      `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}/queue`,
     );
     return data;
   },
@@ -36,10 +36,13 @@ export const feedbackSummaryService = {
   /**
    * Check status of a queued job
    */
-  async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobStatusResponse> {
+  async getJobStatus(
+    jobId: string,
+    signal?: AbortSignal,
+  ): Promise<JobStatusResponse> {
     const { data } = await api.get<JobStatusResponse>(
       `/feedback-summaries/jobs/${jobId}/status`,
-      { signal }
+      { signal },
     );
     return data;
   },
@@ -49,11 +52,11 @@ export const feedbackSummaryService = {
    */
   async batchQueueSummaries(
     evaluationId: number,
-    studentIds: number[]
+    studentIds: number[],
   ): Promise<BatchQueueResponse> {
     const { data } = await api.post<BatchQueueResponse>(
       `/feedback-summaries/evaluation/${evaluationId}/batch-queue`,
-      { student_ids: studentIds }
+      { student_ids: studentIds },
     );
     return data;
   },
@@ -63,12 +66,16 @@ export const feedbackSummaryService = {
    */
   async listEvaluationJobs(
     evaluationId: number,
-    status?: string
-  ): Promise<{ evaluation_id: number; total: number; jobs: JobStatusResponse[] }> {
+    status?: string,
+  ): Promise<{
+    evaluation_id: number;
+    total: number;
+    jobs: JobStatusResponse[];
+  }> {
     const params = status ? { status } : {};
     const { data } = await api.get(
       `/feedback-summaries/evaluation/${evaluationId}/jobs`,
-      { params }
+      { params },
     );
     return data;
   },
@@ -78,11 +85,11 @@ export const feedbackSummaryService = {
    */
   async regenerateSummary(
     evaluationId: number,
-    studentId: number
+    studentId: number,
   ): Promise<FeedbackSummaryResponse> {
     const { data } = await api.post<FeedbackSummaryResponse>(
       `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}/regenerate`,
-      { force: true }
+      { force: true },
     );
     return data;
   },
@@ -92,10 +99,10 @@ export const feedbackSummaryService = {
    */
   async getFeedbackQuotes(
     evaluationId: number,
-    studentId: number
+    studentId: number,
   ): Promise<FeedbackQuotesResponse> {
     const { data } = await api.get<FeedbackQuotesResponse>(
-      `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}/quotes`
+      `/feedback-summaries/evaluation/${evaluationId}/student/${studentId}/quotes`,
     );
     return data;
   },

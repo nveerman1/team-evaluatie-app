@@ -26,14 +26,16 @@ export const projectAssessmentService = {
   async getProjectAssessments(
     groupId?: number,
     courseId?: number,
-    status?: string
+    status?: string,
   ): Promise<ProjectAssessmentListResponse> {
     const params = new URLSearchParams();
     if (groupId) params.set("group_id", groupId.toString());
     if (courseId) params.set("course_id", courseId.toString());
     if (status) params.set("status", status);
     const queryString = params.toString();
-    const url = queryString ? `/project-assessments?${queryString}` : "/project-assessments";
+    const url = queryString
+      ? `/project-assessments?${queryString}`
+      : "/project-assessments";
     const response = await api.get<ProjectAssessmentListResponse>(url);
     return response.data;
   },
@@ -41,13 +43,18 @@ export const projectAssessmentService = {
   /**
    * Get a single project assessment by ID with details
    */
-  async getProjectAssessment(id: number, teamNumber?: number): Promise<ProjectAssessmentDetailOut> {
+  async getProjectAssessment(
+    id: number,
+    teamNumber?: number,
+  ): Promise<ProjectAssessmentDetailOut> {
     const params = new URLSearchParams();
     if (teamNumber !== undefined) {
       params.set("team_number", teamNumber.toString());
     }
     const queryString = params.toString();
-    const url = queryString ? `/project-assessments/${id}?${queryString}` : `/project-assessments/${id}`;
+    const url = queryString
+      ? `/project-assessments/${id}?${queryString}`
+      : `/project-assessments/${id}`;
     const response = await api.get<ProjectAssessmentDetailOut>(url);
     return response.data;
   },
@@ -56,11 +63,11 @@ export const projectAssessmentService = {
    * Create a new project assessment
    */
   async createProjectAssessment(
-    data: ProjectAssessmentCreate
+    data: ProjectAssessmentCreate,
   ): Promise<ProjectAssessmentOut> {
     const response = await api.post<ProjectAssessmentOut>(
       "/project-assessments",
-      data
+      data,
     );
     return response.data;
   },
@@ -70,11 +77,11 @@ export const projectAssessmentService = {
    */
   async updateProjectAssessment(
     id: number,
-    data: ProjectAssessmentUpdate
+    data: ProjectAssessmentUpdate,
   ): Promise<ProjectAssessmentOut> {
     const response = await api.put<ProjectAssessmentOut>(
       `/project-assessments/${id}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -91,11 +98,11 @@ export const projectAssessmentService = {
    */
   async batchUpdateScores(
     assessmentId: number,
-    data: ProjectAssessmentScoreBatchRequest
+    data: ProjectAssessmentScoreBatchRequest,
   ): Promise<ProjectAssessmentScoreOut[]> {
     const response = await api.post<ProjectAssessmentScoreOut[]>(
       `/project-assessments/${assessmentId}/scores/batch`,
-      data
+      data,
     );
     return response.data;
   },
@@ -105,11 +112,11 @@ export const projectAssessmentService = {
    */
   async createOrUpdateReflection(
     assessmentId: number,
-    data: ProjectAssessmentReflectionCreate
+    data: ProjectAssessmentReflectionCreate,
   ): Promise<ProjectAssessmentReflectionOut> {
     const response = await api.post<ProjectAssessmentReflectionOut>(
       `/project-assessments/${assessmentId}/reflection`,
-      data
+      data,
     );
     return response.data;
   },
@@ -118,10 +125,10 @@ export const projectAssessmentService = {
    * Get team overview for a project assessment (teacher)
    */
   async getTeamOverview(
-    assessmentId: number
+    assessmentId: number,
   ): Promise<ProjectAssessmentTeamOverview> {
     const response = await api.get<ProjectAssessmentTeamOverview>(
-      `/project-assessments/${assessmentId}/teams`
+      `/project-assessments/${assessmentId}/teams`,
     );
     return response.data;
   },
@@ -130,10 +137,10 @@ export const projectAssessmentService = {
    * Get all reflections for a project assessment (teacher)
    */
   async getReflections(
-    assessmentId: number
+    assessmentId: number,
   ): Promise<ProjectAssessmentReflectionsOverview> {
     const response = await api.get<ProjectAssessmentReflectionsOverview>(
-      `/project-assessments/${assessmentId}/reflections`
+      `/project-assessments/${assessmentId}/reflections`,
     );
     return response.data;
   },
@@ -142,10 +149,10 @@ export const projectAssessmentService = {
    * Get scores overview for a project assessment (teacher)
    */
   async getScoresOverview(
-    assessmentId: number
+    assessmentId: number,
   ): Promise<ProjectAssessmentScoresOverview> {
     const response = await api.get<ProjectAssessmentScoresOverview>(
-      `/project-assessments/${assessmentId}/scores-overview`
+      `/project-assessments/${assessmentId}/scores-overview`,
     );
     return response.data;
   },
@@ -154,10 +161,10 @@ export const projectAssessmentService = {
    * Get individual students overview for a project assessment (teacher)
    */
   async getStudentsOverview(
-    assessmentId: number
+    assessmentId: number,
   ): Promise<ProjectAssessmentStudentsOverview> {
     const response = await api.get<ProjectAssessmentStudentsOverview>(
-      `/project-assessments/${assessmentId}/students-overview`
+      `/project-assessments/${assessmentId}/students-overview`,
     );
     return response.data;
   },
@@ -166,10 +173,10 @@ export const projectAssessmentService = {
    * Get student's own self-assessment
    */
   async getSelfAssessment(
-    assessmentId: number
+    assessmentId: number,
   ): Promise<SelfAssessmentDetailOut> {
     const response = await api.get<SelfAssessmentDetailOut>(
-      `/project-assessments/${assessmentId}/self`
+      `/project-assessments/${assessmentId}/self`,
     );
     return response.data;
   },
@@ -179,11 +186,11 @@ export const projectAssessmentService = {
    */
   async createOrUpdateSelfAssessment(
     assessmentId: number,
-    data: SelfAssessmentCreate
+    data: SelfAssessmentCreate,
   ): Promise<SelfAssessmentOut> {
     const response = await api.post<SelfAssessmentOut>(
       `/project-assessments/${assessmentId}/self`,
-      data
+      data,
     );
     return response.data;
   },
@@ -195,7 +202,7 @@ export const projectAssessmentService = {
     assessmentId: number,
     q?: string,
     sort?: string,
-    direction?: string
+    direction?: string,
   ): Promise<ProjectAssessmentSelfOverview> {
     const params = new URLSearchParams();
     if (q) params.set("q", q);

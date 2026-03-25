@@ -11,11 +11,11 @@ interface TimelineCardProps {
   filterCategory?: string;
 }
 
-export function TimelineCard({ 
-  contextId, 
-  searchText, 
-  searchName, 
-  filterCategory 
+export function TimelineCard({
+  contextId,
+  searchText,
+  searchName,
+  filterCategory,
 }: TimelineCardProps) {
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,12 +37,15 @@ export function TimelineCard({
   };
 
   // Filter notes
-  const filteredNotes = notes.filter(note => {
-    if (searchText && !note.text.toLowerCase().includes(searchText.toLowerCase())) {
+  const filteredNotes = notes.filter((note) => {
+    if (
+      searchText &&
+      !note.text.toLowerCase().includes(searchText.toLowerCase())
+    ) {
       return false;
     }
     if (searchName) {
-      const nameMatch = 
+      const nameMatch =
         note.student_name?.toLowerCase().includes(searchName.toLowerCase()) ||
         note.team_name?.toLowerCase().includes(searchName.toLowerCase());
       if (!nameMatch) return false;
@@ -64,7 +67,9 @@ export function TimelineCard({
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Tijdlijn</p>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+            Tijdlijn
+          </p>
           <p className="text-sm text-slate-600">
             Chronologisch overzicht van alle aantekeningen binnen dit project.
           </p>
@@ -85,12 +90,12 @@ export function TimelineCard({
               <li key={note.id} className="relative">
                 <span className="absolute -left-[9px] top-[4px] h-2.5 w-2.5 rounded-full bg-indigo-500" />
                 <p className="text-[11px] text-slate-500">
-                  {new Date(note.created_at).toLocaleDateString('nl-NL', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                  {new Date(note.created_at).toLocaleDateString("nl-NL", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2">
@@ -131,7 +136,8 @@ export function TimelineCard({
                     ))}
                   </div>
                 )}
-                {(note.is_competency_evidence || note.is_portfolio_evidence) && (
+                {(note.is_competency_evidence ||
+                  note.is_portfolio_evidence) && (
                   <div className="mt-1 flex gap-1.5">
                     {note.is_competency_evidence && (
                       <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">

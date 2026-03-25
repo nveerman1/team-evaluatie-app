@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { evaluationService, projectAssessmentService, competencyService, taskService } from "@/services";
+import {
+  evaluationService,
+  projectAssessmentService,
+  competencyService,
+  taskService,
+} from "@/services";
 import type { Evaluation } from "@/dtos/evaluation.dto";
 import type { ProjectAssessmentListItem } from "@/dtos/project-assessment.dto";
 import type { CompetencyWindow } from "@/dtos/competency.dto";
@@ -17,14 +22,22 @@ import { KpiTile } from "@/components/teacher/KpiTile";
 export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [projectAssessments, setProjectAssessments] = useState<ProjectAssessmentListItem[]>([]);
-  const [competencyWindows, setCompetencyWindows] = useState<CompetencyWindow[]>([]);
+  const [projectAssessments, setProjectAssessments] = useState<
+    ProjectAssessmentListItem[]
+  >([]);
+  const [competencyWindows, setCompetencyWindows] = useState<
+    CompetencyWindow[]
+  >([]);
   const [openTasksCount, setOpenTasksCount] = useState<number>(0);
   const [tasksHint, setTasksHint] = useState<string>("Opdrachtgeverstaken");
 
   // Tab states for collapsible sections
-  const [taskTab, setTaskTab] = useState<"week" | "deadlines" | "clients">("week");
-  const [evalTab, setEvalTab] = useState<"evaluations" | "projects" | "scans">("evaluations");
+  const [taskTab, setTaskTab] = useState<"week" | "deadlines" | "clients">(
+    "week",
+  );
+  const [evalTab, setEvalTab] = useState<"evaluations" | "projects" | "scans">(
+    "evaluations",
+  );
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -35,13 +48,14 @@ export default function TeacherDashboard() {
         setEvaluations(Array.isArray(evalsData) ? evalsData : []);
 
         // Load project assessments
-        const projectsData = await projectAssessmentService.getProjectAssessments();
+        const projectsData =
+          await projectAssessmentService.getProjectAssessments();
         setProjectAssessments(projectsData?.items || []);
 
         // Load competency windows
         const windowsData = await competencyService.getWindows("open");
         setCompetencyWindows(Array.isArray(windowsData) ? windowsData : []);
-        
+
         // Load open opdrachtgever tasks
         try {
           const tasksData = await taskService.listTasks({
@@ -50,11 +64,11 @@ export default function TeacherDashboard() {
             per_page: 100, // Get all for count
           });
           setOpenTasksCount(tasksData?.total || 0);
-          
+
           // Create hint with first few client names
           if (tasksData?.items && tasksData.items.length > 0) {
             const clientNames = tasksData.items
-              .map(t => t.client_name)
+              .map((t) => t.client_name)
               .filter((name): name is string => !!name)
               .slice(0, 3);
             if (clientNames.length > 0) {
@@ -92,8 +106,12 @@ export default function TeacherDashboard() {
   // Collect deadlines from evaluations
   const evaluationDeadlines = evaluations
     .map((e) => {
-      const reviewDeadline = e.deadlines?.review ? new Date(e.deadlines.review) : null;
-      const reflectionDeadline = e.deadlines?.reflection ? new Date(e.deadlines.reflection) : null;
+      const reviewDeadline = e.deadlines?.review
+        ? new Date(e.deadlines.review)
+        : null;
+      const reflectionDeadline = e.deadlines?.reflection
+        ? new Date(e.deadlines.reflection)
+        : null;
 
       // Get the earliest upcoming deadline
       let nextDeadline = null;
@@ -175,13 +193,19 @@ export default function TeacherDashboard() {
   // Count deadlines this week
   const deadlinesThisWeek = upcomingDeadlines.filter((d) => {
     if (!d.nextDeadline) return false;
-    const daysUntil = Math.floor((d.nextDeadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntil = Math.floor(
+      (d.nextDeadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
     return daysUntil >= 0 && daysUntil <= 7;
   });
 
   // Count review vs reflection deadlines
-  const reviewCount = deadlinesThisWeek.filter((d) => d.nextDeadlineType === "Review").length;
-  const reflectionCount = deadlinesThisWeek.filter((d) => d.nextDeadlineType === "Reflectie").length;
+  const reviewCount = deadlinesThisWeek.filter(
+    (d) => d.nextDeadlineType === "Review",
+  ).length;
+  const reflectionCount = deadlinesThisWeek.filter(
+    (d) => d.nextDeadlineType === "Reflectie",
+  ).length;
 
   // Scans count (competency windows)
   const openScans = competencyWindows.length;
@@ -202,7 +226,9 @@ export default function TeacherDashboard() {
     clientTasksHint: tasksHint,
     openScans: openScans,
     openScansHint:
-      openScans > 0 ? `${openScans} competentiescan${openScans > 1 ? "s" : ""} actief` : "Geen open scans",
+      openScans > 0
+        ? `${openScans} competentiescan${openScans > 1 ? "s" : ""} actief`
+        : "Geen open scans",
   };
 
   return (
@@ -210,7 +236,9 @@ export default function TeacherDashboard() {
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            Dashboard
+          </h1>
           <p className="text-gray-600 mt-1 text-sm">
             Snel overzicht van je lopende evaluaties, deadlines en scans.
           </p>
@@ -221,22 +249,38 @@ export default function TeacherDashboard() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         {/* KPI Tiles Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <KpiTile label="Open evaluaties" value={kpiData.openEvaluations} hint={kpiData.openEvaluationsHint} />
+          <KpiTile
+            label="Open evaluaties"
+            value={kpiData.openEvaluations}
+            hint={kpiData.openEvaluationsHint}
+          />
           <KpiTile
             label="Deadlines deze week"
             value={kpiData.deadlinesThisWeek}
             hint={kpiData.deadlinesHint}
           />
-          <KpiTile label="Opdrachtgeverstaken" value={kpiData.clientTasks} hint={kpiData.clientTasksHint} />
-          <KpiTile label="Open scans" value={kpiData.openScans} hint={kpiData.openScansHint} />
+          <KpiTile
+            label="Opdrachtgeverstaken"
+            value={kpiData.clientTasks}
+            hint={kpiData.clientTasksHint}
+          />
+          <KpiTile
+            label="Open scans"
+            value={kpiData.openScans}
+            hint={kpiData.openScansHint}
+          />
         </div>
 
         {/* Single Column Layout */}
         <div className="flex flex-col gap-6">
           {/* Snelle acties Card */}
           <section className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="text-base font-semibold text-gray-900">Snelle acties</h2>
-            <p className="text-[13px] text-gray-500 mb-4">Start direct een nieuwe evaluatie of scan.</p>
+            <h2 className="text-base font-semibold text-gray-900">
+              Snelle acties
+            </h2>
+            <p className="text-[13px] text-gray-500 mb-4">
+              Start direct een nieuwe evaluatie of scan.
+            </p>
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/teacher/projects/new"
@@ -285,21 +329,25 @@ export default function TeacherDashboard() {
               {taskTab === "week" && (
                 <>
                   {activeEvaluations.length > 0 ? (
-                    activeEvaluations.slice(0, 3).map((evaluation) => (
-                      <ListRow
-                        key={evaluation.id}
-                        title={`${evaluation.title} (${evaluation.cluster || "—"})`}
-                        meta={`Reviewperiode ${formatDate(evaluation.deadlines?.review)}`}
-                        href={`/teacher/evaluations/${evaluation.id}/dashboard`}
-                        right={
-                          <span className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white">
-                            Plan tijdslot
-                          </span>
-                        }
-                      />
-                    ))
+                    activeEvaluations
+                      .slice(0, 3)
+                      .map((evaluation) => (
+                        <ListRow
+                          key={evaluation.id}
+                          title={`${evaluation.title} (${evaluation.cluster || "—"})`}
+                          meta={`Reviewperiode ${formatDate(evaluation.deadlines?.review)}`}
+                          href={`/teacher/evaluations/${evaluation.id}/dashboard`}
+                          right={
+                            <span className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white">
+                              Plan tijdslot
+                            </span>
+                          }
+                        />
+                      ))
                   ) : (
-                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen taken deze week.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">
+                      Geen taken deze week.
+                    </p>
                   )}
                   {competencyWindows.length > 0 && (
                     <ListRow
@@ -343,7 +391,9 @@ export default function TeacherDashboard() {
                       );
                     })
                   ) : (
-                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen aankomende deadlines.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">
+                      Geen aankomende deadlines.
+                    </p>
                   )}
                 </>
               )}
@@ -391,7 +441,9 @@ export default function TeacherDashboard() {
                       />
                     ))
                   ) : (
-                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen actieve evaluaties.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">
+                      Geen actieve evaluaties.
+                    </p>
                   )}
                 </>
               )}
@@ -431,21 +483,25 @@ export default function TeacherDashboard() {
               {evalTab === "scans" && (
                 <>
                   {competencyWindows.length > 0 ? (
-                    competencyWindows.slice(0, 5).map((window) => (
-                      <ListRow
-                        key={window.id}
-                        title={window.title}
-                        meta={`Periode: ${formatDate(window.start_date)} - ${formatDate(window.end_date)} • Status: ${window.status || "open"}`}
-                        href={`/teacher/competencies/windows/${window.id}`}
-                        right={
-                          <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
-                            Bekijk
-                          </span>
-                        }
-                      />
-                    ))
+                    competencyWindows
+                      .slice(0, 5)
+                      .map((window) => (
+                        <ListRow
+                          key={window.id}
+                          title={window.title}
+                          meta={`Periode: ${formatDate(window.start_date)} - ${formatDate(window.end_date)} • Status: ${window.status || "open"}`}
+                          href={`/teacher/competencies/windows/${window.id}`}
+                          right={
+                            <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
+                              Bekijk
+                            </span>
+                          }
+                        />
+                      ))
                   ) : (
-                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen actieve scans.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">
+                      Geen actieve scans.
+                    </p>
                   )}
                 </>
               )}
@@ -520,7 +576,9 @@ function ClientTasksContent() {
   if (tasks.length === 0) {
     return (
       <div className="py-4 text-center">
-        <p className="text-[13px] text-gray-400 mb-2">Geen opdrachtgever-taken op dit moment.</p>
+        <p className="text-[13px] text-gray-400 mb-2">
+          Geen opdrachtgever-taken op dit moment.
+        </p>
         <Link
           href="/teacher/tasks/kanban"
           className="text-[13px] text-blue-600 hover:underline"
@@ -538,13 +596,16 @@ function ClientTasksContent() {
     const today = new Date();
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return "Verlopen";
     if (diffDays === 0) return "Vandaag";
     if (diffDays === 1) return "Morgen";
     if (diffDays <= 7) return `Over ${diffDays} dagen`;
-    
-    return dueDate.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+
+    return dueDate.toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "short",
+    });
   };
 
   // Calculate urgency threshold once (7 days from now)
@@ -555,8 +616,9 @@ function ClientTasksContent() {
       {tasks.map((task) => {
         const canEmail = task.email_to || task.client_email;
         const daysText = formatDueDate(task.due_date);
-        const isUrgent = task.due_date && new Date(task.due_date) <= urgencyThreshold;
-        
+        const isUrgent =
+          task.due_date && new Date(task.due_date) <= urgencyThreshold;
+
         return (
           <ListRow
             key={task.id}
@@ -594,7 +656,7 @@ function ClientTasksContent() {
           />
         );
       })}
-      
+
       {tasks.length >= 3 && (
         <div className="pt-2 text-center">
           <Link

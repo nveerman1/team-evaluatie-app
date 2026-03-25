@@ -1,16 +1,28 @@
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
-import { useStudentDashboard, useCurrentUser, useStudentOverview } from "@/hooks";
+import {
+  useStudentDashboard,
+  useCurrentUser,
+  useStudentOverview,
+} from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { useStudentProjectPlans } from "@/hooks/useStudentProjectPlans";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import { Loading, ErrorMessage } from "@/components";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText, MessageSquare, Dumbbell, TrendingUp } from "lucide-react";
-import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
+import {
+  ClipboardCheck,
+  Target,
+  Trophy,
+  BarChart3,
+  Upload,
+  Clock,
+  FileText,
+  MessageSquare,
+  Dumbbell,
+  TrendingUp,
+} from "lucide-react";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { ProjectPlanDashboardCard } from "@/components/student/dashboard/ProjectPlanDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
@@ -20,7 +32,8 @@ import { SkillTrainingTab } from "@/components/student/dashboard/SkillTrainingTa
 import { ProjectFeedbackDashboardTab } from "@/components/student/dashboard/ProjectFeedbackDashboardTab";
 import { VoortgangTab } from "@/components/student/dashboard/VoortgangTab";
 import { InleverenTab } from "@/components/student/dashboard/InleverenTab";
-import Link from "next/link";
+import { EvaluationsTab } from "@/components/student/dashboard/EvaluationsTab";
+import { BeoordelingTab } from "@/components/student/dashboard/BeoordelingTab";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +41,18 @@ import { cn } from "@/lib/utils";
 
 const TOP_NAV_ITEMS = [
   { id: "overzicht", label: "Overzicht", icon: BarChart3 },
-  { id: "competenties", label: "Competenties", icon: Target, defaultSub: "scans" },
-  { id: "projecten", label: "Projecten", icon: Trophy, defaultSub: "projectplan" },
+  {
+    id: "competenties",
+    label: "Competenties",
+    icon: Target,
+    defaultSub: "scans",
+  },
+  {
+    id: "projecten",
+    label: "Projecten",
+    icon: Trophy,
+    defaultSub: "projectplan",
+  },
   { id: "derde-blok", label: "3de blok", icon: Clock },
 ] as const;
 
@@ -100,7 +123,8 @@ function StudentDashboardContent() {
     error: projectPlansError,
   } = useStudentProjectPlans();
   const { items: peerResults } = usePeerFeedbackResults();
-  const { data: overviewData, isLoading: overviewLoading } = useStudentOverview();
+  const { data: overviewData, isLoading: overviewLoading } =
+    useStudentOverview();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -130,7 +154,10 @@ function StudentDashboardContent() {
 
   // Memoize open and closed evaluations to avoid changing on every render
   // Include both open and closed evaluations for display
-  const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
+  const openEvaluations = useMemo(
+    () => dashboard?.openEvaluations || [],
+    [dashboard?.openEvaluations],
+  );
 
   if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -142,23 +169,25 @@ function StudentDashboardContent() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      {/* Header (full width, donker, in lijn met docentenpagina) */}
-      <div className="w-full bg-slate-800 text-white shadow-sm">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="text-left">
-              <h1 className="text-3xl font-bold tracking-tight">Mijn Dashboard</h1>
-              <p className="mt-1 max-w-xl text-sm text-white/70">
-                Overzicht van je evaluaties, ontwikkeling en projectresultaten.
+      {/* Header */}
+      <div className="w-full bg-slate-900 text-white">
+        <div className="mx-auto w-full max-w-6xl px-6 py-8">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight">
+                Mijn dashboard
+              </h1>
+              <p className="mt-2 text-sm text-slate-300">
+                Overzicht van je evaluaties, ontwikkeling en projectresultaten
               </p>
             </div>
 
-            <div className="flex items-center gap-3 sm:self-start">
+            <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur shrink-0">
               <div className="text-right">
-                <div className="text-sm font-semibold">{studentName}</div>
-                <div className="text-xs text-white/70">{studentClass}</div>
+                <div className="font-semibold leading-tight">{studentName}</div>
+                <div className="text-sm text-slate-300">{studentClass}</div>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20 font-semibold">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 font-semibold">
                 {studentName.charAt(0)}
               </div>
             </div>
@@ -167,14 +196,14 @@ function StudentDashboardContent() {
       </div>
 
       {/* Page container */}
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl px-6 py-8">
         {/* Self-Assessment Required Message */}
         {dashboard.needsSelfAssessment && (
-          <div className="mb-6 p-6 border rounded-xl bg-amber-50 border-amber-200">
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-6">
             <div className="flex items-start gap-3">
               <div className="text-amber-600 text-xl">⚠️</div>
               <div>
-                <h3 className="text-lg font-semibold text-amber-900 mb-1">
+                <h3 className="mb-1 text-lg font-semibold text-amber-900">
                   Zelfbeoordeling Vereist
                 </h3>
                 <p className="text-amber-700">
@@ -187,51 +216,58 @@ function StudentDashboardContent() {
         )}
 
         {/* Navigation + content */}
-        <div className="mt-6">
+        <div>
           {/* ── Two-level navigation ────────────────────────────── */}
-          <div className="bg-white shadow-sm rounded-2xl overflow-hidden">
+          <section className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
             {/* Top navigation row */}
-            <div className="flex gap-1 p-1 overflow-x-auto flex-nowrap">
-            {TOP_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => handleTopNavClick(id)}
-                    className={cn(
-                      "relative rounded-xl px-4 h-9 flex items-center text-sm font-medium transition-colors whitespace-nowrap",
-                      activeTopNav === id
-                        ? "bg-slate-800 text-white shadow-sm"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                    )}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    {label}
-                  </button>
-                ))}
+            <div
+              className={cn(
+                "flex flex-wrap gap-2",
+                SUB_NAV_ITEMS[activeTopNav as keyof typeof SUB_NAV_ITEMS]
+                  ? "border-b border-slate-200 pb-3"
+                  : "",
+              )}
+            >
+              {TOP_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => handleTopNavClick(id)}
+                  className={cn(
+                    "rounded-xl px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap flex items-center",
+                    activeTopNav === id
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  )}
+                >
+                  <Icon className="mr-2 h-4 w-4" />
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* Sub navigation row – only when the active top-nav has sub-items */}
             {SUB_NAV_ITEMS[activeTopNav as keyof typeof SUB_NAV_ITEMS] && (
-              <div className="flex gap-1 px-1 pb-1 border-t border-slate-100 overflow-x-auto flex-nowrap">
+              <div className="flex flex-wrap gap-2 pt-3">
                 {SUB_NAV_ITEMS[activeTopNav as keyof typeof SUB_NAV_ITEMS].map(
                   ({ id, label, icon: Icon }) => (
                     <button
                       key={id}
                       onClick={() => handleTabChange(id)}
                       className={cn(
-                        "relative rounded-lg px-3 h-8 flex items-center text-sm transition-colors whitespace-nowrap",
+                        "rounded-lg px-3 py-2 text-sm transition-colors whitespace-nowrap flex items-center",
                         activeTab === id
-                          ? "bg-slate-700 text-white shadow-sm"
-                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                          ? "bg-slate-100 font-semibold text-slate-900 ring-1 ring-slate-200"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
                       )}
                     >
                       <Icon className="mr-1.5 h-3.5 w-3.5" />
                       {label}
                     </button>
-                  )
+                  ),
                 )}
               </div>
             )}
-          </div>
+          </section>
 
           {/* ── Tab content ─────────────────────────────────────── */}
           <Tabs value={activeTab} className="mt-6">
@@ -272,33 +308,40 @@ function StudentDashboardContent() {
             </TabsContent>
 
             {/* PROJECTPLAN */}
-            <TabsContent value="projectplan" className="space-y-4">
-              <Card className="rounded-2xl border-slate-200 bg-slate-50">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-slate-600" />
-                    <p className="text-sm font-semibold text-slate-900">Mijn projectplannen</p>
+            <TabsContent value="projectplan">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Projectplannen
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Vul je projectplan in. Na goedkeuring krijg je een GO om
+                      te starten.
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Vul hier je projectplan in. Na goedkeuring door de docent krijg je een GO om te starten.
-                  </p>
-                </CardContent>
-              </Card>
+                </div>
 
-              <div className="grid gap-4">
-                {projectPlansLoading ? (
-                  <Loading />
-                ) : projectPlansError ? (
-                  <ErrorMessage message={projectPlansError} />
-                ) : (projectPlans || []).length === 0 ? (
-                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
-                    <p className="text-slate-500">Nog geen projectplannen beschikbaar.</p>
-                  </div>
-                ) : (
-                  (projectPlans || []).map((projectPlan) => (
-                    <ProjectPlanDashboardCard key={projectPlan.id} projectPlan={projectPlan} />
-                  ))
-                )}
+                <div className="mt-5 space-y-3">
+                  {projectPlansLoading ? (
+                    <Loading />
+                  ) : projectPlansError ? (
+                    <ErrorMessage message={projectPlansError} />
+                  ) : (projectPlans || []).length === 0 ? (
+                    <div className="rounded-xl bg-slate-50 p-8 text-center">
+                      <p className="text-slate-500">
+                        Nog geen projectplannen beschikbaar.
+                      </p>
+                    </div>
+                  ) : (
+                    (projectPlans || []).map((projectPlan) => (
+                      <ProjectPlanDashboardCard
+                        key={projectPlan.id}
+                        projectPlan={projectPlan}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
             </TabsContent>
 
@@ -311,82 +354,18 @@ function StudentDashboardContent() {
               />
             </TabsContent>
 
-            {/* 360° FEEDBACK (was: Evaluaties) */}
-            <TabsContent value="evaluaties" className="space-y-4">
-              {/* Compacte intro */}
-              <Card className="rounded-2xl border-slate-200 bg-slate-50">
-                <CardContent className="p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-slate-600" />
-                        <p className="text-sm font-semibold text-slate-900">
-                          Wat moet ik nu doen?
-                        </p>
-                      </div>
-                      <p className="text-sm text-slate-600">
-                        Open evaluaties staan bovenaan. Afgeronde evaluaties kun je
-                        teruglezen.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700">
-                        Open: {openEvaluations.filter((e) => e.status === "open").length}
-                      </Badge>
-                      <Link href="/student/results">
-                        <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700 cursor-pointer hover:bg-indigo-100">
-                          Afgerond: {dashboard.completedEvaluations}
-                        </Badge>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-4">
-                {openEvaluations.length === 0 ? (
-                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
-                    <p className="text-slate-500">Geen open evaluaties op dit moment.</p>
-                  </div>
-                ) : (
-                  openEvaluations.map((evaluation) => (
-                    <EvaluationDashboardCard key={evaluation.id} evaluation={evaluation} />
-                  ))
-                )}
-              </div>
+            {/* 360° FEEDBACK */}
+            <TabsContent value="evaluaties">
+              <EvaluationsTab evaluations={openEvaluations} />
             </TabsContent>
 
-            {/* BEOORDELING (was: Projectbeoordelingen) */}
-            <TabsContent value="beoordeling" className="space-y-4">
-              <Card className="rounded-2xl border-slate-200 bg-slate-50">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-slate-600" />
-                    <p className="text-sm font-semibold text-slate-900">Mijn projectresultaten</p>
-                  </div>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Beoordelingen per project. Klik door voor rubric, feedback en je eindresultaat.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-4">
-                {projectLoading ? (
-                  <Loading />
-                ) : projectError ? (
-                  <ErrorMessage message={projectError} />
-                ) : (projectAssessments || []).filter((p) => ["open", "published", "closed"].includes(p.status)).length === 0 ? (
-                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
-                    <p className="text-slate-500">Nog geen projectbeoordelingen beschikbaar.</p>
-                  </div>
-                ) : (
-                  (projectAssessments || [])
-                    .filter((p) => ["open", "published", "closed"].includes(p.status))
-                    .map((assessment) => (
-                      <ProjectAssessmentDashboardCard key={assessment.id} assessment={assessment} />
-                    ))
-                )}
-              </div>
+            {/* BEOORDELING */}
+            <TabsContent value="beoordeling">
+              <BeoordelingTab
+                projectAssessments={projectAssessments}
+                projectLoading={projectLoading}
+                projectError={projectError}
+              />
             </TabsContent>
 
             {/* 3DE BLOK */}
@@ -394,7 +373,7 @@ function StudentDashboardContent() {
               <AttendanceTab />
             </TabsContent>
 
-            {/* PROJECTEVALUATIE (was: Projectfeedback) */}
+            {/* PROJECTEVALUATIE */}
             <TabsContent value="projectevaluatie" className="space-y-4">
               <ProjectFeedbackDashboardTab />
             </TabsContent>

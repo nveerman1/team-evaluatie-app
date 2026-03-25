@@ -409,7 +409,7 @@ const TeachersManagement = forwardRef((props, ref) => {
                         </dt>
                         <dd className="mt-1 text-sm text-gray-900">
                           {new Date(
-                            selectedTeacher.created_at
+                            selectedTeacher.created_at,
                           ).toLocaleDateString("nl-NL")}
                         </dd>
                       </div>
@@ -421,7 +421,7 @@ const TeachersManagement = forwardRef((props, ref) => {
                         </dt>
                         <dd className="mt-1 text-sm text-gray-900">
                           {new Date(
-                            selectedTeacher.last_login
+                            selectedTeacher.last_login,
                           ).toLocaleDateString("nl-NL")}
                         </dd>
                       </div>
@@ -477,7 +477,7 @@ const TeachersManagement = forwardRef((props, ref) => {
                                 onClick={async () => {
                                   if (
                                     confirm(
-                                      `Vak "${course.name}" verwijderen van ${selectedTeacher.name}?`
+                                      `Vak "${course.name}" verwijderen van ${selectedTeacher.name}?`,
                                     )
                                   ) {
                                     await handleRemoveCourse(course.id);

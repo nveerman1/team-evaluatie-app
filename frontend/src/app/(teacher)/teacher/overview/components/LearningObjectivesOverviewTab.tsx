@@ -23,12 +23,11 @@ export default function LearningObjectivesOverviewTab() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  
-  const [overview, setOverview] = useState<LearningObjectiveOverviewResponse | null>(
-    null
-  );
+
+  const [overview, setOverview] =
+    useState<LearningObjectiveOverviewResponse | null>(null);
   const [allObjectives, setAllObjectives] = useState<LearningObjectiveDto[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -47,39 +46,41 @@ export default function LearningObjectivesOverviewTab() {
 
   // Dropdown data
   const [courses, setCourses] = useState<CourseLite[]>([]);
-  const [classes, setClasses] = useState<Array<{id: string; name: string}>>([]);
-  
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>(
+    [],
+  );
+
   // Sync URL with filter values
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     if (filterValues.courseId) {
       params.set("subjectId", filterValues.courseId);
     } else {
       params.delete("subjectId");
     }
-    
+
     if (filterValues.period) {
       params.set("period", filterValues.period);
     } else {
       params.delete("period");
     }
-    
+
     if (filterValues.classId) {
       params.set("classId", filterValues.classId);
     } else {
       params.delete("classId");
     }
-    
+
     if (filterValues.searchQuery) {
       params.set("q", filterValues.searchQuery);
     } else {
       params.delete("q");
     }
-    
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [filterValues, pathname, router, searchParams]);
-  
+
   const handleFilterChange = (newFilters: OverviewFilterValues) => {
     setFilterValues(newFilters);
   };
@@ -99,19 +100,25 @@ export default function LearningObjectivesOverviewTab() {
   const fetchClasses = useCallback(async () => {
     try {
       // Fetch all students to get unique class names (max limit is 500)
-      const response = await api.get<Array<{ class_name: string | null }>>("/students", {
-        params: { limit: 500 }
-      });
+      const response = await api.get<Array<{ class_name: string | null }>>(
+        "/students",
+        {
+          params: { limit: 500 },
+        },
+      );
       const uniqueClassNames = Array.from(
         new Set(
           response.data
             .map((s) => s.class_name)
-            .filter((c): c is string => !!c)
-        )
+            .filter((c): c is string => !!c),
+        ),
       ).sort();
-      
+
       // Transform class names to dropdown format
-      const classOptions = uniqueClassNames.map(className => ({ id: className, name: className }));
+      const classOptions = uniqueClassNames.map((className) => ({
+        id: className,
+        name: className,
+      }));
       setClasses(classOptions);
     } catch (err) {
       console.error("Error fetching classes:", err);
@@ -138,14 +145,16 @@ export default function LearningObjectivesOverviewTab() {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     setError(null);
 
     try {
       const response = await getLearningObjectivesOverview({
         class_name: filterValues.classId || undefined,
-        course_id: filterValues.courseId ? Number(filterValues.courseId) : undefined,
+        course_id: filterValues.courseId
+          ? Number(filterValues.courseId)
+          : undefined,
         include_teacher_objectives: true, // Include teacher's own objectives
         include_course_objectives: true, // Include objectives from shared courses
       });
@@ -153,9 +162,7 @@ export default function LearningObjectivesOverviewTab() {
       setOverview(response);
     } catch (err) {
       console.error("Error fetching overview:", err);
-      setError(
-        "Er is een fout opgetreden bij het ophalen van het overzicht."
-      );
+      setError("Er is een fout opgetreden bij het ophalen van het overzicht.");
     } finally {
       setLoading(false);
     }
@@ -187,11 +194,13 @@ export default function LearningObjectivesOverviewTab() {
     return score.toFixed(1);
   }
 
-  function calculateAverage(objectives: Array<{ average_score: number | null }>): number | null {
+  function calculateAverage(
+    objectives: Array<{ average_score: number | null }>,
+  ): number | null {
     const scores = objectives
-      .map(obj => obj.average_score)
+      .map((obj) => obj.average_score)
       .filter((s): s is number => s !== null);
-    
+
     if (scores.length === 0) return null;
     return scores.reduce((sum, s) => sum + s, 0) / scores.length;
   }
@@ -200,11 +209,16 @@ export default function LearningObjectivesOverviewTab() {
     if (!overview) return;
 
     // Create CSV content
-    const headers = ["Leerlingnummer", "Naam", "Klas", ...allObjectives.map(obj => obj.domain || obj.title)];
-    const rows = overview.students.map(student => {
-      const scores = allObjectives.map(obj => {
+    const headers = [
+      "Leerlingnummer",
+      "Naam",
+      "Klas",
+      ...allObjectives.map((obj) => obj.domain || obj.title),
+    ];
+    const rows = overview.students.map((student) => {
+      const scores = allObjectives.map((obj) => {
         const progress = student.objectives.find(
-          o => o.learning_objective_id === obj.id
+          (o) => o.learning_objective_id === obj.id,
         );
         return formatScore(progress?.average_score || null);
       });
@@ -212,13 +226,13 @@ export default function LearningObjectivesOverviewTab() {
         student.student_number || "",
         student.user_name,
         student.class_name || "",
-        ...scores
+        ...scores,
       ];
     });
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(","))
+      ...rows.map((row) => row.join(",")),
     ].join("\n");
 
     // Download
@@ -226,7 +240,7 @@ export default function LearningObjectivesOverviewTab() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `leerdoelen-overzicht-${phase}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `leerdoelen-overzicht-${phase}-${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -234,24 +248,30 @@ export default function LearningObjectivesOverviewTab() {
   }
 
   // Filter students by search query
-  const filteredStudents = overview?.students.filter(student => {
-    if (filterValues.searchQuery) {
-      const query = filterValues.searchQuery.toLowerCase();
-      return student.user_name.toLowerCase().includes(query) ||
-             student.class_name?.toLowerCase().includes(query);
-    }
-    return true;
-  }) || [];
-  
+  const filteredStudents =
+    overview?.students.filter((student) => {
+      if (filterValues.searchQuery) {
+        const query = filterValues.searchQuery.toLowerCase();
+        return (
+          student.user_name.toLowerCase().includes(query) ||
+          student.class_name?.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    }) || [];
+
   // Show empty state if no course selected
   if (!filterValues.courseId) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Leerdoelen / Eindtermen Overzicht</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Leerdoelen / Eindtermen Overzicht
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
+              Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen
+              beheersen
             </p>
           </div>
         </div>
@@ -301,9 +321,12 @@ export default function LearningObjectivesOverviewTab() {
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Leerdoelen / Eindtermen Overzicht</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Leerdoelen / Eindtermen Overzicht
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
+              Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen
+              beheersen
             </p>
           </div>
         </div>
@@ -354,9 +377,12 @@ export default function LearningObjectivesOverviewTab() {
     <div className="space-y-6 w-full overflow-hidden">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Leerdoelen / Eindtermen Overzicht</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Leerdoelen / Eindtermen Overzicht
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
+            Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen
+            beheersen
           </p>
         </div>
         <button
@@ -414,61 +440,87 @@ export default function LearningObjectivesOverviewTab() {
       {overview && (
         <div className="bg-white rounded-lg shadow border">
           <div className="overflow-x-auto">
-            <table className="text-sm border-collapse" style={{ width: `${320 + allObjectives.length * 100}px`, minWidth: "100%" }}>
-            <thead className="bg-gray-50 sticky top-0">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r-2 border-gray-300" style={{ width: "200px", minWidth: "200px" }}>
-                  Naam
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky bg-gray-50 z-20 border-r-2 border-gray-300" style={{ left: "200px", width: "120px", minWidth: "120px" }}>
-                  Klas
-                </th>
-                {allObjectives.map((obj) => (
+            <table
+              className="text-sm border-collapse"
+              style={{
+                width: `${320 + allObjectives.length * 100}px`,
+                minWidth: "100%",
+              }}
+            >
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
                   <th
-                    key={obj.id}
-                    className={`px-2 py-3 text-center font-medium text-gray-700 uppercase text-xs border-r border-gray-200 ${
-                      obj.objective_type === "teacher" ? "bg-emerald-50" : ""
-                    }`}
-                    style={{ minWidth: "100px" }}
-                    title={`${obj.objective_type === "template" ? "🏛️ Centraal: " : "👤 Eigen doel: "}${obj.title}\n${obj.description || ""}`}
+                    className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r-2 border-gray-300"
+                    style={{ width: "200px", minWidth: "200px" }}
                   >
-                    <div className="flex flex-col items-center gap-1">
-                      {obj.objective_type === "teacher" && (
-                        <span className="text-emerald-600 text-xs">👤</span>
-                      )}
-                      <span className="font-bold">{obj.domain}</span>
-                      {obj.order > 0 && (
-                        <span className="text-xs text-gray-500">{obj.order}</span>
-                      )}
-                    </div>
+                    Naam
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredStudents.map((student) => (
+                  <th
+                    className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky bg-gray-50 z-20 border-r-2 border-gray-300"
+                    style={{ left: "200px", width: "120px", minWidth: "120px" }}
+                  >
+                    Klas
+                  </th>
+                  {allObjectives.map((obj) => (
+                    <th
+                      key={obj.id}
+                      className={`px-2 py-3 text-center font-medium text-gray-700 uppercase text-xs border-r border-gray-200 ${
+                        obj.objective_type === "teacher" ? "bg-emerald-50" : ""
+                      }`}
+                      style={{ minWidth: "100px" }}
+                      title={`${obj.objective_type === "template" ? "🏛️ Centraal: " : "👤 Eigen doel: "}${obj.title}\n${obj.description || ""}`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        {obj.objective_type === "teacher" && (
+                          <span className="text-emerald-600 text-xs">👤</span>
+                        )}
+                        <span className="font-bold">{obj.domain}</span>
+                        {obj.order > 0 && (
+                          <span className="text-xs text-gray-500">
+                            {obj.order}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredStudents.map((student) => (
                   <tr key={student.user_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-white z-10 border-r-2 border-gray-300" style={{ width: "200px", minWidth: "200px" }}>
+                    <td
+                      className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-white z-10 border-r-2 border-gray-300"
+                      style={{ width: "200px", minWidth: "200px" }}
+                    >
                       {student.user_name}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-600 sticky bg-white z-10 border-r-2 border-gray-300" style={{ left: "200px", width: "120px", minWidth: "120px" }}>
+                    <td
+                      className="px-4 py-2 text-sm text-gray-600 sticky bg-white z-10 border-r-2 border-gray-300"
+                      style={{
+                        left: "200px",
+                        width: "120px",
+                        minWidth: "120px",
+                      }}
+                    >
                       {student.class_name || "-"}
                     </td>
                     {allObjectives.map((obj) => {
                       const progress = student.objectives.find(
-                        o => o.learning_objective_id === obj.id
+                        (o) => o.learning_objective_id === obj.id,
                       );
                       return (
                         <td
                           key={obj.id}
                           className={`px-2 py-2 text-center border-r border-gray-200 ${
-                            obj.objective_type === "teacher" ? "bg-emerald-50/50" : ""
+                            obj.objective_type === "teacher"
+                              ? "bg-emerald-50/50"
+                              : ""
                           }`}
                           style={{ minWidth: "100px" }}
                         >
                           <div
                             className={`w-full h-10 rounded flex items-center justify-center font-bold text-base ${getScoreColor(
-                              progress?.average_score || null
+                              progress?.average_score || null,
                             )}`}
                             title={`${progress?.assessment_count || 0} beoordelingen`}
                           >
@@ -478,9 +530,8 @@ export default function LearningObjectivesOverviewTab() {
                       );
                     })}
                   </tr>
-                )
-              )}
-            </tbody>
+                ))}
+              </tbody>
             </table>
           </div>
 
@@ -531,22 +582,32 @@ export default function LearningObjectivesOverviewTab() {
           <h4 className="text-sm font-medium mb-2">Leerdoel types:</h4>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">🏛️ Centraal</span>
+              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                🏛️ Centraal
+              </span>
               <span className="text-gray-600">— Beheerd door beheerder</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-medium">👤 Eigen doel</span>
-              <span className="text-gray-600">— Jouw persoonlijke leerdoelen</span>
+              <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-medium">
+                👤 Eigen doel
+              </span>
+              <span className="text-gray-600">
+                — Jouw persoonlijke leerdoelen
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-cyan-100 text-cyan-800 rounded text-xs font-medium">👥 Gedeeld</span>
-              <span className="text-gray-600">— Van collega&apos;s via gedeelde courses</span>
+              <span className="px-2 py-1 bg-cyan-100 text-cyan-800 rounded text-xs font-medium">
+                👥 Gedeeld
+              </span>
+              <span className="text-gray-600">
+                — Van collega&apos;s via gedeelde courses
+              </span>
             </div>
           </div>
         </div>
         <p className="mt-3 text-xs text-gray-600">
-          Scores zijn gemiddelden van alle gekoppelde beoordelingen 
-          (peer evaluaties, projectbeoordelingen en competentiescans).
+          Scores zijn gemiddelden van alle gekoppelde beoordelingen (peer
+          evaluaties, projectbeoordelingen en competentiescans).
         </p>
       </div>
     </div>

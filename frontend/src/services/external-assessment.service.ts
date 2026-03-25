@@ -31,10 +31,10 @@ export const externalAssessmentService = {
    */
   async getTeamDetail(
     token: string,
-    teamId: number
+    teamId: number,
   ): Promise<ExternalAssessmentDetail> {
     const response = await api.get(
-      `/external-assessments/${token}/teams/${teamId}`
+      `/external-assessments/${token}/teams/${teamId}`,
     );
     return response.data;
   },
@@ -45,11 +45,11 @@ export const externalAssessmentService = {
   async submitAssessment(
     token: string,
     teamId: number,
-    data: ExternalAssessmentSubmit
+    data: ExternalAssessmentSubmit,
   ): Promise<ExternalAssessmentSubmitResponse> {
     const response = await api.post(
       `/external-assessments/${token}/teams/${teamId}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -69,7 +69,7 @@ export const externalAssessmentService = {
    */
   async getEvaluator(evaluatorId: number): Promise<ExternalEvaluator> {
     const response = await api.get(
-      `/projects/external-management/evaluators/${evaluatorId}`
+      `/projects/external-management/evaluators/${evaluatorId}`,
     );
     return response.data;
   },
@@ -78,11 +78,11 @@ export const externalAssessmentService = {
    * Create a new external evaluator
    */
   async createEvaluator(
-    data: ExternalEvaluatorCreate
+    data: ExternalEvaluatorCreate,
   ): Promise<ExternalEvaluator> {
     const response = await api.post(
       "/projects/external-management/evaluators",
-      data
+      data,
     );
     return response.data;
   },
@@ -92,11 +92,11 @@ export const externalAssessmentService = {
    */
   async updateEvaluator(
     evaluatorId: number,
-    data: ExternalEvaluatorUpdate
+    data: ExternalEvaluatorUpdate,
   ): Promise<ExternalEvaluator> {
     const response = await api.put(
       `/projects/external-management/evaluators/${evaluatorId}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -107,7 +107,7 @@ export const externalAssessmentService = {
   async createBulkInvitations(data: BulkInviteRequest): Promise<any> {
     const response = await api.post(
       "/projects/external-management/invitations/bulk",
-      data
+      data,
     );
     return response.data;
   },
@@ -117,12 +117,12 @@ export const externalAssessmentService = {
    */
   async getProjectExternalStatus(
     projectId: number,
-    assessmentId?: number
+    assessmentId?: number,
   ): Promise<ExternalAssessmentStatus[]> {
     const params = assessmentId ? { assessment_id: assessmentId } : {};
     const response = await api.get(
       `/projects/external-management/projects/${projectId}/external-status`,
-      { params }
+      { params },
     );
     return response.data;
   },
@@ -132,12 +132,12 @@ export const externalAssessmentService = {
    */
   async getExternalAdvisoryDetail(
     projectTeamId: number,
-    teamNumber?: number
+    teamNumber?: number,
   ): Promise<ExternalAdvisoryDetail> {
     const params = teamNumber !== undefined ? { team_number: teamNumber } : {};
     const response = await api.get(
       `/projects/external-management/project-teams/${projectTeamId}/external-advisory`,
-      { params }
+      { params },
     );
     return response.data;
   },

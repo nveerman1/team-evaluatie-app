@@ -244,7 +244,7 @@ export interface CompetencyReflection {
   school_id: number;
   window_id: number;
   user_id: number;
-  goal_id: number;  // Now required - reflections must be tied to goals
+  goal_id: number; // Now required - reflections must be tied to goals
   text: string;
   goal_achieved?: boolean;
   evidence?: string;
@@ -256,7 +256,7 @@ export interface CompetencyReflection {
 export interface CompetencyReflectionCreate {
   window_id: number;
   text: string;
-  goal_id: number;  // Now required
+  goal_id: number; // Now required
   goal_achieved?: boolean;
   evidence?: string;
 }
@@ -315,7 +315,7 @@ export interface StudentCompetencyOverview {
   user_name: string;
   scores: CompetencyScore[];
   goals: CompetencyGoal[];
-  reflections?: CompetencyReflection[];  // Changed from single reflection to array
+  reflections?: CompetencyReflection[]; // Changed from single reflection to array
 }
 
 export interface ClassHeatmapRow {

@@ -1,6 +1,13 @@
 export { Badge } from "./badge";
 export { Button } from "./button";
-export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./card";
+export {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./card";
 export { Input } from "./input";
 export { Progress } from "./progress";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";

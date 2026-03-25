@@ -29,10 +29,17 @@ function getStatusLabel(status: string): string {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
-export function LearningObjectivesSection({ studentId, courseId }: LearningObjectivesSectionProps) {
+export function LearningObjectivesSection({
+  studentId,
+  courseId,
+}: LearningObjectivesSectionProps) {
   const [goals, setGoals] = useState<LearningGoalSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
@@ -42,15 +49,15 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
     async function fetchGoals() {
       try {
         setLoading(true);
-        
+
         // Fetch competency learning goals
         const allGoals = await competencyMonitorService.getLearningGoals({
           courseId,
         });
-        
+
         // Filter for this student
-        const studentGoals = allGoals.filter(g => g.studentId === studentId);
-        
+        const studentGoals = allGoals.filter((g) => g.studentId === studentId);
+
         setGoals(studentGoals);
       } catch (error) {
         console.error("Error fetching learning goals:", error);
@@ -63,13 +70,16 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
   }, [studentId, courseId]);
 
   // Filter goals based on search and status
-  const filteredGoals = goals.filter(goal => {
-    const matchesSearch = searchText === "" || 
+  const filteredGoals = goals.filter((goal) => {
+    const matchesSearch =
+      searchText === "" ||
       goal.goalText.toLowerCase().includes(searchText.toLowerCase()) ||
-      (goal.categoryName && goal.categoryName.toLowerCase().includes(searchText.toLowerCase()));
-    
-    const matchesStatus = statusFilter === "all" || goal.status === statusFilter;
-    
+      (goal.categoryName &&
+        goal.categoryName.toLowerCase().includes(searchText.toLowerCase()));
+
+    const matchesStatus =
+      statusFilter === "all" || goal.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -109,10 +119,12 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
           </select>
         </div>
       </div>
-      
+
       {filteredGoals.length === 0 ? (
         <p className="text-gray-500 text-center py-4">
-          {goals.length === 0 ? "Geen leerdoelen gevonden" : "Geen leerdoelen gevonden met deze filters"}
+          {goals.length === 0
+            ? "Geen leerdoelen gevonden"
+            : "Geen leerdoelen gevonden met deze filters"}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -149,7 +161,7 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        goal.status
+                        goal.status,
                       )}`}
                     >
                       {getStatusLabel(goal.status)}

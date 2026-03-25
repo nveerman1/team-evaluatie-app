@@ -38,7 +38,7 @@ export default function EditCompetencyPage() {
         competencyService.getRubricLevels(id),
         competencyService.getCategories(),
       ]);
-      
+
       setCompetency(data);
       setCategories(cats);
       setFormData({
@@ -51,7 +51,13 @@ export default function EditCompetencyPage() {
 
       // Initialize rubric levels (always 1-5)
       if (levels.length === 0) {
-        const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
+        const defaultLabels = [
+          "Startend",
+          "Basis",
+          "Competent",
+          "Gevorderd",
+          "Excellent",
+        ];
         const initialLevels: RubricLevel[] = [];
         for (let i = 1; i <= 5; i++) {
           initialLevels.push({
@@ -65,17 +71,21 @@ export default function EditCompetencyPage() {
         setRubricLevels(levels);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load competency");
+      setError(
+        err instanceof Error ? err.message : "Failed to load competency",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRubricLevelChange = (level: number, field: string, value: string) => {
+  const handleRubricLevelChange = (
+    level: number,
+    field: string,
+    value: string,
+  ) => {
     setRubricLevels((prev) =>
-      prev.map((rl) =>
-        rl.level === level ? { ...rl, [field]: value } : rl
-      )
+      prev.map((rl) => (rl.level === level ? { ...rl, [field]: value } : rl)),
     );
   };
 
@@ -90,7 +100,7 @@ export default function EditCompetencyPage() {
     try {
       setSubmitting(true);
       setError(null);
-      
+
       // Update competency
       await competencyService.updateCompetency(id, formData);
 
@@ -119,15 +129,17 @@ export default function EditCompetencyPage() {
           // Update the level with the new id
           setRubricLevels((prev) =>
             prev.map((rl) =>
-              rl.level === level.level ? { ...rl, id: created.id } : rl
-            )
+              rl.level === level.level ? { ...rl, id: created.id } : rl,
+            ),
           );
         }
       }
 
       router.push("/teacher/competencies");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update competency");
+      setError(
+        err instanceof Error ? err.message : "Failed to update competency",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -144,13 +156,17 @@ export default function EditCompetencyPage() {
       await competencyService.deleteCompetency(id);
       router.push("/teacher/competencies");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete competency");
+      setError(
+        err instanceof Error ? err.message : "Failed to delete competency",
+      );
       setSubmitting(false);
     }
   };
 
   // Get color for selected category
-  const selectedCategory = categories.find(c => c.id === formData.category_id);
+  const selectedCategory = categories.find(
+    (c) => c.id === formData.category_id,
+  );
 
   if (loading) return <Loading />;
   if (error && !competency) return <ErrorMessage message={error} />;
@@ -179,7 +195,9 @@ export default function EditCompetencyPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      category_id: e.target.value ? Number(e.target.value) : undefined,
+                      category_id: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     })
                   }
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -195,7 +213,9 @@ export default function EditCompetencyPage() {
                   <div className="flex items-center gap-2">
                     <div
                       className="w-4 h-4 rounded"
-                      style={{ backgroundColor: selectedCategory.color || "#3B82F6" }}
+                      style={{
+                        backgroundColor: selectedCategory.color || "#3B82F6",
+                      }}
                     />
                     <span className="text-sm text-gray-600">
                       {selectedCategory.description || "Geen beschrijving"}
@@ -292,7 +312,11 @@ export default function EditCompetencyPage() {
                     type="text"
                     value={level.label || ""}
                     onChange={(e) =>
-                      handleRubricLevelChange(level.level, "label", e.target.value)
+                      handleRubricLevelChange(
+                        level.level,
+                        "label",
+                        e.target.value,
+                      )
                     }
                     placeholder="bijv. Startend, Basis, Competent, Gevorderd, Excellent"
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -309,7 +333,7 @@ export default function EditCompetencyPage() {
                       handleRubricLevelChange(
                         level.level,
                         "description",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     placeholder="Beschrijf concreet gedrag dat bij dit niveau hoort..."

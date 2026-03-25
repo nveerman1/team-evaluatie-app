@@ -13,10 +13,13 @@ export const omzaService = {
   /**
    * Get OMZA data for an evaluation
    */
-  async getOmzaData(evaluationId: number, signal?: AbortSignal): Promise<OmzaDataResponse> {
+  async getOmzaData(
+    evaluationId: number,
+    signal?: AbortSignal,
+  ): Promise<OmzaDataResponse> {
     const response = await api.get<OmzaDataResponse>(
       `/omza/evaluations/${evaluationId}/data`,
-      { signal }
+      { signal },
     );
     return response.data;
   },
@@ -26,11 +29,11 @@ export const omzaService = {
    */
   async saveTeacherScore(
     evaluationId: number,
-    data: TeacherScoreCreate
+    data: TeacherScoreCreate,
   ): Promise<{ message: string; student_id: number; category: string }> {
     const response = await api.post(
       `/omza/evaluations/${evaluationId}/teacher-score`,
-      data
+      data,
     );
     return response.data;
   },
@@ -40,11 +43,11 @@ export const omzaService = {
    */
   async saveTeacherComment(
     evaluationId: number,
-    data: TeacherCommentCreate
+    data: TeacherCommentCreate,
   ): Promise<{ message: string; student_id: number }> {
     const response = await api.post(
       `/omza/evaluations/${evaluationId}/teacher-comment`,
-      data
+      data,
     );
     return response.data;
   },
@@ -55,14 +58,14 @@ export const omzaService = {
   async getStandardComments(
     evaluationId: number,
     signal?: AbortSignal,
-    category?: string
+    category?: string,
   ): Promise<StandardComment[]> {
     const response = await api.get<StandardComment[]>(
       `/omza/evaluations/${evaluationId}/standard-comments`,
       {
         params: category ? { category } : undefined,
         signal,
-      }
+      },
     );
     return response.data;
   },
@@ -72,11 +75,11 @@ export const omzaService = {
    */
   async addStandardComment(
     evaluationId: number,
-    data: StandardCommentCreate
+    data: StandardCommentCreate,
   ): Promise<StandardComment> {
     const response = await api.post<StandardComment>(
       `/omza/evaluations/${evaluationId}/standard-comments`,
-      data
+      data,
     );
     return response.data;
   },
@@ -86,10 +89,10 @@ export const omzaService = {
    */
   async deleteStandardComment(
     evaluationId: number,
-    commentId: string
+    commentId: string,
   ): Promise<{ message: string }> {
     const response = await api.delete(
-      `/omza/evaluations/${evaluationId}/standard-comments/${commentId}`
+      `/omza/evaluations/${evaluationId}/standard-comments/${commentId}`,
     );
     return response.data;
   },

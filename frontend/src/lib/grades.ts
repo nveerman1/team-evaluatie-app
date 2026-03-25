@@ -9,7 +9,7 @@
  */
 export function getGradeLabel(grade: number | null | undefined): string | null {
   if (grade == null) return null;
-  
+
   // Dutch grading labels based on standard scale
   if (grade >= 9.0) return "uitstekend";
   if (grade >= 8.5) return "zeer goed";
@@ -28,7 +28,7 @@ export function getGradeLabel(grade: number | null | undefined): string | null {
  */
 export function getGradeColorClasses(grade: number | null | undefined): string {
   if (grade == null) return "bg-slate-100 text-slate-700";
-  
+
   if (grade >= 8.5) return "bg-green-100 text-green-700";
   if (grade >= 7.5) return "bg-emerald-100 text-emerald-700";
   if (grade >= 6.5) return "bg-blue-100 text-blue-700";
@@ -43,7 +43,10 @@ export function getGradeColorClasses(grade: number | null | undefined): string {
  * @param decimals - Number of decimal places (default: 1)
  * @returns Formatted grade string
  */
-export function formatGrade(grade: number | null | undefined, decimals: number = 1): string {
+export function formatGrade(
+  grade: number | null | undefined,
+  decimals: number = 1,
+): string {
   if (grade == null) return "–";
   return grade.toFixed(decimals);
 }

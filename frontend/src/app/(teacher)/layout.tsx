@@ -93,113 +93,193 @@ export default function TeacherLayout({
         {/* Sidebar */}
         <aside
           className={`bg-slate-700 border-r border-slate-600 text-slate-100 transition-all duration-300 shrink-0
-            ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64'}
+            ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-64"}
             fixed inset-y-0 left-0 z-50 lg:static lg:z-auto
-            ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           `}
         >
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl font-bold text-white">
-              {isAdmin ? "Admin" : "Teacher"}
-            </h1>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-xl font-bold text-white">
+                {isAdmin ? "Admin" : "Teacher"}
+              </h1>
+              <button
+                className="lg:hidden text-slate-300 hover:text-white"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Sluit menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <nav className="space-y-4">
+              {/* ALGEMEEN Section */}
+              <div>
+                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                  Algemeen
+                </div>
+                <div className="space-y-1">
+                  <NavItem
+                    href="/teacher"
+                    label="Dashboard"
+                    icon={LayoutDashboard}
+                  />
+                  <NavItem
+                    href="/teacher/calendar"
+                    label="Kalender"
+                    icon={Calendar}
+                  />
+                  <NavItem
+                    href="/teacher/overview"
+                    label="Overzicht"
+                    icon={FileText}
+                  />
+                  <NavItem
+                    href="/teacher/clients"
+                    label="Opdrachtgevers"
+                    icon={Building2}
+                  />
+                </div>
+              </div>
+
+              {/* PROJECTEN Section */}
+              <div>
+                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                  Projecten
+                </div>
+                <div className="space-y-1">
+                  <NavItem
+                    href="/teacher/projects"
+                    label="Projecten"
+                    icon={Layers}
+                  />
+                  <NavItem
+                    href="/teacher/projectplans"
+                    label="Projectplan"
+                    icon={FileCheck}
+                  />
+                  <NavItem
+                    href="/teacher/project-notes"
+                    label="Projectaantekeningen"
+                    icon={FileEdit}
+                  />
+                  <NavItem
+                    href="/teacher/evaluations"
+                    label="Peerevaluaties"
+                    icon={Users}
+                  />
+                  <NavItem
+                    href="/teacher/project-assessments"
+                    label="Projectbeoordelingen"
+                    icon={CheckSquare}
+                  />
+                  <NavItem
+                    href="/teacher/3de-blok"
+                    label="3de Blok (RFID)"
+                    icon={Clock}
+                  />
+                </div>
+              </div>
+
+              {/* VAARDIGHEDEN Section */}
+              <div>
+                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                  Vaardigheden
+                </div>
+                <div className="space-y-1">
+                  <NavItem
+                    href="/teacher/skill-trainings"
+                    label="Trainingen"
+                    icon={Dumbbell}
+                  />
+                  <NavItem
+                    href="/teacher/competencies"
+                    label="Competentiemonitor"
+                    icon={BarChart3}
+                  />
+                </div>
+              </div>
+
+              {/* BEHEER Section (Admin only) */}
+              {isAdmin && (
+                <div>
+                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                    Beheer
+                  </div>
+                  <div className="space-y-1">
+                    <NavItem
+                      href="/teacher/admin/schoolbeheer"
+                      label="Schoolbeheer"
+                      icon={School}
+                    />
+                    <NavItem
+                      href="/teacher/class-teams"
+                      label="Klas- & Teambeheer"
+                      icon={UsersRound}
+                    />
+                    <NavItem
+                      href="/teacher/learning-objectives"
+                      label="Leerdoelen"
+                      icon={Target}
+                    />
+                    <NavItem
+                      href="/teacher/rubrics"
+                      label="Rubrics"
+                      icon={ClipboardList}
+                    />
+                    <NavItem
+                      href="/teacher/admin/templates"
+                      label="Templates"
+                      icon={FileStack}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Teacher-specific items */}
+              {!isAdmin && (
+                <div>
+                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                    Beheer
+                  </div>
+                  <div className="space-y-1">
+                    <NavItem
+                      href="/teacher/class-teams"
+                      label="Klas- & Teambeheer"
+                      icon={UsersRound}
+                    />
+                    <NavItem
+                      href="/teacher/learning-objectives"
+                      label="Leerdoelen"
+                      icon={Target}
+                    />
+                    <NavItem
+                      href="/teacher/rubrics"
+                      label="Rubrics"
+                      icon={ClipboardList}
+                    />
+                  </div>
+                </div>
+              )}
+            </nav>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 min-w-0">
+          {/* Mobile hamburger button */}
+          <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-2">
             <button
-              className="lg:hidden text-slate-300 hover:text-white"
-              onClick={() => setMobileOpen(false)}
-              aria-label="Sluit menu"
+              onClick={() => setMobileOpen(true)}
+              className="text-gray-600 hover:text-gray-900"
+              aria-label="Open menu"
             >
-              <X size={20} />
+              <Menu size={24} />
             </button>
           </div>
-
-          <nav className="space-y-4">
-            {/* ALGEMEEN Section */}
-            <div>
-              <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                Algemeen
-              </div>
-              <div className="space-y-1">
-                <NavItem href="/teacher" label="Dashboard" icon={LayoutDashboard} />
-                <NavItem href="/teacher/calendar" label="Kalender" icon={Calendar} />
-                <NavItem href="/teacher/overview" label="Overzicht" icon={FileText} />
-                <NavItem href="/teacher/clients" label="Opdrachtgevers" icon={Building2} />
-              </div>
-            </div>
-
-            {/* PROJECTEN Section */}
-            <div>
-              <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                Projecten
-              </div>
-              <div className="space-y-1">
-                <NavItem href="/teacher/projects" label="Projecten" icon={Layers} />
-                <NavItem href="/teacher/projectplans" label="Projectplan" icon={FileCheck} />
-                <NavItem href="/teacher/project-notes" label="Projectaantekeningen" icon={FileEdit} />
-                <NavItem href="/teacher/evaluations" label="Peerevaluaties" icon={Users} />
-                <NavItem href="/teacher/project-assessments" label="Projectbeoordelingen" icon={CheckSquare} />
-                <NavItem href="/teacher/3de-blok" label="3de Blok (RFID)" icon={Clock} />
-              </div>
-            </div>
-
-            {/* VAARDIGHEDEN Section */}
-            <div>
-              <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                Vaardigheden
-              </div>
-              <div className="space-y-1">
-                <NavItem href="/teacher/skill-trainings" label="Trainingen" icon={Dumbbell} />
-                <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
-              </div>
-            </div>
-
-            {/* BEHEER Section (Admin only) */}
-            {isAdmin && (
-              <div>
-                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                  Beheer
-                </div>
-                <div className="space-y-1">
-                  <NavItem href="/teacher/admin/schoolbeheer" label="Schoolbeheer" icon={School} />
-                  <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" icon={UsersRound} />
-                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" icon={Target} />
-                  <NavItem href="/teacher/rubrics" label="Rubrics" icon={ClipboardList} />
-                  <NavItem href="/teacher/admin/templates" label="Templates" icon={FileStack} />
-                </div>
-              </div>
-            )}
-
-            {/* Teacher-specific items */}
-            {!isAdmin && (
-              <div>
-                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                  Beheer
-                </div>
-                <div className="space-y-1">
-                  <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" icon={UsersRound} />
-                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" icon={Target} />
-                  <NavItem href="/teacher/rubrics" label="Rubrics" icon={ClipboardList} />
-                </div>
-              </div>
-            )}
-          </nav>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 min-w-0">
-        {/* Mobile hamburger button */}
-        <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-2">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="text-gray-600 hover:text-gray-900"
-            aria-label="Open menu"
-          >
-            <Menu size={24} />
-          </button>
-        </div>
-        {children}
-      </main>
-    </div>
+          {children}
+        </main>
+      </div>
     </LayoutContext.Provider>
   );
 }

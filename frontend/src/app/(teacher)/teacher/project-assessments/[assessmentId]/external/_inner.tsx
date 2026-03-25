@@ -41,7 +41,7 @@ export default function ExternalAssessmentPageInner() {
   >(new Map());
   const [loadingTeams, setLoadingTeams] = useState<Set<string>>(new Set());
   const [teamLoadErrors, setTeamLoadErrors] = useState<Map<string, string>>(
-    new Map()
+    new Map(),
   );
 
   // Helper function to generate consistent keys for team identification
@@ -50,7 +50,7 @@ export default function ExternalAssessmentPageInner() {
   // Toggle team expansion and load data if needed
   const toggleTeamExpansion = async (
     teamId: number,
-    teamNumber: number | undefined
+    teamNumber: number | undefined,
   ) => {
     // Use team_id as the key since it's unique
     const key = getTeamKey(teamId);
@@ -80,7 +80,7 @@ export default function ExternalAssessmentPageInner() {
         const detail =
           await externalAssessmentService.getExternalAdvisoryDetail(
             teamId,
-            teamNumber
+            teamNumber,
           );
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
@@ -116,7 +116,7 @@ export default function ExternalAssessmentPageInner() {
           const statuses =
             await externalAssessmentService.getProjectExternalStatus(
               overview.assessment.project_id,
-              assessmentId  // Pass assessment_id to filter by this assessment
+              assessmentId, // Pass assessment_id to filter by this assessment
             );
           setExternalStatuses(statuses);
         } catch (statusErr) {
@@ -137,7 +137,7 @@ export default function ExternalAssessmentPageInner() {
           message?: string;
         };
         setError(
-          err?.response?.data?.detail || err?.message || "Laden mislukt"
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
         );
       }
     } finally {
@@ -208,24 +208,27 @@ export default function ExternalAssessmentPageInner() {
 
   // Filter external statuses
   let filteredStatuses = externalStatuses;
-  
+
   // Apply status filter
   if (statusFilter !== "all") {
     filteredStatuses = filteredStatuses.filter((s) => {
       if (statusFilter === "submitted") return s.status === "SUBMITTED";
-      if (statusFilter === "pending") return s.status === "INVITED" || s.status === "IN_PROGRESS";
+      if (statusFilter === "pending")
+        return s.status === "INVITED" || s.status === "IN_PROGRESS";
       if (statusFilter === "not_invited") return s.status === "NOT_INVITED";
       return true;
     });
   }
-  
+
   // Apply search filter
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
     filteredStatuses = filteredStatuses.filter((s) => {
       const teamMatch = s.team_name?.toLowerCase().includes(query);
       const membersMatch = s.members?.toLowerCase().includes(query);
-      const evaluatorMatch = getEvaluatorDisplay(s).toLowerCase().includes(query);
+      const evaluatorMatch = getEvaluatorDisplay(s)
+        .toLowerCase()
+        .includes(query);
       return teamMatch || membersMatch || evaluatorMatch;
     });
   }
@@ -329,7 +332,9 @@ export default function ExternalAssessmentPageInner() {
                             {getEvaluatorDisplay(team)}
                           </div>
                         </td>
-                        <td className="px-4 py-3">{getStatusBadge(team.status)}</td>
+                        <td className="px-4 py-3">
+                          {getStatusBadge(team.status)}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {formatDate(team.updated_at || team.submitted_at)}
                         </td>
@@ -337,7 +342,10 @@ export default function ExternalAssessmentPageInner() {
                           {team.status === "SUBMITTED" && (
                             <button
                               onClick={() =>
-                                toggleTeamExpansion(team.team_id, team.team_number)
+                                toggleTeamExpansion(
+                                  team.team_id,
+                                  team.team_number,
+                                )
                               }
                               className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
                             >
@@ -369,10 +377,7 @@ export default function ExternalAssessmentPageInner() {
                       {/* Expanded detail row */}
                       {isExpanded && (
                         <tr>
-                          <td
-                            colSpan={6}
-                            className="bg-gray-50 px-6 py-4"
-                          >
+                          <td colSpan={6} className="bg-gray-50 px-6 py-4">
                             {isLoading && (
                               <div className="py-8">
                                 <Loading />
@@ -395,9 +400,13 @@ export default function ExternalAssessmentPageInner() {
                                   <div className="text-gray-900">
                                     {detailData.external_evaluator.name}
                                   </div>
-                                  {detailData.external_evaluator.organisation && (
+                                  {detailData.external_evaluator
+                                    .organisation && (
                                     <div className="text-sm text-gray-600">
-                                      {detailData.external_evaluator.organisation}
+                                      {
+                                        detailData.external_evaluator
+                                          .organisation
+                                      }
                                     </div>
                                   )}
                                   <div className="text-sm text-gray-500">
@@ -405,7 +414,8 @@ export default function ExternalAssessmentPageInner() {
                                   </div>
                                   {detailData.submitted_at && (
                                     <div className="text-xs text-gray-400 mt-2">
-                                      Ingeleverd: {formatDate(detailData.submitted_at)}
+                                      Ingeleverd:{" "}
+                                      {formatDate(detailData.submitted_at)}
                                     </div>
                                   )}
                                 </div>

@@ -18,10 +18,13 @@ export function useTeacherFeedback(filters?: TeacherFeedbackFilters) {
     setLoading(true);
     setError(null);
     try {
-      const response = await peerEvaluationOverviewService.getTeacherFeedback(filters);
+      const response =
+        await peerEvaluationOverviewService.getTeacherFeedback(filters);
       setData(response);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load teacher feedback");
+      setError(
+        e instanceof Error ? e.message : "Failed to load teacher feedback",
+      );
     } finally {
       setLoading(false);
     }

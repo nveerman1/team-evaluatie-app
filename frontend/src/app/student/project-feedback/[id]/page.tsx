@@ -176,12 +176,19 @@ export default function StudentFeedbackFormPage() {
         </div>
         <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 flex flex-col items-center py-16 gap-4">
           <div className="text-5xl">✅</div>
-          <h2 className={studentStyles.typography.sectionTitle}>Bedankt voor je feedback!</h2>
-          <p className={studentStyles.typography.infoText}>Je antwoorden zijn anoniem opgeslagen.</p>
+          <h2 className={studentStyles.typography.sectionTitle}>
+            Bedankt voor je feedback!
+          </h2>
+          <p className={studentStyles.typography.infoText}>
+            Je antwoorden zijn anoniem opgeslagen.
+          </p>
           <button
             type="button"
             onClick={() => router.push("/student?tab=projectevaluatie")}
-            className={studentStyles.buttons.primary + " mt-2 px-6 py-2 text-sm font-semibold text-white"}
+            className={
+              studentStyles.buttons.primary +
+              " mt-2 px-6 py-2 text-sm font-semibold text-white"
+            }
           >
             ← Terug naar dashboard
           </button>
@@ -197,7 +204,10 @@ export default function StudentFeedbackFormPage() {
         <header className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
           <div className={studentStyles.header.titleSection}>
             <div className="mb-1 text-sm text-white/60">
-              <Link href="/student?tab=projectevaluatie" className="hover:text-white/90 transition-colors">
+              <Link
+                href="/student?tab=projectevaluatie"
+                className="hover:text-white/90 transition-colors"
+              >
                 ← Projectfeedback
               </Link>
             </div>
@@ -213,7 +223,8 @@ export default function StudentFeedbackFormPage() {
       <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 space-y-6">
         {alreadySubmitted && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            ✓ Je hebt deze vragenlijst al ingevuld. Je kunt de antwoorden hieronder bekijken.
+            ✓ Je hebt deze vragenlijst al ingevuld. Je kunt de antwoorden
+            hieronder bekijken.
           </div>
         )}
 
@@ -225,7 +236,9 @@ export default function StudentFeedbackFormPage() {
                 className="border-b border-slate-100 pb-4 last:border-b-0 last:pb-0"
               >
                 <p className={studentStyles.typography.cardTitle + " mb-3"}>
-                  <span className="text-slate-400 mr-1.5 text-sm font-normal">{i + 1}.</span>
+                  <span className="text-slate-400 mr-1.5 text-sm font-normal">
+                    {i + 1}.
+                  </span>
                   {q.question_text}
                   {q.is_required && q.question_type !== "open" && (
                     <span className="text-rose-500 ml-0.5">*</span>
@@ -259,14 +272,20 @@ export default function StudentFeedbackFormPage() {
               <button
                 type="button"
                 onClick={() => router.push("/student?tab=projectevaluatie")}
-                className={studentStyles.buttons.secondary + " border border-slate-200 px-6 py-2 text-sm font-medium text-slate-700"}
+                className={
+                  studentStyles.buttons.secondary +
+                  " border border-slate-200 px-6 py-2 text-sm font-medium text-slate-700"
+                }
               >
                 Annuleren
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className={studentStyles.buttons.primary + " px-6 py-2 text-sm font-semibold text-white disabled:opacity-50"}
+                className={
+                  studentStyles.buttons.primary +
+                  " px-6 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                }
               >
                 {submitting ? "Versturen…" : "Feedback versturen"}
               </button>
@@ -277,11 +296,13 @@ export default function StudentFeedbackFormPage() {
         {/* Info note */}
         <div className="rounded-xl bg-indigo-50 p-4">
           <p className="text-sm text-slate-700">
-            💡 <span className="font-medium">Jouw antwoorden zijn anoniem.</span> De docent ziet alleen geaggregeerde resultaten, niet jouw individuele antwoorden.
+            💡{" "}
+            <span className="font-medium">Jouw antwoorden zijn anoniem.</span>{" "}
+            De docent ziet alleen geaggregeerde resultaten, niet jouw
+            individuele antwoorden.
           </p>
         </div>
       </main>
     </div>
   );
 }
-

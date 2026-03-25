@@ -3,14 +3,32 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage } from "@/components";
-import { FeedbackSummary, EvaluationReflectionSection } from "@/components/student";
+import {
+  FeedbackSummary,
+  EvaluationReflectionSection,
+} from "@/components/student";
 import { AISummarySection } from "@/components/student/AISummarySection";
-import { peerFeedbackResultsService, studentService, evaluationService, courseService, gradesService } from "@/services";
+import {
+  peerFeedbackResultsService,
+  studentService,
+  evaluationService,
+  courseService,
+  gradesService,
+} from "@/services";
 import api from "@/lib/api";
 import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import { getGradeLabel, getGradeColorClasses } from "@/lib/grades";
-import type { EvaluationResult, OmzaKey, MyAllocation, DashboardResponse } from "@/dtos";
-import type { Evaluation, EvaluationTeamContext, EvaluationTeam } from "@/dtos/evaluation.dto";
+import type {
+  EvaluationResult,
+  OmzaKey,
+  MyAllocation,
+  DashboardResponse,
+} from "@/dtos";
+import type {
+  Evaluation,
+  EvaluationTeamContext,
+  EvaluationTeam,
+} from "@/dtos/evaluation.dto";
 import type { Course } from "@/dtos/course.dto";
 import {
   OMZA_LABELS,
@@ -29,71 +47,91 @@ export default function ResultaatPage() {
   const router = useRouter();
   const evaluationId = Number(params.evaluationId);
 
-  const [evaluationData, setEvaluationData] = useState<EvaluationResult | undefined>();
+  const [evaluationData, setEvaluationData] = useState<
+    EvaluationResult | undefined
+  >();
   const [evaluation, setEvaluation] = useState<Evaluation | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(null);
+  const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(
+    null,
+  );
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Load current user ID
   useEffect(() => {
     if (!evaluationId) return;
-    
+
     const controller = new AbortController();
-    
+
     async function loadUser() {
       try {
-        const response = await api.get("/users/me", { signal: controller.signal });
+        const response = await api.get("/users/me", {
+          signal: controller.signal,
+        });
         setCurrentUserId(response.data.id);
       } catch (e: any) {
         // Silently ignore 404 errors - try fallback method
-        if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
+        if (
+          e.name !== "AbortError" &&
+          e.name !== "CanceledError" &&
+          e.message !== "canceled"
+        ) {
           if (e?.response?.status !== 404) {
             console.error("Failed to load current user:", e);
           }
-          
+
           // Fallback: Get student ID from allocations
           try {
             const allocs = await studentService.getAllocations(evaluationId);
             const selfAlloc = allocs.find((a) => a.is_self);
             if (selfAlloc) {
-              console.log("Using student ID from allocations:", selfAlloc.reviewee_id);
+              console.log(
+                "Using student ID from allocations:",
+                selfAlloc.reviewee_id,
+              );
               setCurrentUserId(selfAlloc.reviewee_id);
             }
           } catch (allocError) {
-            console.error("Failed to load student ID from allocations:", allocError);
+            console.error(
+              "Failed to load student ID from allocations:",
+              allocError,
+            );
           }
         }
       }
     }
     loadUser();
-    
+
     return () => controller.abort();
   }, [evaluationId]);
 
   // Load team context
   useEffect(() => {
     if (!evaluationId) return;
-    
+
     const controller = new AbortController();
-    
+
     async function loadTeams() {
       try {
         const context = await evaluationService.getEvaluationTeams(
           evaluationId,
-          controller.signal
+          controller.signal,
         );
         setTeamContext(context);
       } catch (error: any) {
-        if (error.name !== 'AbortError' && error.name !== 'CanceledError' && error.message !== 'canceled') {
-          console.error('Failed to load team context:', error);
+        if (
+          error.name !== "AbortError" &&
+          error.name !== "CanceledError" &&
+          error.message !== "canceled"
+        ) {
+          console.error("Failed to load team context:", error);
         }
       }
     }
-    
+
     loadTeams();
-    
+
     return () => controller.abort();
   }, [evaluationId]);
 
@@ -103,58 +141,86 @@ export default function ResultaatPage() {
 
     setLoading(true);
     setError(null);
-    
+
     // Load both evaluation metadata and peer results
     Promise.all([
       evaluationService.getEvaluation(evaluationId),
-      peerFeedbackResultsService.getMyPeerResults()
+      peerFeedbackResultsService.getMyPeerResults(),
     ])
       .then(async ([evalData, results]) => {
         setEvaluation(evalData);
-        
+
         console.log("Peer results fetched:", results);
         console.log("Looking for evaluation ID:", evaluationId);
-        
+
         // Find the evaluation with matching ID
         // The API returns IDs with "ev-" prefix, so we need to match both formats
         const evalResult = results.find((r) => {
-          const match = r.id === String(evaluationId) || r.id === `ev-${evaluationId}`;
-          console.log("Comparing:", r.id, "with", evaluationId, "match:", match);
+          const match =
+            r.id === String(evaluationId) || r.id === `ev-${evaluationId}`;
+          console.log(
+            "Comparing:",
+            r.id,
+            "with",
+            evaluationId,
+            "match:",
+            match,
+          );
           return match;
         });
-        
+
         if (evalResult) {
           console.log("Found evaluation data:", evalResult);
-          console.log("GCF/Grade check - teamContributionFactor:", evalResult.teamContributionFactor);
+          console.log(
+            "GCF/Grade check - teamContributionFactor:",
+            evalResult.teamContributionFactor,
+          );
           console.log("GCF/Grade check - gcfScore:", evalResult.gcfScore);
-          console.log("GCF/Grade check - teacherGrade:", evalResult.teacherGrade);
-          console.log("GCF/Grade check - teacherSuggestedGrade:", evalResult.teacherSuggestedGrade);
+          console.log(
+            "GCF/Grade check - teacherGrade:",
+            evalResult.teacherGrade,
+          );
+          console.log(
+            "GCF/Grade check - teacherSuggestedGrade:",
+            evalResult.teacherSuggestedGrade,
+          );
           console.log("GCF/Grade check - teacherOmza:", evalResult.teacherOmza);
-          
+
           // Enrich with grade data if missing GCF or teacherGrade
           if (evalResult.gcfScore == null || evalResult.teacherGrade == null) {
-            console.log("GCF or grade missing, fetching from grades preview...");
+            console.log(
+              "GCF or grade missing, fetching from grades preview...",
+            );
             try {
               const gradeData = await gradesService.previewGrades(evaluationId);
-              const userGrade = gradeData.items && gradeData.items.length > 0 ? gradeData.items[0] : null;
-              
+              const userGrade =
+                gradeData.items && gradeData.items.length > 0
+                  ? gradeData.items[0]
+                  : null;
+
               if (userGrade) {
                 console.log("Enriching with grade data:", {
                   gcf: userGrade.gcf,
-                  suggested_grade: userGrade.suggested_grade
+                  suggested_grade: userGrade.suggested_grade,
                 });
-                
+
                 setEvaluationData({
                   ...evalResult,
                   gcfScore: userGrade.gcf ?? evalResult.gcfScore,
-                  teamContributionFactor: userGrade.gcf ?? evalResult.teamContributionFactor,
-                  teacherSuggestedGrade: userGrade.suggested_grade ?? evalResult.teacherSuggestedGrade,
+                  teamContributionFactor:
+                    userGrade.gcf ?? evalResult.teamContributionFactor,
+                  teacherSuggestedGrade:
+                    userGrade.suggested_grade ??
+                    evalResult.teacherSuggestedGrade,
                 });
               } else {
                 setEvaluationData(evalResult);
               }
             } catch (gradeError) {
-              console.warn("Could not fetch grade data, using original evaluation data:", gradeError);
+              console.warn(
+                "Could not fetch grade data, using original evaluation data:",
+                gradeError,
+              );
               setEvaluationData(evalResult);
             }
           } else {
@@ -162,13 +228,20 @@ export default function ResultaatPage() {
           }
         } else {
           // Fallback: If not found in peer-results, try to build it from other APIs
-          console.log("Evaluation not found in peer-results, trying fallback...");
-          console.log("Available IDs:", results.map(r => r.id));
+          console.log(
+            "Evaluation not found in peer-results, trying fallback...",
+          );
+          console.log(
+            "Available IDs:",
+            results.map((r) => r.id),
+          );
           try {
             const allocs = await studentService.getAllocations(evaluationId);
-            
-            const course = evalData.course_id 
-              ? await courseService.getCourse(evalData.course_id).catch(() => null)
+
+            const course = evalData.course_id
+              ? await courseService
+                  .getCourse(evalData.course_id)
+                  .catch(() => null)
               : null;
 
             // Build a minimal EvaluationResult from available data
@@ -176,12 +249,14 @@ export default function ResultaatPage() {
               id: String(evaluationId),
               title: evalData.title,
               course: course?.name || evalData.cluster || "Cursus",
-              deadlineISO: evalData.deadlines?.review || evalData.settings?.deadlines?.review,
+              deadlineISO:
+                evalData.deadlines?.review ||
+                evalData.settings?.deadlines?.review,
               status: evalData.status === "open" ? "open" : "closed",
               peers: [], // No peer data available yet
               omzaAverages: [],
             };
-            
+
             console.log("Using fallback data:", fallbackData);
             setEvaluationData(fallbackData);
           } catch (fallbackError) {
@@ -200,7 +275,11 @@ export default function ResultaatPage() {
   // Calculate OMZA averages from peer data (if available)
   // Must be before early returns to follow Rules of Hooks
   const averages = useMemo(() => {
-    if (!evaluationData || !evaluationData.peers || evaluationData.peers.length === 0) {
+    if (
+      !evaluationData ||
+      !evaluationData.peers ||
+      evaluationData.peers.length === 0
+    ) {
       return {
         organiseren: 0,
         meedoen: 0,
@@ -208,7 +287,7 @@ export default function ResultaatPage() {
         autonomie: 0,
       };
     }
-    
+
     const obj: Record<OmzaKey, number> = {
       organiseren: 0,
       meedoen: 0,
@@ -228,45 +307,70 @@ export default function ResultaatPage() {
     if (!evaluationData) return null;
     return getTeamContributionFactor(
       evaluationData.teamContributionFactor,
-      evaluationData.gcfScore
+      evaluationData.gcfScore,
     );
   }, [evaluationData]);
 
   const teamContributionLabel = useMemo(() => {
     if (!evaluationData) return null;
-    return evaluationData.teamContributionLabel ??
+    return (
+      evaluationData.teamContributionLabel ??
       (teamContributionFactor != null
         ? getTeamContributionLabel(teamContributionFactor)
-        : null);
+        : null)
+    );
   }, [evaluationData, teamContributionFactor]);
 
   // Use omzaAverages if provided, otherwise calculate from peers
   const omzaAverages = useMemo(() => {
     if (!evaluationData) return [];
-    return evaluationData.omzaAverages ?? [
-      { key: "O", label: OMZA_LABELS.organiseren, value: averages.organiseren, delta: 0 },
-      { key: "M", label: OMZA_LABELS.meedoen, value: averages.meedoen, delta: 0 },
-      { key: "Z", label: OMZA_LABELS.zelfvertrouwen, value: averages.zelfvertrouwen, delta: 0 },
-      { key: "A", label: OMZA_LABELS.autonomie, value: averages.autonomie, delta: 0 },
-    ];
+    return (
+      evaluationData.omzaAverages ?? [
+        {
+          key: "O",
+          label: OMZA_LABELS.organiseren,
+          value: averages.organiseren,
+          delta: 0,
+        },
+        {
+          key: "M",
+          label: OMZA_LABELS.meedoen,
+          value: averages.meedoen,
+          delta: 0,
+        },
+        {
+          key: "Z",
+          label: OMZA_LABELS.zelfvertrouwen,
+          value: averages.zelfvertrouwen,
+          delta: 0,
+        },
+        {
+          key: "A",
+          label: OMZA_LABELS.autonomie,
+          value: averages.autonomie,
+          delta: 0,
+        },
+      ]
+    );
   }, [evaluationData, averages]);
 
   // Find the student's team
   const myTeam = useMemo(() => {
     if (!teamContext || !currentUserId) return null;
-    
-    return teamContext.teams.find((team) => 
-      team.members.some((member) => member.user_id === currentUserId)
+
+    return teamContext.teams.find((team) =>
+      team.members.some((member) => member.user_id === currentUserId),
     );
   }, [teamContext, currentUserId]);
 
   // Calculate final grade and its label for display
   const finalGradeInfo = useMemo(() => {
     if (!evaluationData) return null;
-    
-    const finalGrade = evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade;
+
+    const finalGrade =
+      evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade;
     if (finalGrade == null) return null;
-    
+
     return {
       value: finalGrade,
       label: getGradeLabel(finalGrade),
@@ -289,7 +393,9 @@ export default function ResultaatPage() {
           <header className={studentStyles.header.wrapper}>
             <div className={studentStyles.header.flexContainer}>
               <div className={studentStyles.header.titleSection}>
-                <h1 className={studentStyles.header.title}>Resultaat nog niet beschikbaar</h1>
+                <h1 className={studentStyles.header.title}>
+                  Resultaat nog niet beschikbaar
+                </h1>
               </div>
             </div>
           </header>
@@ -321,11 +427,10 @@ export default function ResultaatPage() {
         <header className={studentStyles.header.wrapper}>
           <div className={studentStyles.header.flexContainer}>
             <div className={studentStyles.header.titleSection}>
-              <h1 className={studentStyles.header.title}>
-                Resultaat
-              </h1>
+              <h1 className={studentStyles.header.title}>Resultaat</h1>
               <p className={studentStyles.header.subtitle}>
-                Hier zie je je scores, feedback van teamgenoten en docentbeoordeling.
+                Hier zie je je scores, feedback van teamgenoten en
+                docentbeoordeling.
               </p>
             </div>
             <button
@@ -361,7 +466,9 @@ export default function ResultaatPage() {
               <p className="mt-1 text-xs text-slate-500">
                 {evaluationData.course} • Deadline:{" "}
                 {evaluationData.deadlineISO
-                  ? new Date(evaluationData.deadlineISO).toLocaleDateString("nl-NL")
+                  ? new Date(evaluationData.deadlineISO).toLocaleDateString(
+                      "nl-NL",
+                    )
                   : "Niet ingesteld"}
               </p>
             </div>
@@ -370,8 +477,10 @@ export default function ResultaatPage() {
           {/* Card content */}
           {/* PEER CARDS SECTION - Feedback Teamgenoten */}
           <div className="mt-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-3">Feedback Teamgenoten</h3>
-            
+            <h3 className="text-base font-semibold text-slate-900 mb-3">
+              Feedback Teamgenoten
+            </h3>
+
             <div className="grid gap-4 md:grid-cols-3">
               {/* AI-samenvatting */}
               <div className="flex flex-col gap-3 md:col-span-2">
@@ -388,20 +497,30 @@ export default function ResultaatPage() {
               {/* Right column: Teambeoordeling */}
               <div className="space-y-3">
                 {/* Always show Teambeoordeling card if there's any relevant data */}
-                {(evaluationData.teacherOmza || omzaAverages.length > 0 || teamContributionFactor != null || evaluationData.sprScore != null) && (
+                {(evaluationData.teacherOmza ||
+                  omzaAverages.length > 0 ||
+                  teamContributionFactor != null ||
+                  evaluationData.sprScore != null) && (
                   <div className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="mb-3">
-                      <h4 className="text-xs font-semibold text-slate-700">Teambeoordeling</h4>
+                      <h4 className="text-xs font-semibold text-slate-700">
+                        Teambeoordeling
+                      </h4>
                     </div>
-                    
+
                     {/* OMZA scores table - show teacher scores if available, otherwise team averages */}
-                    {((evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0) || omzaAverages.length > 0) && (
+                    {((evaluationData.teacherOmza &&
+                      Object.keys(evaluationData.teacherOmza).length > 0) ||
+                      omzaAverages.length > 0) && (
                       <div className="overflow-x-auto mb-3">
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-slate-200">
-                              {['O', 'M', 'Z', 'A'].map((key) => (
-                                <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
+                              {["O", "M", "Z", "A"].map((key) => (
+                                <th
+                                  key={key}
+                                  className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600"
+                                >
                                   {key}
                                 </th>
                               ))}
@@ -409,40 +528,64 @@ export default function ResultaatPage() {
                           </thead>
                           <tbody>
                             <tr className="hover:bg-slate-50">
-                              {['O', 'M', 'Z', 'A'].map((key) => {
+                              {["O", "M", "Z", "A"].map((key) => {
                                 // Check if teacher has provided OMZA scores
-                                const teacherValue = evaluationData.teacherOmza?.[key as keyof typeof evaluationData.teacherOmza];
-                                const peerAvg = omzaAverages.find(avg => avg.key === key);
+                                const teacherValue =
+                                  evaluationData.teacherOmza?.[
+                                    key as keyof typeof evaluationData.teacherOmza
+                                  ];
+                                const peerAvg = omzaAverages.find(
+                                  (avg) => avg.key === key,
+                                );
                                 const teamValue = peerAvg?.value;
                                 const delta = peerAvg?.delta ?? 0;
-                                
+
                                 // Use teacher score if available, otherwise use team average
-                                const displayValue = teacherValue != null ? teacherValue : teamValue;
+                                const displayValue =
+                                  teacherValue != null
+                                    ? teacherValue
+                                    : teamValue;
                                 const isTeacherScore = teacherValue != null;
-                                
+
                                 // Color based on score (1-4 scale) matching heatmap
                                 const getScoreColor = (score: number) => {
-                                  if (score >= 3.5) return "bg-green-100 text-green-700";
-                                  if (score >= 2.5) return "bg-blue-100 text-blue-700";
+                                  if (score >= 3.5)
+                                    return "bg-green-100 text-green-700";
+                                  if (score >= 2.5)
+                                    return "bg-blue-100 text-blue-700";
                                   return "bg-orange-100 text-orange-700";
                                 };
-                                
+
                                 return (
-                                  <td key={key} className="px-2 py-2 text-center">
+                                  <td
+                                    key={key}
+                                    className="px-2 py-2 text-center"
+                                  >
                                     {displayValue != null ? (
                                       <div className="inline-flex flex-col items-center gap-0.5">
-                                        <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(displayValue)}`}>
+                                        <span
+                                          className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(displayValue)}`}
+                                        >
                                           {displayValue.toFixed(1)}
                                         </span>
                                         {/* Show delta only for teacher scores */}
                                         {isTeacherScore && delta !== 0 && (
-                                          <span className={`text-[10px] font-medium tabular-nums ${
-                                            delta > 0 ? "text-green-600" : "text-red-600"
-                                          }`}>
-                                            {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                                          <span
+                                            className={`text-[10px] font-medium tabular-nums ${
+                                              delta > 0
+                                                ? "text-green-600"
+                                                : "text-red-600"
+                                            }`}
+                                          >
+                                            {delta > 0 ? "+" : ""}
+                                            {delta.toFixed(1)}
                                           </span>
                                         )}
-                                        {isTeacherScore && delta === 0 && <span className="text-slate-300 text-xs">–</span>}
+                                        {isTeacherScore && delta === 0 && (
+                                          <span className="text-slate-300 text-xs">
+                                            –
+                                          </span>
+                                        )}
                                       </div>
                                     ) : (
                                       <span className="text-slate-300">–</span>
@@ -455,34 +598,40 @@ export default function ResultaatPage() {
                         </table>
                       </div>
                     )}
-                    
+
                     {/* GCF and SPR labels with colors */}
-                    {(teamContributionFactor != null || evaluationData.sprScore != null) && (
-                      <div className={`space-y-2 ${((evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0) || omzaAverages.length > 0) ? 'pt-3 border-t border-slate-200' : ''}`}>
+                    {(teamContributionFactor != null ||
+                      evaluationData.sprScore != null) && (
+                      <div
+                        className={`space-y-2 ${(evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0) || omzaAverages.length > 0 ? "pt-3 border-t border-slate-200" : ""}`}
+                      >
                         {/* GCF score and label */}
                         {teamContributionFactor != null && (
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-slate-600">GCF (Correctiefactor):</span>
+                              <span className="text-slate-600">
+                                GCF (Correctiefactor):
+                              </span>
                               <span className="text-lg font-semibold text-slate-900 tabular-nums">
                                 {teamContributionFactor.toFixed(2)}
                               </span>
                             </div>
                             <div className="flex justify-end">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                                teamContributionFactor >= 1.05
-                                  ? "bg-green-100 text-green-700"
-                                  : teamContributionFactor >= 0.95
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}>
-                                {teamContributionLabel || (
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                                   teamContributionFactor >= 1.05
+                                    ? "bg-green-100 text-green-700"
+                                    : teamContributionFactor >= 0.95
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-orange-100 text-orange-700"
+                                }`}
+                              >
+                                {teamContributionLabel ||
+                                  (teamContributionFactor >= 1.05
                                     ? "Boven verwachting"
                                     : teamContributionFactor >= 0.95
-                                    ? "Naar verwachting"
-                                    : "Onder verwachting"
-                                )}
+                                      ? "Naar verwachting"
+                                      : "Onder verwachting")}
                               </span>
                             </div>
                           </div>
@@ -490,43 +639,54 @@ export default function ResultaatPage() {
                         {/* SPR label */}
                         {evaluationData.sprScore != null && (
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">Zelfbeeld (SPR):</span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
-                              evaluationData.sprScore >= 1.2
-                                ? "bg-orange-100 text-orange-700"
-                                : evaluationData.sprScore >= 0.8
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-orange-100 text-orange-700"
-                            }`}>
+                            <span className="text-slate-600">
+                              Zelfbeeld (SPR):
+                            </span>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                                evaluationData.sprScore >= 1.2
+                                  ? "bg-orange-100 text-orange-700"
+                                  : evaluationData.sprScore >= 0.8
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
                               {evaluationData.sprScore >= 1.2
                                 ? "Te hoog"
                                 : evaluationData.sprScore >= 0.8
-                                ? "Realistisch"
-                                : "Te laag"}
+                                  ? "Realistisch"
+                                  : "Te laag"}
                             </span>
                           </div>
                         )}
                       </div>
                     )}
-                    
+
                     {/* Show message if no data available */}
-                    {!evaluationData.teacherOmza && omzaAverages.length === 0 && teamContributionFactor == null && evaluationData.sprScore == null && (
-                      <p className="text-sm text-slate-500 text-center py-2">
-                        Nog geen teambeoordeling beschikbaar
-                      </p>
-                    )}
+                    {!evaluationData.teacherOmza &&
+                      omzaAverages.length === 0 &&
+                      teamContributionFactor == null &&
+                      evaluationData.sprScore == null && (
+                        <p className="text-sm text-slate-500 text-center py-2">
+                          Nog geen teambeoordeling beschikbaar
+                        </p>
+                      )}
                   </div>
                 )}
               </div>
             </div>
-
-
           </div>
 
           {/* DOCENT CARDS SECTION - Teacher comments and evaluation */}
-          {(evaluationData.teacherComments || evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherGroupGrade != null || evaluationData.teacherOmza) && (
+          {(evaluationData.teacherComments ||
+            evaluationData.teacherGrade != null ||
+            evaluationData.teacherSuggestedGrade != null ||
+            evaluationData.teacherGroupGrade != null ||
+            evaluationData.teacherOmza) && (
             <div className="mt-6">
-              <h3 className="text-base font-semibold text-slate-900 mb-3">Docentbeoordeling</h3>
+              <h3 className="text-base font-semibold text-slate-900 mb-3">
+                Docentbeoordeling
+              </h3>
               <div className="grid gap-4 md:grid-cols-3">
                 {/* Teacher comments */}
                 {evaluationData.teacherComments && (
@@ -544,29 +704,44 @@ export default function ResultaatPage() {
                 )}
 
                 {/* Docentbeoordeling cijfers card */}
-                {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherOmza) && (
-                  <div className={`rounded-xl border border-slate-100 bg-slate-50/70 p-3 ${!evaluationData.teacherComments ? 'md:col-span-3' : ''}`}>
+                {(evaluationData.teacherGrade != null ||
+                  evaluationData.teacherSuggestedGrade != null ||
+                  evaluationData.teacherOmza) && (
+                  <div
+                    className={`rounded-xl border border-slate-100 bg-slate-50/70 p-3 ${!evaluationData.teacherComments ? "md:col-span-3" : ""}`}
+                  >
                     <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-3">
                       <span>Docentbeoordeling</span>
                     </div>
-                    
+
                     {/* Display final grade (given or auto-generated) */}
-                    {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null) && (
+                    {(evaluationData.teacherGrade != null ||
+                      evaluationData.teacherSuggestedGrade != null) && (
                       <div className="mb-3 pb-3 border-b border-slate-200">
-                        <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Eindcijfer</p>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">
+                          Eindcijfer
+                        </p>
                         <div className="flex items-center gap-2">
                           <p className="text-3xl font-bold text-slate-900 tabular-nums">
-                            {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
+                            {(
+                              evaluationData.teacherGrade ??
+                              evaluationData.teacherSuggestedGrade
+                            )?.toFixed(1)}
                           </p>
                           {finalGradeInfo && finalGradeInfo.label && (
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold ${finalGradeInfo.colorClasses}`}>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold ${finalGradeInfo.colorClasses}`}
+                            >
                               {finalGradeInfo.label}
                             </span>
                           )}
                         </div>
-                        {evaluationData.teacherGrade == null && evaluationData.teacherSuggestedGrade != null && (
-                          <p className="text-[10px] text-slate-400 mt-1">(automatisch berekend)</p>
-                        )}
+                        {evaluationData.teacherGrade == null &&
+                          evaluationData.teacherSuggestedGrade != null && (
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              (automatisch berekend)
+                            </p>
+                          )}
                       </div>
                     )}
 
@@ -574,7 +749,10 @@ export default function ResultaatPage() {
                     {evaluationData.teacherGroupGrade != null && (
                       <div className="mb-3 pb-3 border-b border-slate-200">
                         <p className="text-[11px] text-slate-500">
-                          Groepscijfer: <span className="font-semibold text-slate-700 text-base">{evaluationData.teacherGroupGrade.toFixed(1)}</span>
+                          Groepscijfer:{" "}
+                          <span className="font-semibold text-slate-700 text-base">
+                            {evaluationData.teacherGroupGrade.toFixed(1)}
+                          </span>
                         </p>
                       </div>
                     )}
@@ -586,8 +764,11 @@ export default function ResultaatPage() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="border-b border-slate-200">
-                                {['O', 'M', 'Z', 'A'].map((key) => (
-                                  <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
+                                {["O", "M", "Z", "A"].map((key) => (
+                                  <th
+                                    key={key}
+                                    className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600"
+                                  >
                                     {key}
                                   </th>
                                 ))}
@@ -595,17 +776,27 @@ export default function ResultaatPage() {
                             </thead>
                             <tbody>
                               <tr className="hover:bg-slate-50">
-                                {['O', 'M', 'Z', 'A'].map((key) => {
-                                  const value = evaluationData.teacherOmza?.[key as keyof typeof evaluationData.teacherOmza];
-                                  
+                                {["O", "M", "Z", "A"].map((key) => {
+                                  const value =
+                                    evaluationData.teacherOmza?.[
+                                      key as keyof typeof evaluationData.teacherOmza
+                                    ];
+
                                   return (
-                                    <td key={key} className="px-2 py-2 text-center">
+                                    <td
+                                      key={key}
+                                      className="px-2 py-2 text-center"
+                                    >
                                       {value != null ? (
-                                        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
+                                        <span
+                                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm shadow-sm ${getOmzaEmojiColorClasses(value)}`}
+                                        >
                                           {getOmzaEmoji(value)}
                                         </span>
                                       ) : (
-                                        <span className="text-slate-300">–</span>
+                                        <span className="text-slate-300">
+                                          –
+                                        </span>
                                       )}
                                     </td>
                                   );

@@ -42,7 +42,8 @@ export default function ClassTeamsPageInner() {
   const { user, isAdmin, isTeacher, loading: authLoading } = useAuth();
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [selectedProject, setSelectedProject] = useState<ProjectListItem | null>(null);
+  const [selectedProject, setSelectedProject] =
+    useState<ProjectListItem | null>(null);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,17 +52,23 @@ export default function ClassTeamsPageInner() {
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">(
+    "info",
+  );
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
-  const [sortColumn, setSortColumn] = useState<"name" | "email" | "class_name" | "team_number" | null>(null);
+  const [sortColumn, setSortColumn] = useState<
+    "name" | "email" | "class_name" | "team_number" | null
+  >(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Check if project is closed (completed or archived)
-  const isProjectClosed = selectedProject?.status === "completed" || selectedProject?.status === "archived";
+  const isProjectClosed =
+    selectedProject?.status === "completed" ||
+    selectedProject?.status === "archived";
 
   // Team colors for visual distinction
   const TEAM_COLORS = [
@@ -88,11 +95,11 @@ export default function ClassTeamsPageInner() {
   useEffect(() => {
     const loadCourseFromUrl = async () => {
       if (!courseIdParam) return;
-      
+
       try {
         const courseId = parseInt(courseIdParam, 10);
         if (isNaN(courseId)) return;
-        
+
         const course = await courseService.getCourse(courseId);
         setSelectedCourse(course);
       } catch (error) {
@@ -115,20 +122,26 @@ export default function ClassTeamsPageInner() {
       setLoading(true);
       try {
         // Always load all course students first
-        const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
+        const courseStudents = await courseService.getCourseStudents(
+          selectedCourse.id,
+        );
         // Filter out inactive students
-        const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
+        const activeStudents = courseStudents.filter(
+          (s) => s.status !== "inactive",
+        );
 
         if (selectedProject) {
           // If a project is selected, overlay project-specific team info
           try {
-            const projectStudents = await projectTeamService.getProjectStudents(selectedProject.id);
-            
+            const projectStudents = await projectTeamService.getProjectStudents(
+              selectedProject.id,
+            );
+
             // Create a map of student_id -> team_number from project students
             const projectTeamMap = new Map(
-              projectStudents.map(ps => [ps.id, ps.project_team_number])
+              projectStudents.map((ps) => [ps.id, ps.project_team_number]),
             );
-            
+
             // Merge: all course students with their project team numbers (if any)
             setStudents(
               activeStudents.map((s) => ({
@@ -138,7 +151,7 @@ export default function ClassTeamsPageInner() {
                 class_name: s.class_name || "",
                 team_number: projectTeamMap.get(s.id) ?? null,
                 status: s.status,
-              }))
+              })),
             );
           } catch (error) {
             // If project students can't be loaded, show all students with no team numbers
@@ -151,7 +164,7 @@ export default function ClassTeamsPageInner() {
                 class_name: s.class_name || "",
                 team_number: null,
                 status: s.status,
-              }))
+              })),
             );
           }
         } else {
@@ -164,7 +177,7 @@ export default function ClassTeamsPageInner() {
               class_name: s.class_name || "",
               team_number: null, // Don't show User.team_number - it's being phased out
               status: s.status,
-            }))
+            })),
           );
         }
       } catch (error) {
@@ -199,7 +212,10 @@ export default function ClassTeamsPageInner() {
   // RBAC Guard: Only teachers and admins can access
   useEffect(() => {
     if (!authLoading && !isAdmin && !isTeacher) {
-      showAlert("Geen toegang. Alleen docenten en admins kunnen deze pagina bekijken.", "error");
+      showAlert(
+        "Geen toegang. Alleen docenten en admins kunnen deze pagina bekijken.",
+        "error",
+      );
     }
   }, [authLoading, isAdmin, isTeacher]);
 
@@ -232,7 +248,7 @@ export default function ClassTeamsPageInner() {
     if (projectIdParam && projects.length > 0) {
       const pid = parseInt(projectIdParam, 10);
       if (!isNaN(pid)) {
-        const project = projects.find(p => p.id === pid);
+        const project = projects.find((p) => p.id === pid);
         if (project) {
           setSelectedProject(project);
         }
@@ -243,11 +259,11 @@ export default function ClassTeamsPageInner() {
   // Update URL when project selection changes
   const updateURL = (projectId: number | null) => {
     if (!selectedCourse) return;
-    
+
     const params = new URLSearchParams();
     params.set("course_id", selectedCourse.id.toString());
     if (projectId) params.set("project_id", projectId.toString());
-    
+
     router.replace(`/teacher/class-teams?${params.toString()}`);
   };
 
@@ -268,10 +284,12 @@ export default function ClassTeamsPageInner() {
 
       // Class filter
       const matchesClass =
-        selectedClasses.length === 0 || selectedClasses.includes(student.class_name);
+        selectedClasses.length === 0 ||
+        selectedClasses.includes(student.class_name);
 
       // Unassigned filter
-      const matchesUnassigned = !showUnassignedOnly || student.team_number === null;
+      const matchesUnassigned =
+        !showUnassignedOnly || student.team_number === null;
 
       return matchesSearch && matchesClass && matchesUnassigned;
     });
@@ -291,7 +309,7 @@ export default function ClassTeamsPageInner() {
 
         // String comparison
         if (typeof aVal === "string" && typeof bVal === "string") {
-          return sortDirection === "asc" 
+          return sortDirection === "asc"
             ? aVal.localeCompare(bVal)
             : bVal.localeCompare(aVal);
         }
@@ -306,9 +324,19 @@ export default function ClassTeamsPageInner() {
     }
 
     return filtered;
-  }, [students, searchQuery, selectedClasses, showUnassignedOnly, sortColumn, sortDirection]);
+  }, [
+    students,
+    searchQuery,
+    selectedClasses,
+    showUnassignedOnly,
+    sortColumn,
+    sortDirection,
+  ]);
 
-  const showAlert = (message: string, type: "success" | "error" | "info" = "info") => {
+  const showAlert = (
+    message: string,
+    type: "success" | "error" | "info" = "info",
+  ) => {
     setAlertMessage(message);
     setAlertType(type);
     setTimeout(() => setAlertMessage(null), 4000);
@@ -316,7 +344,9 @@ export default function ClassTeamsPageInner() {
 
   const handleClassToggle = (className: string) => {
     setSelectedClasses((prev) =>
-      prev.includes(className) ? prev.filter((c) => c !== className) : [...prev, className]
+      prev.includes(className)
+        ? prev.filter((c) => c !== className)
+        : [...prev, className],
     );
   };
 
@@ -327,7 +357,7 @@ export default function ClassTeamsPageInner() {
 
   const handleSaveEdit = (studentId: number) => {
     const newValue = editingValue === "" ? null : parseInt(editingValue, 10);
-    
+
     if (editingValue !== "" && (isNaN(newValue!) || newValue! < 1)) {
       showAlert("Teamnummer moet een positief getal zijn", "error");
       return;
@@ -335,8 +365,10 @@ export default function ClassTeamsPageInner() {
 
     setStudents((prev) =>
       prev.map((s) =>
-        s.id === studentId ? { ...s, team_number: newValue, isModified: true } : s
-      )
+        s.id === studentId
+          ? { ...s, team_number: newValue, isModified: true }
+          : s,
+      ),
     );
     setEditingStudentId(null);
     setEditingValue("");
@@ -350,7 +382,7 @@ export default function ClassTeamsPageInner() {
 
   const handleSaveChanges = async () => {
     if (!selectedCourse) return;
-    
+
     try {
       const modifiedStudents = students.filter((s) => s.isModified);
       if (modifiedStudents.length === 0) return;
@@ -362,13 +394,19 @@ export default function ClassTeamsPageInner() {
 
       // If a project is selected, update project_teams.team_number
       if (selectedProject) {
-        await projectTeamService.updateProjectStudentTeams(selectedProject.id, updates);
+        await projectTeamService.updateProjectStudentTeams(
+          selectedProject.id,
+          updates,
+        );
       } else {
         // No project selected - don't save (User.team_number is being phased out)
-        showAlert("Selecteer eerst een project om teams te kunnen toewijzen", "error");
+        showAlert(
+          "Selecteer eerst een project om teams te kunnen toewijzen",
+          "error",
+        );
         return;
       }
-      
+
       showAlert("Wijzigingen automatisch opgeslagen", "success");
       setStudents((prev) => prev.map((s) => ({ ...s, isModified: false })));
       setHasUnsavedChanges(false);
@@ -389,17 +427,21 @@ export default function ClassTeamsPageInner() {
       return;
     }
 
-    if (!confirm("Weet je zeker dat je alle studenten opnieuw wilt verdelen in teams van 4? Bestaande teams worden overschreven.")) {
+    if (
+      !confirm(
+        "Weet je zeker dat je alle studenten opnieuw wilt verdelen in teams van 4? Bestaande teams worden overschreven.",
+      )
+    ) {
       return;
     }
 
     // Shuffle students randomly
     const shuffled = [...students].sort(() => Math.random() - 0.5);
-    
+
     // Calculate number of teams needed
     const teamSize = 4;
     const numTeams = Math.ceil(shuffled.length / teamSize);
-    
+
     // Assign team numbers
     const updated = shuffled.map((student, idx) => ({
       ...student,
@@ -409,7 +451,10 @@ export default function ClassTeamsPageInner() {
 
     setStudents(updated);
     setHasUnsavedChanges(true);
-    showAlert(`${updated.length} studenten verdeeld over ${numTeams} teams`, "success");
+    showAlert(
+      `${updated.length} studenten verdeeld over ${numTeams} teams`,
+      "success",
+    );
   };
 
   const handleAutoBalance = () => {
@@ -424,7 +469,13 @@ export default function ClassTeamsPageInner() {
       return;
     }
 
-    const teamNumbers = Array.from(new Set(students.filter((s) => s.team_number !== null).map((s) => s.team_number!)));
+    const teamNumbers = Array.from(
+      new Set(
+        students
+          .filter((s) => s.team_number !== null)
+          .map((s) => s.team_number!),
+      ),
+    );
     if (teamNumbers.length === 0) {
       showAlert("Geen bestaande teams om over te verdelen", "error");
       return;
@@ -444,7 +495,10 @@ export default function ClassTeamsPageInner() {
 
     setStudents(updated);
     setHasUnsavedChanges(true);
-    showAlert(`${unassigned.length} studenten verdeeld over ${teamNumbers.length} teams`, "success");
+    showAlert(
+      `${unassigned.length} studenten verdeeld over ${teamNumbers.length} teams`,
+      "success",
+    );
   };
 
   const handleOpenEditModal = (student: StudentRow) => {
@@ -464,8 +518,8 @@ export default function ClassTeamsPageInner() {
       prev.map((s) =>
         s.id === editingStudent.id
           ? { ...editingStudent, isModified: true }
-          : s
-      )
+          : s,
+      ),
     );
     setHasUnsavedChanges(true);
     setShowEditModal(false);
@@ -500,42 +554,58 @@ export default function ClassTeamsPageInner() {
 
     try {
       // Call API to add student to course (without team_number - it's being phased out)
-      const newStudent = await courseService.addStudentToCourse(selectedCourse.id, {
-        name: editingStudent.name,
-        email: editingStudent.email,
-        class_name: editingStudent.class_name || undefined,
-      });
+      const newStudent = await courseService.addStudentToCourse(
+        selectedCourse.id,
+        {
+          name: editingStudent.name,
+          email: editingStudent.email,
+          class_name: editingStudent.class_name || undefined,
+        },
+      );
 
       // Add to local state without team number (assign via project teams)
-      setStudents((prev) => [...prev, {
-        ...newStudent,
-        class_name: newStudent.class_name || "",
-        team_number: null, // No team assigned yet - assign via project teams
-      }]);
+      setStudents((prev) => [
+        ...prev,
+        {
+          ...newStudent,
+          class_name: newStudent.class_name || "",
+          team_number: null, // No team assigned yet - assign via project teams
+        },
+      ]);
       setShowAddModal(false);
       setEditingStudent(null);
       showAlert("Student succesvol toegevoegd aan vak", "success");
     } catch (error: any) {
       console.error("Failed to add student:", error);
-      const errorMsg = error?.response?.data?.detail || "Kon student niet toevoegen";
+      const errorMsg =
+        error?.response?.data?.detail || "Kon student niet toevoegen";
       showAlert(errorMsg, "error");
     }
   };
 
   const handleDeleteStudent = (studentId: number) => {
-    const student = students.find(s => s.id === studentId);
+    const student = students.find((s) => s.id === studentId);
     if (!student) return;
 
-    if (!confirm(`Weet je zeker dat je ${student.name} wilt verwijderen uit dit vak?`)) {
+    if (
+      !confirm(
+        `Weet je zeker dat je ${student.name} wilt verwijderen uit dit vak?`,
+      )
+    ) {
       return;
     }
 
     // Remove student from local state
     setStudents((prev) => prev.filter((s) => s.id !== studentId));
-    showAlert("Student verwijderd (let op: deze wijziging is alleen lokaal)", "info");
+    showAlert(
+      "Student verwijderd (let op: deze wijziging is alleen lokaal)",
+      "info",
+    );
   };
 
-  const handleSort = (column: "name" | "email" | "class_name" | "team_number") => {
+  const handleSort = (
+    column: "name" | "email" | "class_name" | "team_number",
+  ) => {
     if (sortColumn === column) {
       // Toggle direction if same column
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -552,11 +622,17 @@ export default function ClassTeamsPageInner() {
       return;
     }
 
-    if (!confirm("Weet je zeker dat je alle teams wilt wissen? Deze actie kan niet ongedaan gemaakt worden.")) {
+    if (
+      !confirm(
+        "Weet je zeker dat je alle teams wilt wissen? Deze actie kan niet ongedaan gemaakt worden.",
+      )
+    ) {
       return;
     }
 
-    setStudents((prev) => prev.map((s) => ({ ...s, team_number: null, isModified: true })));
+    setStudents((prev) =>
+      prev.map((s) => ({ ...s, team_number: null, isModified: true })),
+    );
     setHasUnsavedChanges(true);
     showAlert("Alle teams gewist", "success");
   };
@@ -576,7 +652,9 @@ export default function ClassTeamsPageInner() {
       selectedProject.title,
     ]);
 
-    const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -610,7 +688,9 @@ export default function ClassTeamsPageInner() {
         });
 
         if (matchingLine) {
-          const cols = matchingLine.split(",").map((col) => col.replace(/^"|"$/g, ""));
+          const cols = matchingLine
+            .split(",")
+            .map((col) => col.replace(/^"|"$/g, ""));
           const teamNum = cols[3] ? parseInt(cols[3], 10) : null;
           matchCount++;
           return { ...student, team_number: teamNum, isModified: true };
@@ -620,7 +700,10 @@ export default function ClassTeamsPageInner() {
 
       setStudents(updated);
       setHasUnsavedChanges(true);
-      showAlert(`CSV geïmporteerd: ${matchCount} studenten gevonden`, "success");
+      showAlert(
+        `CSV geïmporteerd: ${matchCount} studenten gevonden`,
+        "success",
+      );
     };
     reader.readAsText(file);
   };
@@ -641,7 +724,10 @@ export default function ClassTeamsPageInner() {
           <p className="mt-2 text-sm text-red-600">
             Alleen docenten en admins kunnen deze pagina bekijken.
           </p>
-          <Link href="/teacher/courses" className="mt-4 inline-block text-blue-600 underline">
+          <Link
+            href="/teacher/courses"
+            className="mt-4 inline-block text-blue-600 underline"
+          >
             Terug naar vakken
           </Link>
         </div>
@@ -666,7 +752,8 @@ export default function ClassTeamsPageInner() {
               </h1>
               {selectedCourse && (
                 <p className="text-gray-600 mt-1 text-sm">
-                  {selectedCourse.name} ({selectedCourse.code}) - {selectedCourse.level} jaar {selectedCourse.year}
+                  {selectedCourse.name} ({selectedCourse.code}) -{" "}
+                  {selectedCourse.level} jaar {selectedCourse.year}
                 </p>
               )}
             </div>
@@ -691,8 +778,8 @@ export default function ClassTeamsPageInner() {
               alertType === "success"
                 ? "bg-green-50 text-green-800"
                 : alertType === "error"
-                ? "bg-red-50 text-red-800"
-                : "bg-blue-50 text-blue-800"
+                  ? "bg-red-50 text-red-800"
+                  : "bg-blue-50 text-blue-800"
             }`}
           >
             {alertMessage}
@@ -714,11 +801,15 @@ export default function ClassTeamsPageInner() {
 
               {/* Project */}
               <div>
-                <p className="mb-2 text-sm font-semibold text-gray-700">Project</p>
+                <p className="mb-2 text-sm font-semibold text-gray-700">
+                  Project
+                </p>
                 <select
                   value={selectedProject?.id || ""}
                   onChange={(e) => {
-                    const project = projects.find((p) => p.id === parseInt(e.target.value));
+                    const project = projects.find(
+                      (p) => p.id === parseInt(e.target.value),
+                    );
                     handleProjectSelect(project || null);
                   }}
                   disabled={!selectedCourse}
@@ -733,7 +824,8 @@ export default function ClassTeamsPageInner() {
                 </select>
                 {selectedProject && isProjectClosed && (
                   <p className="text-xs text-amber-600 mt-2">
-                    🔒 Dit project is afgesloten. Teams kunnen niet meer worden gewijzigd.
+                    🔒 Dit project is afgesloten. Teams kunnen niet meer worden
+                    gewijzigd.
                   </p>
                 )}
               </div>
@@ -743,7 +835,6 @@ export default function ClassTeamsPageInner() {
 
         {selectedCourse && (
           <>
-
             {/* Search and Filter Card */}
             <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-200">
               {/* Row 1: Filters */}
@@ -842,7 +933,7 @@ export default function ClassTeamsPageInner() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th 
+                      <th
                         onClick={() => handleSort("name")}
                         className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
                       >
@@ -853,7 +944,7 @@ export default function ClassTeamsPageInner() {
                           )}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleSort("email")}
                         className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
                       >
@@ -864,7 +955,7 @@ export default function ClassTeamsPageInner() {
                           )}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleSort("class_name")}
                         className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
                       >
@@ -875,7 +966,7 @@ export default function ClassTeamsPageInner() {
                           )}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleSort("team_number")}
                         className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
                       >
@@ -894,7 +985,8 @@ export default function ClassTeamsPageInner() {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {filteredStudents.map((student) => {
                       const classColor =
-                        allClasses.find((c) => c.name === student.class_name)?.color || "bg-gray-100 text-gray-800";
+                        allClasses.find((c) => c.name === student.class_name)
+                          ?.color || "bg-gray-100 text-gray-800";
                       const isEditing = editingStudentId === student.id;
 
                       return (
@@ -909,7 +1001,9 @@ export default function ClassTeamsPageInner() {
                             {student.email}
                           </td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm">
-                            <span className={`rounded-full px-2 py-1 text-xs font-medium ${classColor}`}>
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-medium ${classColor}`}
+                            >
                               {student.class_name}
                             </span>
                           </td>
@@ -920,7 +1014,9 @@ export default function ClassTeamsPageInner() {
                                   type="number"
                                   min="1"
                                   value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onChange={(e) =>
+                                    setEditingValue(e.target.value)
+                                  }
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter") {
                                       handleSaveEdit(student.id);
@@ -932,11 +1028,21 @@ export default function ClassTeamsPageInner() {
                                       e.preventDefault();
                                       handleSaveEdit(student.id);
                                       // Find next student in filtered list
-                                      const currentIndex = filteredStudents.findIndex(s => s.id === student.id);
-                                      if (currentIndex < filteredStudents.length - 1) {
-                                        const nextStudent = filteredStudents[currentIndex + 1];
+                                      const currentIndex =
+                                        filteredStudents.findIndex(
+                                          (s) => s.id === student.id,
+                                        );
+                                      if (
+                                        currentIndex <
+                                        filteredStudents.length - 1
+                                      ) {
+                                        const nextStudent =
+                                          filteredStudents[currentIndex + 1];
                                         setTimeout(() => {
-                                          handleStartEdit(nextStudent.id, nextStudent.team_number);
+                                          handleStartEdit(
+                                            nextStudent.id,
+                                            nextStudent.team_number,
+                                          );
                                         }, 50);
                                       }
                                     }
@@ -959,36 +1065,50 @@ export default function ClassTeamsPageInner() {
                                   ✕
                                 </button>
                               </div>
-                            ) : (
-                              student.team_number !== null ? (
-                                isProjectClosed || !selectedProject ? (
-                                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                    TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
-                                  }`}>
-                                    Team {student.team_number}
-                                  </span>
-                                ) : (
-                                  <button
-                                    onClick={() => handleStartEdit(student.id, student.team_number)}
-                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 ${
-                                      TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
-                                    }`}
-                                  >
-                                    Team {student.team_number}
-                                  </button>
-                                )
+                            ) : student.team_number !== null ? (
+                              isProjectClosed || !selectedProject ? (
+                                <span
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    TEAM_COLORS[
+                                      (student.team_number - 1) %
+                                        TEAM_COLORS.length
+                                    ]
+                                  }`}
+                                >
+                                  Team {student.team_number}
+                                </span>
                               ) : (
-                                isProjectClosed || !selectedProject ? (
-                                  <span className="text-gray-400">-</span>
-                                ) : (
-                                  <button
-                                    onClick={() => handleStartEdit(student.id, student.team_number)}
-                                    className="text-gray-400 hover:text-gray-600"
-                                  >
-                                    - (klik om toe te wijzen)
-                                  </button>
-                                )
+                                <button
+                                  onClick={() =>
+                                    handleStartEdit(
+                                      student.id,
+                                      student.team_number,
+                                    )
+                                  }
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 ${
+                                    TEAM_COLORS[
+                                      (student.team_number - 1) %
+                                        TEAM_COLORS.length
+                                    ]
+                                  }`}
+                                >
+                                  Team {student.team_number}
+                                </button>
                               )
+                            ) : isProjectClosed || !selectedProject ? (
+                              <span className="text-gray-400">-</span>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  handleStartEdit(
+                                    student.id,
+                                    student.team_number,
+                                  )
+                                }
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                - (klik om toe te wijzen)
+                              </button>
                             )}
                           </td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm">
@@ -1020,7 +1140,11 @@ export default function ClassTeamsPageInner() {
               <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-3">
                 <p className="text-sm text-gray-600">
                   {filteredStudents.length} van {students.length} studenten
-                  {hasUnsavedChanges && <span className="ml-2 text-orange-600">(wijzigingen worden automatisch opgeslagen...)</span>}
+                  {hasUnsavedChanges && (
+                    <span className="ml-2 text-orange-600">
+                      (wijzigingen worden automatisch opgeslagen...)
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -1031,46 +1155,78 @@ export default function ClassTeamsPageInner() {
         {showEditModal && editingStudent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-              <h2 className="mb-4 text-xl font-bold text-gray-900">Leerling bewerken</h2>
-              
+              <h2 className="mb-4 text-xl font-bold text-gray-900">
+                Leerling bewerken
+              </h2>
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Naam *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Naam *
+                  </label>
                   <input
                     type="text"
                     value={editingStudent.name}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        name: e.target.value,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email *
+                  </label>
                   <input
                     type="email"
                     value={editingStudent.email}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        email: e.target.value,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Klas</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Klas
+                  </label>
                   <input
                     type="text"
                     value={editingStudent.class_name}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        class_name: e.target.value,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Teamnummer</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Teamnummer
+                  </label>
                   <input
                     type="number"
                     min="1"
                     value={editingStudent.team_number || ""}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, team_number: e.target.value ? parseInt(e.target.value) : null })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        team_number: e.target.value
+                          ? parseInt(e.target.value)
+                          : null,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -1098,37 +1254,60 @@ export default function ClassTeamsPageInner() {
         {showAddModal && editingStudent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-              <h2 className="mb-4 text-xl font-bold text-gray-900">Leerling toevoegen</h2>
-              
+              <h2 className="mb-4 text-xl font-bold text-gray-900">
+                Leerling toevoegen
+              </h2>
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Naam *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Naam *
+                  </label>
                   <input
                     type="text"
                     value={editingStudent.name}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        name: e.target.value,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="Volledige naam"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email *
+                  </label>
                   <input
                     type="email"
                     value={editingStudent.email}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        email: e.target.value,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="email@school.nl"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Klas</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Klas
+                  </label>
                   <input
                     type="text"
                     value={editingStudent.class_name}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
+                    onChange={(e) =>
+                      setEditingStudent({
+                        ...editingStudent,
+                        class_name: e.target.value,
+                      })
+                    }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="bijv. 5V1"
                   />
