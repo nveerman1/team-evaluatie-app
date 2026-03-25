@@ -42,7 +42,7 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
   const loadData = async () => {
     try {
       setLoading(true);
-      const wins = await competencyService.getWindows("all");
+      const wins = await competencyService.getWindows();
       setWindows(wins);
 
       if (wins.length > 0 && !currentUserId) {
