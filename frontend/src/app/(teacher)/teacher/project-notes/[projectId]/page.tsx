@@ -138,8 +138,7 @@ export default function ProjectNotesDetailPage({
               : {}),
           },
         },
-      },
-    };
+      };
     try {
       await projectNotesService.updateContext(Number(projectId), { settings: updated });
       setContext(prev => prev ? { ...prev, settings: updated } : prev);
