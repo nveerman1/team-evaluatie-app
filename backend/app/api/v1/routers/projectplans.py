@@ -1646,7 +1646,8 @@ def export_projectplan_docx(
 
     buffer = generate_projectplan_docx(team_data)
 
-    safe_title = re.sub(r'[^\w\-]', '', (team.title or "document").replace(" ", "-"))
+    raw_title = (team.title or "document").strip()
+    safe_title = re.sub(r"-{2,}", "-", re.sub(r"[^\w\s-]", "", raw_title).strip().replace(" ", "-")).strip("-")
     filename = f"Projectplan-{safe_title or 'document'}.docx"
 
     return StreamingResponse(
