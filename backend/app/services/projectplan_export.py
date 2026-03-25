@@ -11,16 +11,16 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 # ── Color palette ──────────────────────────────────────────────────────────────
-COLOR_DARK   = RGBColor(0x1E, 0x29, 0x3B)  # slate-800  – titles, body text
+COLOR_DARK = RGBColor(0x1E, 0x29, 0x3B)  # slate-800  – titles, body text
 COLOR_ACCENT = RGBColor(0x1E, 0x40, 0xAF)  # blue-800   – section headings
-COLOR_MUTED  = RGBColor(0x64, 0x74, 0x8B)  # slate-500  – labels, meta text
-COLOR_LABEL  = RGBColor(0x47, 0x55, 0x69)  # slate-600  – table labels
+COLOR_MUTED = RGBColor(0x64, 0x74, 0x8B)  # slate-500  – labels, meta text
+COLOR_LABEL = RGBColor(0x47, 0x55, 0x69)  # slate-600  – table labels
 
-_BORDER_COLOR          = "CBD5E1"  # slate-300 – table cell borders
-_HEADER_FILL           = "DBEAFE"  # blue-100  – table header background
-_SIG_FILL              = "F1F5F9"  # slate-100 – signature header background
-_SIG_BORDER            = "E2E8F0"  # slate-200 – info / signature borders
-_SIGNATURE_LINE_LENGTH = 32        # number of underscores in a signature line
+_BORDER_COLOR = "CBD5E1"  # slate-300 – table cell borders
+_HEADER_FILL = "DBEAFE"  # blue-100  – table header background
+_SIG_FILL = "F1F5F9"  # slate-100 – signature header background
+_SIG_BORDER = "E2E8F0"  # slate-200 – info / signature borders
+_SIGNATURE_LINE_LENGTH = 32  # number of underscores in a signature line
 
 FONT_NAME = "Aptos"  # document-wide typeface
 
@@ -37,18 +37,19 @@ SECTION_ORDER = [
 ]
 
 SECTION_TITLES = {
-    "client":     "1. Opdrachtgever",
-    "problem":    "2. Probleemstelling",
-    "goal":       "3. Doelstelling",
-    "method":     "4. Methode",
-    "planning":   "5. Planning",
-    "tasks":      "6. Taakverdeling",
+    "client": "1. Opdrachtgever",
+    "problem": "2. Probleemstelling",
+    "goal": "3. Doelstelling",
+    "method": "4. Methode",
+    "planning": "5. Planning",
+    "tasks": "6. Taakverdeling",
     "motivation": "7. Motivatie",
-    "risks":      "8. Risico's",
+    "risks": "8. Risico's",
 }
 
 
 # ── Low-level XML helpers ──────────────────────────────────────────────────────
+
 
 def _set_cell_shading(cell, fill_hex: str) -> None:
     """Fill a table cell with a background color."""
@@ -78,7 +79,12 @@ def _set_cell_margins(cell, top=80, bottom=80, left=120, right=120) -> None:
     """Set inner cell padding (values in twentieths of a point / DXA)."""
     tcPr = cell._tc.get_or_add_tcPr()
     tcMar = OxmlElement("w:tcMar")
-    for side, val in (("top", top), ("bottom", bottom), ("left", left), ("right", right)):
+    for side, val in (
+        ("top", top),
+        ("bottom", bottom),
+        ("left", left),
+        ("right", right),
+    ):
         el = OxmlElement(f"w:{side}")
         el.set(qn("w:w"), str(val))
         el.set(qn("w:type"), "dxa")
@@ -132,6 +138,7 @@ def _set_default_font(doc: Document) -> None:
 
 
 # ── Layout helper functions ────────────────────────────────────────────────────
+
 
 def add_document_header(
     doc: Document,
@@ -373,12 +380,14 @@ def add_signature_section(doc: Document) -> None:
 
 # ── Text parsing helpers ───────────────────────────────────────────────────────
 
+
 def _parse_lines(text: str) -> list:
     """Return non-empty stripped lines from a block of text."""
     return [ln.strip() for ln in text.splitlines() if ln.strip()]
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
+
 
 def generate_projectplan_docx(team_data: dict) -> BytesIO:
     """
@@ -402,11 +411,11 @@ def generate_projectplan_docx(team_data: dict) -> BytesIO:
         section.left_margin = Cm(2.5)
         section.right_margin = Cm(2.5)
 
-    title_text    = team_data.get("title") or "Projectplan"
-    team_number   = team_data.get("team_number")
-    team_members  = team_data.get("team_members") or []
-    export_date   = date.today().strftime("%d-%m-%Y")
-    sections_map  = {s["key"]: s for s in team_data.get("sections", [])}
+    title_text = team_data.get("title") or "Projectplan"
+    team_number = team_data.get("team_number")
+    team_members = team_data.get("team_members") or []
+    export_date = date.today().strftime("%d-%m-%Y")
+    sections_map = {s["key"]: s for s in team_data.get("sections", [])}
 
     # Extract client org name for the header hint
     client_org: Optional[str] = None
@@ -415,7 +424,9 @@ def generate_projectplan_docx(team_data: dict) -> BytesIO:
         client_org = (client_section.get("client") or {}).get("organisation") or None
 
     # ── 1. Header block ────────────────────────────────────────────────────────
-    add_document_header(doc, title_text, team_number, team_members, export_date, client_org)
+    add_document_header(
+        doc, title_text, team_number, team_members, export_date, client_org
+    )
 
     # ── 2. Content sections ────────────────────────────────────────────────────
     for key in SECTION_ORDER:
@@ -427,10 +438,10 @@ def generate_projectplan_docx(team_data: dict) -> BytesIO:
         if key == "client":
             client = section.get("client") or {}
             info_pairs = [
-                ("Organisatie",    client.get("organisation")),
+                ("Organisatie", client.get("organisation")),
                 ("Contactpersoon", client.get("contact")),
-                ("Email",          client.get("email")),
-                ("Telefoon",       client.get("phone")),
+                ("Email", client.get("email")),
+                ("Telefoon", client.get("phone")),
             ]
             non_empty = [(lbl, val) for lbl, val in info_pairs if val]
             description = (client.get("description") or "").strip()
