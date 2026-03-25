@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CombinedTeamCard } from "./_components/CombinedTeamCard";
 import { projectNotesService, courseService } from "@/services";
 import {
@@ -313,6 +314,11 @@ export default function ProjectNotesDetailPage({
     filteredTeams[0] ??
     null;
 
+  // Navigation between filtered teams
+  const activeTeamIndex = activeTeam ? filteredTeams.findIndex(t => t.id === activeTeam.id) : -1;
+  const canGoPrev = activeTeamIndex > 0;
+  const canGoNext = activeTeamIndex >= 0 && activeTeamIndex < filteredTeams.length - 1;
+
   /** Get the tile-display title: use the live (unsaved) value while typing, otherwise the saved one */
   const getTileTitle = (teamId: number): string => {
     const live = liveTeamTitles[String(teamId)];
@@ -358,6 +364,22 @@ export default function ProjectNotesDetailPage({
               }`}
             >
               Teams {teamsOpen ? "▴" : "▾"}
+            </button>
+            <button
+              onClick={() => setActiveTeamId(filteredTeams[activeTeamIndex - 1].id)}
+              disabled={!canGoPrev}
+              aria-label="Vorig team"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setActiveTeamId(filteredTeams[activeTeamIndex + 1].id)}
+              disabled={!canGoNext}
+              aria-label="Volgend team"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
             </button>
             <input
               type="text"
