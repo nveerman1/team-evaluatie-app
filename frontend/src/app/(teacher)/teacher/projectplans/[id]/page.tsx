@@ -16,6 +16,7 @@ import {
   SuggestClientItem,
 } from "@/dtos/projectplan.dto";
 import { Loading, ErrorMessage } from "@/components";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ProjectPlanDetailPage() {
   const params = useParams();
@@ -51,6 +52,9 @@ export default function ProjectPlanDetailPage() {
 
   // Refs for section feedback textareas
   const feedbackRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  // Ref to track currently selected team so loadDetail can preserve it
+  const currentTeamIdRef = useRef<number | null>(null);
 
   // Section metadata
   const sectionMetadata: Record<
@@ -97,6 +101,17 @@ export default function ProjectPlanDetailPage() {
     try {
       const result = await projectPlanService.getProjectPlan(projectPlanId);
       setDetail(result);
+
+      // Preserve the currently selected team if it still exists in the new data
+      const keepId = currentTeamIdRef.current;
+      if (keepId && result.teams.length > 0) {
+        const existingTeam = result.teams.find((t) => t.id === keepId);
+        if (existingTeam) {
+          setSelectedTeamId(existingTeam.id);
+          setSelectedTeam(existingTeam);
+          return;
+        }
+      }
 
       // Auto-select first team if teamParam is provided
       if (teamParam && result.teams.length > 0) {
@@ -159,6 +174,7 @@ export default function ProjectPlanDetailPage() {
   // When team selection changes, load that team's data
   useEffect(() => {
     if (selectedTeamId && detail) {
+      currentTeamIdRef.current = selectedTeamId;
       const team = detail.teams.find((t) => t.id === selectedTeamId);
       setSelectedTeam(team || null);
     }
@@ -290,6 +306,22 @@ export default function ProjectPlanDetailPage() {
   if (error && !detail) return <ErrorMessage message={error} />;
   if (!detail) return <ErrorMessage message="Geen data gevonden" />;
 
+  const currentTeamIndex = detail.teams.findIndex(
+    (t) => t.id === selectedTeamId,
+  );
+
+  const handlePreviousTeam = () => {
+    if (currentTeamIndex > 0) {
+      setSelectedTeamId(detail.teams[currentTeamIndex - 1].id);
+    }
+  };
+
+  const handleNextTeam = () => {
+    if (currentTeamIndex < detail.teams.length - 1) {
+      setSelectedTeamId(detail.teams[currentTeamIndex + 1].id);
+    }
+  };
+
   const getStatusBadge = (status: PlanStatus) => {
     const badges: Record<PlanStatus, { className: string; label: string }> = {
       [PlanStatus.CONCEPT]: {
@@ -385,35 +417,35 @@ export default function ProjectPlanDetailPage() {
               </div>
             </div>
           </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2 mt-6 border-b border-slate-200">
-            <button
-              onClick={() => handleTabChange("overzicht")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                tab === "overzicht"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Overzicht
-            </button>
-            <button
-              onClick={() => handleTabChange("projectplannen")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                tab === "projectplannen"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Projectplannen
-            </button>
-          </div>
         </header>
       </div>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-slate-200">
+          <button
+            onClick={() => handleTabChange("overzicht")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+              tab === "overzicht"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Overzicht
+          </button>
+          <button
+            onClick={() => handleTabChange("projectplannen")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+              tab === "projectplannen"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Projectplannen
+          </button>
+        </div>
+
         {/* Tab 1: Overzicht */}
         {tab === "overzicht" && (
           <div className="space-y-4">
@@ -533,13 +565,19 @@ export default function ProjectPlanDetailPage() {
         {/* Tab 2: Projectplannen */}
         {tab === "projectplannen" && (
           <div className="space-y-4">
-            {/* Team Selector - Sticky */}
-            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200 p-4 shadow-sm">
-              <label className="block text-sm font-medium mb-2">
-                Selecteer team:
-              </label>
+            {/* Team Selector */}
+            <div className="sticky top-0 z-10 flex flex-wrap gap-2 items-center py-2 bg-transparent">
+              <button
+                onClick={handlePreviousTeam}
+                disabled={currentTeamIndex <= 0}
+                aria-label="Vorig team"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Vorig team"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
               <select
-                className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
                 value={selectedTeamId || ""}
                 onChange={(e) => setSelectedTeamId(Number(e.target.value))}
               >
@@ -551,6 +589,15 @@ export default function ProjectPlanDetailPage() {
                   </option>
                 ))}
               </select>
+              <button
+                onClick={handleNextTeam}
+                disabled={currentTeamIndex >= detail.teams.length - 1}
+                aria-label="Volgend team"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Volgend team"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
             {selectedTeam && (
@@ -676,10 +723,17 @@ export default function ProjectPlanDetailPage() {
                                       onClick={() => {
                                         const textarea =
                                           feedbackRefs.current[section.key];
+                                        const note = textarea?.value || "";
+                                        if (!note.trim()) {
+                                          alert(
+                                            "Vul een opmerking in voordat je op 'Aanpassen' klikt.",
+                                          );
+                                          return;
+                                        }
                                         handleSectionFeedback(
                                           section.key,
                                           SectionStatus.REVISION,
-                                          textarea?.value || "",
+                                          note,
                                         );
                                       }}
                                       disabled={isSaving}
