@@ -281,7 +281,7 @@ def dashboard_evaluation(
 
         # Suggested grade: schaal 1–10 vanaf rubric scale
         suggested = (
-            round((peer_avg_overall / rubric.scale_max) * 9 + 1, 1)
+            round((peer_avg_overall / rubric.scale_max) * 8 + 2, 1)
             if rubric.scale_max
             else 0.0
         )
