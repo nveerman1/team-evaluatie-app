@@ -213,7 +213,7 @@ export function CombinedTeamCard({
       {/* ── Header: team label + editable project title + teacher dropdown ── */}
       <div className="border-b border-slate-200 px-5 py-3 bg-slate-100">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-slate-900 whitespace-nowrap shrink-0">
               {teamDisplayName}
             </h3>
@@ -232,7 +232,7 @@ export function CombinedTeamCard({
               }}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
               placeholder="Projecttitel…"
-              className="flex-1 min-w-0 text-sm font-medium bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-700 placeholder:font-normal placeholder:text-slate-400"
+              className="flex-1 min-w-[160px] text-sm font-bold bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-700 placeholder:font-normal placeholder:text-slate-400"
               title="Klik om de projecttitel in te stellen"
               aria-label="Projecttitel van dit team"
             />
