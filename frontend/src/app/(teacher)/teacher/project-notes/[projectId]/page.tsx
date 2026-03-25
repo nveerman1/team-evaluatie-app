@@ -6,6 +6,7 @@ import { CombinedTeamCard } from "./_components/CombinedTeamCard";
 import { projectNotesService, courseService } from "@/services";
 import { ProjectNotesContextDetail, ProjectNote, TeamInfo } from "@/dtos/project-notes.dto";
 import { TeacherCourse } from "@/dtos/course.dto";
+import { useTeacherLayout } from "@/app/(teacher)/layout";
 
 // OMZA categories
 const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
@@ -31,6 +32,10 @@ export default function ProjectNotesDetailPage({
   const [activeTeamId, setActiveTeamId] = useState<number | null>(null);
   // Live title overrides – updated on every keystroke so tiles stay in sync while typing
   const [liveTeamTitles, setLiveTeamTitles] = useState<Record<string, string>>({});
+
+  // Teams panel open/close – mirrors the focus-mode pattern used on the assessment page
+  const [teamsOpen, setTeamsOpen] = useState(false);
+  const { setSidebarCollapsed } = useTeacherLayout();
 
   // Filter states
   const [search, setSearch] = useState<string>("");
@@ -79,6 +84,17 @@ export default function ProjectNotesDetailPage({
       setActiveTeamId(context.teams[0].id);
     }
   }, [context, activeTeamId]);
+
+  // Collapse / restore the left navigation sidebar when the teams panel is open,
+  // using the same pattern as the assessment page (useTeacherLayout + setSidebarCollapsed).
+  useEffect(() => {
+    if (teamsOpen) {
+      setSidebarCollapsed(true);
+    }
+    return () => {
+      if (teamsOpen) setSidebarCollapsed(false);
+    };
+  }, [teamsOpen, setSidebarCollapsed]);
 
   const handleNoteSaved = useCallback(() => {
     loadAllNotes();
