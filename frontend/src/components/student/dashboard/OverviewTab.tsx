@@ -1,11 +1,9 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChevronRight,
   ChevronDown,
   MessageSquare,
   FileText,
-  TrendingUp,
 } from "lucide-react";
 import type {
   EvaluationResult,
@@ -121,30 +119,13 @@ export function OverviewTab({
 
   return (
     <div className="space-y-4">
-      {/* Header with stats */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-slate-600" />
-                <p className="text-sm font-semibold text-slate-900">Overzicht</p>
-              </div>
-              <p className="text-sm text-slate-600">
-                Jouw projectresultaten, evaluaties en reflecties.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 1) Project Results - Full Width */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Projectresultaten</CardTitle>
-          <p className="text-sm text-slate-600">Overzicht van je projectbeoordelingen met scores per categorie.</p>
-        </CardHeader>
-        <CardContent>
+      {/* 1) Project Results */}
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="p-5 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Projectresultaten</h2>
+          <p className="mt-1 text-sm text-slate-500">Overzicht van je projectbeoordelingen met scores per categorie.</p>
+        </div>
+        <div className="px-5 pb-5">
           {projectResults.length === 0 ? (
             <p className="text-slate-500 text-center py-4">Geen projectresultaten gevonden</p>
           ) : (
@@ -199,18 +180,18 @@ export function OverviewTab({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* 2) Evaluation Heatmap - Full Width */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Evaluaties Overzicht</CardTitle>
-          <p className="text-sm text-slate-600">
+      {/* 2) Evaluation Heatmap */}
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="p-5 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Evaluaties Overzicht</h2>
+          <p className="mt-1 text-sm text-slate-500">
             Overzicht van al je peerevaluaties met peer-scores en docent-feedback.
           </p>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="px-5 pb-5">
           {enrichedEvaluations.length === 0 ? (
             <p className="text-slate-500 text-center py-4">Geen evaluaties gevonden</p>
           ) : (
@@ -461,16 +442,16 @@ export function OverviewTab({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* 3) Reflections - Full Width Table with Expand */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Reflecties</CardTitle>
-          <p className="text-sm text-slate-600">Overzicht van al je reflecties. Klik om de volledige tekst te zien.</p>
-        </CardHeader>
-        <CardContent>
+      {/* 3) Reflections */}
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="p-5 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Reflecties</h2>
+          <p className="mt-1 text-sm text-slate-500">Overzicht van al je reflecties. Klik om de volledige tekst te zien.</p>
+        </div>
+        <div className="px-5 pb-5">
           {reflections.length === 0 ? (
             <p className="text-slate-500 text-center py-4">Nog geen reflecties geschreven.</p>
           ) : (
@@ -528,8 +509,8 @@ export function OverviewTab({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

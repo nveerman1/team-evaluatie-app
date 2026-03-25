@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, ExternalLink, Circle, Flag, Clock, CheckCircle2, BadgeCheck, X, Sparkles } from "lucide-react";
+import { Search, ExternalLink, Circle, Flag, Clock, CheckCircle2, BadgeCheck, X } from "lucide-react";
 import { skillTrainingService } from "@/services";
 import type { StudentTrainingItem, SkillTrainingStatus } from "@/dtos";
 import { STUDENT_ALLOWED_STATUSES } from "@/dtos";
@@ -172,16 +172,13 @@ export function SkillTrainingTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Search and filters */}
-      <div className="rounded-2xl border-slate-200 bg-slate-50 p-5 shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1 flex-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-slate-600" />
-              <p className="text-sm font-semibold text-slate-900">Trainingen</p>
-            </div>
-            <p className="text-sm text-slate-600">Werk aan je vaardigheden en volg je voortgang.</p>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Trainingen</h2>
+            <p className="mt-1 text-sm text-slate-500">Werk aan je vaardigheden en volg je voortgang.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -213,7 +210,7 @@ export function SkillTrainingTab() {
       </div>
 
       {/* Progress per competency */}
-      <div className="rounded-2xl border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold text-slate-900">Voortgang per competentie</div>
           <div className="text-xs text-slate-500">Afgerond/beheerst ÷ totaal</div>
@@ -245,7 +242,7 @@ export function SkillTrainingTab() {
       </div>
 
       {/* Trainings table */}
-      <div className="rounded-2xl border-slate-200 bg-white shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-[900px] w-full">
             <thead className="bg-slate-50">

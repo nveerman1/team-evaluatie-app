@@ -1,5 +1,4 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, TrendingUp } from "lucide-react";
 import { StatusBadge } from "./helpers";
@@ -175,32 +174,15 @@ export function VoortgangTab({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-slate-600" />
-                <p className="text-sm font-semibold text-slate-900">Ontwikkeling</p>
-              </div>
-              <p className="text-sm text-slate-600">
-                Peer-feedback (OMZA), jouw competentieprofiel, leerdoelen en vaardigheidstrainingen.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Row 1: OMZA Trend (left) + Competency Profile (right) */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* OMZA Trend Chart */}
-        <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">OMZA Trend</CardTitle>
-            <p className="text-sm text-slate-600">Ontwikkeling van je peer-feedback scores over tijd.</p>
-          </CardHeader>
-          <CardContent>
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="p-5 pb-3">
+            <h2 className="text-lg font-semibold text-slate-900">OMZA Trend</h2>
+            <p className="mt-1 text-sm text-slate-500">Ontwikkeling van je peer-feedback scores over tijd.</p>
+          </div>
+          <div className="px-5 pb-5">
             {omzaTrendData.length === 0 ? (
               <p className="text-slate-500 text-center py-4">Geen trend data beschikbaar</p>
             ) : (
@@ -244,16 +226,16 @@ export function VoortgangTab({
                 </ResponsiveContainer>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Competency Profile Radar */}
-        <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="p-5 pb-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-base">Competentieprofiel</CardTitle>
-                <p className="text-sm text-slate-600">
+                <h2 className="text-lg font-semibold text-slate-900">Competentieprofiel</h2>
+                <p className="mt-1 text-sm text-slate-500">
                   {radarData ? radarData.scan_label : "Laatste scan"} • schaal 1–5
                 </p>
               </div>
@@ -278,8 +260,8 @@ export function VoortgangTab({
                 )}
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="px-5 pb-5">
             {radarLoading ? (
               <div className="py-8 text-center">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
@@ -362,17 +344,17 @@ export function VoortgangTab({
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Row 2: Leerdoelen - Full Width Table */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Leerdoelen</CardTitle>
-          <p className="text-sm text-slate-600">Overzicht van al je leerdoelen en hun status.</p>
-        </CardHeader>
-        <CardContent>
+      {/* Row 2: Leerdoelen */}
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="p-5 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Leerdoelen</h2>
+          <p className="mt-1 text-sm text-slate-500">Overzicht van al je leerdoelen en hun status.</p>
+        </div>
+        <div className="px-5 pb-5">
           {learningGoals.length === 0 ? (
             <p className="text-slate-500 text-center py-4">Geen leerdoelen ingesteld.</p>
           ) : (
@@ -404,16 +386,16 @@ export function VoortgangTab({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Row 3: Vaardigheidstrainingen - Full Width Table */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Vaardigheidstrainingen</CardTitle>
-          <p className="text-sm text-slate-600">Overzicht van jouw vaardigheidstrainingen en hun status.</p>
-        </CardHeader>
-        <CardContent>
+      {/* Row 3: Vaardigheidstrainingen */}
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="p-5 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Vaardigheidstrainingen</h2>
+          <p className="mt-1 text-sm text-slate-500">Overzicht van jouw vaardigheidstrainingen en hun status.</p>
+        </div>
+        <div className="px-5 pb-5">
           {skillTrainings.length === 0 ? (
             <p className="text-slate-500 text-center py-4">Geen vaardigheidstrainingen gevonden.</p>
           ) : (
@@ -449,8 +431,8 @@ export function VoortgangTab({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

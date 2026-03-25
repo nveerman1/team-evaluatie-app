@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -94,12 +93,10 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "neu
           : "text-slate-900";
 
   return (
-    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-      <CardContent className="p-4">
-        <div className="text-xs font-medium text-slate-600">{label}</div>
-        <div className={`mt-1 text-2xl font-semibold tracking-tight ${toneClass}`}>{value}</div>
-      </CardContent>
-    </Card>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-medium text-slate-600">{label}</div>
+      <div className={`mt-1 text-2xl font-semibold tracking-tight ${toneClass}`}>{value}</div>
+    </div>
   );
 }
 
@@ -298,100 +295,84 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
   return (
     <>
       {/* Info card */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50 shadow-none">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl bg-white border border-slate-200 text-slate-700">
-                <Timer className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-900">3de Blok – Aanwezigheid</div>
-                <p className="mt-1 text-sm text-slate-600">
-                  Bekijk je gewerkte tijd op school en registreer extern werk (bijv. thuis of bij een opdrachtgever).
-                </p>
-                <div className="mt-2">
-                  <SmallHelp>75 min = 1 lesblok. Extern werk telt pas mee na goedkeuring.</SmallHelp>
-                </div>
-              </div>
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl bg-slate-100 text-slate-700">
+              <Timer className="h-4 w-4" />
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={period === "week" ? "default" : "secondary"}
-                className={`rounded-xl ${period === "week" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
-                size="sm"
-                onClick={() => setPeriod("week")}
-              >
-                Deze week
-              </Button>
-              <Button
-                variant={period === "maand" ? "default" : "secondary"}
-                className={`rounded-xl ${period === "maand" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
-                size="sm"
-                onClick={() => setPeriod("maand")}
-              >
-                Deze maand
-              </Button>
-              <Button
-                variant={period === "alles" ? "default" : "secondary"}
-                className={`rounded-xl ${period === "alles" ? "bg-slate-900 hover:bg-slate-800" : ""}`}
-                size="sm"
-                onClick={() => setPeriod("alles")}
-              >
-                Alles
-              </Button>
+            <div>
+              <div className="text-lg font-semibold text-slate-900">3de Blok – Aanwezigheid</div>
+              <p className="mt-1 text-sm text-slate-500">
+                Bekijk je gewerkte tijd op school en registreer extern werk (bijv. thuis of bij een opdrachtgever).
+              </p>
+              <div className="mt-2">
+                <SmallHelp>75 min = 1 lesblok. Extern werk telt pas mee na goedkeuring.</SmallHelp>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          {/* Period filter pills */}
+          <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1 shrink-0">
+            {(["week", "maand", "alles"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  period === p ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {p === "week" ? "Week" : p === "maand" ? "Maand" : "Alles"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Project filter */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <label className="text-sm font-medium text-slate-900 shrink-0">
-              Filter op project:
-            </label>
-            <select
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-              value={projectFilter}
-              onChange={(e) => handleProjectFilterChange(e.target.value)}
-            >
-              <option value="">Alle projecten</option>
-              {projects.map((project) => {
-                let dateRange = '';
-                try {
-                  if (project.start_date && project.end_date) {
-                    const startDate = new Date(project.start_date);
-                    const endDate = new Date(project.end_date);
-                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                      dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
-                    }
-                  } else if (project.start_date) {
-                    const startDate = new Date(project.start_date);
-                    if (!isNaN(startDate.getTime())) {
-                      dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
-                    }
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <label className="text-sm font-medium text-slate-900 shrink-0">
+            Filter op project:
+          </label>
+          <select
+            className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+            value={projectFilter}
+            onChange={(e) => handleProjectFilterChange(e.target.value)}
+          >
+            <option value="">Alle projecten</option>
+            {projects.map((project) => {
+              let dateRange = '';
+              try {
+                if (project.start_date && project.end_date) {
+                  const startDate = new Date(project.start_date);
+                  const endDate = new Date(project.end_date);
+                  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                    dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
                   }
-                } catch (error) {
-                  // Date parsing errors are non-critical - the project title will still display
-                  // without the date range, which is acceptable fallback behavior
+                } else if (project.start_date) {
+                  const startDate = new Date(project.start_date);
+                  if (!isNaN(startDate.getTime())) {
+                    dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
+                  }
                 }
-                return (
-                  <option key={project.id} value={project.id}>
-                    {project.title}{dateRange}
-                  </option>
-                );
-              })}
-            </select>
-            {projectFilter && (
-              <SmallHelp>
-                Totalen en blokken tonen alleen gegevens binnen de projectperiode.
-              </SmallHelp>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              } catch (error) {
+                // Date parsing errors are non-critical - the project title will still display
+                // without the date range, which is acceptable fallback behavior
+              }
+              return (
+                <option key={project.id} value={project.id}>
+                  {project.title}{dateRange}
+                </option>
+              );
+            })}
+          </select>
+          {projectFilter && (
+            <SmallHelp>
+              Totalen en blokken tonen alleen gegevens binnen de projectperiode.
+            </SmallHelp>
+          )}
+        </div>
+      </div>
 
       {/* KPI grid */}
       {totals && (
@@ -420,13 +401,12 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
       )}
 
       {/* Sessions */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-5 space-y-4">
-          <TableShell 
-            title="Aanwezigheidssessies" 
-            icon={<Clock className="h-4 w-4" />} 
-            right={<SmallHelp>Nieuwste bovenaan</SmallHelp>} 
-          />
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        <TableShell 
+          title="Aanwezigheidssessies" 
+          icon={<Clock className="h-4 w-4" />} 
+          right={<SmallHelp>Nieuwste bovenaan</SmallHelp>} 
+        />
 
           <div className="overflow-hidden rounded-2xl border border-slate-200">
             <table className="w-full text-sm">
@@ -457,21 +437,19 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
       {/* External work */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-5 space-y-4">
-          <TableShell
-            title="Externe werkregistraties"
-            icon={<Briefcase className="h-4 w-4" />}
-            right={
-              <Button
-                className="rounded-xl bg-slate-900 hover:bg-slate-800"
-                size="sm"
-                onClick={() => setShowNewExternal(true)}
-              >
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        <TableShell
+          title="Externe werkregistraties"
+          icon={<Briefcase className="h-4 w-4" />}
+          right={
+            <Button
+              className="rounded-xl bg-slate-900 hover:bg-slate-800"
+              size="sm"
+              onClick={() => setShowNewExternal(true)}
+            >
                 <Plus className="mr-1 h-4 w-4" /> Nieuwe registratie
               </Button>
             }
@@ -545,8 +523,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <SmallHelp>Klik op een afgekeurde registratie om de reden te bekijken.</SmallHelp>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
       {/* Modal: nieuwe registratie */}
       <Dialog open={showNewExternal} onOpenChange={setShowNewExternal}>
