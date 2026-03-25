@@ -18,6 +18,7 @@ import { ProjectFeedbackDashboardTab } from "@/components/student/dashboard/Proj
 import { VoortgangTab } from "@/components/student/dashboard/VoortgangTab";
 import { InleverenTab } from "@/components/student/dashboard/InleverenTab";
 import { EvaluationsTab } from "@/components/student/dashboard/EvaluationsTab";
+import { BeoordelingTab } from "@/components/student/dashboard/BeoordelingTab";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -144,10 +145,9 @@ function StudentDashboardContent() {
         <div className="mx-auto w-full max-w-6xl px-6 py-8">
           <div className="flex items-start justify-between gap-6">
             <div>
-              <p className="text-sm text-slate-300">Student dashboard</p>
-              <h1 className="mt-1 text-4xl font-bold tracking-tight">Mijn dashboard</h1>
+              <h1 className="text-4xl font-bold tracking-tight">Mijn dashboard</h1>
               <p className="mt-2 text-sm text-slate-300">
-                Bekijk wat nog openstaat en rond je taken stap voor stap af.
+                Overzicht van je evaluaties, ontwikkeling en projectresultaten
               </p>
             </div>
 
@@ -188,7 +188,7 @@ function StudentDashboardContent() {
           {/* ── Two-level navigation ────────────────────────────── */}
           <section className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
             {/* Top navigation row */}
-            <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+            <div className={cn("flex flex-wrap gap-2", SUB_NAV_ITEMS[activeTopNav as keyof typeof SUB_NAV_ITEMS] ? "border-b border-slate-200 pb-3" : "")}>
               {TOP_NAV_ITEMS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -314,34 +314,11 @@ function StudentDashboardContent() {
 
             {/* BEOORDELING */}
             <TabsContent value="beoordeling">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Projectbeoordeling</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Beoordelingen per project. Klik door voor rubric, feedback en je eindresultaat.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {projectLoading ? (
-                    <Loading />
-                  ) : projectError ? (
-                    <ErrorMessage message={projectError} />
-                  ) : (projectAssessments || []).filter((p) => ["open", "published", "closed"].includes(p.status)).length === 0 ? (
-                    <div className="rounded-xl bg-slate-50 p-8 text-center">
-                      <p className="text-slate-500">Nog geen projectbeoordelingen beschikbaar.</p>
-                    </div>
-                  ) : (
-                    (projectAssessments || [])
-                      .filter((p) => ["open", "published", "closed"].includes(p.status))
-                      .map((assessment) => (
-                        <ProjectAssessmentDashboardCard key={assessment.id} assessment={assessment} />
-                      ))
-                  )}
-                </div>
-              </div>
+              <BeoordelingTab
+                projectAssessments={projectAssessments}
+                projectLoading={projectLoading}
+                projectError={projectError}
+              />
             </TabsContent>
 
             {/* 3DE BLOK */}

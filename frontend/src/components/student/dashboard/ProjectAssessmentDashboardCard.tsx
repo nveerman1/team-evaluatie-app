@@ -17,21 +17,6 @@ export function ProjectAssessmentDashboardCard({
   const grade = (assessment.metadata_json as any)?.final_grade || (assessment.metadata_json as any)?.suggested_grade;
   const teamLabel = assessment.group_name || (assessment.team_number ? `Team ${assessment.team_number}` : "Onbekend");
 
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      return new Date(dateStr).toLocaleDateString("nl-NL", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return null;
-    }
-  };
-
-  const publishedDate = formatDate(assessment.published_at);
-
   const statusLabel = isPublished ? "Gepubliceerd" : isOpen ? "Open" : "Gesloten";
   const statusClass = isPublished
     ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
@@ -79,17 +64,8 @@ export function ProjectAssessmentDashboardCard({
             </div>
           </div>
 
-          {/* Right: info block + action button */}
+          {/* Right: action button */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
-            <div className="min-w-[120px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
-                {isPublished ? "Gepubliceerd" : "Status"}
-              </div>
-              <div className="mt-1 text-base font-semibold text-slate-900">
-                {isPublished && publishedDate ? publishedDate : statusLabel}
-              </div>
-            </div>
-
             <div className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-slate-800">
               {actionLabel}
               <span className="ml-2">→</span>

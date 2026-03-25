@@ -49,10 +49,6 @@ export function ScanDashboardCard({
 
             <div className="mt-1 text-sm text-slate-500">Competentiescan</div>
 
-            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-              <span className="rounded-lg bg-slate-100 px-2.5 py-1">Sluit op: {endDate}</span>
-            </div>
-
             {hasInvites && onShowInvites && (
               <button
                 onClick={onShowInvites}
@@ -71,7 +67,7 @@ export function ScanDashboardCard({
               <div className="mt-1 text-base font-semibold text-slate-900">{endDate}</div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
               <Link
                 href={`/student/competency/scan/${window.id}`}
                 className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
@@ -80,32 +76,30 @@ export function ScanDashboardCard({
                 <span className="ml-2">→</span>
               </Link>
 
-              <div className="flex gap-2">
-                {window.require_goal && (
-                  <Link
-                    href={`/student/competency/goal/${window.id}`}
-                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Leerdoel
-                  </Link>
-                )}
-                {window.require_reflection && (
-                  <Link
-                    href={`/student/competency/reflection/${window.id}`}
-                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Reflectie
-                  </Link>
-                )}
-                {hasInvites && onInviteExternal && (
-                  <button
-                    onClick={onInviteExternal}
-                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Externen
-                  </button>
-                )}
-              </div>
+              {window.require_goal && (
+                <Link
+                  href={`/student/competency/goal/${window.id}`}
+                  className="inline-flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Leerdoel
+                </Link>
+              )}
+              {window.require_reflection && (
+                <Link
+                  href={`/student/competency/reflection/${window.id}`}
+                  className="inline-flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Reflectie
+                </Link>
+              )}
+              {hasInvites && onInviteExternal && (
+                <button
+                  onClick={onInviteExternal}
+                  className="inline-flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Externen
+                </button>
+              )}
             </div>
           </div>
         </div>

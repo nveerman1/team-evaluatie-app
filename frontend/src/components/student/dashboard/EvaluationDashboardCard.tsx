@@ -65,10 +65,6 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
               {evaluation.evaluation_type === "peer" ? "Peerevaluatie" : "360° feedback"}
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-              <span className="rounded-lg bg-slate-100 px-2.5 py-1">{deadlineLabel}</span>
-            </div>
-
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
               {parts.map((part) => (
                 <span
