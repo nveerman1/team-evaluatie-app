@@ -72,119 +72,77 @@ function normalizePeerScore(v: number | null | undefined) {
   return Number(value.toFixed(1));
 }
 
-/* ====================== UI mini components ====================== */
-function Stat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | null | undefined;
-}) {
+/* ====================== UI components ====================== */
+
+/** Single grade stat tile used in Cijferoverzicht */
+function GradeItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="p-3 rounded-xl border border-gray-200 bg-white">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-base font-medium">{value ?? "—"}</div>
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+      <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
     </div>
   );
 }
 
-const Badge = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <span
-    className={
-      "inline-flex shrink-0 items-center rounded-full border border-gray-200 bg-white/70 px-2 py-0.5 text-[11px] leading-5 text-gray-600 " +
-      className
-    }
-  >
-    {children}
-  </span>
-);
-
-const ScoreBadge = ({ value }: { value: number | null }) => (
-  <span className="inline-flex w-[78px] shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white/70 px-2 py-0.5 text-[11px] leading-5 text-gray-600 tabular-nums">
-    {value != null ? `Score: ${value}` : "Score: –"}
-  </span>
-);
-
-/** Eén comment: links badges (criterium + score), rechts tekst (wrapt) */
-function CommentRow({ item }: { item: CommentItem }) {
-  const isObj = typeof item !== "string";
-  const text = isObj ? (item as any).text?.trim() : (item as string);
-  const label = isObj ? ((item as any).criterion_name || "").trim() : "";
-  const score: number | null = isObj ? ((item as any).score ?? null) : null;
+/** One competency row inside a reviewer card */
+function FeedbackRow({ item }: { item: CommentItem }) {
+  const obj = typeof item !== "string" ? (item as CommentObj) : null;
+  const text = obj ? obj.text?.trim() : (item as string);
+  const label = obj ? (obj.criterion_name || "").trim() : "";
+  const score: number | null = obj ? (obj.score ?? null) : null;
 
   return (
-    <li className="border-t first:border-t-0 border-gray-100 py-2">
-      <div className="flex items-start gap-3">
-        {/* Left column = 2-column grid: [criterion] [score] */}
-        <div className="min-w-[280px] max-w-[55%]">
-          <div className="grid grid-cols-[auto_78px] items-start gap-2">
-            {label ? <Badge className="mt-0.5">{label}</Badge> : <span />}
-            <ScoreBadge value={score} />
-          </div>
-        </div>
-
-        {/* Right column = feedback text */}
-        <p className="text-sm leading-6 text-gray-800">{text || "—"}</p>
+    <div className="grid gap-3 px-4 py-4 lg:grid-cols-[220px_92px_1fr] lg:items-start lg:gap-4">
+      <div className="text-sm font-medium text-slate-700">{label || "—"}</div>
+      <div>
+        <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          Score: {score ?? "–"}
+        </span>
       </div>
-    </li>
+      <div className="text-sm leading-6 text-slate-700">{text || "—"}</div>
+    </div>
   );
 }
 
-/** Per peer: titel + nette lijst onder elkaar */
-function PeerGroupBlock({
-  title,
-  groups,
-  nameFromGroup,
+/** Card for a single reviewer (feedback received) or reviewee (feedback given) */
+function PeerFeedbackCard({
+  name,
+  comments,
 }: {
-  title: string;
-  groups: (ReceivedGroup | GivenGroup)[];
-  nameFromGroup: (g: any) => string | undefined;
+  name: string;
+  comments: CommentItem[];
 }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 ring-1 ring-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+        <div className="text-lg font-semibold text-slate-900">{name}</div>
+        {comments.length > 0 && (
+          <div className="rounded-full bg-white px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
+            {comments.length} reactie{comments.length === 1 ? "" : "s"}
+          </div>
+        )}
+      </div>
 
-      {!groups || groups.length === 0 ? (
-        <p className="text-sm text-gray-500">—</p>
+      {comments.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">Geen opmerkingen.</p>
       ) : (
-        <ul className="space-y-6">
-          {groups.map((g, idx) => {
-            const name = nameFromGroup(g) || "—";
-            const comments = g.comments ?? [];
-
-            return (
-              <li key={idx} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-medium">{name}</h3>
-                  {comments.length > 0 && (
-                    <span className="text-xs text-gray-500">
-                      {comments.length} reactie
-                      {comments.length === 1 ? "" : "s"}
-                    </span>
-                  )}
-                </div>
-
-                {comments.length === 0 ? (
-                  <p className="text-sm text-gray-500">Geen opmerkingen.</p>
-                ) : (
-                  <ul className="rounded-xl border border-gray-100 bg-white">
-                    {comments.map((c, i) => (
-                      <CommentRow key={i} item={c} />
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          {/* Column headers — hidden on small screens */}
+          <div className="hidden grid-cols-[220px_92px_1fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:grid">
+            <div>Onderdeel</div>
+            <div>Score</div>
+            <div>Toelichting</div>
+          </div>
+          <div className="divide-y divide-slate-200">
+            {comments.map((c, i) => (
+              <FeedbackRow key={i} item={c} />
+            ))}
+          </div>
+        </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -245,56 +203,47 @@ export default function StudentOverviewPageInner() {
 
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
+      {/* SECTION 1 — Student header */}
+      <section className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Overzicht leerling</h1>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+            Overzicht leerling
+          </h2>
+          {data && (
+            <div className="mt-5">
+              <div className="text-lg font-medium text-slate-900">
+                #{data.user.id} · {data.user.name}
+              </div>
+              <div className="mt-1 text-sm text-slate-500">{data.user.email}</div>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/teacher/evaluations/${evalId}/assessment`}
-            className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
-          >
-            ← Terug naar beoordeling
-          </Link>
-        </div>
-      </header>
+        <Link
+          href={`/teacher/evaluations/${evalId}/assessment`}
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          <span>←</span>
+          <span>Terug naar beoordeling</span>
+        </Link>
+      </section>
 
       {loading && <div>Laden…</div>}
       {error && <div className="text-red-600">{error}</div>}
 
       {!loading && !error && data && (
         <>
-          <p className="text-gray-600">
-            #{data.user.id} · {data.user.name} · {data.user.email}
-          </p>
-
-          {/* Meta */}
-          <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <Stat label="Klas" value={data.user.class_name ?? "—"} />
-            <Stat
-              label="Cluster"
-              value={
-                data.user.cluster_name ??
-                (data.user.cluster_id ? `Course ${data.user.cluster_id}` : "—")
-              }
-            />
-            <Stat
-              label="Team"
-              value={
-                data.user.team_name ??
-                (data.user.team_number != null
-                  ? `Team ${data.user.team_number}`
-                  : "—")
-              }
-            />
-            <Stat label="Team #" value={data.user.team_number ?? "—"} />
-          </section>
-
-          {/* Cijfers */}
-          <section className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
-            <h2 className="font-semibold">Cijfer</h2>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-              <Stat
+          {/* SECTION 2 — Cijferoverzicht */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div>
+              <h3 className="text-xl font-semibold text-slate-900">
+                Cijferoverzicht
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Alle kernscores compact in één overzicht.
+              </p>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+              <GradeItem
                 label="Eindcijfer"
                 value={
                   finalGrade !== null && finalGrade !== undefined
@@ -302,86 +251,150 @@ export default function StudentOverviewPageInner() {
                     : "—"
                 }
               />
-              <Stat
+              <GradeItem
                 label="Suggestie"
                 value={g?.suggested != null ? format1(g.suggested) : "—"}
               />
-              <Stat
+              <GradeItem
                 label="Groepscijfer"
                 value={g?.group_grade != null ? format1(g.group_grade) : "—"}
               />
-              <Stat label="GCF" value={g?.gcf != null ? format2(g.gcf) : "—"} />
-              <Stat
-                label="Peer (1–10)"
-                value={peerNormalized != null ? peerNormalized : "—"}
+              <GradeItem
+                label="GCF"
+                value={g?.gcf != null ? format2(g.gcf) : "—"}
               />
-              <Stat label="SPR" value={g?.spr != null ? format2(g.spr) : "—"} />
+              <GradeItem
+                label="Peer (1–10)"
+                value={peerNormalized != null ? String(peerNormalized) : "—"}
+              />
+              <GradeItem
+                label="SPR"
+                value={g?.spr != null ? format2(g.spr) : "—"}
+              />
             </div>
           </section>
 
-          {/* OMZA Scores */}
+          {/* SECTION 3 — OMZA scores */}
           {categoryAverages.length > 0 && (
-            <section className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
-              <h2 className="font-semibold">OMZA Scores</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  OMZA scores
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Gemiddelde peer-scores per categorie.
+                </p>
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {categoryAverages.map((cat) => (
                   <div
                     key={cat.category}
-                    className="p-3 rounded-xl border border-gray-200 bg-white"
+                    className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200"
                   >
-                    <div className="text-xs text-gray-500 mb-1">
+                    <div className="text-sm font-medium text-slate-700">
                       {cat.category}
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-sm">
-                        <span className="text-gray-500">Peer:</span>{" "}
-                        <span className="font-medium">
-                          {cat.peer_avg.toFixed(2)}
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">
+                      Peer: {cat.peer_avg.toFixed(2)}
+                    </div>
+                    {cat.self_avg !== null && cat.self_avg !== undefined && (
+                      <div className="mt-1 text-sm text-slate-500">
+                        Zelf:{" "}
+                        <span className="font-medium text-blue-600">
+                          {cat.self_avg.toFixed(2)}
                         </span>
                       </div>
-                      {cat.self_avg !== null && cat.self_avg !== undefined && (
-                        <div className="text-sm">
-                          <span className="text-gray-500">Zelf:</span>{" "}
-                          <span className="font-medium text-blue-600">
-                            {cat.self_avg.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
             </section>
           )}
 
-          {/* Feedback ontvangen */}
-          <PeerGroupBlock
-            title="Feedback ontvangen (peers → Student)"
-            groups={data.feedback_received || []}
-            nameFromGroup={(g: ReceivedGroup) => g.reviewer_name}
-          />
+          {/* SECTION 4 — Peer feedback ontvangen */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  Feedback ontvangen
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Feedback van peers aan deze leerling, overzichtelijk per
+                  beoordelaar.
+                </p>
+              </div>
+              <div className="text-sm text-slate-500">Peers → student</div>
+            </div>
 
-          {/* Feedback gegeven */}
-          <PeerGroupBlock
-            title="Feedback gegeven (Student → peers)"
-            groups={data.feedback_given || []}
-            nameFromGroup={(g: GivenGroup) => g.reviewee_name}
-          />
+            {!data.feedback_received || data.feedback_received.length === 0 ? (
+              <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm text-slate-500 ring-1 ring-slate-200">
+                Geen feedback ontvangen gevonden.
+              </div>
+            ) : (
+              <div className="mt-6 space-y-5">
+                {data.feedback_received.map((group, idx) => (
+                  <PeerFeedbackCard
+                    key={idx}
+                    name={group.reviewer_name || "—"}
+                    comments={group.comments ?? []}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
 
-          {/* Reflectie */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
-            <h2 className="font-semibold">Reflectie</h2>
+          {/* SECTION 5 — Feedback gegeven */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div>
+              <h3 className="text-xl font-semibold text-slate-900">
+                Feedback gegeven
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">Student → peers</p>
+            </div>
+
+            {!data.feedback_given || data.feedback_given.length === 0 ? (
+              <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm text-slate-500 ring-1 ring-slate-200">
+                Geen feedback gegeven gevonden.
+              </div>
+            ) : (
+              <div className="mt-6 space-y-5">
+                {data.feedback_given.map((group, idx) => (
+                  <PeerFeedbackCard
+                    key={idx}
+                    name={group.reviewee_name || "—"}
+                    comments={group.comments ?? []}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* SECTION 6 — Reflectie */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div>
+              <h3 className="text-xl font-semibold text-slate-900">
+                Reflectie
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Inzichten en eigen reflectie van de leerling.
+              </p>
+            </div>
+
             {data.reflection?.text ? (
-              <>
-                <p className="text-sm text-gray-500">
+              <div className="mt-5 space-y-3">
+                <p className="text-sm text-slate-500">
                   {data.reflection.submitted_at
                     ? new Date(data.reflection.submitted_at).toLocaleString()
                     : "—"}
                 </p>
-                <p className="whitespace-pre-wrap">{data.reflection.text}</p>
-                <div className="mt-3 flex gap-2">
+                <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                    {data.reflection.text}
+                  </p>
+                </div>
+                <div className="flex gap-2">
                   <button
-                    className="px-2 py-1 border border-gray-200 rounded text-sm hover:bg-gray-50"
+                    className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm text-slate-700 hover:bg-slate-50"
                     onClick={() =>
                       navigator.clipboard.writeText(data.reflection?.text || "")
                     }
@@ -389,7 +402,7 @@ export default function StudentOverviewPageInner() {
                     Kopieer tekst
                   </button>
                   <a
-                    className="px-2 py-1 border border-gray-200 rounded text-sm hover:bg-gray-50"
+                    className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm text-slate-700 hover:bg-slate-50"
                     href={`data:text/plain;charset=utf-8,${encodeURIComponent(
                       data.reflection?.text || "",
                     )}`}
@@ -400,9 +413,11 @@ export default function StudentOverviewPageInner() {
                     Download .txt
                   </a>
                 </div>
-              </>
+              </div>
             ) : (
-              <p className="text-sm text-gray-500">Geen reflectie gevonden.</p>
+              <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm text-slate-500 ring-1 ring-slate-200">
+                Geen reflectie gevonden.
+              </div>
             )}
           </section>
         </>
