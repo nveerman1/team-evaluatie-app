@@ -416,7 +416,7 @@ export default function EditProjectAssessmentInner() {
   const [panelView, setPanelView] = useState<PanelView>("document");
 
   // Layout context for sidebar collapse
-  const { setSidebarCollapsed } = useTeacherLayout();
+  const { setSidebarCollapsed, setOnSidebarIconClick } = useTeacherLayout();
 
   // Layout context for parent container width
   const { setFocusMode: setLayoutFocusMode } = useFocusMode();
@@ -449,6 +449,14 @@ export default function EditProjectAssessmentInner() {
       setLayoutFocusMode(false);
     };
   }, [focusMode, setSidebarCollapsed, setLayoutFocusMode]);
+
+  useEffect(() => {
+    const exitFocus = () => setDocOpen(false);
+    setOnSidebarIconClick(() => exitFocus);
+    return () => {
+      setOnSidebarIconClick(undefined);
+    };
+  }, [setOnSidebarIconClick, setDocOpen]);
 
   // Load teams overview
   useEffect(() => {

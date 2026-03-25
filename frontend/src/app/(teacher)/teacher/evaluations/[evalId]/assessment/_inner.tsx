@@ -253,7 +253,7 @@ export default function CombinedAssessmentInner() {
   // Focus mode
   const { focusMode, setFocusMode } = useEvaluationFocusMode();
   const [notesWidth, setNotesWidth] = useState(0);
-  const { setSidebarCollapsed } = useTeacherLayout();
+  const { setSidebarCollapsed, setOnSidebarIconClick } = useTeacherLayout();
   const maxNotesWidth = focusMode ? 1500 : 600;
 
   // Focus view: 'notes' or 'feedback', persisted per evalId in localStorage
@@ -454,6 +454,14 @@ export default function CombinedAssessmentInner() {
       if (focusMode) setSidebarCollapsed(false);
     };
   }, [focusMode, setSidebarCollapsed]);
+
+  useEffect(() => {
+    const exitFocus = () => setFocusMode(false);
+    setOnSidebarIconClick(() => exitFocus);
+    return () => {
+      setOnSidebarIconClick(undefined);
+    };
+  }, [setOnSidebarIconClick, setFocusMode]);
 
   // ── auto-save grades every 30s ────────────────────────────────────────────
 

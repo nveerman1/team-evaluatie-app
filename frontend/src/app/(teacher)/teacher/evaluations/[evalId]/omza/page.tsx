@@ -214,7 +214,7 @@ export default function OMZAOverviewPage() {
   // Focus mode state
   const { focusMode, setFocusMode } = useEvaluationFocusMode();
   const [notesWidth, setNotesWidth] = useState(0);
-  const { setSidebarCollapsed } = useTeacherLayout();
+  const { setSidebarCollapsed, setOnSidebarIconClick } = useTeacherLayout();
   const maxNotesWidth = focusMode ? 1500 : 600;
 
   // Sorting state
@@ -325,6 +325,14 @@ export default function OMZAOverviewPage() {
       }
     };
   }, [focusMode, setSidebarCollapsed]);
+
+  useEffect(() => {
+    const exitFocus = () => setFocusMode(false);
+    setOnSidebarIconClick(() => exitFocus);
+    return () => {
+      setOnSidebarIconClick(undefined);
+    };
+  }, [setOnSidebarIconClick, setFocusMode]);
 
   // Load standard comments
   useEffect(() => {
