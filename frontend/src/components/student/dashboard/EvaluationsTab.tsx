@@ -10,8 +10,8 @@ type FilterType = "alles" | "open" | "afgerond" | "gesloten";
 const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: "alles", label: "Alles" },
   { value: "open", label: "Open" },
-  { value: "gesloten", label: "Gesloten" },
   { value: "afgerond", label: "Afgerond" },
+  { value: "gesloten", label: "Gesloten" },
 ];
 
 type EvaluationsTabProps = {
