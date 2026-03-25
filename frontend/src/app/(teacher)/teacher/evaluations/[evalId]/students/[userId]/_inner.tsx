@@ -16,11 +16,19 @@ type CommentObj = {
 };
 type CommentItem = string | CommentObj;
 
+type OmzaAverages = {
+  O?: number | null;
+  M?: number | null;
+  Z?: number | null;
+  A?: number | null;
+};
+
 type ReceivedGroup = {
   reviewer_id?: number | null;
   reviewer_name?: string;
   score_pct?: number | null;
   comments?: CommentItem[];
+  omza_averages?: OmzaAverages | null;
 };
 
 type GivenGroup = {
@@ -106,17 +114,33 @@ function FeedbackRow({ item }: { item: CommentItem }) {
   );
 }
 
+const OMZA_LABELS: { code: keyof OmzaAverages; label: string }[] = [
+  { code: "O", label: "Organiseren" },
+  { code: "M", label: "Meedoen" },
+  { code: "Z", label: "Zelfvertrouwen" },
+  { code: "A", label: "Autonomie" },
+];
+
 /** Card for a single reviewer (feedback received) or reviewee (feedback given) */
 function PeerFeedbackCard({
   name,
   comments,
+  omzaAverages,
 }: {
   name: string;
   comments: CommentItem[];
+  omzaAverages?: OmzaAverages | null;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const showOmzaRow =
+    omzaAverages &&
+    OMZA_LABELS.some((o) => omzaAverages[o.code] != null);
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 ring-1 ring-slate-200">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+      {/* Reviewer header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
         <div className="text-lg font-semibold text-slate-900">{name}</div>
         {comments.length > 0 && (
           <div className="rounded-full bg-white px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
@@ -125,22 +149,62 @@ function PeerFeedbackCard({
         )}
       </div>
 
-      {comments.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-500">Geen opmerkingen.</p>
-      ) : (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          {/* Column headers — hidden on small screens */}
-          <div className="hidden grid-cols-[220px_92px_1fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:grid">
-            <div>Onderdeel</div>
-            <div>Score</div>
-            <div>Toelichting</div>
-          </div>
-          <div className="divide-y divide-slate-200">
-            {comments.map((c, i) => (
-              <FeedbackRow key={i} item={c} />
-            ))}
-          </div>
+      {/* OMZA averages mini-row */}
+      {showOmzaRow && (
+        <div className="mb-4 grid grid-cols-4 gap-2">
+          {OMZA_LABELS.map(({ code, label }) => {
+            const val = omzaAverages![code];
+            return (
+              <div
+                key={code}
+                className="rounded-xl bg-white p-3 ring-1 ring-slate-200 text-center"
+              >
+                <div className="text-xs font-medium text-slate-500">{code}</div>
+                <div
+                  className="mt-1 text-lg font-semibold text-slate-900"
+                  title={label}
+                >
+                  {val != null ? Number(val).toFixed(2) : "—"}
+                </div>
+              </div>
+            );
+          })}
         </div>
+      )}
+
+      {/* Collapsible details */}
+      {comments.length === 0 ? (
+        <p className="text-sm text-slate-500">Geen opmerkingen.</p>
+      ) : (
+        <>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+          >
+            <span
+              className={`inline-block transition-transform ${expanded ? "rotate-90" : ""}`}
+            >
+              ▶
+            </span>
+            {expanded ? "Verberg details" : "Toon details per onderdeel"}
+          </button>
+
+          {expanded && (
+            <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              {/* Column headers — hidden on small screens */}
+              <div className="hidden grid-cols-[220px_92px_1fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:grid">
+                <div>Onderdeel</div>
+                <div>Score</div>
+                <div>Toelichting</div>
+              </div>
+              <div className="divide-y divide-slate-200">
+                {comments.map((c, i) => (
+                  <FeedbackRow key={i} item={c} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -285,7 +349,7 @@ export default function StudentOverviewPageInner() {
                   Gemiddelde peer-scores per categorie.
                 </p>
               </div>
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
                 {categoryAverages.map((cat) => (
                   <div
                     key={cat.category}
@@ -337,6 +401,7 @@ export default function StudentOverviewPageInner() {
                     key={idx}
                     name={group.reviewer_name || "—"}
                     comments={group.comments ?? []}
+                    omzaAverages={group.omza_averages}
                   />
                 ))}
               </div>

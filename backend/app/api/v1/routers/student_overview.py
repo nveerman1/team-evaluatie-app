@@ -1,12 +1,29 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union, SupportsFloat, SupportsIndex
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Union, SupportsFloat, SupportsIndex
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, aliased
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import Allocation, Score, RubricCriterion, User, Reflection
 from app.infra.db.models import Grade  # kernmodel
+
+# Maps RubricCriterion.category values to the short OMZA code used by the frontend
+_OMZA_CAT_TO_CODE: Dict[str, str] = {
+    "Organiseren": "O",
+    "organiseren": "O",
+    "O": "O",
+    "Meedoen": "M",
+    "meedoen": "M",
+    "M": "M",
+    "Zelfvertrouwen": "Z",
+    "zelfvertrouwen": "Z",
+    "Z": "Z",
+    "Autonomie": "A",
+    "autonomie": "A",
+    "A": "A",
+}
 
 router = APIRouter(prefix="/evaluations", tags=["student-overview"])
 
@@ -144,6 +161,47 @@ def student_overview(
             }
         )
     received = list(rec_by_from.values())
+
+    # --- Per-reviewer OMZA averages (all scores, not limited to commented ones) ---
+    rows_recv_scores = (
+        db.query(
+            Allocation.reviewer_id.label("from_id"),
+            Score.score.label("score"),
+            RubricCriterion.category.label("category"),
+        )
+        .join(Score, Score.allocation_id == Allocation.id)
+        .join(RubricCriterion, RubricCriterion.id == Score.criterion_id)
+        .filter(
+            Allocation.school_id == current_user.school_id,
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.reviewee_id == user_id,
+            Allocation.is_self.is_(False),
+            Score.score.isnot(None),
+        )
+        .all()
+    )
+
+    reviewer_omza: Dict[int, Dict[str, List[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    for row in rows_recv_scores:
+        if row.from_id is None:
+            continue
+        fid = int(row.from_id)
+        code = _OMZA_CAT_TO_CODE.get(row.category or "")
+        if code and row.score is not None:
+            reviewer_omza[fid][code].append(float(row.score))
+
+    for fid, gdict in rec_by_from.items():
+        omza_lists = reviewer_omza.get(fid, {})
+        gdict["omza_averages"] = {
+            code: (
+                round(sum(omza_lists[code]) / len(omza_lists[code]), 2)
+                if omza_lists.get(code)
+                else None
+            )
+            for code in ("O", "M", "Z", "A")
+        }
 
     U_to = aliased(User)
     rows_given = (
