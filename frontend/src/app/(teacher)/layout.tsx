@@ -28,11 +28,14 @@ import { get_role_home_path } from "@/lib/role-utils";
 type LayoutContextType = {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  onSidebarIconClick?: () => void;
+  setOnSidebarIconClick: (cb: (() => void) | undefined) => void;
 };
 
 const LayoutContext = createContext<LayoutContextType>({
   sidebarCollapsed: false,
   setSidebarCollapsed: () => {},
+  setOnSidebarIconClick: () => {},
 });
 
 export const useTeacherLayout = () => useContext(LayoutContext);
@@ -47,6 +50,7 @@ export default function TeacherLayout({
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [onIconClick, setOnIconClick] = useState<(() => void) | undefined>();
 
   // Auto-close mobile sidebar on navigation
   useEffect(() => {
@@ -80,7 +84,7 @@ export default function TeacherLayout({
   }
 
   return (
-    <LayoutContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>
+    <LayoutContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed, onSidebarIconClick: onIconClick, setOnSidebarIconClick: setOnIconClick }}>
       <div className="min-h-screen bg-gray-100 flex">
         {/* Mobile backdrop */}
         {mobileOpen && (
@@ -93,31 +97,36 @@ export default function TeacherLayout({
         {/* Sidebar */}
         <aside
           className={`bg-slate-700 border-r border-slate-600 text-slate-100 transition-all duration-300 shrink-0
-            ${sidebarCollapsed ? "w-0 overflow-hidden" : "w-64"}
+            ${sidebarCollapsed ? "w-14 overflow-hidden" : "w-64"}
             fixed inset-y-0 left-0 z-50 lg:static lg:z-auto
             ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           `}
         >
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-xl font-bold text-white">
-                {isAdmin ? "Admin" : "Teacher"}
-              </h1>
-              <button
-                className="lg:hidden text-slate-300 hover:text-white"
-                onClick={() => setMobileOpen(false)}
-                aria-label="Sluit menu"
-              >
-                <X size={20} />
-              </button>
-            </div>
+          <div className={sidebarCollapsed ? "px-2 py-4" : "p-4"}>
+            {!sidebarCollapsed && (
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-xl font-bold text-white">
+                  {isAdmin ? "Admin" : "Teacher"}
+                </h1>
+                <button
+                  className="lg:hidden text-slate-300 hover:text-white"
+                  onClick={() => setMobileOpen(false)}
+                  aria-label="Sluit menu"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
 
-            <nav className="space-y-4">
+            <nav className={sidebarCollapsed ? "space-y-1 mt-2" : "space-y-4"}>
               {/* ALGEMEEN Section */}
               <div>
-                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                  Algemeen
-                </div>
+                {!sidebarCollapsed && (
+                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                    Algemeen
+                  </div>
+                )}
+                {sidebarCollapsed && <hr className="border-slate-600 my-1" />}
                 <div className="space-y-1">
                   <NavItem
                     href="/teacher"
@@ -144,9 +153,12 @@ export default function TeacherLayout({
 
               {/* PROJECTEN Section */}
               <div>
-                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                  Projecten
-                </div>
+                {!sidebarCollapsed && (
+                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                    Projecten
+                  </div>
+                )}
+                {sidebarCollapsed && <hr className="border-slate-600 my-1" />}
                 <div className="space-y-1">
                   <NavItem
                     href="/teacher/projects"
@@ -183,9 +195,12 @@ export default function TeacherLayout({
 
               {/* VAARDIGHEDEN Section */}
               <div>
-                <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                  Vaardigheden
-                </div>
+                {!sidebarCollapsed && (
+                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                    Vaardigheden
+                  </div>
+                )}
+                {sidebarCollapsed && <hr className="border-slate-600 my-1" />}
                 <div className="space-y-1">
                   <NavItem
                     href="/teacher/skill-trainings"
@@ -203,9 +218,12 @@ export default function TeacherLayout({
               {/* BEHEER Section (Admin only) */}
               {isAdmin && (
                 <div>
-                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                    Beheer
-                  </div>
+                  {!sidebarCollapsed && (
+                    <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                      Beheer
+                    </div>
+                  )}
+                  {sidebarCollapsed && <hr className="border-slate-600 my-1" />}
                   <div className="space-y-1">
                     <NavItem
                       href="/teacher/admin/schoolbeheer"
@@ -239,9 +257,12 @@ export default function TeacherLayout({
               {/* Teacher-specific items */}
               {!isAdmin && (
                 <div>
-                  <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                    Beheer
-                  </div>
+                  {!sidebarCollapsed && (
+                    <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
+                      Beheer
+                    </div>
+                  )}
+                  {sidebarCollapsed && <hr className="border-slate-600 my-1" />}
                   <div className="space-y-1">
                     <NavItem
                       href="/teacher/class-teams"

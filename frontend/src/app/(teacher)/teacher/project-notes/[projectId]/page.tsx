@@ -47,7 +47,7 @@ export default function ProjectNotesDetailPage({
 
   // Teams panel open/close – mirrors the focus-mode pattern used on the assessment page
   const [teamsOpen, setTeamsOpen] = useState(false);
-  const { setSidebarCollapsed } = useTeacherLayout();
+  const { setSidebarCollapsed, setOnSidebarIconClick } = useTeacherLayout();
 
   // Filter states
   const [search, setSearch] = useState<string>("");
@@ -107,6 +107,14 @@ export default function ProjectNotesDetailPage({
       setSidebarCollapsed(false);
     };
   }, [teamsOpen, setSidebarCollapsed]);
+
+  useEffect(() => {
+    const exitFocus = () => setTeamsOpen(false);
+    setOnSidebarIconClick(() => exitFocus);
+    return () => {
+      setOnSidebarIconClick(undefined);
+    };
+  }, [setOnSidebarIconClick]);
 
   const handleNoteSaved = useCallback(() => {
     loadAllNotes();
