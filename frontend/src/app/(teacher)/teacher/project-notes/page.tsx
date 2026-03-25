@@ -6,6 +6,7 @@ import { projectNotesService, courseService, projectService } from "@/services";
 import { ProjectNotesContext } from "@/dtos/project-notes.dto";
 import { Course } from "@/dtos/course.dto";
 import type { ProjectListItem } from "@/dtos/project.dto";
+import { Loading, ErrorMessage } from "@/components";
 
 const INITIAL_PROJECT_STATE = {
   title: "",
@@ -21,12 +22,15 @@ export default function ProjectNotesOverviewPage() {
     [],
   );
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
     new Set(),
   );
   const [linkToExistingProject, setLinkToExistingProject] = useState(false);
   const [newProject, setNewProject] = useState(INITIAL_PROJECT_STATE);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [courseFilter, setCourseFilter] = useState("all");
 
   useEffect(() => {
     loadProjects();
@@ -37,10 +41,12 @@ export default function ProjectNotesOverviewPage() {
   const loadProjects = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await projectNotesService.listContexts();
       setProjects(data);
-    } catch (error) {
-      console.error("Failed to load projects:", error);
+    } catch (err) {
+      console.error("Failed to load projects:", err);
+      setError("Fout bij laden van projecten.");
     } finally {
       setLoading(false);
     }
@@ -86,7 +92,7 @@ export default function ProjectNotesOverviewPage() {
       setShowNewProjectForm(false);
       setNewProject(INITIAL_PROJECT_STATE);
       setLinkToExistingProject(false);
-      loadProjects(); // Reload the list
+      loadProjects();
     } catch (error) {
       console.error("Failed to create project:", error);
       alert("Fout bij aanmaken project. Probeer het opnieuw.");
@@ -104,10 +110,29 @@ export default function ProjectNotesOverviewPage() {
   };
 
   const handleToggleAll = () => {
-    if (selectedProjects.size === projects.length) {
+    if (selectedProjects.size === filteredProjects.length) {
       setSelectedProjects(new Set());
     } else {
-      setSelectedProjects(new Set(projects.map((p) => p.id)));
+      setSelectedProjects(new Set(filteredProjects.map((p) => p.id)));
+    }
+  };
+
+  const handleDeleteSingle = async (projectId: number) => {
+    const confirmed = confirm(
+      "Weet je zeker dat je dit project wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    );
+    if (!confirmed) return;
+    try {
+      await projectNotesService.deleteContext(projectId);
+      setSelectedProjects((prev) => {
+        const next = new Set(prev);
+        next.delete(projectId);
+        return next;
+      });
+      loadProjects();
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      alert("Fout bij verwijderen van project. Probeer het opnieuw.");
     }
   };
 
@@ -137,16 +162,53 @@ export default function ProjectNotesOverviewPage() {
     }
   };
 
+  // Build unique courses list from loaded projects
+  const uniqueCourses = Array.from(
+    new Set(
+      projects
+        .map((p) => p.course_name)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  );
+
+  // Filter projects by search query and course filter
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (project.course_name &&
+        project.course_name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())) ||
+      (project.description &&
+        project.description
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()));
+    const matchesCourse =
+      courseFilter === "all" || project.course_name === courseFilter;
+    return matchesSearch && matchesCourse;
+  });
+
+  // Group filtered projects by course name
+  const groupedByCourse: Record<string, ProjectNotesContext[]> = {};
+  filteredProjects.forEach((project) => {
+    const courseKey = project.course_name || "Geen vak";
+    if (!groupedByCourse[courseKey]) {
+      groupedByCourse[courseKey] = [];
+    }
+    groupedByCourse[courseKey].push(project);
+  });
+
   return (
     <>
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-2xl font-semibold text-slate-900">
               Projectaantekeningen
             </h1>
-            <p className="text-gray-600 mt-1 text-sm max-w-xl">
+            <p className="text-sm text-slate-500 mt-1">
               Overzicht van alle projecten waarin je observaties en
               aantekeningen bijhoudt.
             </p>
@@ -171,7 +233,7 @@ export default function ProjectNotesOverviewPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* New Project Form */}
         {showNewProjectForm && (
           <div className="rounded-xl bg-white border border-gray-200/80 shadow-sm p-6">
@@ -307,103 +369,181 @@ export default function ProjectNotesOverviewPage() {
           </div>
         )}
 
-        {/* Projects Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Projecten laden...</p>
-          </div>
-        ) : projects.length > 0 ? (
-          <>
-            {/* Select All Checkbox */}
-            <div className="flex items-center gap-2 px-2">
-              <input
-                type="checkbox"
-                id="select-all"
-                checked={
-                  selectedProjects.size === projects.length &&
-                  projects.length > 0
-                }
-                onChange={handleToggleAll}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label
-                htmlFor="select-all"
-                className="text-sm text-gray-600 cursor-pointer"
-              >
-                Selecteer alle projecten
-              </label>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className={`rounded-xl bg-white border shadow-sm p-5 hover:shadow-md transition-shadow ${
-                    selectedProjects.has(project.id)
-                      ? "border-blue-500 ring-2 ring-blue-200"
-                      : "border-gray-200/80"
-                  }`}
+        {/* Filter Bar */}
+        <div className="rounded-xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap gap-3 items-center flex-1">
+              {/* Search field */}
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Zoek op titel, vak of beschrijving…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-9 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {/* Course dropdown */}
+              <select
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
+                value={courseFilter}
+                onChange={(e) => setCourseFilter(e.target.value)}
+              >
+                <option value="all">Alle vakken</option>
+                {uniqueCourses.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Select all checkbox */}
+              {filteredProjects.length > 0 && (
+                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedProjects.size === filteredProjects.length &&
+                      filteredProjects.length > 0
+                    }
+                    onChange={handleToggleAll}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Selecteer alle
+                </label>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Loading / Error states */}
+        {loading && (
+          <div className="p-6">
+            <Loading />
+          </div>
+        )}
+        {error && !loading && (
+          <div className="p-6">
+            <ErrorMessage message={error} />
+          </div>
+        )}
+
+        {/* Projects List grouped by course */}
+        {!loading && !error && filteredProjects.length > 0 &&
+          Object.keys(groupedByCourse).map((courseName) => (
+            <section key={courseName} className="space-y-3">
+              <h3 className="text-lg font-semibold text-slate-800 px-2">
+                {courseName}
+              </h3>
+              <div className="space-y-3">
+                {groupedByCourse[courseName].map((project) => (
+                  <div
+                    key={project.id}
+                    className={`group flex items-stretch justify-between gap-4 rounded-xl border bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                      selectedProjects.has(project.id)
+                        ? "border-blue-400 ring-2 ring-blue-100"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <div className="flex items-center">
                       <input
                         type="checkbox"
                         checked={selectedProjects.has(project.id)}
                         onChange={() => handleToggleProject(project.id)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {project.title}
-                        </h3>
-                        <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                          {project.course_name && (
-                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700 border border-blue-100">
-                              {project.course_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
                     </div>
 
-                    {project.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2 ml-7">
-                        {project.description}
+                    {/* Left side: content */}
+                    <div className="flex flex-1 flex-col gap-1">
+                      {/* Title */}
+                      <p className="text-base font-semibold text-slate-900">
+                        {project.title}
                       </p>
-                    )}
 
-                    <div className="flex items-center gap-3 text-xs text-gray-500 ml-7">
+                      {/* Description */}
+                      {project.description && (
+                        <p className="text-sm text-slate-500 line-clamp-1">
+                          {project.description}
+                        </p>
+                      )}
+
+                      {/* Note count */}
                       {project.note_count !== undefined && (
-                        <span>
+                        <div className="text-xs text-slate-500">
                           {project.note_count}{" "}
                           {project.note_count === 1 ? "notitie" : "notities"}
-                        </span>
+                        </div>
                       )}
                     </div>
 
-                    <Link
-                      href={`/teacher/project-notes/${project.id}`}
-                      className="block w-full rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-medium text-white hover:bg-slate-800 transition-colors ml-7"
-                      style={{ marginLeft: 0, width: "100%" }}
-                    >
-                      Bekijk aantekeningen
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : null}
+                    {/* Right side: buttons */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={`/teacher/project-notes/${project.id}`}
+                        className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                      >
+                        Bekijk aantekeningen
+                      </Link>
 
-        {!loading && projects.length === 0 && (
-          <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-12 text-center">
-            <p className="text-gray-500">
-              Nog geen projecten aangemaakt. Klik op &quot;Nieuw project&quot;
-              om te beginnen.
-            </p>
+                      {/* Delete button */}
+                      <button
+                        onClick={() => handleDeleteSingle(project.id)}
+                        aria-label="Verwijder project"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition hover:border-red-200 hover:bg-red-100"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))
+        }
+
+        {/* Empty state */}
+        {!loading && !error && projects.length === 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-slate-500">
+            Nog geen projecten aangemaakt. Klik op &quot;Nieuw project&quot; om
+            te beginnen.
           </div>
         )}
-      </div>
+
+        {/* No results after filtering */}
+        {!loading && !error && projects.length > 0 && filteredProjects.length === 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-slate-500">
+            Geen projecten gevonden voor de huidige filters.
+          </div>
+        )}
+      </main>
     </>
   );
 }
