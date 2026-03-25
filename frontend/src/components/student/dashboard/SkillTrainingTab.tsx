@@ -74,7 +74,7 @@ function Modal({ open, onClose, title, children }: any) {
         className="absolute inset-0 bg-slate-900/50 transition-opacity"
         onClick={onClose}
       />
-      <div className="relative z-10 w-[min(820px,92vw)] rounded-2xl bg-white shadow-xl transition-all">
+      <div className="relative z-10 w-[min(820px,92vw)] rounded-2xl bg-white text-slate-900 shadow-xl transition-all">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="text-base font-semibold text-slate-900">{title}</div>
           <button

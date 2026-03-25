@@ -67,7 +67,7 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white text-slate-900 shadow-xl">
         {/* Modal header */}
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>

@@ -314,7 +314,7 @@ export default function GoalPage() {
                         : undefined,
                     })
                   }
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Geen specifieke competentie</option>
                   {competencies.map((comp) => (
@@ -340,7 +340,7 @@ export default function GoalPage() {
                   }
                   placeholder="Wat wil je leren of verbeteren? Bijv. 'Ik wil beter leren samenwerken door actief naar anderen te luisteren'"
                   rows={4}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   required
                 />
               </div>
@@ -360,7 +360,7 @@ export default function GoalPage() {
                   }
                   placeholder="Hoe weet je dat je je doel hebt bereikt? Bijv. 'Ik heb in elke vergadering minimaal 3 keer actief input gegeven op ideeën van anderen'"
                   rows={3}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 

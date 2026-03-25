@@ -310,7 +310,7 @@ export function VoortgangTab({
                   <select
                     value={selectedScanId || ""}
                     onChange={(e) => setSelectedScanId(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="px-3 py-1.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     aria-label="Selecteer scan"
                     disabled={scansLoading}
                   >
