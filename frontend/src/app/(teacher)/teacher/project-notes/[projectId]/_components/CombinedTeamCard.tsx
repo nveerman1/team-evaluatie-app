@@ -211,7 +211,7 @@ export function CombinedTeamCard({
       className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
     >
       {/* ── Header: team label + editable project title + teacher dropdown ── */}
-      <div className="border-b border-slate-200 px-5 py-2 bg-slate-100">
+      <div className="border-b border-slate-200 px-5 py-2 bg-slate-200">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-slate-900 whitespace-nowrap shrink-0">
