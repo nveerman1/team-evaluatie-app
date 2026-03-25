@@ -43,7 +43,6 @@ from app.api.v1.schemas.projectplans import (
     SuggestClientItem,
     LinkedClientResponse,
 )
-from app.services.projectplan_export import generate_projectplan_docx
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
 student_router = APIRouter(
@@ -1641,6 +1640,14 @@ def export_projectplan_docx(
         "team_members": team_members,
         "sections": sections,
     }
+
+    try:
+        from app.services.projectplan_export import generate_projectplan_docx
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="Word export is momenteel niet beschikbaar (python-docx niet geïnstalleerd)",
+        )
 
     buffer = generate_projectplan_docx(team_data)
 
