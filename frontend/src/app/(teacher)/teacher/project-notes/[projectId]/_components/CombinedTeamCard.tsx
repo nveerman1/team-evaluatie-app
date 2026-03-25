@@ -317,7 +317,7 @@ export function CombinedTeamCard({
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder={filter ? `Observatie voor ${filter}...` : "Korte observatie voor het team..."}
-            className="w-full min-h-[80px] rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 resize-none"
+            className="w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 resize-none"
           />
 
           {/* 4. OMZA tags + Save button row */}
