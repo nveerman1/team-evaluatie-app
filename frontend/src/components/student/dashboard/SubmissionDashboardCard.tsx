@@ -1,35 +1,26 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Upload, CheckCircle, AlertCircle, Calendar } from "lucide-react";
 import { ProjectAssessmentListItem } from "@/dtos";
-import { studentStyles } from "@/styles/student-dashboard.styles";
 import Link from "next/link";
 
 type SubmissionDashboardCardProps = {
-  assessment: ProjectAssessmentListItem & {
-    team_number?: number | null;
-    project_end_date?: string | null;
-  };
+  assessment: ProjectAssessmentListItem;
 };
 
-export function SubmissionDashboardCard({ 
-  assessment 
+export function SubmissionDashboardCard({
+  assessment,
 }: SubmissionDashboardCardProps) {
   // For now, we don't have submission status in the assessment data
   // This will be enhanced when we fetch actual submission data
   const hasSubmitted = false; // Placeholder
-  
-  // Format deadline date
+
   const formatDeadline = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('nl-NL', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
+      return date.toLocaleDateString("nl-NL", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
       });
     } catch {
       return null;
@@ -37,53 +28,75 @@ export function SubmissionDashboardCard({
   };
 
   const deadline = formatDeadline(assessment.project_end_date);
-  
+  const teamLabel = assessment.team_number
+    ? `Team ${assessment.team_number}`
+    : assessment.group_name || "Onbekend";
+
   return (
-    <Card className={studentStyles.cards.listCard.container}>
-      <CardContent className={studentStyles.cards.listCard.content}>
-        <div className={studentStyles.cards.listCard.flexContainer}>
-          <div className={studentStyles.cards.listCard.leftSection}>
+    <Link
+      href={`/student/project-assessments/${assessment.id}/submissions`}
+      className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+    >
+      <div className="flex items-stretch">
+        {/* Coloured status bar */}
+        <div
+          className={`w-1.5 flex-shrink-0 ${
+            hasSubmitted ? "bg-emerald-500" : "bg-amber-500"
+          }`}
+        />
+
+        <div className="flex w-full flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+          {/* Left: title, badge, type, tags */}
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className={studentStyles.typography.cardTitle}>
+              <h3 className="text-base font-semibold text-slate-900">
                 {assessment.title}
               </h3>
-              {hasSubmitted ? (
-                <Badge className="rounded-full bg-emerald-50 text-emerald-700 border-emerald-200">
-                  <CheckCircle className="mr-1 h-3 w-3" />
-                  Ingeleverd
-                </Badge>
-              ) : (
-                <Badge className="rounded-full bg-amber-50 text-amber-700 border-amber-200">
-                  <AlertCircle className="mr-1 h-3 w-3" />
-                  Nog inleveren
-                </Badge>
-              )}
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
+                  hasSubmitted
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                    : "bg-amber-50 text-amber-700 ring-amber-200"
+                }`}
+              >
+                {hasSubmitted ? "Ingeleverd" : "Nog inleveren"}
+              </span>
             </div>
-            <div className={studentStyles.typography.infoText}>
-              Team: {assessment.team_number ? `Team ${assessment.team_number}` : (assessment.group_name || "Onbekend")}
+
+            <div className="mt-1 text-sm text-slate-500">
+              Projectbeoordeling
             </div>
-            {deadline && (
-              <div className="flex items-center gap-1.5 text-sm text-slate-600">
-                <Calendar className="h-4 w-4" />
-                <span>Deadline: {deadline}</span>
-              </div>
-            )}
-            <div className={studentStyles.typography.metaTextSmall}>
-              Docent: {assessment.teacher_name || "Onbekend"}
+
+            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
+              <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                {teamLabel}
+              </span>
+              <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                {assessment.teacher_name || "Onbekend"}
+              </span>
             </div>
           </div>
 
-          <div className={studentStyles.cards.listCard.rightSection}>
-            <Button asChild className={studentStyles.buttons.primary} size="sm">
-              <Link href={`/student/project-assessments/${assessment.id}/submissions`}>
-                <Upload className="mr-1 h-4 w-4" />
-                Inleveren
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
+          {/* Right: deadline block + action button */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+            {deadline && (
+              <div className="min-w-[108px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
+                <div className="text-xs uppercase tracking-wide text-slate-500">
+                  Deadline
+                </div>
+                <div className="mt-1 text-base font-semibold text-slate-900">
+                  {deadline}
+                </div>
+              </div>
+            )}
+
+            <div className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-slate-800">
+              {hasSubmitted ? "Bekijken" : "Inleveren"}
+              <span className="ml-2">→</span>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Link>
   );
 }
