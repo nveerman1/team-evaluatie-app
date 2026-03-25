@@ -21,7 +21,12 @@ export type DashboardResponse = {
   rubric_id: number;
   rubric_scale_min: number;
   rubric_scale_max: number;
-  criteria: { id: number; name: string; weight: number; category?: string | null }[];
+  criteria: {
+    id: number;
+    name: string;
+    weight: number;
+    category?: string | null;
+  }[];
   items: DashboardRow[];
 };
 

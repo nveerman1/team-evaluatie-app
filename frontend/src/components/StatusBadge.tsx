@@ -18,9 +18,7 @@ export function StatusBadge({ status }: { status: EvalStatus }) {
     closed: "✅",
   };
   return (
-    <span
-      className={`px-2 py-1 rounded-full text-xs ${styles[status]}`}
-    >
+    <span className={`px-2 py-1 rounded-full text-xs ${styles[status]}`}>
       {icons[status]} {STATUS_LABEL[status]}
     </span>
   );

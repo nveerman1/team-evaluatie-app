@@ -12,11 +12,15 @@ export default function ProjectAssessmentReflectionsInner() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<ProjectAssessmentReflectionsOverview | null>(null);
+  const [data, setData] = useState<ProjectAssessmentReflectionsOverview | null>(
+    null,
+  );
 
   // UI state for search and filters
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "missing">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "submitted" | "missing"
+  >("all");
   const [sort, setSort] = useState<
     "name_asc" | "name_desc" | "date_new" | "date_old" | "words_hi" | "words_lo"
   >("name_asc");
@@ -27,7 +31,8 @@ export default function ProjectAssessmentReflectionsInner() {
       setLoading(true);
       setError(null);
       try {
-        const result = await projectAssessmentService.getReflections(assessmentId);
+        const result =
+          await projectAssessmentService.getReflections(assessmentId);
         setData(result);
         // Initialize all cards as collapsed
         const map: Record<number, boolean> = {};
@@ -37,8 +42,13 @@ export default function ProjectAssessmentReflectionsInner() {
         if (e instanceof ApiAuthError) {
           setError(e.originalMessage);
         } else {
-          const err = e as { response?: { data?: { detail?: string } }; message?: string };
-          setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+          const err = e as {
+            response?: { data?: { detail?: string } };
+            message?: string;
+          };
+          setError(
+            err?.response?.data?.detail || err?.message || "Laden mislukt",
+          );
         }
       } finally {
         setLoading(false);
@@ -110,7 +120,9 @@ export default function ProjectAssessmentReflectionsInner() {
         <select
           className="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as "all" | "submitted" | "missing")}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as "all" | "submitted" | "missing")
+          }
         >
           <option value="all">Alle reflecties</option>
           <option value="submitted">Ingeleverd</option>
@@ -171,7 +183,9 @@ export default function ProjectAssessmentReflectionsInner() {
                   }
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-gray-900">{reflection.user_name}</span>
+                    <span className="font-semibold text-gray-900">
+                      {reflection.user_name}
+                    </span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
                         reflection.submitted_at

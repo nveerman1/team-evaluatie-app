@@ -28,7 +28,8 @@ export default function StudentProjectOverviewPage() {
           <div className="flex flex-col text-xs text-slate-600 sm:flex-row sm:items-center sm:gap-2">
             <span className="font-medium text-slate-800">Tip</span>
             <span>
-              Gebruik deze pagina om je ontwikkeling over meerdere projecten te volgen.
+              Gebruik deze pagina om je ontwikkeling over meerdere projecten te
+              volgen.
             </span>
           </div>
           <a
@@ -115,8 +116,12 @@ export default function StudentProjectOverviewPage() {
         <section className="grid gap-4 lg:grid-cols-5">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:col-span-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">Cijfers per project</h2>
-              <span className="text-[11px] text-slate-500">Lijngrafiek • klikbaar</span>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Cijfers per project
+              </h2>
+              <span className="text-[11px] text-slate-500">
+                Lijngrafiek • klikbaar
+              </span>
             </div>
             <div className="mt-3 flex h-56 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-xs text-slate-400">
               Line chart placeholder
@@ -220,8 +225,8 @@ export default function StudentProjectOverviewPage() {
               </li>
             </ul>
             <p className="mt-3 text-[11px] text-slate-500">
-              De kleuren sluiten aan bij de grafieken op deze pagina en bij
-              de projectrubric.
+              De kleuren sluiten aan bij de grafieken op deze pagina en bij de
+              projectrubric.
             </p>
           </div>
         </section>

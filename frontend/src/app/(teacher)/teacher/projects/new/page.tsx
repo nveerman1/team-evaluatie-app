@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { projectService, clientService, rubricService, competencyService } from "@/services";
+import {
+  projectService,
+  clientService,
+  rubricService,
+  competencyService,
+} from "@/services";
 import { useCourses } from "@/hooks";
 import type { WizardProjectCreate, EvaluationConfig } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
@@ -13,8 +18,8 @@ import { MultiSelect } from "@/components/form/MultiSelect";
 import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 
 // Period options constant
-const PERIOD_OPTIONS = ['P1', 'P2', 'P3', 'P4'] as const;
-type Period = typeof PERIOD_OPTIONS[number];
+const PERIOD_OPTIONS = ["P1", "P2", "P3", "P4"] as const;
+type Period = (typeof PERIOD_OPTIONS)[number];
 
 export default function NewProjectWizardPage() {
   const router = useRouter();
@@ -39,7 +44,7 @@ export default function NewProjectWizardPage() {
   const [description, setDescription] = useState("");
 
   // Filtered courses based on niveau selection
-  const filteredCourses = courses.filter(course => {
+  const filteredCourses = courses.filter((course) => {
     if (!niveau) return true;
     return course.level === niveau;
   });
@@ -48,25 +53,33 @@ export default function NewProjectWizardPage() {
   const [peerTussenEnabled, setPeerTussenEnabled] = useState(true);
   const [peerTussenDeadline, setPeerTussenDeadline] = useState("");
   const [peerTussenRubricId, setPeerTussenRubricId] = useState<number | "">("");
-  
+
   const [peerEindEnabled, setPeerEindEnabled] = useState(true);
   const [peerEindDeadline, setPeerEindDeadline] = useState("");
   const [peerEindRubricId, setPeerEindRubricId] = useState<number | "">("");
-  
-  const [projectAssessmentEnabled, setProjectAssessmentEnabled] = useState(true);
-  const [projectAssessmentRubricId, setProjectAssessmentRubricId] = useState<number | "">("");
-  const [projectAssessmentDeadline, setProjectAssessmentDeadline] = useState("");
+
+  const [projectAssessmentEnabled, setProjectAssessmentEnabled] =
+    useState(true);
+  const [projectAssessmentRubricId, setProjectAssessmentRubricId] = useState<
+    number | ""
+  >("");
+  const [projectAssessmentDeadline, setProjectAssessmentDeadline] =
+    useState("");
   const [projectAssessmentVersion, setProjectAssessmentVersion] = useState("");
-  
-  const [projectAssessmentTussenEnabled, setProjectAssessmentTussenEnabled] = useState(false);
-  const [projectAssessmentTussenRubricId, setProjectAssessmentTussenRubricId] = useState<number | "">("");
-  const [projectAssessmentTussenDeadline, setProjectAssessmentTussenDeadline] = useState("");
-  
+
+  const [projectAssessmentTussenEnabled, setProjectAssessmentTussenEnabled] =
+    useState(false);
+  const [projectAssessmentTussenRubricId, setProjectAssessmentTussenRubricId] =
+    useState<number | "">("");
+  const [projectAssessmentTussenDeadline, setProjectAssessmentTussenDeadline] =
+    useState("");
+
   const [competencyScanEnabled, setCompetencyScanEnabled] = useState(false);
   const [competencyScanStartDate, setCompetencyScanStartDate] = useState("");
   const [competencyScanEndDate, setCompetencyScanEndDate] = useState("");
   const [competencyScanDeadline, setCompetencyScanDeadline] = useState("");
-  const [competencyScanCompetencyIds, setCompetencyScanCompetencyIds] = useState<number[]>([]);
+  const [competencyScanCompetencyIds, setCompetencyScanCompetencyIds] =
+    useState<number[]>([]);
   const [competencyScanTitle, setCompetencyScanTitle] = useState("");
 
   // Step 3: Clients and notes
@@ -76,7 +89,7 @@ export default function NewProjectWizardPage() {
   const [loadingClients, setLoadingClients] = useState(false);
   const [clientsLoadError, setClientsLoadError] = useState<string | null>(null);
   const [clientsLoaded, setClientsLoaded] = useState(false);
-  
+
   // Rubrics and competencies for step 2
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
@@ -91,7 +104,7 @@ export default function NewProjectWizardPage() {
       loadRubrics();
     }
   }, [step, rubricsLoaded]);
-  
+
   // Load competencies when reaching step 2
   useEffect(() => {
     if (step === 2 && !competenciesLoaded) {
@@ -105,7 +118,7 @@ export default function NewProjectWizardPage() {
       loadClients();
     }
   }, [step, clientsLoaded]);
-  
+
   async function loadRubrics() {
     setLoadingRubrics(true);
     try {
@@ -119,7 +132,7 @@ export default function NewProjectWizardPage() {
       setLoadingRubrics(false);
     }
   }
-  
+
   async function loadCompetencies() {
     setLoadingCompetencies(true);
     try {
@@ -144,7 +157,7 @@ export default function NewProjectWizardPage() {
     } catch (e: any) {
       console.error("Failed to load clients:", e);
       setClientsLoadError(
-        "Kon opdrachtgevers niet laden. Je kunt doorgaan zonder opdrachtgevers te selecteren."
+        "Kon opdrachtgevers niet laden. Je kunt doorgaan zonder opdrachtgevers te selecteren.",
       );
       // Mark as loaded to prevent retry loop
       setClientsLoaded(true);
@@ -200,7 +213,7 @@ export default function NewProjectWizardPage() {
     try {
       // Build new nested evaluation config
       const evaluationConfig: EvaluationConfig = {};
-      
+
       if (peerTussenEnabled) {
         evaluationConfig.peer_tussen = {
           enabled: true,
@@ -209,7 +222,7 @@ export default function NewProjectWizardPage() {
           title_suffix: "tussentijds",
         };
       }
-      
+
       if (peerEindEnabled) {
         evaluationConfig.peer_eind = {
           enabled: true,
@@ -218,7 +231,7 @@ export default function NewProjectWizardPage() {
           title_suffix: "eind",
         };
       }
-      
+
       // Project Assessment Tussentijds (interim)
       if (projectAssessmentTussenEnabled && projectAssessmentTussenRubricId) {
         evaluationConfig.project_assessment_tussen = {
@@ -228,7 +241,7 @@ export default function NewProjectWizardPage() {
           version: "tussentijds",
         };
       }
-      
+
       // Project Assessment (final/eind)
       if (projectAssessmentEnabled && projectAssessmentRubricId) {
         evaluationConfig.project_assessment_eind = {
@@ -238,14 +251,17 @@ export default function NewProjectWizardPage() {
           version: projectAssessmentVersion || "eind",
         };
       }
-      
+
       if (competencyScanEnabled) {
         evaluationConfig.competency_scan = {
           enabled: true,
           start_date: competencyScanStartDate || undefined,
           end_date: competencyScanEndDate || undefined,
           deadline: competencyScanDeadline || undefined,
-          competency_ids: competencyScanCompetencyIds.length > 0 ? competencyScanCompetencyIds : undefined,
+          competency_ids:
+            competencyScanCompetencyIds.length > 0
+              ? competencyScanCompetencyIds
+              : undefined,
           title: competencyScanTitle || undefined,
         };
       }
@@ -266,11 +282,11 @@ export default function NewProjectWizardPage() {
       };
 
       const result = await projectService.wizardCreateProject(payload);
-      
+
       // Store created entities and warnings
       setCreatedEntities(result.entities || []);
       setWizardWarnings(result.warnings || []);
-      
+
       setCreatedProjectId(result.project.id);
       setSuccess(true);
     } catch (e: any) {
@@ -278,24 +294,26 @@ export default function NewProjectWizardPage() {
       const errorMessage = e?.message?.includes("Network Error")
         ? "Kan geen verbinding maken met de backend server. Controleer of de backend server draait op http://localhost:8000"
         : typeof detail === "string"
-        ? detail
-        : e?.message || "Project aanmaken mislukt";
-      
+          ? detail
+          : e?.message || "Project aanmaken mislukt";
+
       setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   }
 
-
-
   // Success screen
   if (success) {
     // Count entity types
-    const peerCount = createdEntities.filter(e => e.type === "peer").length;
-    const projectAssessmentCount = createdEntities.filter(e => e.type === "project_assessment").length;
-    const competencyScanCount = createdEntities.filter(e => e.type === "competency_scan").length;
-    
+    const peerCount = createdEntities.filter((e) => e.type === "peer").length;
+    const projectAssessmentCount = createdEntities.filter(
+      (e) => e.type === "project_assessment",
+    ).length;
+    const competencyScanCount = createdEntities.filter(
+      (e) => e.type === "competency_scan",
+    ).length;
+
     return (
       <main className="p-6 max-w-4xl mx-auto">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
@@ -306,11 +324,13 @@ export default function NewProjectWizardPage() {
               Het project &quot;{title}&quot; is succesvol aangemaakt.
             </p>
           </div>
-          
+
           {/* Show warnings if any */}
           {wizardWarnings.length > 0 && (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Waarschuwingen</h3>
+              <h3 className="font-semibold text-yellow-800 mb-2">
+                ⚠️ Waarschuwingen
+              </h3>
               <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
                 {wizardWarnings.map((warning, idx) => (
                   <li key={idx}>{warning}</li>
@@ -318,7 +338,7 @@ export default function NewProjectWizardPage() {
               </ul>
             </div>
           )}
-          
+
           {/* Summary of created entities */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <h3 className="font-semibold mb-3">Aangemaakt:</h3>
@@ -326,24 +346,32 @@ export default function NewProjectWizardPage() {
               {peerCount > 0 && (
                 <li className="flex items-center gap-2">
                   <span className="text-green-600">✓</span>
-                  <span>{peerCount} Peerevaluatie{peerCount > 1 ? 's' : ''}</span>
+                  <span>
+                    {peerCount} Peerevaluatie{peerCount > 1 ? "s" : ""}
+                  </span>
                 </li>
               )}
               {projectAssessmentCount > 0 && (
                 <li className="flex items-center gap-2">
                   <span className="text-green-600">✓</span>
-                  <span>{projectAssessmentCount} Projectbeoordeling{projectAssessmentCount > 1 ? 'en' : ''}</span>
+                  <span>
+                    {projectAssessmentCount} Projectbeoordeling
+                    {projectAssessmentCount > 1 ? "en" : ""}
+                  </span>
                 </li>
               )}
               {competencyScanCount > 0 && (
                 <li className="flex items-center gap-2">
                   <span className="text-green-600">✓</span>
-                  <span>{competencyScanCount} Competentiescan{competencyScanCount > 1 ? 's' : ''}</span>
+                  <span>
+                    {competencyScanCount} Competentiescan
+                    {competencyScanCount > 1 ? "s" : ""}
+                  </span>
                 </li>
               )}
             </ul>
           </div>
-          
+
           <div className="flex gap-3 justify-center flex-wrap">
             {/* Primary action: Navigate to class-teams to create teams */}
             {createdProjectId && (
@@ -351,7 +379,7 @@ export default function NewProjectWizardPage() {
                 onClick={() => {
                   // Defensive null check
                   if (!createdProjectId) return;
-                  
+
                   const params = new URLSearchParams();
                   params.set("project_id", createdProjectId.toString());
                   if (courseId) params.set("course_id", courseId.toString());
@@ -362,7 +390,7 @@ export default function NewProjectWizardPage() {
                 👥 Teams aanmaken
               </button>
             )}
-            
+
             {projectAssessmentCount > 0 && (
               <button
                 onClick={() => router.push("/teacher/project-assessments")}
@@ -405,7 +433,8 @@ export default function NewProjectWizardPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Nieuw project aanmaken</h1>
         <p className="text-gray-600">
-          Maak in één keer een project aan met gekoppelde evaluaties, opdrachtgevers en aantekeningen.
+          Maak in één keer een project aan met gekoppelde evaluaties,
+          opdrachtgevers en aantekeningen.
         </p>
       </div>
 
@@ -422,8 +451,8 @@ export default function NewProjectWizardPage() {
                   s < step
                     ? "bg-green-500 text-white"
                     : s === step
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-600"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
                 }`}
               >
                 {s < step ? "✓" : s}
@@ -467,7 +496,7 @@ export default function NewProjectWizardPage() {
         {step === 1 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Projectbasis</h2>
-            
+
             <div>
               <label className="block text-sm font-medium mb-1">
                 Projecttitel <span className="text-red-500">*</span>
@@ -505,7 +534,9 @@ export default function NewProjectWizardPage() {
               <label className="block text-sm font-medium mb-1">Course</label>
               <select
                 value={courseId}
-                onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) =>
+                  setCourseId(e.target.value ? Number(e.target.value) : "")
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="">Selecteer een course...</option>
@@ -525,15 +556,19 @@ export default function NewProjectWizardPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="">Selecteer een periode...</option>
-                {PERIOD_OPTIONS.map(p => (
-                  <option key={p} value={p}>{p}</option>
+                {PERIOD_OPTIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Startdatum</label>
+                <label className="block text-sm font-medium mb-1">
+                  Startdatum
+                </label>
                 <input
                   type="date"
                   value={startDate}
@@ -542,7 +577,9 @@ export default function NewProjectWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Einddatum</label>
+                <label className="block text-sm font-medium mb-1">
+                  Einddatum
+                </label>
                 <input
                   type="date"
                   value={endDate}
@@ -553,7 +590,9 @@ export default function NewProjectWizardPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Beschrijving</label>
+              <label className="block text-sm font-medium mb-1">
+                Beschrijving
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -569,9 +608,12 @@ export default function NewProjectWizardPage() {
         {step === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-2">Evaluaties & beoordeling</h2>
+              <h2 className="text-xl font-semibold mb-2">
+                Evaluaties & beoordeling
+              </h2>
               <p className="text-sm text-gray-600">
-                Configureer welke evaluaties automatisch aangemaakt moeten worden.
+                Configureer welke evaluaties automatisch aangemaakt moeten
+                worden.
               </p>
             </div>
 
@@ -589,33 +631,51 @@ export default function NewProjectWizardPage() {
                       className="mt-1"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">Peerevaluatie tussentijds</div>
+                      <div className="font-medium">
+                        Peerevaluatie tussentijds
+                      </div>
                       <div className="text-sm text-gray-600 mb-3">
                         Studenten beoordelen elkaar halverwege het project
                       </div>
-                      
+
                       {peerTussenEnabled && (
                         <div className="space-y-3 mt-3 pl-6 border-l-2 border-blue-200">
                           <div>
-                            <label className="block text-xs font-medium mb-1">Deadline</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Deadline
+                            </label>
                             <input
                               type="datetime-local"
                               value={peerTussenDeadline}
-                              onChange={(e) => setPeerTussenDeadline(e.target.value)}
+                              onChange={(e) =>
+                                setPeerTussenDeadline(e.target.value)
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Rubric (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Rubric (optioneel)
+                            </label>
                             <select
                               value={peerTussenRubricId}
-                              onChange={(e) => setPeerTussenRubricId(e.target.value ? Number(e.target.value) : "")}
+                              onChange={(e) =>
+                                setPeerTussenRubricId(
+                                  e.target.value ? Number(e.target.value) : "",
+                                )
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             >
-                              <option value="">Gebruik standaard peer rubric</option>
-                              {rubrics.filter(r => r.scope === "peer").map(rubric => (
-                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
-                              ))}
+                              <option value="">
+                                Gebruik standaard peer rubric
+                              </option>
+                              {rubrics
+                                .filter((r) => r.scope === "peer")
+                                .map((rubric) => (
+                                  <option key={rubric.id} value={rubric.id}>
+                                    {rubric.title}
+                                  </option>
+                                ))}
                             </select>
                           </div>
                         </div>
@@ -636,31 +696,48 @@ export default function NewProjectWizardPage() {
                     <div className="flex-1">
                       <div className="font-medium">Peerevaluatie eind</div>
                       <div className="text-sm text-gray-600 mb-3">
-                        Studenten beoordelen elkaar aan het einde van het project
+                        Studenten beoordelen elkaar aan het einde van het
+                        project
                       </div>
-                      
+
                       {peerEindEnabled && (
                         <div className="space-y-3 mt-3 pl-6 border-l-2 border-blue-200">
                           <div>
-                            <label className="block text-xs font-medium mb-1">Deadline</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Deadline
+                            </label>
                             <input
                               type="datetime-local"
                               value={peerEindDeadline}
-                              onChange={(e) => setPeerEindDeadline(e.target.value)}
+                              onChange={(e) =>
+                                setPeerEindDeadline(e.target.value)
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Rubric (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Rubric (optioneel)
+                            </label>
                             <select
                               value={peerEindRubricId}
-                              onChange={(e) => setPeerEindRubricId(e.target.value ? Number(e.target.value) : "")}
+                              onChange={(e) =>
+                                setPeerEindRubricId(
+                                  e.target.value ? Number(e.target.value) : "",
+                                )
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             >
-                              <option value="">Gebruik standaard peer rubric</option>
-                              {rubrics.filter(r => r.scope === "peer").map(rubric => (
-                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
-                              ))}
+                              <option value="">
+                                Gebruik standaard peer rubric
+                              </option>
+                              {rubrics
+                                .filter((r) => r.scope === "peer")
+                                .map((rubric) => (
+                                  <option key={rubric.id} value={rubric.id}>
+                                    {rubric.title}
+                                  </option>
+                                ))}
                             </select>
                           </div>
                         </div>
@@ -675,15 +752,20 @@ export default function NewProjectWizardPage() {
                     <input
                       type="checkbox"
                       checked={projectAssessmentTussenEnabled}
-                      onChange={(e) => setProjectAssessmentTussenEnabled(e.target.checked)}
+                      onChange={(e) =>
+                        setProjectAssessmentTussenEnabled(e.target.checked)
+                      }
                       className="mt-1"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">Projectbeoordeling Tussentijds</div>
-                      <div className="text-sm text-gray-600 mb-3">
-                        Docent beoordeelt het tussentijdse projectresultaat per team
+                      <div className="font-medium">
+                        Projectbeoordeling Tussentijds
                       </div>
-                      
+                      <div className="text-sm text-gray-600 mb-3">
+                        Docent beoordeelt het tussentijdse projectresultaat per
+                        team
+                      </div>
+
                       {projectAssessmentTussenEnabled && (
                         <div className="space-y-3 mt-3 pl-6 border-l-2 border-orange-200">
                           <div>
@@ -692,25 +774,42 @@ export default function NewProjectWizardPage() {
                             </label>
                             <select
                               value={projectAssessmentTussenRubricId}
-                              onChange={(e) => setProjectAssessmentTussenRubricId(e.target.value ? Number(e.target.value) : "")}
+                              onChange={(e) =>
+                                setProjectAssessmentTussenRubricId(
+                                  e.target.value ? Number(e.target.value) : "",
+                                )
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               required
                             >
-                              <option value="">Selecteer project rubric...</option>
-                              {rubrics.filter(r => r.scope === "project").map(rubric => (
-                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
-                              ))}
+                              <option value="">
+                                Selecteer project rubric...
+                              </option>
+                              {rubrics
+                                .filter((r) => r.scope === "project")
+                                .map((rubric) => (
+                                  <option key={rubric.id} value={rubric.id}>
+                                    {rubric.title}
+                                  </option>
+                                ))}
                             </select>
                             <p className="text-xs text-gray-500 mt-1">
-                              Er wordt één tussentijdse beoordeling per team aangemaakt
+                              Er wordt één tussentijdse beoordeling per team
+                              aangemaakt
                             </p>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Deadline (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Deadline (optioneel)
+                            </label>
                             <input
                               type="datetime-local"
                               value={projectAssessmentTussenDeadline}
-                              onChange={(e) => setProjectAssessmentTussenDeadline(e.target.value)}
+                              onChange={(e) =>
+                                setProjectAssessmentTussenDeadline(
+                                  e.target.value,
+                                )
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             />
                           </div>
@@ -726,15 +825,19 @@ export default function NewProjectWizardPage() {
                     <input
                       type="checkbox"
                       checked={projectAssessmentEnabled}
-                      onChange={(e) => setProjectAssessmentEnabled(e.target.checked)}
+                      onChange={(e) =>
+                        setProjectAssessmentEnabled(e.target.checked)
+                      }
                       className="mt-1"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">Projectbeoordeling (Eind)</div>
+                      <div className="font-medium">
+                        Projectbeoordeling (Eind)
+                      </div>
                       <div className="text-sm text-gray-600 mb-3">
                         Docent beoordeelt het eindresultaat per team
                       </div>
-                      
+
                       {projectAssessmentEnabled && (
                         <div className="space-y-3 mt-3 pl-6 border-l-2 border-green-200">
                           <div>
@@ -743,34 +846,52 @@ export default function NewProjectWizardPage() {
                             </label>
                             <select
                               value={projectAssessmentRubricId}
-                              onChange={(e) => setProjectAssessmentRubricId(e.target.value ? Number(e.target.value) : "")}
+                              onChange={(e) =>
+                                setProjectAssessmentRubricId(
+                                  e.target.value ? Number(e.target.value) : "",
+                                )
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               required
                             >
-                              <option value="">Selecteer project rubric...</option>
-                              {rubrics.filter(r => r.scope === "project").map(rubric => (
-                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
-                              ))}
+                              <option value="">
+                                Selecteer project rubric...
+                              </option>
+                              {rubrics
+                                .filter((r) => r.scope === "project")
+                                .map((rubric) => (
+                                  <option key={rubric.id} value={rubric.id}>
+                                    {rubric.title}
+                                  </option>
+                                ))}
                             </select>
                             <p className="text-xs text-gray-500 mt-1">
                               Er wordt één beoordeling per team aangemaakt
                             </p>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Deadline (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Deadline (optioneel)
+                            </label>
                             <input
                               type="datetime-local"
                               value={projectAssessmentDeadline}
-                              onChange={(e) => setProjectAssessmentDeadline(e.target.value)}
+                              onChange={(e) =>
+                                setProjectAssessmentDeadline(e.target.value)
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Versie (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Versie (optioneel)
+                            </label>
                             <input
                               type="text"
                               value={projectAssessmentVersion}
-                              onChange={(e) => setProjectAssessmentVersion(e.target.value)}
+                              onChange={(e) =>
+                                setProjectAssessmentVersion(e.target.value)
+                              }
                               placeholder="bijv. tussentijds, eind"
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             />
@@ -787,66 +908,89 @@ export default function NewProjectWizardPage() {
                     <input
                       type="checkbox"
                       checked={competencyScanEnabled}
-                      onChange={(e) => setCompetencyScanEnabled(e.target.checked)}
+                      onChange={(e) =>
+                        setCompetencyScanEnabled(e.target.checked)
+                      }
                       className="mt-1"
                       id="competency-scan-checkbox"
                     />
                     <div className="flex-1">
-                      <label htmlFor="competency-scan-checkbox" className="font-medium cursor-pointer">
+                      <label
+                        htmlFor="competency-scan-checkbox"
+                        className="font-medium cursor-pointer"
+                      >
                         Competentiescan
                       </label>
                       <div className="text-sm text-gray-600 mb-3">
                         Studenten vullen een competentiescan in voor dit project
                       </div>
-                      
+
                       {competencyScanEnabled && (
                         <div className="space-y-3 mt-3 pl-6 border-l-2 border-purple-200">
                           <div>
-                            <label className="block text-xs font-medium mb-1">Titel (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Titel (optioneel)
+                            </label>
                             <input
                               type="text"
                               value={competencyScanTitle}
-                              onChange={(e) => setCompetencyScanTitle(e.target.value)}
+                              onChange={(e) =>
+                                setCompetencyScanTitle(e.target.value)
+                              }
                               placeholder="bijv. Q1 Competentiescan"
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <label className="block text-xs font-medium mb-1">Startdatum</label>
+                              <label className="block text-xs font-medium mb-1">
+                                Startdatum
+                              </label>
                               <input
                                 type="datetime-local"
                                 value={competencyScanStartDate}
-                                onChange={(e) => setCompetencyScanStartDate(e.target.value)}
+                                onChange={(e) =>
+                                  setCompetencyScanStartDate(e.target.value)
+                                }
                                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium mb-1">Einddatum</label>
+                              <label className="block text-xs font-medium mb-1">
+                                Einddatum
+                              </label>
                               <input
                                 type="datetime-local"
                                 value={competencyScanEndDate}
-                                onChange={(e) => setCompetencyScanEndDate(e.target.value)}
+                                onChange={(e) =>
+                                  setCompetencyScanEndDate(e.target.value)
+                                }
                                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               />
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Deadline (optioneel)</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Deadline (optioneel)
+                            </label>
                             <input
                               type="datetime-local"
                               value={competencyScanDeadline}
-                              onChange={(e) => setCompetencyScanDeadline(e.target.value)}
+                              onChange={(e) =>
+                                setCompetencyScanDeadline(e.target.value)
+                              }
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               placeholder="Anders wordt einddatum gebruikt"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1">Competenties</label>
+                            <label className="block text-xs font-medium mb-1">
+                              Competenties
+                            </label>
                             <MultiSelect
-                              options={competencies.map(comp => ({
+                              options={competencies.map((comp) => ({
                                 id: comp.id,
-                                label: comp.name
+                                label: comp.name,
                               }))}
                               value={competencyScanCompetencyIds}
                               onChange={setCompetencyScanCompetencyIds}
@@ -854,7 +998,9 @@ export default function NewProjectWizardPage() {
                               className="w-full"
                             />
                             {competencies.length === 0 && (
-                              <p className="text-xs text-gray-500 italic mt-1">Geen competenties beschikbaar</p>
+                              <p className="text-xs text-gray-500 italic mt-1">
+                                Geen competenties beschikbaar
+                              </p>
                             )}
                           </div>
                         </div>
@@ -870,7 +1016,9 @@ export default function NewProjectWizardPage() {
         {/* Step 3: Clients and notes */}
         {step === 3 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold mb-4">Opdrachtgevers & aantekeningen</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Opdrachtgevers & aantekeningen
+            </h2>
 
             <div>
               <h3 className="font-medium mb-2">Opdrachtgevers</h3>
@@ -894,10 +1042,10 @@ export default function NewProjectWizardPage() {
               )}
 
               <SearchableMultiSelect
-                options={clients.map(client => ({
+                options={clients.map((client) => ({
                   id: client.id,
                   label: client.organization,
-                  subtitle: client.contact_name
+                  subtitle: client.contact_name,
                 }))}
                 value={selectedClientIds}
                 onChange={setSelectedClientIds}
@@ -925,8 +1073,9 @@ export default function NewProjectWizardPage() {
                     Maak een standaard projectaantekeningen-pagina aan
                   </div>
                   <div className="text-sm text-gray-600">
-                    Projectaantekeningen zijn alleen zichtbaar voor docenten en kunnen gebruikt
-                    worden voor planning, materialen, contact met opdrachtgever etc.
+                    Projectaantekeningen zijn alleen zichtbaar voor docenten en
+                    kunnen gebruikt worden voor planning, materialen, contact
+                    met opdrachtgever etc.
                   </div>
                 </div>
               </label>
@@ -939,7 +1088,8 @@ export default function NewProjectWizardPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Bevestigen</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Controleer de gegevens en klik op &quot;Project aanmaken&quot; om te bevestigen.
+              Controleer de gegevens en klik op &quot;Project aanmaken&quot; om
+              te bevestigen.
             </p>
 
             <div className="space-y-4">
@@ -988,10 +1138,13 @@ export default function NewProjectWizardPage() {
                 <ul className="space-y-2 text-sm">
                   {peerTussenEnabled && (
                     <li>
-                      <div className="font-medium">✓ Peerevaluatie tussentijds</div>
+                      <div className="font-medium">
+                        ✓ Peerevaluatie tussentijds
+                      </div>
                       {peerTussenDeadline && (
                         <div className="text-xs text-gray-600 ml-4">
-                          Deadline: {new Date(peerTussenDeadline).toLocaleString("nl-NL")}
+                          Deadline:{" "}
+                          {new Date(peerTussenDeadline).toLocaleString("nl-NL")}
                         </div>
                       )}
                     </li>
@@ -1001,33 +1154,49 @@ export default function NewProjectWizardPage() {
                       <div className="font-medium">✓ Peerevaluatie eind</div>
                       {peerEindDeadline && (
                         <div className="text-xs text-gray-600 ml-4">
-                          Deadline: {new Date(peerEindDeadline).toLocaleString("nl-NL")}
+                          Deadline:{" "}
+                          {new Date(peerEindDeadline).toLocaleString("nl-NL")}
                         </div>
                       )}
                     </li>
                   )}
                   {projectAssessmentTussenEnabled && (
                     <li>
-                      <div className="font-medium">✓ Projectbeoordeling Tussentijds</div>
+                      <div className="font-medium">
+                        ✓ Projectbeoordeling Tussentijds
+                      </div>
                       <div className="text-xs text-gray-600 ml-4">
-                        Rubric: {rubrics.find(r => r.id === projectAssessmentTussenRubricId)?.title || "Niet geselecteerd"}
+                        Rubric:{" "}
+                        {rubrics.find(
+                          (r) => r.id === projectAssessmentTussenRubricId,
+                        )?.title || "Niet geselecteerd"}
                       </div>
                       {projectAssessmentTussenDeadline && (
                         <div className="text-xs text-gray-600 ml-4">
-                          Deadline: {new Date(projectAssessmentTussenDeadline).toLocaleString("nl-NL")}
+                          Deadline:{" "}
+                          {new Date(
+                            projectAssessmentTussenDeadline,
+                          ).toLocaleString("nl-NL")}
                         </div>
                       )}
                     </li>
                   )}
                   {projectAssessmentEnabled && (
                     <li>
-                      <div className="font-medium">✓ Projectbeoordeling (Eind)</div>
+                      <div className="font-medium">
+                        ✓ Projectbeoordeling (Eind)
+                      </div>
                       <div className="text-xs text-gray-600 ml-4">
-                        Rubric: {rubrics.find(r => r.id === projectAssessmentRubricId)?.title || "Niet geselecteerd"}
+                        Rubric:{" "}
+                        {rubrics.find((r) => r.id === projectAssessmentRubricId)
+                          ?.title || "Niet geselecteerd"}
                       </div>
                       {projectAssessmentDeadline && (
                         <div className="text-xs text-gray-600 ml-4">
-                          Deadline: {new Date(projectAssessmentDeadline).toLocaleString("nl-NL")}
+                          Deadline:{" "}
+                          {new Date(projectAssessmentDeadline).toLocaleString(
+                            "nl-NL",
+                          )}
                         </div>
                       )}
                     </li>
@@ -1037,12 +1206,23 @@ export default function NewProjectWizardPage() {
                       <div className="font-medium">✓ Competentiescan</div>
                       {competencyScanCompetencyIds.length > 0 && (
                         <div className="text-xs text-gray-600 ml-4">
-                          {competencyScanCompetencyIds.length} competentie{competencyScanCompetencyIds.length > 1 ? 's' : ''} geselecteerd
+                          {competencyScanCompetencyIds.length} competentie
+                          {competencyScanCompetencyIds.length > 1
+                            ? "s"
+                            : ""}{" "}
+                          geselecteerd
                         </div>
                       )}
                       {competencyScanStartDate && competencyScanEndDate && (
                         <div className="text-xs text-gray-600 ml-4">
-                          Periode: {new Date(competencyScanStartDate).toLocaleDateString("nl-NL")} - {new Date(competencyScanEndDate).toLocaleDateString("nl-NL")}
+                          Periode:{" "}
+                          {new Date(competencyScanStartDate).toLocaleDateString(
+                            "nl-NL",
+                          )}{" "}
+                          -{" "}
+                          {new Date(competencyScanEndDate).toLocaleDateString(
+                            "nl-NL",
+                          )}
                         </div>
                       )}
                     </li>
@@ -1052,16 +1232,22 @@ export default function NewProjectWizardPage() {
                     !projectAssessmentEnabled &&
                     !projectAssessmentTussenEnabled &&
                     !competencyScanEnabled && (
-                      <li className="text-gray-500 italic">Geen evaluaties geselecteerd</li>
+                      <li className="text-gray-500 italic">
+                        Geen evaluaties geselecteerd
+                      </li>
                     )}
                 </ul>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold mb-2">Opdrachtgevers & aantekeningen</h3>
+                <h3 className="font-semibold mb-2">
+                  Opdrachtgevers & aantekeningen
+                </h3>
                 <div className="space-y-2 text-sm">
                   <div>
-                    <span className="text-gray-600">Geselecteerde opdrachtgevers: </span>
+                    <span className="text-gray-600">
+                      Geselecteerde opdrachtgevers:{" "}
+                    </span>
                     <span className="font-medium">
                       {selectedClientIds.length === 0
                         ? "Geen"
@@ -1069,7 +1255,9 @@ export default function NewProjectWizardPage() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Projectaantekeningen: </span>
+                    <span className="text-gray-600">
+                      Projectaantekeningen:{" "}
+                    </span>
                     <span className="font-medium">
                       {createDefaultNote ? "Ja" : "Nee"}
                     </span>

@@ -20,9 +20,9 @@ export default function CompetenciesOverviewTab() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  
+
   const [activeSubTab, setActiveSubTab] = useState("overzicht");
-  
+
   // Initialize filter values from URL
   const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
     academicYear: searchParams.get("year") || undefined,
@@ -30,60 +30,70 @@ export default function CompetenciesOverviewTab() {
     period: searchParams.get("period") || undefined,
     searchQuery: searchParams.get("q") || undefined,
   });
-  
+
   const [filters, setFilters] = useState<CompetencyOverviewFilters>({
-    scanRange: filterValues.period as CompetencyOverviewFilters["scanRange"] || "last_3",
-    academicYearId: filterValues.academicYear ? Number(filterValues.academicYear) : undefined,
+    scanRange:
+      (filterValues.period as CompetencyOverviewFilters["scanRange"]) ||
+      "last_3",
+    academicYearId: filterValues.academicYear
+      ? Number(filterValues.academicYear)
+      : undefined,
     courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
   });
-  
+
   const { data: filterOptions } = useCompetencyFilterOptions();
-  
+
   // Sync URL with filter values
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     if (filterValues.academicYear) {
       params.set("year", filterValues.academicYear);
     } else {
       params.delete("year");
     }
-    
+
     if (filterValues.courseId) {
       params.set("subjectId", filterValues.courseId);
     } else {
       params.delete("subjectId");
     }
-    
+
     if (filterValues.period) {
       params.set("period", filterValues.period);
     } else {
       params.delete("period");
     }
-    
+
     if (filterValues.searchQuery) {
       params.set("q", filterValues.searchQuery);
     } else {
       params.delete("q");
     }
-    
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [filterValues, pathname, router, searchParams]);
-  
+
   // Update internal filters when filterValues change
   useEffect(() => {
-    const academicYearId = filterValues.academicYear ? Number(filterValues.academicYear) : undefined;
+    const academicYearId = filterValues.academicYear
+      ? Number(filterValues.academicYear)
+      : undefined;
     setFilters({
-      scanRange: filterValues.period as CompetencyOverviewFilters["scanRange"] || "last_3",
+      scanRange:
+        (filterValues.period as CompetencyOverviewFilters["scanRange"]) ||
+        "last_3",
       academicYearId,
-      courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
+      courseId: filterValues.courseId
+        ? Number(filterValues.courseId)
+        : undefined,
     });
   }, [filterValues]);
-  
+
   const handleFilterChange = (newFilters: OverviewFilterValues) => {
     setFilterValues(newFilters);
   };
-  
+
   // Period options
   const periodOptions = [
     { value: "last_3", label: "Laatste 3 scans" },
@@ -92,7 +102,6 @@ export default function CompetenciesOverviewTab() {
     { value: "all", label: "Alles" },
   ];
 
-  
   // Show empty state if no course selected
   if (!filterValues.courseId) {
     return (
@@ -129,7 +138,7 @@ export default function CompetenciesOverviewTab() {
           Overzicht van competentiescans en -ontwikkeling
         </p>
       </div>
-      
+
       {/* Global Filter Bar */}
       <OverviewFilters
         filters={filterValues}
@@ -170,8 +179,12 @@ export default function CompetenciesOverviewTab() {
       {/* Sub-tab Content */}
       <div>
         {activeSubTab === "overzicht" && <OverviewSubTab filters={filters} />}
-        {activeSubTab === "leerdoelen" && <LearningGoalsSubTab filters={filters} />}
-        {activeSubTab === "reflecties" && <ReflectionsSubTab filters={filters} />}
+        {activeSubTab === "leerdoelen" && (
+          <LearningGoalsSubTab filters={filters} />
+        )}
+        {activeSubTab === "reflecties" && (
+          <ReflectionsSubTab filters={filters} />
+        )}
       </div>
     </div>
   );

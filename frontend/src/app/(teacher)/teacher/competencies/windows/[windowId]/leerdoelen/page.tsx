@@ -15,12 +15,16 @@ export default function LeerdoelenTabPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  
+
   // Filter and search state
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "achieved" | "not_achieved">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "in_progress" | "achieved" | "not_achieved"
+  >("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sort, setSort] = useState<"name_asc" | "name_desc" | "date_new" | "date_old">("name_asc");
+  const [sort, setSort] = useState<
+    "name_asc" | "name_desc" | "date_new" | "date_old"
+  >("name_asc");
 
   const loadData = useCallback(async () => {
     try {
@@ -64,17 +68,19 @@ export default function LeerdoelenTabPage() {
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toLowerCase();
-    
+
     const arr = data.items.filter((r) => {
       // Status filter
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
-      
+
       // Category filter
-      if (categoryFilter !== "all" && r.competency_name !== categoryFilter) return false;
-      
+      if (categoryFilter !== "all" && r.competency_name !== categoryFilter)
+        return false;
+
       // Search query
       if (q) {
-        const hay = `${r.user_name ?? ""} ${r.goal_text ?? ""} ${r.competency_name ?? ""}`.toLowerCase();
+        const hay =
+          `${r.user_name ?? ""} ${r.goal_text ?? ""} ${r.competency_name ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -110,7 +116,9 @@ export default function LeerdoelenTabPage() {
       not_achieved: "Niet behaald",
     };
     return (
-      <span className={`text-xs px-2 py-0.5 rounded-full ring-1 ${styles[status] || "ring-slate-200 bg-slate-50 text-slate-600"}`}>
+      <span
+        className={`text-xs px-2 py-0.5 rounded-full ring-1 ${styles[status] || "ring-slate-200 bg-slate-50 text-slate-600"}`}
+      >
         {labels[status] || status}
       </span>
     );
@@ -120,8 +128,12 @@ export default function LeerdoelenTabPage() {
   if (error) return <ErrorMessage message={error} />;
   if (!data) return <ErrorMessage message="Data not found" />;
 
-  const achievedCount = data.items.filter((i) => i.status === "achieved").length;
-  const inProgressCount = data.items.filter((i) => i.status === "in_progress").length;
+  const achievedCount = data.items.filter(
+    (i) => i.status === "achieved",
+  ).length;
+  const inProgressCount = data.items.filter(
+    (i) => i.status === "in_progress",
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -130,7 +142,10 @@ export default function LeerdoelenTabPage() {
         <Tile label="Totaal leerdoelen" value={data.items.length} />
         <Tile label="Behaald" value={achievedCount} />
         <Tile label="In uitvoering" value={inProgressCount} />
-        <Tile label="Niet behaald" value={data.items.filter((i) => i.status === "not_achieved").length} />
+        <Tile
+          label="Niet behaald"
+          value={data.items.filter((i) => i.status === "not_achieved").length}
+        />
       </section>
 
       {/* Filters */}
@@ -144,7 +159,9 @@ export default function LeerdoelenTabPage() {
         <select
           className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as typeof statusFilter)
+          }
         >
           <option value="all">Alle statussen</option>
           <option value="in_progress">In uitvoering</option>
@@ -158,7 +175,9 @@ export default function LeerdoelenTabPage() {
         >
           <option value="all">Alle competenties</option>
           {categories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
           ))}
         </select>
         <select
@@ -225,7 +244,10 @@ export default function LeerdoelenTabPage() {
                         {item.competency_name || "–"}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-800">
-                        <div className="max-w-md truncate" title={item.goal_text}>
+                        <div
+                          className="max-w-md truncate"
+                          title={item.goal_text}
+                        >
                           {item.goal_text}
                         </div>
                       </td>
@@ -234,7 +256,9 @@ export default function LeerdoelenTabPage() {
                       </td>
                       <td className="px-4 py-3 text-center text-sm text-slate-600">
                         {item.updated_at
-                          ? new Date(item.updated_at).toLocaleDateString("nl-NL")
+                          ? new Date(item.updated_at).toLocaleDateString(
+                              "nl-NL",
+                            )
                           : "–"}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -272,7 +296,9 @@ export default function LeerdoelenTabPage() {
                               {item.submitted_at && (
                                 <span>
                                   Ingediend:{" "}
-                                  {new Date(item.submitted_at).toLocaleDateString("nl-NL")}
+                                  {new Date(
+                                    item.submitted_at,
+                                  ).toLocaleDateString("nl-NL")}
                                 </span>
                               )}
                             </div>

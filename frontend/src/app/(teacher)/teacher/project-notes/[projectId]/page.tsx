@@ -4,12 +4,21 @@ import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
 import { CombinedTeamCard } from "./_components/CombinedTeamCard";
 import { projectNotesService, courseService } from "@/services";
-import { ProjectNotesContextDetail, ProjectNote, TeamInfo } from "@/dtos/project-notes.dto";
+import {
+  ProjectNotesContextDetail,
+  ProjectNote,
+  TeamInfo,
+} from "@/dtos/project-notes.dto";
 import { TeacherCourse } from "@/dtos/course.dto";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
 
 // OMZA categories
-const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+const OMZA_CATEGORIES = [
+  "Organiseren",
+  "Meedoen",
+  "Zelfvertrouwen",
+  "Autonomie",
+];
 
 interface TeamMeta {
   title?: string;
@@ -22,8 +31,10 @@ export default function ProjectNotesDetailPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = use(params);
-  
-  const [context, setContext] = useState<ProjectNotesContextDetail | null>(null);
+
+  const [context, setContext] = useState<ProjectNotesContextDetail | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [allNotes, setAllNotes] = useState<ProjectNote[]>([]);
   const [courseTeachers, setCourseTeachers] = useState<TeacherCourse[]>([]);
@@ -51,7 +62,9 @@ export default function ProjectNotesDetailPage({
       // Load teachers for the course if available
       if (data.course_id) {
         try {
-          const teachers = await courseService.getCourseTeachers(data.course_id);
+          const teachers = await courseService.getCourseTeachers(
+            data.course_id,
+          );
           setCourseTeachers(teachers);
         } catch {
           // Teachers not critical – ignore errors
@@ -102,21 +115,28 @@ export default function ProjectNotesDetailPage({
    * Called by CombinedTeamCard when a team's title or responsible teacher changes.
    * Persists the updated team_metadata to context.settings via the API.
    */
-  const handleTeamMetaChange = useCallback(async (
-    teamId: number,
-    patch: { title?: string; responsibleTeacherId?: number | null },
-  ) => {
-    if (!context) return;
-    const current = (context.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
-    const key = String(teamId);
-    const updated = {
-      ...context.settings,
-      team_metadata: {
-        ...current,
-        [key]: {
-          ...current[key],
-          ...(patch.title !== undefined ? { title: patch.title } : {}),
-          ...(patch.responsibleTeacherId !== undefined ? { responsible_teacher_id: patch.responsibleTeacherId } : {}),
+  const handleTeamMetaChange = useCallback(
+    async (
+      teamId: number,
+      patch: { title?: string; responsibleTeacherId?: number | null },
+    ) => {
+      if (!context) return;
+      const current = (context.settings?.team_metadata ?? {}) as Record<
+        string,
+        TeamMeta
+      >;
+      const key = String(teamId);
+      const updated = {
+        ...context.settings,
+        team_metadata: {
+          ...current,
+          [key]: {
+            ...current[key],
+            ...(patch.title !== undefined ? { title: patch.title } : {}),
+            ...(patch.responsibleTeacherId !== undefined
+              ? { responsible_teacher_id: patch.responsibleTeacherId }
+              : {}),
+          },
         },
       },
     };
@@ -144,64 +164,78 @@ export default function ProjectNotesDetailPage({
   async function handleExport() {
     try {
       const notes = await projectNotesService.listNotes(Number(projectId));
-      
+
       // Prepare CSV headers
       const headers = [
-        'Datum',
-        'Type',
-        'Team',
-        'Student',
-        'OMZA Categorie',
-        'Eindterm',
-        'Tags',
-        'Aantekening',
-        'Competentiebewijs',
-        'Portfolio',
+        "Datum",
+        "Type",
+        "Team",
+        "Student",
+        "OMZA Categorie",
+        "Eindterm",
+        "Tags",
+        "Aantekening",
+        "Competentiebewijs",
+        "Portfolio",
       ];
-      
+
       // Prepare CSV rows
-      const rows = notes.map(note => [
-        new Date(note.created_at).toLocaleDateString('nl-NL'),
-        note.note_type === 'project' ? 'Project' : note.note_type === 'team' ? 'Team' : 'Student',
-        note.team_name || '-',
-        note.student_name || '-',
-        note.omza_category || '-',
-        note.learning_objective_title || '-',
-        note.tags.join(', '),
+      const rows = notes.map((note) => [
+        new Date(note.created_at).toLocaleDateString("nl-NL"),
+        note.note_type === "project"
+          ? "Project"
+          : note.note_type === "team"
+            ? "Team"
+            : "Student",
+        note.team_name || "-",
+        note.student_name || "-",
+        note.omza_category || "-",
+        note.learning_objective_title || "-",
+        note.tags.join(", "),
         note.text,
-        note.is_competency_evidence ? 'Ja' : 'Nee',
-        note.is_portfolio_evidence ? 'Ja' : 'Nee',
+        note.is_competency_evidence ? "Ja" : "Nee",
+        note.is_portfolio_evidence ? "Ja" : "Nee",
       ]);
-      
+
       // Create CSV content
       const csvContent =
-        headers.join(',') +
-        '\n' +
-        rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-      
+        headers.join(",") +
+        "\n" +
+        rows
+          .map((row) =>
+            row
+              .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+              .join(","),
+          )
+          .join("\n");
+
       // Create and download CSV file using native browser APIs
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.href = url;
-      const filename = `${context?.title || 'project'}_aantekeningen_${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `${context?.title || "project"}_aantekeningen_${new Date().toISOString().split("T")[0]}.csv`;
       link.download = filename;
       link.click();
       // Revoke the object URL to prevent memory leaks
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
-      console.error('Failed to export notes:', error);
-      alert('Fout bij exporteren. Probeer het opnieuw.');
+      console.error("Failed to export notes:", error);
+      alert("Fout bij exporteren. Probeer het opnieuw.");
     }
   }
 
   // Get notes for a specific team (includes team notes and student notes for team members)
   const getNotesForTeam = (team: TeamInfo): ProjectNote[] => {
-    return allNotes.filter(note => {
+    return allNotes.filter((note) => {
       // Include team notes for this team
       if (note.note_type === "team" && note.team_id === team.id) return true;
       // Include student notes for students in this team
-      if (note.note_type === "student" && team.member_ids.includes(note.student_id || 0)) return true;
+      if (
+        note.note_type === "student" &&
+        team.member_ids.includes(note.student_id || 0)
+      )
+        return true;
       return false;
     });
   };
@@ -211,16 +245,23 @@ export default function ProjectNotesDetailPage({
     if (!search && !searchOmza) return false;
 
     // Match against the team's saved project title
-    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<
+      string,
+      TeamMeta
+    >;
     const savedTitle = teamMeta[String(team.id)]?.title ?? "";
-    if (search && savedTitle.toLowerCase().includes(search.toLowerCase())) return true;
+    if (search && savedTitle.toLowerCase().includes(search.toLowerCase()))
+      return true;
 
     const teamNotes = getNotesForTeam(team);
-    return teamNotes.some(note => {
-      const matchesSearch = !search || 
+    return teamNotes.some((note) => {
+      const matchesSearch =
+        !search ||
         note.text.toLowerCase().includes(search.toLowerCase()) ||
         note.student_name?.toLowerCase().includes(search.toLowerCase()) ||
-        team.members.some(m => m.toLowerCase().includes(search.toLowerCase()));
+        team.members.some((m) =>
+          m.toLowerCase().includes(search.toLowerCase()),
+        );
       const matchesOmza = !searchOmza || note.omza_category === searchOmza;
       return matchesSearch && matchesOmza;
     });
@@ -229,7 +270,10 @@ export default function ProjectNotesDetailPage({
   // Returns true when the team card should be hidden due to teacher filter
   const teamMatchesTeacherFilter = (team: TeamInfo): boolean => {
     if (!searchTeacher) return true;
-    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+    const teamMeta = (context?.settings?.team_metadata ?? {}) as Record<
+      string,
+      TeamMeta
+    >;
     const meta = teamMeta[String(team.id)];
     const responsibleId = meta?.responsible_teacher_id;
     if (responsibleId == null) return false;
@@ -253,7 +297,10 @@ export default function ProjectNotesDetailPage({
   }
 
   // Per-team metadata from settings
-  const teamMetadata = (context.settings?.team_metadata ?? {}) as Record<string, TeamMeta>;
+  const teamMetadata = (context.settings?.team_metadata ?? {}) as Record<
+    string,
+    TeamMeta
+  >;
 
   // Apply filters to determine which teams are visible
   const filteredTeams = context.teams.filter(team =>
@@ -288,7 +335,7 @@ export default function ProjectNotesDetailPage({
             </p>
           </div>
           <div className="flex items-center gap-2 md:self-center">
-            <button 
+            <button
               onClick={handleExport}
               className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
@@ -320,7 +367,7 @@ export default function ProjectNotesDetailPage({
               onChange={(e) => setSearch(e.target.value)}
               className="w-64 max-w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 shadow-sm"
             />
-            <select 
+            <select
               value={searchOmza}
               onChange={(e) => setSearchOmza(e.target.value)}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-slate-700"

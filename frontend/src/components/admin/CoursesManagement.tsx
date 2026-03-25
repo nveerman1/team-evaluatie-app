@@ -53,7 +53,7 @@ const CoursesManagement = forwardRef((props, ref) => {
   const handleDeleteCourse = async (courseId: number) => {
     if (
       !confirm(
-        "Weet je zeker dat je dit vak wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden."
+        "Weet je zeker dat je dit vak wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden.",
       )
     ) {
       return;
@@ -126,7 +126,9 @@ const CoursesManagement = forwardRef((props, ref) => {
               type="number"
               value={filterYear || ""}
               onChange={(e) =>
-                setFilterYear(e.target.value ? parseInt(e.target.value) : undefined)
+                setFilterYear(
+                  e.target.value ? parseInt(e.target.value) : undefined,
+                )
               }
               placeholder="2024"
               min="2020"
@@ -162,14 +164,14 @@ const CoursesManagement = forwardRef((props, ref) => {
       {error && (
         <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="rounded-lg bg-red-50 p-4 text-red-800">
-          <p className="font-medium">Fout bij laden</p>
-          <p className="text-sm">{error}</p>
-          <button
-            onClick={loadCourses}
-            className="mt-2 rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
-          >
-            Opnieuw proberen
-          </button>
+            <p className="font-medium">Fout bij laden</p>
+            <p className="text-sm">{error}</p>
+            <button
+              onClick={loadCourses}
+              className="mt-2 rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+            >
+              Opnieuw proberen
+            </button>
           </div>
         </div>
       )}
@@ -184,14 +186,14 @@ const CoursesManagement = forwardRef((props, ref) => {
           {courses.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-8">
               <div className="rounded-lg bg-yellow-50 p-8 text-center">
-              <p className="text-lg font-medium text-yellow-900">
-                Geen vakken gevonden
-              </p>
-              <p className="mt-1 text-yellow-700">
-                {searchTerm || filterLevel || filterYear
-                  ? "Probeer andere filters"
-                  : "Maak je eerste vak aan om te beginnen"}
-              </p>
+                <p className="text-lg font-medium text-yellow-900">
+                  Geen vakken gevonden
+                </p>
+                <p className="mt-1 text-yellow-700">
+                  {searchTerm || filterLevel || filterYear
+                    ? "Probeer andere filters"
+                    : "Maak je eerste vak aan om te beginnen"}
+                </p>
               </div>
             </div>
           ) : (
@@ -227,17 +229,20 @@ const CoursesManagement = forwardRef((props, ref) => {
 
                       <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
                         {course.academic_year_label && (
-                          <span>📅 Schooljaar: {course.academic_year_label}</span>
+                          <span>
+                            📅 Schooljaar: {course.academic_year_label}
+                          </span>
                         )}
                         {course.year && !course.academic_year_label && (
                           <span>📚 Jaar: {course.year}</span>
                         )}
-                        {course.teacher_names && course.teacher_names.length > 0 && (
-                          <span>👥 Docenten: {course.teacher_names.join(", ")}</span>
-                        )}
-                        <span>
-                          🆔 ID: {course.id}
-                        </span>
+                        {course.teacher_names &&
+                          course.teacher_names.length > 0 && (
+                            <span>
+                              👥 Docenten: {course.teacher_names.join(", ")}
+                            </span>
+                          )}
+                        <span>🆔 ID: {course.id}</span>
                       </div>
                     </div>
 

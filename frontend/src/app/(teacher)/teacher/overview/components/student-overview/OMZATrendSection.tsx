@@ -23,7 +23,7 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 interface OMZATrendSectionProps {
@@ -31,7 +31,10 @@ interface OMZATrendSectionProps {
   courseId: number;
 }
 
-export function OMZATrendSection({ studentId, courseId }: OMZATrendSectionProps) {
+export function OMZATrendSection({
+  studentId,
+  courseId,
+}: OMZATrendSectionProps) {
   const [trendData, setTrendData] = useState<OmzaTrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +46,7 @@ export function OMZATrendSection({ studentId, courseId }: OMZATrendSectionProps)
           courseId,
           studentId,
         });
-        
+
         setTrendData(response.trendData);
       } catch (error) {
         console.error("Error fetching OMZA trend data:", error);
@@ -122,7 +125,9 @@ export function OMZATrendSection({ studentId, courseId }: OMZATrendSectionProps)
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">OMZA Trend</h3>
       {trendData.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen trend data beschikbaar</p>
+        <p className="text-gray-500 text-center py-4">
+          Geen trend data beschikbaar
+        </p>
       ) : (
         <div className="h-64">
           <Line data={chartData} options={chartOptions} />

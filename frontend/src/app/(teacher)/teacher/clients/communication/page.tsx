@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 
 // Helper function for building mailto links
-function buildMailto({ bcc, subject, body }: { bcc?: string; subject: string; body: string }) {
+function buildMailto({
+  bcc,
+  subject,
+  body,
+}: {
+  bcc?: string;
+  subject: string;
+  body: string;
+}) {
   if (bcc) {
     return `mailto:?bcc=${bcc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
@@ -56,7 +64,7 @@ export default function BulkCommunicationPage() {
   const [template, setTemplate] = useState("opvolgmail");
 
   // Filter clients based on criteria
-  const filteredClients = mockClients.filter(client => {
+  const filteredClients = mockClients.filter((client) => {
     if (!client.hadProjectLastYear) return false;
     if (level !== "Alle" && client.level !== level) return false;
     return true;
@@ -64,7 +72,7 @@ export default function BulkCommunicationPage() {
 
   const toggleClient = (clientId: string) => {
     if (selectedClients.includes(clientId)) {
-      setSelectedClients(selectedClients.filter(id => id !== clientId));
+      setSelectedClients(selectedClients.filter((id) => id !== clientId));
     } else {
       setSelectedClients([...selectedClients, clientId]);
     }
@@ -74,14 +82,14 @@ export default function BulkCommunicationPage() {
     if (selectedClients.length === filteredClients.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(filteredClients.map(c => c.id));
+      setSelectedClients(filteredClients.map((c) => c.id));
     }
   };
 
   const handleSendBulkEmail = () => {
     const selectedEmails = filteredClients
-      .filter(c => selectedClients.includes(c.id))
-      .map(c => c.email)
+      .filter((c) => selectedClients.includes(c.id))
+      .map((c) => c.email)
       .join(";");
 
     const templates: Record<string, { subject: string; body: string }> = {
@@ -116,7 +124,7 @@ Het docententeam`,
       body: selectedTemplate.body,
     });
 
-    window.open(mailtoLink, '_self');
+    window.open(mailtoLink, "_self");
   };
 
   return (
@@ -147,15 +155,18 @@ Het docententeam`,
             📬 Jaarlijkse opvolging (bulk mail)
           </h2>
           <p className="text-sm text-slate-600 mt-1">
-            Verstuur een opvolgmail naar opdrachtgevers die vorig schooljaar een module hadden.
+            Verstuur een opvolgmail naar opdrachtgevers die vorig schooljaar een
+            module hadden.
           </p>
         </div>
 
         {/* Filters */}
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">Schooljaar</label>
-            <select 
+            <label className="text-xs font-medium text-slate-600">
+              Schooljaar
+            </label>
+            <select
               value={schoolYear}
               onChange={(e) => setSchoolYear(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
@@ -168,7 +179,7 @@ Het docententeam`,
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-600">Niveau</label>
-            <select 
+            <select
               value={level}
               onChange={(e) => setLevel(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
@@ -180,8 +191,10 @@ Het docententeam`,
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">Template</label>
-            <select 
+            <label className="text-xs font-medium text-slate-600">
+              Template
+            </label>
+            <select
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
@@ -198,11 +211,13 @@ Het docententeam`,
             <label className="text-xs font-medium text-slate-600">
               Opdrachtgevers ({filteredClients.length} gevonden)
             </label>
-            <button 
+            <button
               onClick={toggleAll}
               className="text-xs text-sky-600 hover:text-sky-700 font-medium"
             >
-              {selectedClients.length === filteredClients.length ? "Deselecteer alles" : "Selecteer alles"}
+              {selectedClients.length === filteredClients.length
+                ? "Deselecteer alles"
+                : "Selecteer alles"}
             </button>
           </div>
 
@@ -213,7 +228,7 @@ Het docententeam`,
               </div>
             ) : (
               filteredClients.map((client) => (
-                <label 
+                <label
                   key={client.id}
                   className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer"
                 >
@@ -224,7 +239,9 @@ Het docententeam`,
                     className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                   />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-slate-900">{client.organization}</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      {client.organization}
+                    </div>
                     <div className="text-xs text-slate-500">{client.email}</div>
                   </div>
                   <div className="text-xs text-slate-500">{client.level}</div>
@@ -236,23 +253,24 @@ Het docententeam`,
 
         {/* Action button */}
         <div className="flex items-center gap-3 pt-2">
-          <button 
+          <button
             onClick={handleSendBulkEmail}
             disabled={selectedClients.length === 0}
             className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm ${
               selectedClients.length > 0
-                ? 'bg-sky-600 text-white hover:bg-sky-700 border border-sky-500'
-                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                ? "bg-sky-600 text-white hover:bg-sky-700 border border-sky-500"
+                : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
             }`}
           >
-            📧 Open mail in Outlook voor geselecteerde opdrachtgevers ({selectedClients.length})
+            📧 Open mail in Outlook voor geselecteerde opdrachtgevers (
+            {selectedClients.length})
           </button>
         </div>
 
         {selectedClients.length > 0 && (
           <div className="rounded-lg bg-sky-50 border border-sky-200 p-3 text-xs text-sky-800">
-            <strong>Let op:</strong> De geselecteerde opdrachtgevers worden toegevoegd aan het BCC-veld, 
-            zodat ze elkaars e-mailadres niet zien.
+            <strong>Let op:</strong> De geselecteerde opdrachtgevers worden
+            toegevoegd aan het BCC-veld, zodat ze elkaars e-mailadres niet zien.
           </div>
         )}
       </section>
@@ -264,12 +282,16 @@ Het docententeam`,
             🚀 Bulk startmail
           </h2>
           <p className="text-sm text-slate-600 mt-1">
-            Verstuur een startmail naar alle opdrachtgevers voor een nieuw project.
+            Verstuur een startmail naar alle opdrachtgevers voor een nieuw
+            project.
           </p>
         </div>
 
         <div className="text-center py-8 text-slate-500">
-          <p className="text-sm">Gebruik dezelfde filters hierboven en selecteer &quot;Bulk startmail&quot; als template.</p>
+          <p className="text-sm">
+            Gebruik dezelfde filters hierboven en selecteer &quot;Bulk
+            startmail&quot; als template.
+          </p>
         </div>
       </section>
     </div>

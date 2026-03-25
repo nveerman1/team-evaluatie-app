@@ -17,13 +17,16 @@ export function PageHeader({ onRefresh, onExportAll }: PageHeaderProps) {
               Peer-feedback resultaten
             </h1>
             <p className={studentStyles.header.subtitle}>
-              Overzicht van ontvangen feedback, OMZA-scores, docentbeoordeling en groei.
+              Overzicht van ontvangen feedback, OMZA-scores, docentbeoordeling
+              en groei.
             </p>
           </div>
           <div className="flex gap-2 sm:self-start">
             <Link
               href="/student"
-              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+              prefetch={
+                process.env.NODE_ENV === "production" ? false : undefined
+              }
               className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
               <span className="mr-2">←</span>
@@ -39,7 +42,10 @@ export function PageHeader({ onRefresh, onExportAll }: PageHeaderProps) {
             </button>
             <button
               type="button"
-              className={studentStyles.buttons.primary + " inline-flex items-center px-3 py-2 text-sm font-medium text-white shadow-sm"}
+              className={
+                studentStyles.buttons.primary +
+                " inline-flex items-center px-3 py-2 text-sm font-medium text-white shadow-sm"
+              }
               onClick={onExportAll}
             >
               <span className="mr-2">📄</span>

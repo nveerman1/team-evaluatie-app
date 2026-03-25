@@ -125,7 +125,7 @@ export type EvaluationConfig = {
   project_assessment_tussen?: ProjectAssessmentConfig;
   project_assessment_eind?: ProjectAssessmentConfig;
   competency_scan?: CompetencyScanConfig;
-  
+
   // Legacy support (deprecated, for backward compatibility)
   project_assessment?: ProjectAssessmentConfig;
   create_peer_tussen?: boolean;

@@ -130,18 +130,19 @@ export default function TemplatesPageInner() {
   } | null>(null);
 
   // Objectives filtering and editing state
-  const [selectedObjectiveLevelFilter, setSelectedObjectiveLevelFilter] = useState<
-    "all" | "onderbouw" | "bovenbouw"
-  >("all");
-  const [selectedObjectiveDomainFilter, setSelectedObjectiveDomainFilter] = useState<string>("all");
+  const [selectedObjectiveLevelFilter, setSelectedObjectiveLevelFilter] =
+    useState<"all" | "onderbouw" | "bovenbouw">("all");
+  const [selectedObjectiveDomainFilter, setSelectedObjectiveDomainFilter] =
+    useState<string>("all");
   const [editingObjective, setEditingObjective] = useState<number | null>(null);
-  const [editObjectiveFormData, setEditObjectiveFormData] = useState<LearningObjectiveUpdateDto>({
-    domain: "",
-    title: "",
-    description: "",
-    order: 0,
-    phase: "",
-  });
+  const [editObjectiveFormData, setEditObjectiveFormData] =
+    useState<LearningObjectiveUpdateDto>({
+      domain: "",
+      title: "",
+      description: "",
+      order: 0,
+      phase: "",
+    });
 
   // Peer criteria state
   const [peerCriteria, setPeerCriteria] = useState<
@@ -244,9 +245,14 @@ export default function TemplatesPageInner() {
   >("all");
   const [selectedCompetencyLevelFilter, setSelectedCompetencyLevelFilter] =
     useState<"all" | "onderbouw" | "bovenbouw">("all");
-  const [expandedCompetency, setExpandedCompetency] = useState<number | null>(null);
-  const [editingCompetency, setEditingCompetency] = useState<number | null>(null);
-  const [editCompetencyFormData, setEditCompetencyFormData] = useState<CompetencyUpdate>({});
+  const [expandedCompetency, setExpandedCompetency] = useState<number | null>(
+    null,
+  );
+  const [editingCompetency, setEditingCompetency] = useState<number | null>(
+    null,
+  );
+  const [editCompetencyFormData, setEditCompetencyFormData] =
+    useState<CompetencyUpdate>({});
 
   // Mail template state
   const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
@@ -256,7 +262,8 @@ export default function TemplatesPageInner() {
     null,
   );
   const [isMailEditModalOpen, setIsMailEditModalOpen] = useState(false);
-  const [selectedMailTypeFilter, setSelectedMailTypeFilter] = useState<string>("all");
+  const [selectedMailTypeFilter, setSelectedMailTypeFilter] =
+    useState<string>("all");
   const [mailSort, setMailSort] = useState<{
     key: string | null;
     dir: "asc" | "desc";
@@ -317,37 +324,50 @@ export default function TemplatesPageInner() {
   }, []);
 
   // Define fetchLearningObjectives before the useEffects that use it
-  const fetchLearningObjectives = useCallback(async (page: number) => {
-    if (!selectedSubjectId) return;
+  const fetchLearningObjectives = useCallback(
+    async (page: number) => {
+      if (!selectedSubjectId) return;
 
-    setLoadingObjectives(true);
-    try {
-      const response = await listLearningObjectives({
-        page: page,
-        limit: OBJECTIVES_PER_PAGE,
-        subject_id: selectedSubjectId, // Filter by selected subject
-        objective_type: "template", // Only show central/template objectives in admin
-        phase: selectedObjectiveLevelFilter !== "all" ? selectedObjectiveLevelFilter : undefined,
-        domain: selectedObjectiveDomainFilter !== "all" ? selectedObjectiveDomainFilter : undefined,
-      });
-      setLearningObjectives(response.items);
-      setObjectivesPagination({
-        page: response.page,
-        limit: response.limit,
-        total: response.total,
-      });
-    } catch (err) {
-      console.error("Error fetching learning objectives:", err);
-    } finally {
-      setLoadingObjectives(false);
-    }
-  }, [selectedSubjectId, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
+      setLoadingObjectives(true);
+      try {
+        const response = await listLearningObjectives({
+          page: page,
+          limit: OBJECTIVES_PER_PAGE,
+          subject_id: selectedSubjectId, // Filter by selected subject
+          objective_type: "template", // Only show central/template objectives in admin
+          phase:
+            selectedObjectiveLevelFilter !== "all"
+              ? selectedObjectiveLevelFilter
+              : undefined,
+          domain:
+            selectedObjectiveDomainFilter !== "all"
+              ? selectedObjectiveDomainFilter
+              : undefined,
+        });
+        setLearningObjectives(response.items);
+        setObjectivesPagination({
+          page: response.page,
+          limit: response.limit,
+          total: response.total,
+        });
+      } catch (err) {
+        console.error("Error fetching learning objectives:", err);
+      } finally {
+        setLoadingObjectives(false);
+      }
+    },
+    [
+      selectedSubjectId,
+      selectedObjectiveLevelFilter,
+      selectedObjectiveDomainFilter,
+    ],
+  );
 
   // Load learning objectives when tab changes to objectives
   useEffect(() => {
     if (activeTab === "objectives" && selectedSubjectId) {
       // Reset to page 1 when subject or tab changes
-      setObjectivesPagination(prev => ({ ...prev, page: 1 }));
+      setObjectivesPagination((prev) => ({ ...prev, page: 1 }));
       fetchLearningObjectives(1);
     }
   }, [activeTab, selectedSubjectId, fetchLearningObjectives]);
@@ -355,10 +375,16 @@ export default function TemplatesPageInner() {
   // Reset to page 1 when filters change
   useEffect(() => {
     if (activeTab === "objectives" && selectedSubjectId) {
-      setObjectivesPagination(prev => ({ ...prev, page: 1 }));
+      setObjectivesPagination((prev) => ({ ...prev, page: 1 }));
       fetchLearningObjectives(1);
     }
-  }, [selectedObjectiveLevelFilter, selectedObjectiveDomainFilter, activeTab, selectedSubjectId, fetchLearningObjectives]);
+  }, [
+    selectedObjectiveLevelFilter,
+    selectedObjectiveDomainFilter,
+    activeTab,
+    selectedSubjectId,
+    fetchLearningObjectives,
+  ]);
 
   // Load peer criteria when tab changes to peer
   useEffect(() => {
@@ -428,12 +454,13 @@ export default function TemplatesPageInner() {
     setLoadingCompetencies(true);
     try {
       // Fetch all central/template competencies (admin manages these)
-      const response: CompetencyListResponse = await competencyService.listTeacherCompetencies({
-        page: 1,
-        limit: 100,
-        active_only: false, // Include inactive
-        competency_type: "central", // Only central/template competencies in admin
-      });
+      const response: CompetencyListResponse =
+        await competencyService.listTeacherCompetencies({
+          page: 1,
+          limit: 100,
+          active_only: false, // Include inactive
+          competency_type: "central", // Only central/template competencies in admin
+        });
       setCompetencies(response.items);
     } catch (err) {
       console.error("Error fetching competencies:", err);
@@ -445,41 +472,48 @@ export default function TemplatesPageInner() {
   // Filter competencies based on selected filters
   const filteredCompetencies = useMemo((): Competency[] => {
     let result = competencies;
-    
+
     // Filter by category
     if (selectedCategoryFilter !== "all") {
-      result = result.filter(comp => comp.category_id === selectedCategoryFilter);
+      result = result.filter(
+        (comp) => comp.category_id === selectedCategoryFilter,
+      );
     }
-    
+
     // Filter by phase/level
     if (selectedCompetencyLevelFilter !== "all") {
-      result = result.filter(comp => comp.phase === selectedCompetencyLevelFilter);
+      result = result.filter(
+        (comp) => comp.phase === selectedCompetencyLevelFilter,
+      );
     }
-    
+
     return result;
   }, [competencies, selectedCategoryFilter, selectedCompetencyLevelFilter]);
 
   // Group competencies by category for display
   const competenciesByCategory = useMemo(() => {
-    const grouped: Record<number, { category: CompetencyCategory | null; items: Competency[] }> = {};
-    
+    const grouped: Record<
+      number,
+      { category: CompetencyCategory | null; items: Competency[] }
+    > = {};
+
     // Initialize with categories
-    categories.forEach(cat => {
+    categories.forEach((cat) => {
       grouped[cat.id] = { category: cat, items: [] };
     });
-    
+
     // Add uncategorized group
     grouped[0] = { category: null, items: [] };
-    
+
     // Group competencies
-    filteredCompetencies.forEach(comp => {
+    filteredCompetencies.forEach((comp) => {
       const catId = comp.category_id || 0;
       if (!grouped[catId]) {
         grouped[catId] = { category: null, items: [] };
       }
       grouped[catId].items.push(comp);
     });
-    
+
     // Return only groups with items
     return Object.entries(grouped)
       .filter(([_, group]) => group.items.length > 0)
@@ -504,7 +538,13 @@ export default function TemplatesPageInner() {
       description: comp.description || "",
       category_id: comp.category_id,
       phase: comp.phase || "",
-      level_descriptors: comp.level_descriptors || { "1": "", "2": "", "3": "", "4": "", "5": "" },
+      level_descriptors: comp.level_descriptors || {
+        "1": "",
+        "2": "",
+        "3": "",
+        "4": "",
+        "5": "",
+      },
     });
   };
 
@@ -539,10 +579,11 @@ export default function TemplatesPageInner() {
       fetchCompetencies();
     } catch (err) {
       console.error("Error deleting competency:", err);
-      alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
+      alert(
+        "Er is een fout opgetreden bij het verwijderen van de competentie.",
+      );
     }
   };
-
 
   // Filter and sort peer criteria for the table view
   const filteredAndSortedPeerCriteria = useMemo(() => {
@@ -1250,8 +1291,13 @@ export default function TemplatesPageInner() {
   // Handle mail template update from modal
   const handleMailTemplateUpdateFromModal = async () => {
     if (!editingMailTemplate) return;
-    
-    if (!mailFormData.name || !mailFormData.subject || !mailFormData.body || !mailFormData.type) {
+
+    if (
+      !mailFormData.name ||
+      !mailFormData.subject ||
+      !mailFormData.body ||
+      !mailFormData.type
+    ) {
       alert("Naam, type, onderwerp en inhoud zijn verplicht");
       return;
     }
@@ -1336,7 +1382,13 @@ export default function TemplatesPageInner() {
                   </option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name} ({competencies.filter(c => c.category_id === category.id).length})
+                      {category.name} (
+                      {
+                        competencies.filter(
+                          (c) => c.category_id === category.id,
+                        ).length
+                      }
+                      )
                     </option>
                   ))}
                 </select>
@@ -1421,10 +1473,10 @@ export default function TemplatesPageInner() {
                     {filteredCompetencies.map((comp) => {
                       const isExpanded = expandedCompetency === comp.id;
                       const isEditing = editingCompetency === comp.id;
-                      
+
                       return [
-                        <tr 
-                          key={comp.id} 
+                        <tr
+                          key={comp.id}
                           className="hover:bg-gray-50 cursor-pointer bg-amber-50/30"
                           onClick={() => toggleCompetencyExpand(comp.id)}
                         >
@@ -1435,23 +1487,33 @@ export default function TemplatesPageInner() {
                           </td>
                           <td className="w-28 px-4 py-3 text-sm align-top">
                             {comp.category_name ? (
-                              <span className="font-medium">{comp.category_name}</span>
+                              <span className="font-medium">
+                                {comp.category_name}
+                              </span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="w-32 px-4 py-3 text-sm font-medium align-top">{comp.name}</td>
+                          <td className="w-32 px-4 py-3 text-sm font-medium align-top">
+                            {comp.name}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-600 align-top">
-                            {comp.description || <span className="text-gray-400">-</span>}
+                            {comp.description || (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="w-28 px-4 py-3 text-sm align-top">
                             {comp.phase ? (
-                              <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
-                                comp.phase === "onderbouw" 
-                                  ? "bg-blue-100 text-blue-800" 
-                                  : "bg-purple-100 text-purple-800"
-                              }`}>
-                                {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                              <span
+                                className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                                  comp.phase === "onderbouw"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-purple-100 text-purple-800"
+                                }`}
+                              >
+                                {comp.phase === "onderbouw"
+                                  ? "Onderbouw"
+                                  : "Bovenbouw"}
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>
@@ -1459,75 +1521,140 @@ export default function TemplatesPageInner() {
                           </td>
                         </tr>,
                         isExpanded && (
-                          <tr key={`${comp.id}-expanded`} className="bg-slate-50">
+                          <tr
+                            key={`${comp.id}-expanded`}
+                            className="bg-slate-50"
+                          >
                             <td colSpan={5} className="p-4">
                               {isEditing ? (
                                 // Edit form
                                 <div className="space-y-4">
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                      <label className="block text-sm font-medium mb-1">Naam</label>
+                                      <label className="block text-sm font-medium mb-1">
+                                        Naam
+                                      </label>
                                       <input
                                         type="text"
-                                        value={editCompetencyFormData.name || ""}
-                                        onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, name: e.target.value })}
+                                        value={
+                                          editCompetencyFormData.name || ""
+                                        }
+                                        onChange={(e) =>
+                                          setEditCompetencyFormData({
+                                            ...editCompetencyFormData,
+                                            name: e.target.value,
+                                          })
+                                        }
                                         className="w-full px-3 py-2 border rounded"
                                         onClick={(e) => e.stopPropagation()}
                                       />
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium mb-1">Categorie</label>
+                                      <label className="block text-sm font-medium mb-1">
+                                        Categorie
+                                      </label>
                                       <select
-                                        value={editCompetencyFormData.category_id || ""}
-                                        onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                                        value={
+                                          editCompetencyFormData.category_id ||
+                                          ""
+                                        }
+                                        onChange={(e) =>
+                                          setEditCompetencyFormData({
+                                            ...editCompetencyFormData,
+                                            category_id: e.target.value
+                                              ? parseInt(e.target.value)
+                                              : undefined,
+                                          })
+                                        }
                                         className="w-full px-3 py-2 border rounded"
                                         onClick={(e) => e.stopPropagation()}
                                       >
                                         <option value="">Geen categorie</option>
                                         {categories.map((cat) => (
-                                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                          <option key={cat.id} value={cat.id}>
+                                            {cat.name}
+                                          </option>
                                         ))}
                                       </select>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium mb-1">Fase</label>
+                                      <label className="block text-sm font-medium mb-1">
+                                        Fase
+                                      </label>
                                       <select
-                                        value={editCompetencyFormData.phase || ""}
-                                        onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, phase: e.target.value })}
+                                        value={
+                                          editCompetencyFormData.phase || ""
+                                        }
+                                        onChange={(e) =>
+                                          setEditCompetencyFormData({
+                                            ...editCompetencyFormData,
+                                            phase: e.target.value,
+                                          })
+                                        }
                                         className="w-full px-3 py-2 border rounded"
                                         onClick={(e) => e.stopPropagation()}
                                       >
-                                        <option value="">Niet gespecificeerd</option>
-                                        <option value="onderbouw">Onderbouw</option>
-                                        <option value="bovenbouw">Bovenbouw</option>
+                                        <option value="">
+                                          Niet gespecificeerd
+                                        </option>
+                                        <option value="onderbouw">
+                                          Onderbouw
+                                        </option>
+                                        <option value="bovenbouw">
+                                          Bovenbouw
+                                        </option>
                                       </select>
                                     </div>
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Beschrijving
+                                    </label>
                                     <textarea
-                                      value={editCompetencyFormData.description || ""}
-                                      onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, description: e.target.value })}
+                                      value={
+                                        editCompetencyFormData.description || ""
+                                      }
+                                      onChange={(e) =>
+                                        setEditCompetencyFormData({
+                                          ...editCompetencyFormData,
+                                          description: e.target.value,
+                                        })
+                                      }
                                       className="w-full px-3 py-2 border rounded"
                                       rows={2}
                                       onClick={(e) => e.stopPropagation()}
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                                    <label className="block text-sm font-medium mb-2">
+                                      Niveaubeschrijvingen
+                                    </label>
                                     <div className="grid grid-cols-5 gap-2">
                                       {[1, 2, 3, 4, 5].map((level) => (
-                                        <div key={level} className="flex flex-col">
-                                          <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                                        <div
+                                          key={level}
+                                          className="flex flex-col"
+                                        >
+                                          <label className="text-xs font-medium text-gray-700 mb-1">
+                                            Niveau {level}
+                                          </label>
                                           <textarea
-                                            value={editCompetencyFormData.level_descriptors?.[level.toString()] || ""}
-                                            onChange={(e) => setEditCompetencyFormData({
-                                              ...editCompetencyFormData,
-                                              level_descriptors: {
-                                                ...editCompetencyFormData.level_descriptors,
-                                                [level.toString()]: e.target.value
-                                              }
-                                            })}
+                                            value={
+                                              editCompetencyFormData
+                                                .level_descriptors?.[
+                                                level.toString()
+                                              ] || ""
+                                            }
+                                            onChange={(e) =>
+                                              setEditCompetencyFormData({
+                                                ...editCompetencyFormData,
+                                                level_descriptors: {
+                                                  ...editCompetencyFormData.level_descriptors,
+                                                  [level.toString()]:
+                                                    e.target.value,
+                                                },
+                                              })
+                                            }
                                             className="w-full px-2 py-1.5 border rounded text-xs resize-none"
                                             rows={3}
                                             onClick={(e) => e.stopPropagation()}
@@ -1562,23 +1689,38 @@ export default function TemplatesPageInner() {
                                 // Read-only view with level descriptors
                                 <>
                                   {comp.category_description && (
-                                    <p className="text-sm text-gray-600 mb-3">{comp.category_description}</p>
+                                    <p className="text-sm text-gray-600 mb-3">
+                                      {comp.category_description}
+                                    </p>
                                   )}
                                   <div className="text-xs font-medium text-slate-700 mb-2">
                                     Niveaubeschrijvingen (1–5)
                                   </div>
                                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                                     {[1, 2, 3, 4, 5].map((level) => (
-                                      <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
-                                        <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
+                                      <div
+                                        key={level}
+                                        className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner"
+                                      >
+                                        <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                          Niveau {level}
+                                        </span>
                                         <p className="text-[11px] text-slate-700">
-                                          {comp.level_descriptors?.[level.toString()] || <em className="text-slate-400">Niet ingevuld</em>}
+                                          {comp.level_descriptors?.[
+                                            level.toString()
+                                          ] || (
+                                            <em className="text-slate-400">
+                                              Niet ingevuld
+                                            </em>
+                                          )}
                                         </p>
                                       </div>
                                     ))}
                                   </div>
                                   <div className="mt-4 flex justify-between items-center text-xs">
-                                    <span className="text-gray-400">Klik om details te verbergen</span>
+                                    <span className="text-gray-400">
+                                      Klik om details te verbergen
+                                    </span>
                                     <div className="flex gap-2">
                                       <button
                                         onClick={(e) => {
@@ -1804,7 +1946,8 @@ export default function TemplatesPageInner() {
                             setMailSort({
                               key: "name",
                               dir:
-                                mailSort.key === "name" && mailSort.dir === "asc"
+                                mailSort.key === "name" &&
+                                mailSort.dir === "asc"
                                   ? "desc"
                                   : "asc",
                             })
@@ -2316,7 +2459,9 @@ export default function TemplatesPageInner() {
                         {peerSort.key === "target_level" &&
                           (peerSort.dir === "asc" ? "↑" : "↓")}
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschrijving</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Beschrijving
+                      </th>
                       <th
                         className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
@@ -2350,14 +2495,18 @@ export default function TemplatesPageInner() {
                           <td className="w-28 px-4 py-3 text-sm font-medium align-top">
                             {row.categoryName}
                           </td>
-                          <td className="w-32 px-4 py-3 text-sm align-top">{row.title}</td>
+                          <td className="w-32 px-4 py-3 text-sm align-top">
+                            {row.title}
+                          </td>
                           <td className="w-28 px-4 py-3 text-sm align-top">
                             {row.target_level ? (
-                              <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
-                                row.target_level === "onderbouw"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-purple-100 text-purple-800"
-                              }`}>
+                              <span
+                                className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                                  row.target_level === "onderbouw"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-purple-100 text-purple-800"
+                                }`}
+                              >
                                 {row.target_level === "onderbouw"
                                   ? "Onderbouw"
                                   : "Bovenbouw"}
@@ -2367,7 +2516,9 @@ export default function TemplatesPageInner() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 align-top">
-                            {row.description || <span className="text-gray-400">-</span>}
+                            {row.description || (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="w-28 px-4 py-3 text-sm text-gray-600 align-top">
                             {row.learningObjectivesCount}
@@ -3053,7 +3204,9 @@ export default function TemplatesPageInner() {
                         {projectSort.key === "target_level" &&
                           (projectSort.dir === "asc" ? "↑" : "↓")}
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschrijving</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Beschrijving
+                      </th>
                       <th
                         className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
@@ -3087,14 +3240,18 @@ export default function TemplatesPageInner() {
                           <td className="w-28 px-4 py-3 text-sm font-medium align-top">
                             {row.categoryName}
                           </td>
-                          <td className="w-32 px-4 py-3 text-sm align-top">{row.title}</td>
+                          <td className="w-32 px-4 py-3 text-sm align-top">
+                            {row.title}
+                          </td>
                           <td className="w-28 px-4 py-3 text-sm align-top">
                             {row.target_level ? (
-                              <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
-                                row.target_level === "onderbouw"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-purple-100 text-purple-800"
-                              }`}>
+                              <span
+                                className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                                  row.target_level === "onderbouw"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-purple-100 text-purple-800"
+                                }`}
+                              >
                                 {row.target_level === "onderbouw"
                                   ? "Onderbouw"
                                   : "Bovenbouw"}
@@ -3104,7 +3261,9 @@ export default function TemplatesPageInner() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 align-top">
-                            {row.description || <span className="text-gray-400">-</span>}
+                            {row.description || (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="w-28 px-4 py-3 text-sm text-gray-600 align-top">
                             {row.learningObjectivesCount}
@@ -3438,7 +3597,8 @@ export default function TemplatesPageInner() {
             {/* Title and description */}
             <div>
               <p className="text-sm text-slate-600 mt-1">
-                Beheer email templates met variabelen voor verschillende communicatiemomenten.
+                Beheer email templates met variabelen voor verschillende
+                communicatiemomenten.
               </p>
             </div>
 
@@ -3973,129 +4133,163 @@ export default function TemplatesPageInner() {
                     </p>
                   </>
                 ) : (
-                  <p>
-                    Geen leerdoelen gevonden voor de geselecteerde filters.
-                  </p>
+                  <p>Geen leerdoelen gevonden voor de geselecteerde filters.</p>
                 )}
               </div>
             )}
 
             {/* Pagination Controls */}
-            {filteredLearningObjectives.length > 0 && objectivesPagination.total > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <span>
-                    Toont {Math.min((objectivesPagination.page - 1) * objectivesPagination.limit + 1, objectivesPagination.total)} tot{" "}
-                    {Math.min(objectivesPagination.page * objectivesPagination.limit, objectivesPagination.total)} van{" "}
-                    {objectivesPagination.total} leerdoelen
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const newPage = objectivesPagination.page - 1;
-                      setObjectivesPagination(prev => ({ ...prev, page: newPage }));
-                      fetchLearningObjectives(newPage);
-                    }}
-                    disabled={objectivesPagination.page <= 1}
-                    className={`px-3 py-1 text-sm border rounded ${
-                      objectivesPagination.page <= 1
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    Vorige
-                  </button>
-                  
-                  {/* Page numbers */}
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const totalPages = Math.ceil(objectivesPagination.total / objectivesPagination.limit);
-                      const currentPage = objectivesPagination.page;
-                      const pages: (number | string)[] = [];
-                      
-                      if (totalPages <= MAX_VISIBLE_PAGES) {
-                        // Show all pages if MAX_VISIBLE_PAGES or fewer
-                        for (let i = 1; i <= totalPages; i++) {
-                          pages.push(i);
-                        }
-                      } else {
-                        // Always show first page
-                        pages.push(1);
-                        
-                        if (currentPage > ELLIPSIS_THRESHOLD) {
-                          pages.push("...");
-                        }
-                        
-                        // Show pages around current page (avoiding duplicates)
-                        const start = Math.max(2, currentPage - 1);
-                        const end = Math.min(totalPages - 1, currentPage + 1);
-                        
-                        for (let i = start; i <= end; i++) {
-                          // Skip if this page is already added (page 1 or last page)
-                          if (i !== 1 && i !== totalPages) {
+            {filteredLearningObjectives.length > 0 &&
+              objectivesPagination.total > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span>
+                      Toont{" "}
+                      {Math.min(
+                        (objectivesPagination.page - 1) *
+                          objectivesPagination.limit +
+                          1,
+                        objectivesPagination.total,
+                      )}{" "}
+                      tot{" "}
+                      {Math.min(
+                        objectivesPagination.page * objectivesPagination.limit,
+                        objectivesPagination.total,
+                      )}{" "}
+                      van {objectivesPagination.total} leerdoelen
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const newPage = objectivesPagination.page - 1;
+                        setObjectivesPagination((prev) => ({
+                          ...prev,
+                          page: newPage,
+                        }));
+                        fetchLearningObjectives(newPage);
+                      }}
+                      disabled={objectivesPagination.page <= 1}
+                      className={`px-3 py-1 text-sm border rounded ${
+                        objectivesPagination.page <= 1
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      Vorige
+                    </button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const totalPages = Math.ceil(
+                          objectivesPagination.total /
+                            objectivesPagination.limit,
+                        );
+                        const currentPage = objectivesPagination.page;
+                        const pages: (number | string)[] = [];
+
+                        if (totalPages <= MAX_VISIBLE_PAGES) {
+                          // Show all pages if MAX_VISIBLE_PAGES or fewer
+                          for (let i = 1; i <= totalPages; i++) {
                             pages.push(i);
                           }
+                        } else {
+                          // Always show first page
+                          pages.push(1);
+
+                          if (currentPage > ELLIPSIS_THRESHOLD) {
+                            pages.push("...");
+                          }
+
+                          // Show pages around current page (avoiding duplicates)
+                          const start = Math.max(2, currentPage - 1);
+                          const end = Math.min(totalPages - 1, currentPage + 1);
+
+                          for (let i = start; i <= end; i++) {
+                            // Skip if this page is already added (page 1 or last page)
+                            if (i !== 1 && i !== totalPages) {
+                              pages.push(i);
+                            }
+                          }
+
+                          if (currentPage < totalPages - ELLIPSIS_OFFSET) {
+                            pages.push("...");
+                          }
+
+                          // Always show last page (if not already shown)
+                          if (totalPages > 1) {
+                            pages.push(totalPages);
+                          }
                         }
-                        
-                        if (currentPage < totalPages - ELLIPSIS_OFFSET) {
-                          pages.push("...");
-                        }
-                        
-                        // Always show last page (if not already shown)
-                        if (totalPages > 1) {
-                          pages.push(totalPages);
-                        }
-                      }
-                      
-                      return pages.map((page, idx) => {
-                        if (page === "...") {
+
+                        return pages.map((page, idx) => {
+                          if (page === "...") {
+                            return (
+                              <span
+                                key={`ellipsis-${idx}`}
+                                className="px-2 text-gray-400"
+                              >
+                                ...
+                              </span>
+                            );
+                          }
+
+                          const pageNum = page as number;
                           return (
-                            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
-                              ...
-                            </span>
+                            <button
+                              key={pageNum}
+                              onClick={() => {
+                                setObjectivesPagination((prev) => ({
+                                  ...prev,
+                                  page: pageNum,
+                                }));
+                                fetchLearningObjectives(pageNum);
+                              }}
+                              className={`px-3 py-1 text-sm border rounded ${
+                                currentPage === pageNum
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
                           );
-                        }
-                        
-                        const pageNum = page as number;
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => {
-                              setObjectivesPagination(prev => ({ ...prev, page: pageNum }));
-                              fetchLearningObjectives(pageNum);
-                            }}
-                            className={`px-3 py-1 text-sm border rounded ${
-                              currentPage === pageNum
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-white text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      });
-                    })()}
+                        });
+                      })()}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const newPage = objectivesPagination.page + 1;
+                        setObjectivesPagination((prev) => ({
+                          ...prev,
+                          page: newPage,
+                        }));
+                        fetchLearningObjectives(newPage);
+                      }}
+                      disabled={
+                        objectivesPagination.page >=
+                        Math.ceil(
+                          objectivesPagination.total /
+                            objectivesPagination.limit,
+                        )
+                      }
+                      className={`px-3 py-1 text-sm border rounded ${
+                        objectivesPagination.page >=
+                        Math.ceil(
+                          objectivesPagination.total /
+                            objectivesPagination.limit,
+                        )
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      Volgende
+                    </button>
                   </div>
-                  
-                  <button
-                    onClick={() => {
-                      const newPage = objectivesPagination.page + 1;
-                      setObjectivesPagination(prev => ({ ...prev, page: newPage }));
-                      fetchLearningObjectives(newPage);
-                    }}
-                    disabled={objectivesPagination.page >= Math.ceil(objectivesPagination.total / objectivesPagination.limit)}
-                    className={`px-3 py-1 text-sm border rounded ${
-                      objectivesPagination.page >= Math.ceil(objectivesPagination.total / objectivesPagination.limit)
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    Volgende
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         )}
 

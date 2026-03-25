@@ -173,7 +173,7 @@ export function useAiInsights() {
     try {
       // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 500));
-      
+
       // Return mock data
       const mockData = generateMockAiInsightsData();
       setData(mockData);

@@ -30,24 +30,24 @@ body {
     background: white;
     color: black;
   }
-  
+
   /* Hide navigation and action buttons when printing */
   header button,
   nav,
   .no-print {
     display: none !important;
   }
-  
+
   /* Ensure proper page breaks */
   section {
     page-break-inside: avoid;
   }
-  
+
   /* Make sure all content is visible */
   .overflow-x-auto {
     overflow: visible !important;
   }
-  
+
   /* Adjust for print */
   @page {
     margin: 1.5cm;

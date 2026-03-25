@@ -72,16 +72,24 @@ export function CombinedTeamCard({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
+    null,
+  );
   const [omzaTags, setOmzaTags] = useState<string[]>([]);
 
   // Local editable state for team metadata
   const [localTitle, setLocalTitle] = useState(teamTitle);
-  const [localTeacherId, setLocalTeacherId] = useState<number | null>(teamResponsibleTeacherId);
+  const [localTeacherId, setLocalTeacherId] = useState<number | null>(
+    teamResponsibleTeacherId,
+  );
 
   // Keep local state in sync if props change (e.g. after parent reload)
-  useEffect(() => { setLocalTitle(teamTitle); }, [teamTitle]);
-  useEffect(() => { setLocalTeacherId(teamResponsibleTeacherId); }, [teamResponsibleTeacherId]);
+  useEffect(() => {
+    setLocalTitle(teamTitle);
+  }, [teamTitle]);
+  useEffect(() => {
+    setLocalTeacherId(teamResponsibleTeacherId);
+  }, [teamResponsibleTeacherId]);
 
   // Reset note form when the active team changes
   useEffect(() => {
@@ -92,8 +100,8 @@ export function CombinedTeamCard({
   }, [team.id]);
 
   const toggleOmza = (tag: string) => {
-    setOmzaTags(prev => 
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    setOmzaTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -110,7 +118,7 @@ export function CombinedTeamCard({
   const formatSnippet = (baseText: string, isStudent: boolean) => {
     const tags: string[] = [];
     if (isStudent && filter) tags.push(`#${filter}`);
-    if (omzaTags.length) tags.push(...omzaTags.map(t => `#${t}`));
+    if (omzaTags.length) tags.push(...omzaTags.map((t) => `#${t}`));
     const tagBlock = tags.length ? `[${tags.join("][")}]` : "";
     const trimmedText = baseText.trim();
     if (!tagBlock && !trimmedText) return "";
@@ -128,18 +136,18 @@ export function CombinedTeamCard({
     if (!line) {
       return;
     }
-    setNote(prev => prev.trim() ? `${prev.trim()}\n${line}` : line);
+    setNote((prev) => (prev.trim() ? `${prev.trim()}\n${line}` : line));
   };
 
   const saveNote = async () => {
     if (!note.trim()) return;
-    
+
     try {
       setSaving(true);
-      
+
       // Determine if this is a student note or team note
       const isStudentNote = selectedStudentId !== null;
-      
+
       await projectNotesService.createNote(contextId, {
         note_type: isStudentNote ? "student" : "team",
         // Only pass team_id for team notes, not for student notes
@@ -153,11 +161,11 @@ export function CombinedTeamCard({
         is_portfolio_evidence: false,
         metadata: { omza_tags: omzaTags },
       });
-      
+
       // Reset form
       setNote("");
       setOmzaTags([]);
-      
+
       // Notify parent to refresh notes
       onNoteSaved();
     } catch (error) {
@@ -169,7 +177,9 @@ export function CombinedTeamCard({
   };
 
   // Get the team display name
-  const teamDisplayName = team.team_number ? `Team ${team.team_number}` : team.name;
+  const teamDisplayName = team.team_number
+    ? `Team ${team.team_number}`
+    : team.name;
 
   // Filter and sort notes for the timeline panel
   let timelineNotes = notes;

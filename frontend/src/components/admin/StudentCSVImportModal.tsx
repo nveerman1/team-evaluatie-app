@@ -73,7 +73,8 @@ export default function StudentCSVImportModal({
   };
 
   const downloadTemplate = () => {
-    const csvContent = "student_number,first_name,prefix,last_name,name,email,class_name,course_name,team_number,status\n450001,Jan,de,Vries,Jan de Vries,j.devries@school.nl,4A,Onderzoek & Ontwerpen,1,active\n450002,Marie,,Jansen,Marie Jansen,m.jansen@school.nl,4B,Biologie,,active";
+    const csvContent =
+      "student_number,first_name,prefix,last_name,name,email,class_name,course_name,team_number,status\n450001,Jan,de,Vries,Jan de Vries,j.devries@school.nl,4A,Onderzoek & Ontwerpen,1,active\n450002,Marie,,Jansen,Marie Jansen,m.jansen@school.nl,4B,Biologie,,active";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -102,8 +103,12 @@ export default function StudentCSVImportModal({
             student_number,first_name,prefix,last_name,name,email,class_name,course_name,team_number,status
           </code>
           <p className="text-xs text-blue-700 mt-2">
-            <strong>Verplicht:</strong> email + name (of first_name/last_name)<br />
-            <strong>Optioneel:</strong> student_number (leerlingnummer), first_name (voornaam), prefix (tussenvoegsel), last_name (achternaam), class_name (klas), course_name (vak), team_number, status (active/inactive)
+            <strong>Verplicht:</strong> email + name (of first_name/last_name)
+            <br />
+            <strong>Optioneel:</strong> student_number (leerlingnummer),
+            first_name (voornaam), prefix (tussenvoegsel), last_name
+            (achternaam), class_name (klas), course_name (vak), team_number,
+            status (active/inactive)
           </p>
           <button
             type="button"
@@ -133,7 +138,8 @@ export default function StudentCSVImportModal({
                     : "text-orange-600"
                 }`}
               >
-                {result.created + result.updated} geslaagd, {result.errors.length} gefaald
+                {result.created + result.updated} geslaagd,{" "}
+                {result.errors.length} gefaald
               </span>
             </div>
 
@@ -153,7 +159,9 @@ export default function StudentCSVImportModal({
                 <p className="text-xs font-medium text-red-600 mb-1">Fouten:</p>
                 <ul className="text-xs text-red-600 space-y-1">
                   {result.errors.map((err, idx) => (
-                    <li key={idx}>• Rij {err.row}: {err.error}</li>
+                    <li key={idx}>
+                      • Rij {err.row}: {err.error}
+                    </li>
                   ))}
                 </ul>
               </div>

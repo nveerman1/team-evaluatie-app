@@ -1,6 +1,6 @@
 /**
  * Close Project Assessment Button Component
- * 
+ *
  * Allows teachers to close and archive project assessments,
  * locking the associated project team roster
  */
@@ -32,13 +32,16 @@ export default function CloseAssessmentButton({
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/project-assessments/${assessmentId}/close`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-User-Email": localStorage.getItem("user_email") || "",
+      const response = await fetch(
+        `/api/v1/project-assessments/${assessmentId}/close`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Email": localStorage.getItem("user_email") || "",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         const data = await response.json();
@@ -53,7 +56,9 @@ export default function CloseAssessmentButton({
       setShowConfirmModal(false);
     } catch (err) {
       console.error("Error closing assessment:", err);
-      setError(err instanceof Error ? err.message : "Failed to close assessment");
+      setError(
+        err instanceof Error ? err.message : "Failed to close assessment",
+      );
     } finally {
       setLoading(false);
     }
@@ -91,8 +96,9 @@ export default function CloseAssessmentButton({
                   Close and Archive Assessment?
                 </h3>
                 <p className="text-sm text-gray-600">
-                  This will mark the assessment as closed and permanently lock the team roster.
-                  You will not be able to modify team members after this action.
+                  This will mark the assessment as closed and permanently lock
+                  the team roster. You will not be able to modify team members
+                  after this action.
                 </p>
               </div>
             </div>

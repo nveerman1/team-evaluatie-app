@@ -1,17 +1,24 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect, ReactNode, useCallback, createContext, useContext } from "react";
+import {
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+  createContext,
+  useContext,
+} from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
 import { Loading, ErrorMessage, StatusToggle } from "@/components";
 import { ProjectAssessmentTabs } from "@/components/teacher/project-assessments/ProjectAssessmentTabs";
-import { 
-  normalizeProjectAssessmentStatus, 
+import {
+  normalizeProjectAssessmentStatus,
   STATUS_TOGGLE_OPTIONS,
-  getStatusChangeMessage 
+  getStatusChangeMessage,
 } from "@/lib/project-assessment-status";
 
 type LayoutProps = {
@@ -47,14 +54,21 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await projectAssessmentService.getTeamOverview(Number(assessmentId));
+      const result = await projectAssessmentService.getTeamOverview(
+        Number(assessmentId),
+      );
       setData(result);
     } catch (e: unknown) {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        const err = e as { response?: { data?: { detail?: string } }; message?: string };
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
+        );
       }
     } finally {
       setLoading(false);
@@ -74,27 +88,41 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
   // Handle status change from toggle
   async function handleStatusChange(newStatus: string) {
     if (!data || publishing) return;
-    
+
     // Normalize the status
     const normalizedStatus = normalizeProjectAssessmentStatus(newStatus);
-    
+
     // Don't do anything if status is the same
-    if (normalizeProjectAssessmentStatus(data.assessment.status) === normalizedStatus) return;
-    
+    if (
+      normalizeProjectAssessmentStatus(data.assessment.status) ===
+      normalizedStatus
+    )
+      return;
+
     setPublishing(true);
     try {
-      await projectAssessmentService.updateProjectAssessment(Number(assessmentId), {
-        status: newStatus,
-      });
-      
+      await projectAssessmentService.updateProjectAssessment(
+        Number(assessmentId),
+        {
+          status: newStatus,
+        },
+      );
+
       // Reload data to get updated status
       await loadData();
-      
+
       // Show appropriate message
       showToast(getStatusChangeMessage(normalizedStatus));
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      showToast(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Status wijzigen mislukt",
+      );
     } finally {
       setPublishing(false);
     }
@@ -121,7 +149,9 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
           <div className="mb-4">
             <Link
               href="/teacher/project-assessments"
-              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+              prefetch={
+                process.env.NODE_ENV === "production" ? false : undefined
+              }
               className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ← Terug naar overzicht
@@ -133,7 +163,8 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
                 {data.assessment.title}
               </h1>
               <p className="text-gray-600 mt-1 text-sm">
-                Rubric: {data.rubric_title} (schaal {data.rubric_scale_min}-{data.rubric_scale_max})
+                Rubric: {data.rubric_title} (schaal {data.rubric_scale_min}-
+                {data.rubric_scale_max})
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -149,7 +180,9 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 py-6 space-y-6 ${focusMode ? 'w-full max-w-none px-4 sm:px-6' : 'max-w-6xl mx-auto px-4 sm:px-6'}`}>
+      <div
+        className={`transition-all duration-300 py-6 space-y-6 ${focusMode ? "w-full max-w-none px-4 sm:px-6" : "max-w-6xl mx-auto px-4 sm:px-6"}`}
+      >
         {/* Tabs Navigation */}
         <ProjectAssessmentTabs assessmentId={assessmentId} />
 

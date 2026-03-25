@@ -4,7 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { overviewService } from "@/services";
-import { OverviewMatrixResponse, MatrixFilters, MatrixCell, MatrixColumn } from "@/dtos/overview.dto";
+import {
+  OverviewMatrixResponse,
+  MatrixFilters,
+  MatrixCell,
+  MatrixColumn,
+} from "@/dtos/overview.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
 import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
@@ -16,25 +21,29 @@ export default function AllItemsTab() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  
-  const [matrixData, setMatrixData] = useState<OverviewMatrixResponse | null>(null);
+
+  const [matrixData, setMatrixData] = useState<OverviewMatrixResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [loadingCourses, setLoadingCourses] = useState(true);
-  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
-  
+  const [courses, setCourses] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
+
   // Extract unique classes from matrix data
   const availableClasses = useMemo(() => {
     if (!matrixData) return [];
     const classNames = Array.from(
       new Set(
         matrixData.rows
-          .map(row => row.student_class)
-          .filter((className): className is string => Boolean(className))
-      )
+          .map((row) => row.student_class)
+          .filter((className): className is string => Boolean(className)),
+      ),
     ).sort();
-    return classNames.map(name => ({ id: name, name }));
+    return classNames.map((name) => ({ id: name, name }));
   }, [matrixData]);
-  
+
   // Initialize filters from URL
   const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
     courseId: searchParams.get("subjectId") || undefined,
@@ -42,7 +51,7 @@ export default function AllItemsTab() {
     classId: searchParams.get("classId") || undefined,
     searchQuery: searchParams.get("q") || undefined,
   });
-  
+
   // Column visibility toggles
   const [showProject, setShowProject] = useState(true);
   const [showPeer, setShowPeer] = useState(true);
@@ -60,31 +69,31 @@ export default function AllItemsTab() {
   // Sync URL with filter values
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     if (filterValues.courseId) {
       params.set("subjectId", filterValues.courseId);
     } else {
       params.delete("subjectId");
     }
-    
+
     if (filterValues.period) {
       params.set("period", filterValues.period);
     } else {
       params.delete("period");
     }
-    
+
     if (filterValues.classId) {
       params.set("classId", filterValues.classId);
     } else {
       params.delete("classId");
     }
-    
+
     if (filterValues.searchQuery) {
       params.set("q", filterValues.searchQuery);
     } else {
       params.delete("q");
     }
-    
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [filterValues, pathname, router, searchParams]);
 
@@ -97,13 +106,13 @@ export default function AllItemsTab() {
       setLoading(false);
       return;
     }
-    
+
     const timer = setTimeout(() => {
       loadData();
     }, FILTER_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [filterValues, sortBy, sortOrder]);
-  
+
   // Filter columns based on type toggles
   const filteredColumns = useMemo((): MatrixColumn[] => {
     if (!matrixData) return [];
@@ -130,7 +139,7 @@ export default function AllItemsTab() {
 
   const loadData = async () => {
     if (!filterValues.courseId) return;
-    
+
     setLoading(true);
     try {
       const courseId = Number(filterValues.courseId);
@@ -141,7 +150,7 @@ export default function AllItemsTab() {
         sort_by: sortBy || undefined,
         sort_order: sortOrder,
       };
-      
+
       const response = await overviewService.getMatrix(filters);
       setMatrixData(response);
     } catch (error) {
@@ -164,7 +173,7 @@ export default function AllItemsTab() {
 
   const handleExportCSV = async () => {
     if (!filterValues.courseId) return;
-    
+
     try {
       const courseId = Number(filterValues.courseId);
       const exportFilters: MatrixFilters = {
@@ -174,7 +183,7 @@ export default function AllItemsTab() {
         sort_by: sortBy || undefined,
         sort_order: sortOrder,
       };
-      
+
       const blob = await overviewService.exportMatrixCSV(exportFilters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -190,8 +199,9 @@ export default function AllItemsTab() {
   };
 
   const getScoreColor = (score: number | null | undefined): string => {
-    if (score === null || score === undefined) return "bg-gray-100 text-gray-400";
-    
+    if (score === null || score === undefined)
+      return "bg-gray-100 text-gray-400";
+
     // Assuming 1-10 scale (grades)
     if (score >= 8.0) return "bg-green-100 text-green-800";
     if (score >= 6.5) return "bg-yellow-100 text-yellow-800";
@@ -201,14 +211,22 @@ export default function AllItemsTab() {
 
   const getTypeIcon = (type: string): string => {
     switch (type) {
-      case "project": return "📊";
-      case "peer": return "👥";
-      case "competency": return "🎯";
-      default: return "📄";
+      case "project":
+        return "📊";
+      case "peer":
+        return "👥";
+      case "competency":
+        return "🎯";
+      default:
+        return "📄";
     }
   };
 
-  const renderCell = (cell: MatrixCell | null, studentId: number, colKey: string) => {
+  const renderCell = (
+    cell: MatrixCell | null,
+    studentId: number,
+    colKey: string,
+  ) => {
     if (!cell) {
       return (
         <td key={colKey} className="px-3 py-2 text-center">
@@ -220,7 +238,7 @@ export default function AllItemsTab() {
     }
 
     const scoreColor = getScoreColor(cell.score);
-    
+
     return (
       <td key={colKey} className="px-3 py-2 text-center">
         <Link
@@ -228,9 +246,13 @@ export default function AllItemsTab() {
           className="group block"
           title={`${cell.title}\nCijfer: ${cell.score?.toFixed(1) || "—"}\nDatum: ${cell.date ? formatDate(cell.date) : "—"}\nDocent: ${cell.teacher_name || "—"}`}
         >
-          <div className={`w-full h-10 rounded flex items-center justify-center ${scoreColor} group-hover:ring-2 group-hover:ring-blue-500 transition-all cursor-pointer`}>
+          <div
+            className={`w-full h-10 rounded flex items-center justify-center ${scoreColor} group-hover:ring-2 group-hover:ring-blue-500 transition-all cursor-pointer`}
+          >
             <div className="font-bold text-base">
-              {cell.score !== null && cell.score !== undefined ? cell.score.toFixed(1) : "—"}
+              {cell.score !== null && cell.score !== undefined
+                ? cell.score.toFixed(1)
+                : "—"}
             </div>
           </div>
         </Link>
@@ -243,7 +265,9 @@ export default function AllItemsTab() {
     return (
       <div className="space-y-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Totaaloverzicht
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
             Alle beoordelingen in één overzicht
           </p>
@@ -268,7 +292,9 @@ export default function AllItemsTab() {
     return (
       <div className="space-y-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Totaaloverzicht
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
             Alle beoordelingen in één overzicht
           </p>
@@ -325,7 +351,9 @@ export default function AllItemsTab() {
     return (
       <div className="space-y-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Totaaloverzicht
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
             Alle beoordelingen in één overzicht
           </p>
@@ -390,7 +418,7 @@ export default function AllItemsTab() {
           Alle beoordelingen in één overzicht
         </p>
       </div>
-      
+
       {/* Filters */}
       <OverviewFilters
         filters={filterValues}
@@ -439,7 +467,8 @@ export default function AllItemsTab() {
       {/* Header with summary and Export button */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600">
-          {matrixData.total_students} leerlingen • {filteredColumns.length} evaluaties
+          {matrixData.total_students} leerlingen • {filteredColumns.length}{" "}
+          evaluaties
         </div>
         <button
           onClick={handleExportCSV}
@@ -455,7 +484,7 @@ export default function AllItemsTab() {
           <thead className="bg-slate-50 sticky top-0 z-10">
             <tr>
               {/* Sticky student columns - sortable */}
-              <th 
+              <th
                 className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px] cursor-pointer hover:bg-slate-100"
                 onClick={() => handleColumnSort("student")}
                 title="Klik om te sorteren op naam"
@@ -463,14 +492,16 @@ export default function AllItemsTab() {
                 <div className="flex items-center gap-1">
                   <span>Leerling</span>
                   {sortBy === "student" && (
-                    <span className="text-xs">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                    <span className="text-xs">
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </span>
                   )}
                 </div>
               </th>
               <th className="sticky left-[200px] z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
                 Klas
               </th>
-              
+
               {/* Dynamic evaluation columns - sortable */}
               {filteredColumns.map((col) => (
                 <th
@@ -484,7 +515,9 @@ export default function AllItemsTab() {
                     <div className="flex items-center gap-1">
                       <span>{getTypeIcon(col.type)}</span>
                       {sortBy === col.key && (
-                        <span className="text-xs">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                        <span className="text-xs">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
                       )}
                     </div>
                     <span className="truncate max-w-[60px]">{col.title}</span>
@@ -506,10 +539,10 @@ export default function AllItemsTab() {
                 <td className="sticky left-[200px] z-10 bg-white px-4 py-2 text-sm text-slate-600 border-r border-slate-100 min-w-[120px]">
                   {row.student_class || "—"}
                 </td>
-                
+
                 {/* Dynamic cells */}
-                {filteredColumns.map((col) => 
-                  renderCell(row.cells[col.key], row.student_id, col.key)
+                {filteredColumns.map((col) =>
+                  renderCell(row.cells[col.key], row.student_id, col.key),
                 )}
               </tr>
             ))}
@@ -543,7 +576,8 @@ export default function AllItemsTab() {
 
       {/* Info text */}
       <div className="text-xs text-gray-500">
-        💡 <strong>Tip:</strong> Klik op een cel om naar de detailweergave te gaan. Hover voor meer informatie.
+        💡 <strong>Tip:</strong> Klik op een cel om naar de detailweergave te
+        gaan. Hover voor meer informatie.
       </div>
     </div>
   );

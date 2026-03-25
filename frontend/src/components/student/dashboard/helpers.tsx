@@ -3,14 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Clock } from "lucide-react";
 
-export function StatPill({ 
-  icon, 
-  label, 
-  value 
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string 
+export function StatPill({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
 }) {
   return (
     <div className="flex items-center gap-2 rounded-full border bg-white/70 px-3 py-1 text-sm shadow-sm">
@@ -21,13 +21,7 @@ export function StatPill({
   );
 }
 
-export function ScoreRow({ 
-  label, 
-  value 
-}: { 
-  label: string; 
-  value: number 
-}) {
+export function ScoreRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
@@ -39,11 +33,7 @@ export function ScoreRow({
   );
 }
 
-export function StatusBadge({ 
-  status 
-}: { 
-  status: "actief" | "afgerond" 
-}) {
+export function StatusBadge({ status }: { status: "actief" | "afgerond" }) {
   if (status === "afgerond") {
     return (
       <Badge className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
@@ -60,21 +50,41 @@ export function StatusBadge({
 
 export type OmzaTeacherStatus = "goed" | "v" | "letop" | "urgent";
 
-export function OmzaTeacherBadge({ 
-  letter, 
-  status 
-}: { 
-  letter: string; 
-  status: OmzaTeacherStatus 
+export function OmzaTeacherBadge({
+  letter,
+  status,
+}: {
+  letter: string;
+  status: OmzaTeacherStatus;
 }) {
   const cfg =
     status === "goed"
-      ? { bg: "bg-emerald-50", fg: "text-emerald-700", ring: "ring-emerald-200", content: "🙂" }
+      ? {
+          bg: "bg-emerald-50",
+          fg: "text-emerald-700",
+          ring: "ring-emerald-200",
+          content: "🙂",
+        }
       : status === "v"
-        ? { bg: "bg-emerald-50", fg: "text-emerald-700", ring: "ring-emerald-200", content: "V" }
+        ? {
+            bg: "bg-emerald-50",
+            fg: "text-emerald-700",
+            ring: "ring-emerald-200",
+            content: "V",
+          }
         : status === "letop"
-          ? { bg: "bg-amber-50", fg: "text-amber-800", ring: "ring-amber-200", content: "!" }
-          : { bg: "bg-rose-50", fg: "text-rose-700", ring: "ring-rose-200", content: "!!" };
+          ? {
+              bg: "bg-amber-50",
+              fg: "text-amber-800",
+              ring: "ring-amber-200",
+              content: "!",
+            }
+          : {
+              bg: "bg-rose-50",
+              fg: "text-rose-700",
+              ring: "ring-rose-200",
+              content: "!!",
+            };
 
   return (
     <div className="flex items-center gap-2">
@@ -97,13 +107,7 @@ export function OmzaTeacherBadge({
   );
 }
 
-export function ActionChip({ 
-  done, 
-  label 
-}: { 
-  done: boolean; 
-  label: string 
-}) {
+export function ActionChip({ done, label }: { done: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-sm">
       {done ? (
@@ -118,11 +122,11 @@ export function ActionChip({
   );
 }
 
-export function SectionHeader({ 
-  icon, 
-  title, 
-  subtitle, 
-  right 
+export function SectionHeader({
+  icon,
+  title,
+  subtitle,
+  right,
 }: {
   icon?: React.ReactNode;
   title: string;
@@ -136,9 +140,7 @@ export function SectionHeader({
           {icon && <span className="text-slate-600">{icon}</span>}
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
         </div>
-        {subtitle && (
-          <p className="text-sm text-slate-600">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-sm text-slate-600">{subtitle}</p>}
       </div>
       {right && <div className="flex items-center gap-2">{right}</div>}
     </div>

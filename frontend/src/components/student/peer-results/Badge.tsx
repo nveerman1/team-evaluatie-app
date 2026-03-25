@@ -20,7 +20,7 @@ export function Badge({ color = "gray", children }: BadgeProps) {
     <span
       className={classNames(
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
-        map[color]
+        map[color],
       )}
     >
       {children}

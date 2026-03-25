@@ -59,7 +59,17 @@ interface ProjectWithLevel extends RunningProjectItem {
 }
 
 // Helper function for building mailto links
-function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; subject: string; body: string }) {
+function buildMailto({
+  to,
+  bcc,
+  subject,
+  body,
+}: {
+  to?: string;
+  bcc?: string;
+  subject: string;
+  body: string;
+}) {
   if (bcc) {
     return `mailto:?bcc=${bcc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
@@ -70,7 +80,9 @@ function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; su
 }
 
 // Render status indicator
-const renderStatusIndicator = (status: "complete" | "partial" | "not_started") => {
+const renderStatusIndicator = (
+  status: "complete" | "partial" | "not_started",
+) => {
   const colors = {
     complete: "bg-green-400",
     partial: "bg-yellow-400",
@@ -85,7 +97,7 @@ function DeleteConfirmModal({
   projectTitle,
   onConfirm,
   onCancel,
-  isDeleting
+  isDeleting,
 }: {
   isOpen: boolean;
   projectTitle: string;
@@ -94,13 +106,16 @@ function DeleteConfirmModal({
   isDeleting: boolean;
 }) {
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Project verwijderen</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Project verwijderen
+        </h3>
         <p className="text-gray-600 text-sm mb-2">
-          Weet je zeker dat je het project &quot;{projectTitle}&quot; wilt verwijderen?
+          Weet je zeker dat je het project &quot;{projectTitle}&quot; wilt
+          verwijderen?
         </p>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
           <p className="text-yellow-800 text-xs font-medium mb-1">⚠️ Let op:</p>
@@ -165,7 +180,9 @@ function SubprojectModal({
 }) {
   const [title, setTitle] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [selectedTeamNumber, setSelectedTeamNumber] = useState<number | null>(null);
+  const [selectedTeamNumber, setSelectedTeamNumber] = useState<number | null>(
+    null,
+  );
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [teams, setTeams] = useState<ProjectTeamDto[]>([]);
@@ -175,11 +192,12 @@ function SubprojectModal({
   useEffect(() => {
     if (isOpen) {
       setLoadingClients(true);
-      clientService.listClients({ per_page: 100 })
-        .then(response => {
+      clientService
+        .listClients({ per_page: 100 })
+        .then((response) => {
           setClients(response.items || []);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Failed to load clients:", err);
         })
         .finally(() => setLoadingClients(false));
@@ -190,11 +208,12 @@ function SubprojectModal({
   useEffect(() => {
     if (isOpen && projectId) {
       setLoadingTeams(true);
-      projectTeamService.listProjectTeams(projectId)
-        .then(response => {
+      projectTeamService
+        .listProjectTeams(projectId)
+        .then((response) => {
           setTeams(response.teams);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Failed to load teams:", err);
         })
         .finally(() => setLoadingTeams(false));
@@ -210,17 +229,17 @@ function SubprojectModal({
     }
   }, [isOpen]);
 
-  const selectedTeam = teams.find(t => t.team_number === selectedTeamNumber);
+  const selectedTeam = teams.find((t) => t.team_number === selectedTeamNumber);
 
   const handleSave = () => {
     if (!title.trim()) return;
-    
+
     const subprojectData: SubprojectData = {
       title: title.trim(),
       client_id: selectedClientId || undefined,
       team_number: selectedTeamNumber || undefined,
     };
-    
+
     onSave(subprojectData);
   };
 
@@ -229,7 +248,9 @@ function SubprojectModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Nieuw deelproject</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Nieuw deelproject
+        </h3>
         <p className="text-sm text-gray-600 mb-4">
           Voeg een deelproject toe aan &quot;{projectTitle}&quot;
         </p>
@@ -258,13 +279,15 @@ function SubprojectModal({
               <div className="text-sm text-gray-500">Laden...</div>
             ) : (
               <SearchableMultiSelect
-                options={clients.map(client => ({
+                options={clients.map((client) => ({
                   id: client.id,
                   label: client.organization,
-                  subtitle: client.contact_name
+                  subtitle: client.contact_name,
                 }))}
                 value={selectedClientId ? [selectedClientId] : []}
-                onChange={(ids) => setSelectedClientId(ids.length > 0 ? ids[0] : null)}
+                onChange={(ids) =>
+                  setSelectedClientId(ids.length > 0 ? ids[0] : null)
+                }
                 placeholder="Zoek en selecteer opdrachtgever..."
                 loading={loadingClients}
                 className="w-full"
@@ -281,20 +304,28 @@ function SubprojectModal({
               <div className="text-sm text-gray-500">Teams laden...</div>
             ) : teams.length === 0 ? (
               <div className="text-sm text-gray-500 italic">
-                {projectId ? "Geen teams gevonden voor dit project." : "Geen project geselecteerd."}
+                {projectId
+                  ? "Geen teams gevonden voor dit project."
+                  : "Geen project geselecteerd."}
               </div>
             ) : (
               <select
                 value={selectedTeamNumber || ""}
-                onChange={(e) => setSelectedTeamNumber(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) =>
+                  setSelectedTeamNumber(
+                    e.target.value ? Number(e.target.value) : null,
+                  )
+                }
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Selecteer een team...</option>
-                {teams.filter(team => team.team_number !== null).map(team => (
-                  <option key={team.id} value={team.team_number!}>
-                    {team.display_name_at_time} ({team.member_count} leden)
-                  </option>
-                ))}
+                {teams
+                  .filter((team) => team.team_number !== null)
+                  .map((team) => (
+                    <option key={team.id} value={team.team_number!}>
+                      {team.display_name_at_time} ({team.member_count} leden)
+                    </option>
+                  ))}
               </select>
             )}
           </div>
@@ -302,9 +333,14 @@ function SubprojectModal({
           {/* Team members preview */}
           {selectedTeam && selectedTeam.members.length > 0 && (
             <div className="bg-blue-50 rounded-lg p-3">
-              <div className="text-xs font-medium text-gray-700 mb-1">Teamleden</div>
+              <div className="text-xs font-medium text-gray-700 mb-1">
+                Teamleden
+              </div>
               <div className="text-xs text-gray-600">
-                {selectedTeam.members.filter(m => m.user_name).map(m => m.user_name).join(", ")}
+                {selectedTeam.members
+                  .filter((m) => m.user_name)
+                  .map((m) => m.user_name)
+                  .join(", ")}
               </div>
             </div>
           )}
@@ -338,14 +374,14 @@ function EditProjectModal({
   courses,
   onSave,
   onCancel,
-  isSaving
+  isSaving,
 }: {
   isOpen: boolean;
   project: ProjectWithLevel | null;
   courses: Course[];
-  onSave: (data: { 
-    title: string; 
-    class_name?: string; 
+  onSave: (data: {
+    title: string;
+    class_name?: string;
     status: string;
     course_id?: number;
     start_date?: string;
@@ -359,14 +395,20 @@ function EditProjectModal({
   const [title, setTitle] = useState(project?.project_title || "");
   const [className, setClassName] = useState(project?.class_name || "");
   const [status, setStatus] = useState(project?.project_status || "concept");
-  const [courseId, setCourseId] = useState<number | "">(project?.course_id || "");
-  const [startDate, setStartDate] = useState(project?.start_date?.split("T")[0] || "");
-  const [endDate, setEndDate] = useState(project?.end_date?.split("T")[0] || "");
+  const [courseId, setCourseId] = useState<number | "">(
+    project?.course_id || "",
+  );
+  const [startDate, setStartDate] = useState(
+    project?.start_date?.split("T")[0] || "",
+  );
+  const [endDate, setEndDate] = useState(
+    project?.end_date?.split("T")[0] || "",
+  );
   const [description, setDescription] = useState(project?.description || "");
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>(
-    project?.client_id ? [project.client_id] : []
+    project?.client_id ? [project.client_id] : [],
   );
-  
+
   // Client loading state
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
@@ -376,7 +418,7 @@ function EditProjectModal({
   useEffect(() => {
     async function loadClients() {
       if (!isOpen || clientsLoaded) return;
-      
+
       setLoadingClients(true);
       try {
         const response = await clientService.listClients({ per_page: 100 });
@@ -408,14 +450,18 @@ function EditProjectModal({
   }, [project]);
 
   if (!isOpen || !project) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Project bewerken</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Project bewerken
+        </h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Projecttitel *</label>
+            <label className="block text-sm font-medium mb-1">
+              Projecttitel *
+            </label>
             <input
               type="text"
               value={title}
@@ -424,12 +470,16 @@ function EditProjectModal({
               required
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium mb-1">Course (Vak)</label>
+            <label className="block text-sm font-medium mb-1">
+              Course (Vak)
+            </label>
             <select
               value={courseId}
-              onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) =>
+                setCourseId(e.target.value ? Number(e.target.value) : "")
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
               <option value="">Geen vak geselecteerd</option>
@@ -440,14 +490,16 @@ function EditProjectModal({
               ))}
             </select>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium mb-1">Opdrachtgever(s)</label>
+            <label className="block text-sm font-medium mb-1">
+              Opdrachtgever(s)
+            </label>
             <SearchableMultiSelect
-              options={clients.map(client => ({
+              options={clients.map((client) => ({
                 id: client.id,
                 label: client.organization,
-                subtitle: client.contact_name
+                subtitle: client.contact_name,
               }))}
               value={selectedClientIds}
               onChange={setSelectedClientIds}
@@ -456,7 +508,7 @@ function EditProjectModal({
               className="w-full"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Klas</label>
             <input
@@ -467,10 +519,12 @@ function EditProjectModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Startdatum</label>
+              <label className="block text-sm font-medium mb-1">
+                Startdatum
+              </label>
               <input
                 type="date"
                 value={startDate}
@@ -479,7 +533,9 @@ function EditProjectModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Einddatum</label>
+              <label className="block text-sm font-medium mb-1">
+                Einddatum
+              </label>
               <input
                 type="date"
                 value={endDate}
@@ -488,9 +544,11 @@ function EditProjectModal({
               />
             </div>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium mb-1">Beschrijving</label>
+            <label className="block text-sm font-medium mb-1">
+              Beschrijving
+            </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -499,7 +557,7 @@ function EditProjectModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Status</label>
             <select
@@ -523,16 +581,19 @@ function EditProjectModal({
             Annuleren
           </button>
           <button
-            onClick={() => onSave({ 
-              title, 
-              class_name: className || undefined, 
-              status,
-              course_id: courseId === "" ? undefined : courseId,
-              start_date: startDate || undefined,
-              end_date: endDate || undefined,
-              description: description || undefined,
-              client_ids: selectedClientIds.length > 0 ? selectedClientIds : undefined,
-            })}
+            onClick={() =>
+              onSave({
+                title,
+                class_name: className || undefined,
+                status,
+                course_id: courseId === "" ? undefined : courseId,
+                start_date: startDate || undefined,
+                end_date: endDate || undefined,
+                description: description || undefined,
+                client_ids:
+                  selectedClientIds.length > 0 ? selectedClientIds : undefined,
+              })
+            }
             disabled={isSaving || !title.trim()}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
@@ -545,17 +606,17 @@ function EditProjectModal({
 }
 
 // Main Project Table Component
-function ProjectTable({ 
-  projects, 
-  selectedProjects, 
-  toggleProjectSelection, 
-  toggleAllProjects, 
-  expandedProjects, 
+function ProjectTable({
+  projects,
+  selectedProjects,
+  toggleProjectSelection,
+  toggleAllProjects,
+  expandedProjects,
   toggleProjectExpansion,
   isOnderbouw,
   onEditProject,
   onDeleteProject,
-  onAddSubproject
+  onAddSubproject,
 }: {
   projects: ProjectWithLevel[];
   selectedProjects: number[];
@@ -570,7 +631,7 @@ function ProjectTable({
 }) {
   // Determine column count based on tab
   const colSpan = isOnderbouw ? 7 : 5; // onderbouw has 7 cols, bovenbouw has 5 cols (no opdrachtgever, no mail)
-  
+
   return (
     <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-3">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-gray-100 pb-2">
@@ -579,10 +640,18 @@ function ProjectTable({
             {isOnderbouw ? "Onderbouw projecten" : "Bovenbouw keuzeprojecten"}
           </h2>
           <p className="text-xs text-gray-600">
-            {isOnderbouw 
-              ? <>Projecten gekoppeld aan een specifieke <span className="font-medium">Course (Vak)</span> in de onderbouw.</>
-              : <>Keuzeprojecten met centrale beoordeling, peer en scan. Klik op een keuzeproject om details te zien.</>
-            }
+            {isOnderbouw ? (
+              <>
+                Projecten gekoppeld aan een specifieke{" "}
+                <span className="font-medium">Course (Vak)</span> in de
+                onderbouw.
+              </>
+            ) : (
+              <>
+                Keuzeprojecten met centrale beoordeling, peer en scan. Klik op
+                een keuzeproject om details te zien.
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-gray-500">
@@ -602,7 +671,10 @@ function ProjectTable({
               <th className="px-3 py-2">
                 <input
                   type="checkbox"
-                  checked={projects.length > 0 && selectedProjects.length === projects.length}
+                  checked={
+                    projects.length > 0 &&
+                    selectedProjects.length === projects.length
+                  }
                   onChange={toggleAllProjects}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
@@ -619,15 +691,20 @@ function ProjectTable({
             {projects.map((project) => (
               <React.Fragment key={project.project_id}>
                 {/* Main project row - clickable to expand/collapse */}
-                <tr 
+                <tr
                   className="hover:bg-gray-50 align-top cursor-pointer"
                   onClick={() => toggleProjectExpansion(project.project_id)}
                 >
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-3 py-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedProjects.includes(project.project_id)}
-                      onChange={() => toggleProjectSelection(project.project_id)}
+                      onChange={() =>
+                        toggleProjectSelection(project.project_id)
+                      }
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
@@ -641,26 +718,41 @@ function ProjectTable({
                         {project.class_name && project.team_number && " · "}
                         {project.team_number && `Team ${project.team_number}`}
                       </span>
-                      <span className="text-[11px] text-gray-400">{project.project_status}</span>
+                      <span className="text-[11px] text-gray-400">
+                        {project.project_status}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-[11px] text-gray-700">{project.course_name || "-"}</td>
+                  <td className="px-4 py-2 text-[11px] text-gray-700">
+                    {project.course_name || "-"}
+                  </td>
                   {isOnderbouw && (
                     <td className="px-4 py-2">
                       <div className="flex flex-col">
-                        <span className="text-xs text-gray-800">{project.client_organization || "-"}</span>
+                        <span className="text-xs text-gray-800">
+                          {project.client_organization || "-"}
+                        </span>
                       </div>
                     </td>
                   )}
                   <td className="px-4 py-2 text-[11px] text-gray-600">
                     {project.start_date && project.end_date ? (
                       <>
-                        {new Date(project.start_date).toLocaleDateString("nl-NL")} – {new Date(project.end_date).toLocaleDateString("nl-NL")}
+                        {new Date(project.start_date).toLocaleDateString(
+                          "nl-NL",
+                        )}{" "}
+                        –{" "}
+                        {new Date(project.end_date).toLocaleDateString("nl-NL")}
                       </>
-                    ) : "-"}
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   {isOnderbouw && (
-                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="px-4 py-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {project.client_email ? (
                         <a
                           href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
@@ -673,7 +765,10 @@ function ProjectTable({
                       )}
                     </td>
                   )}
-                  <td className="px-4 py-2 text-right align-top" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-4 py-2 text-right align-top"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEditProject(project)}
@@ -690,11 +785,17 @@ function ProjectTable({
                         🗑️
                       </button>
                       <button
-                        onClick={() => toggleProjectExpansion(project.project_id)}
+                        onClick={() =>
+                          toggleProjectExpansion(project.project_id)
+                        }
                         className="inline-flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-900 ml-2"
                       >
                         Details
-                        <span className="text-xs">{expandedProjects.includes(project.project_id) ? "▾" : "▸"}</span>
+                        <span className="text-xs">
+                          {expandedProjects.includes(project.project_id)
+                            ? "▾"
+                            : "▸"}
+                        </span>
                       </button>
                     </div>
                   </td>
@@ -707,80 +808,117 @@ function ProjectTable({
                       {/* Evaluation status grid */}
                       <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-6 gap-3 text-[11px] text-gray-700">
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Opdrachtgever</div>
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Opdrachtgever
+                          </div>
                           <div className="flex items-center gap-1">
                             {renderStatusIndicator(
-                              project.client_organization ? "complete" : "not_started"
+                              project.client_organization
+                                ? "complete"
+                                : "not_started",
                             )}
-                            {project.client_organization || "Geen opdrachtgever"}
+                            {project.client_organization ||
+                              "Geen opdrachtgever"}
                           </div>
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Projectbeoordeling</div>
-                          <Link 
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Projectbeoordeling
+                          </div>
+                          <Link
                             href={`/teacher/project-assessments?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
                             {renderStatusIndicator(
-                              (project.evaluation_counts?.project_assessment || 0) > 0 ? "complete" : "not_started"
+                              (project.evaluation_counts?.project_assessment ||
+                                0) > 0
+                                ? "complete"
+                                : "not_started",
                             )}
-                            {(project.evaluation_counts?.project_assessment || 0) > 0 
+                            {(project.evaluation_counts?.project_assessment ||
+                              0) > 0
                               ? `${project.evaluation_counts?.project_assessment} beoordeling${(project.evaluation_counts?.project_assessment || 0) > 1 ? "en" : ""} gekoppeld`
-                              : "Nog geen beoordeling"
-                            }
+                              : "Nog geen beoordeling"}
                           </Link>
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Peerevaluatie</div>
-                          <Link 
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Peerevaluatie
+                          </div>
+                          <Link
                             href={`/teacher/evaluations?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
                             {renderStatusIndicator(
-                              (project.evaluation_counts?.peer || 0) > 0 ? "complete" : "not_started"
+                              (project.evaluation_counts?.peer || 0) > 0
+                                ? "complete"
+                                : "not_started",
                             )}
-                            {(project.evaluation_counts?.peer || 0) > 0 
+                            {(project.evaluation_counts?.peer || 0) > 0
                               ? `${project.evaluation_counts?.peer} peerevaluatie${(project.evaluation_counts?.peer || 0) > 1 ? "s" : ""} ingericht`
-                              : "Nog geen peerevaluatie"
-                            }
+                              : "Nog geen peerevaluatie"}
                           </Link>
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Competentiescan</div>
-                          <Link 
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Competentiescan
+                          </div>
+                          <Link
                             href={`/teacher/competencies?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
                             {renderStatusIndicator(
-                              (project.evaluation_counts?.competency_scan || 0) > 0 ? "complete" : "not_started"
+                              (project.evaluation_counts?.competency_scan ||
+                                0) > 0
+                                ? "complete"
+                                : "not_started",
                             )}
-                            {(project.evaluation_counts?.competency_scan || 0) > 0 
+                            {(project.evaluation_counts?.competency_scan || 0) >
+                            0
                               ? `${project.evaluation_counts?.competency_scan} scan${(project.evaluation_counts?.competency_scan || 0) > 1 ? "s" : ""} ingericht`
-                              : "Scan nog in te richten"
-                            }
+                              : "Scan nog in te richten"}
                           </Link>
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Aantekeningen</div>
-                          <Link href={`/teacher/project-notes?project_id=${project.project_id}`} className="hover:underline">
-                            {(project.note_count || 0) > 0 
-                              ? <><span className="font-medium">{project.note_count}</span> aantekening{(project.note_count || 0) > 1 ? "en" : ""} • <span className="underline underline-offset-2">Bekijk overzicht</span></>
-                              : "Nog geen aantekeningen"
-                            }
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Aantekeningen
+                          </div>
+                          <Link
+                            href={`/teacher/project-notes?project_id=${project.project_id}`}
+                            className="hover:underline"
+                          >
+                            {(project.note_count || 0) > 0 ? (
+                              <>
+                                <span className="font-medium">
+                                  {project.note_count}
+                                </span>{" "}
+                                aantekening
+                                {(project.note_count || 0) > 1
+                                  ? "en"
+                                  : ""} •{" "}
+                                <span className="underline underline-offset-2">
+                                  Bekijk overzicht
+                                </span>
+                              </>
+                            ) : (
+                              "Nog geen aantekeningen"
+                            )}
                           </Link>
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Projectfeedback</div>
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Projectfeedback
+                          </div>
                           <Link
                             href={`/teacher/project-feedback/create?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
-                            {renderStatusIndicator("not_started")}
-                            + Feedback opzetten
+                            {renderStatusIndicator("not_started")}+ Feedback
+                            opzetten
                           </Link>
                         </div>
                       </div>
-                      
+
                       {/* Deelprojecten section for Bovenbouw projects */}
                       {!isOnderbouw && (
                         <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3 space-y-2">
@@ -790,10 +928,11 @@ function ProjectTable({
                                 Deelprojecten – {project.project_title}
                               </h3>
                               <p className="text-[11px] text-gray-500">
-                                Per deelproject zie je de opdrachtgever, het team en de namen van de teamleden.
+                                Per deelproject zie je de opdrachtgever, het
+                                team en de namen van de teamleden.
                               </p>
                             </div>
-                            <button 
+                            <button
                               className="rounded-full border border-blue-200 bg-white px-3 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50"
                               onClick={() => onAddSubproject(project)}
                             >
@@ -814,14 +953,25 @@ function ProjectTable({
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-blue-100">
-                                {project.subprojects && project.subprojects.length > 0 ? (
+                                {project.subprojects &&
+                                project.subprojects.length > 0 ? (
                                   project.subprojects.map((subproject) => (
-                                    <tr key={subproject.id} className="hover:bg-white/80">
-                                      <td className="py-2 pr-4 align-top">{subproject.title}</td>
-                                      <td className="px-4 py-2 align-top">{subproject.client_name || "-"}</td>
-                                      <td className="px-4 py-2 align-top">{subproject.team_name || "-"}</td>
+                                    <tr
+                                      key={subproject.id}
+                                      className="hover:bg-white/80"
+                                    >
+                                      <td className="py-2 pr-4 align-top">
+                                        {subproject.title}
+                                      </td>
+                                      <td className="px-4 py-2 align-top">
+                                        {subproject.client_name || "-"}
+                                      </td>
+                                      <td className="px-4 py-2 align-top">
+                                        {subproject.team_name || "-"}
+                                      </td>
                                       <td className="px-4 py-2 align-top text-[11px] text-gray-700">
-                                        {subproject.team_members?.join(", ") || "-"}
+                                        {subproject.team_members?.join(", ") ||
+                                          "-"}
                                       </td>
                                       <td className="px-4 py-2 align-top text-right">
                                         {subproject.client_email ? (
@@ -832,15 +982,22 @@ function ProjectTable({
                                             📧 Mail
                                           </a>
                                         ) : (
-                                          <span className="text-slate-400 text-[11px]">-</span>
+                                          <span className="text-slate-400 text-[11px]">
+                                            -
+                                          </span>
                                         )}
                                       </td>
                                     </tr>
                                   ))
                                 ) : (
                                   <tr>
-                                    <td colSpan={5} className="py-4 text-center text-gray-500 text-[11px]">
-                                      Nog geen deelprojecten aangemaakt. Klik op &quot;+ Nieuw deelproject&quot; om te beginnen.
+                                    <td
+                                      colSpan={5}
+                                      className="py-4 text-center text-gray-500 text-[11px]"
+                                    >
+                                      Nog geen deelprojecten aangemaakt. Klik op
+                                      &quot;+ Nieuw deelproject&quot; om te
+                                      beginnen.
                                     </td>
                                   </tr>
                                 )}
@@ -849,14 +1006,20 @@ function ProjectTable({
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Team members if available (for onderbouw) */}
-                      {isOnderbouw && project.student_names && project.student_names.length > 0 && (
-                        <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
-                          <div className="text-xs font-semibold text-gray-800 mb-1">Teamleden</div>
-                          <p className="text-[11px] text-gray-600">{project.student_names.join(", ")}</p>
-                        </div>
-                      )}
+                      {isOnderbouw &&
+                        project.student_names &&
+                        project.student_names.length > 0 && (
+                          <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                            <div className="text-xs font-semibold text-gray-800 mb-1">
+                              Teamleden
+                            </div>
+                            <p className="text-[11px] text-gray-600">
+                              {project.student_names.join(", ")}
+                            </p>
+                          </div>
+                        )}
                     </td>
                   </tr>
                 )}
@@ -865,7 +1028,10 @@ function ProjectTable({
 
             {projects.length === 0 && (
               <tr>
-                <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
+                <td
+                  colSpan={colSpan}
+                  className="px-4 py-8 text-center text-gray-500"
+                >
                   Geen projecten gevonden
                 </td>
               </tr>
@@ -878,7 +1044,11 @@ function ProjectTable({
 }
 
 // Tab Content Component (shared between Onderbouw and Bovenbouw)
-function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" }) {
+function TabContent({
+  levelFilter,
+}: {
+  levelFilter: "onderbouw" | "bovenbouw";
+}) {
   const router = useRouter();
   const { courses } = useCourses();
   const [projects, setProjects] = useState<ProjectWithLevel[]>([]);
@@ -893,21 +1063,27 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   const [expandedProjects, setExpandedProjects] = useState<number[]>([]);
   const [emailTemplate, setEmailTemplate] = useState("");
   const [availableCourses, setAvailableCourses] = useState<string[]>([]);
-  const [availableAcademicYears, setAvailableAcademicYears] = useState<string[]>([]);
+  const [availableAcademicYears, setAvailableAcademicYears] = useState<
+    string[]
+  >([]);
   const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
-  
+
   // Mail templates from API
   const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
-  
+
   // Edit/Delete modals
-  const [editingProject, setEditingProject] = useState<ProjectWithLevel | null>(null);
-  const [deletingProject, setDeletingProject] = useState<ProjectWithLevel | null>(null);
+  const [editingProject, setEditingProject] = useState<ProjectWithLevel | null>(
+    null,
+  );
+  const [deletingProject, setDeletingProject] =
+    useState<ProjectWithLevel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // Subproject modal
-  const [subprojectModalProject, setSubprojectModalProject] = useState<ProjectWithLevel | null>(null);
+  const [subprojectModalProject, setSubprojectModalProject] =
+    useState<ProjectWithLevel | null>(null);
   const [isCreatingSubproject, setIsCreatingSubproject] = useState(false);
 
   // Fetch mail templates
@@ -918,13 +1094,13 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         const templates = await listMailTemplates({ is_active: true });
         setMailTemplates(templates);
         if (templates.length > 0) {
-          setEmailTemplate((prev) => prev === "" ? templates[0].type : prev);
+          setEmailTemplate((prev) => (prev === "" ? templates[0].type : prev));
         } else {
-          setEmailTemplate((prev) => prev === "" ? "opvolgmail" : prev);
+          setEmailTemplate((prev) => (prev === "" ? "opvolgmail" : prev));
         }
       } catch (err) {
         console.error("Error fetching mail templates:", err);
-        setEmailTemplate((prev) => prev === "" ? "opvolgmail" : prev);
+        setEmailTemplate((prev) => (prev === "" ? "opvolgmail" : prev));
       } finally {
         setTemplatesLoading(false);
       }
@@ -942,89 +1118,105 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         setLoading(true);
         // Use listProjects to get all projects, including newly created ones
         const response = await projectService.listProjects({ per_page: 100 });
-        
+
         // Map ProjectListItem to ProjectWithLevel format
-        const basicProjects: ProjectWithLevel[] = (response.items || []).map(item => {
-          // Find course info
-          const course = courses.find(c => c.id === item.course_id);
-          
-          return {
-            project_id: item.id,
-            project_title: item.title,
-            project_status: item.status,
-            course_name: course?.name,
-            course_id: item.course_id,
-            course_level: course?.level,
-            class_name: item.class_name,
-            period: item.period,
-            academic_year_label: course?.academic_year_label,
-            start_date: item.start_date,
-            end_date: item.end_date,
-            student_names: [],
-          };
-        });
-        
+        const basicProjects: ProjectWithLevel[] = (response.items || []).map(
+          (item) => {
+            // Find course info
+            const course = courses.find((c) => c.id === item.course_id);
+
+            return {
+              project_id: item.id,
+              project_title: item.title,
+              project_status: item.status,
+              course_name: course?.name,
+              course_id: item.course_id,
+              course_level: course?.level,
+              class_name: item.class_name,
+              period: item.period,
+              academic_year_label: course?.academic_year_label,
+              start_date: item.start_date,
+              end_date: item.end_date,
+              student_names: [],
+            };
+          },
+        );
+
         // Fetch project details and subprojects in parallel
         const [projectDetails, subprojectsResults] = await Promise.all([
-          Promise.allSettled(basicProjects.map(p => projectService.getProject(p.project_id))),
-          Promise.allSettled(basicProjects.map(p => projectService.listSubprojects(p.project_id))),
+          Promise.allSettled(
+            basicProjects.map((p) => projectService.getProject(p.project_id)),
+          ),
+          Promise.allSettled(
+            basicProjects.map((p) =>
+              projectService.listSubprojects(p.project_id),
+            ),
+          ),
         ]);
-        
+
         // Enrich projects with details and subprojects
-        const enrichedProjects: ProjectWithLevel[] = basicProjects.map((project, index) => {
-          const detailResult = projectDetails[index];
-          const subprojectsResult = subprojectsResults[index];
-          
-          let enriched = { ...project };
-          
-          if (detailResult.status === 'fulfilled') {
-            const detail = detailResult.value;
-            enriched = {
-              ...enriched,
-              evaluation_counts: detail.evaluation_counts,
-              note_count: detail.note_count,
-              client_count: detail.client_count,
-              description: detail.description,
-              // Add client info from project details
-              client_id: detail.client_id,
-              client_organization: detail.client_organization,
-              client_email: detail.client_email,
-            };
-          }
-          
-          if (subprojectsResult.status === 'fulfilled') {
-            enriched.subprojects = subprojectsResult.value.items;
-          } else {
-            enriched.subprojects = [];
-          }
-          
-          return enriched;
-        });
-        
+        const enrichedProjects: ProjectWithLevel[] = basicProjects.map(
+          (project, index) => {
+            const detailResult = projectDetails[index];
+            const subprojectsResult = subprojectsResults[index];
+
+            let enriched = { ...project };
+
+            if (detailResult.status === "fulfilled") {
+              const detail = detailResult.value;
+              enriched = {
+                ...enriched,
+                evaluation_counts: detail.evaluation_counts,
+                note_count: detail.note_count,
+                client_count: detail.client_count,
+                description: detail.description,
+                // Add client info from project details
+                client_id: detail.client_id,
+                client_organization: detail.client_organization,
+                client_email: detail.client_email,
+              };
+            }
+
+            if (subprojectsResult.status === "fulfilled") {
+              enriched.subprojects = subprojectsResult.value.items;
+            } else {
+              enriched.subprojects = [];
+            }
+
+            return enriched;
+          },
+        );
+
         setProjects(enrichedProjects);
-        
+
         // Extract unique courses for filter dropdown
-        const uniqueCourses = Array.from(new Set(
-          enrichedProjects
-            .map(p => p.course_name)
-            .filter((name): name is string => !!name)
-        )).sort();
+        const uniqueCourses = Array.from(
+          new Set(
+            enrichedProjects
+              .map((p) => p.course_name)
+              .filter((name): name is string => !!name),
+          ),
+        ).sort();
         setAvailableCourses(uniqueCourses);
-        
+
         // Extract unique academic years for filter dropdown
-        const uniqueAcademicYears = Array.from(new Set(
-          enrichedProjects
-            .map(p => p.academic_year_label)
-            .filter((label): label is string => !!label)
-        )).sort();
+        const uniqueAcademicYears = Array.from(
+          new Set(
+            enrichedProjects
+              .map((p) => p.academic_year_label)
+              .filter((label): label is string => !!label),
+          ),
+        ).sort();
         setAvailableAcademicYears(uniqueAcademicYears);
-        
+
         // Extract unique periods for filter dropdown
-        const uniquePeriods = Array.from(new Set(
-          enrichedProjects
-            .map(p => p.period)
-            .filter((period): period is string => !!period)
-        )).sort();
+        const uniquePeriods = Array.from(
+          new Set(
+            enrichedProjects
+              .map((p) => p.period)
+              .filter((period): period is string => !!period),
+          ),
+        ).sort();
         setAvailablePeriods(uniquePeriods);
       } catch (err) {
         console.error("Failed to fetch projects:", err);
@@ -1033,7 +1225,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         setLoading(false);
       }
     }
-    
+
     // Only fetch when courses are loaded
     if (courses.length > 0) {
       fetchProjects();
@@ -1044,53 +1236,71 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   useEffect(() => {
     let lastRefreshTime = 0;
     const DEBOUNCE_MS = 2000; // Only refresh if more than 2 seconds since last refresh
-    
+
     const handleFocus = () => {
       const now = Date.now();
       if (now - lastRefreshTime > DEBOUNCE_MS) {
         lastRefreshTime = now;
-        setRefreshKey(prev => prev + 1);
+        setRefreshKey((prev) => prev + 1);
       }
     };
-    
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, []);
 
   // Filter projects based on level and search criteria
-  const filteredProjects = projects.filter(project => {
+  const filteredProjects = projects.filter((project) => {
     // Filter by level (onderbouw/bovenbouw)
     // If course has no level, show in both tabs
     if (project.course_level && project.course_level !== levelFilter) {
       return false;
     }
-    
+
     // Search filter
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch =
+      searchQuery === "" ||
       project.project_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (project.course_name && project.course_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (project.client_organization && project.client_organization.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+      (project.course_name &&
+        project.course_name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())) ||
+      (project.client_organization &&
+        project.client_organization
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()));
+
     // Course filter
-    const matchesCourse = courseFilter === "" || project.course_name === courseFilter;
-    
+    const matchesCourse =
+      courseFilter === "" || project.course_name === courseFilter;
+
     // Status filter
-    const matchesStatus = statusFilter === "" || project.project_status === statusFilter;
-    
+    const matchesStatus =
+      statusFilter === "" || project.project_status === statusFilter;
+
     // Academic year filter
-    const matchesAcademicYear = academicYearFilter === "" || project.academic_year_label === academicYearFilter;
-    
+    const matchesAcademicYear =
+      academicYearFilter === "" ||
+      project.academic_year_label === academicYearFilter;
+
     // Period filter
-    const matchesPeriod = periodFilter === "" || project.period === periodFilter;
-    
-    return matchesSearch && matchesCourse && matchesStatus && matchesAcademicYear && matchesPeriod;
+    const matchesPeriod =
+      periodFilter === "" || project.period === periodFilter;
+
+    return (
+      matchesSearch &&
+      matchesCourse &&
+      matchesStatus &&
+      matchesAcademicYear &&
+      matchesPeriod
+    );
   });
 
   const toggleProjectSelection = (projectId: number) => {
-    setSelectedProjects(prev => 
-      prev.includes(projectId) 
-        ? prev.filter(id => id !== projectId)
-        : [...prev, projectId]
+    setSelectedProjects((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId],
     );
   };
 
@@ -1098,15 +1308,15 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     if (selectedProjects.length === filteredProjects.length) {
       setSelectedProjects([]);
     } else {
-      setSelectedProjects(filteredProjects.map(p => p.project_id));
+      setSelectedProjects(filteredProjects.map((p) => p.project_id));
     }
   };
 
   const toggleProjectExpansion = (projectId: number) => {
-    setExpandedProjects(prev =>
+    setExpandedProjects((prev) =>
       prev.includes(projectId)
-        ? prev.filter(id => id !== projectId)
-        : [...prev, projectId]
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId],
     );
   };
 
@@ -1120,42 +1330,43 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
 
   const handleSendBulkEmail = () => {
     const selectedEmails = filteredProjects
-      .filter(p => selectedProjects.includes(p.project_id) && p.client_email)
-      .map(p => p.client_email)
+      .filter((p) => selectedProjects.includes(p.project_id) && p.client_email)
+      .map((p) => p.client_email)
       .filter((email): email is string => !!email)
       .join(";");
-    
+
     if (!selectedEmails) {
       alert("Geen opdrachtgevers met email geselecteerd");
       return;
     }
-    
+
     // Use template from API or fallback
-    const apiTemplate = mailTemplates.find(t => t.type === emailTemplate);
+    const apiTemplate = mailTemplates.find((t) => t.type === emailTemplate);
     let emailSubject: string;
     let emailBody: string;
-    
+
     if (apiTemplate) {
       emailSubject = apiTemplate.subject;
       emailBody = apiTemplate.body;
     } else {
-      const defaultTemplate = DEFAULT_TEMPLATES[emailTemplate] || DEFAULT_TEMPLATES.opvolgmail;
+      const defaultTemplate =
+        DEFAULT_TEMPLATES[emailTemplate] || DEFAULT_TEMPLATES.opvolgmail;
       emailSubject = defaultTemplate.subject;
       emailBody = defaultTemplate.body;
     }
-    
+
     const mailtoLink = buildMailto({
       to: selectedEmails,
       subject: emailSubject,
       body: emailBody,
     });
-    
-    window.open(mailtoLink, '_self');
+
+    window.open(mailtoLink, "_self");
   };
 
-  const handleEditProject = async (data: { 
-    title: string; 
-    class_name?: string; 
+  const handleEditProject = async (data: {
+    title: string;
+    class_name?: string;
     status: string;
     course_id?: number;
     start_date?: string;
@@ -1164,7 +1375,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     client_ids?: number[];
   }) => {
     if (!editingProject) return;
-    
+
     setIsSaving(true);
     try {
       // Update project basic fields
@@ -1177,26 +1388,32 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         end_date: data.end_date,
         description: data.description,
       });
-      
+
       // Handle client linking/unlinking
       if (data.client_ids !== undefined) {
         const currentClientId = editingProject.client_id;
         const newClientIds = data.client_ids;
-        
+
         // Unlink old client if it's no longer selected
         if (currentClientId && !newClientIds.includes(currentClientId)) {
           try {
-            await clientService.unlinkProjectFromClient(currentClientId, editingProject.project_id);
+            await clientService.unlinkProjectFromClient(
+              currentClientId,
+              editingProject.project_id,
+            );
           } catch (err) {
             console.warn("Failed to unlink old client:", err);
           }
         }
-        
+
         // Link new clients (ignore "already linked" errors - 400 status)
         for (const clientId of newClientIds) {
           if (clientId !== currentClientId) {
             try {
-              await clientService.linkProjectToClient(clientId, editingProject.project_id);
+              await clientService.linkProjectToClient(
+                clientId,
+                editingProject.project_id,
+              );
             } catch (err: unknown) {
               // Ignore 400 errors (project already linked to this client)
               const axiosErr = err as { response?: { status?: number } };
@@ -1207,27 +1424,29 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           }
         }
       }
-      
+
       // Find course name for the selected course_id
-      const selectedCourse = courses.find(c => c.id === data.course_id);
-      
+      const selectedCourse = courses.find((c) => c.id === data.course_id);
+
       // Update local state
-      setProjects(prev => prev.map(p => 
-        p.project_id === editingProject.project_id 
-          ? { 
-              ...p, 
-              project_title: data.title, 
-              class_name: data.class_name, 
-              project_status: data.status,
-              course_name: selectedCourse?.name,
-              course_level: selectedCourse?.level,
-              start_date: data.start_date,
-              end_date: data.end_date,
-              description: data.description,
-              client_id: data.client_ids?.[0],
-            }
-          : p
-      ));
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.project_id === editingProject.project_id
+            ? {
+                ...p,
+                project_title: data.title,
+                class_name: data.class_name,
+                project_status: data.status,
+                course_name: selectedCourse?.name,
+                course_level: selectedCourse?.level,
+                start_date: data.start_date,
+                end_date: data.end_date,
+                description: data.description,
+                client_id: data.client_ids?.[0],
+              }
+            : p,
+        ),
+      );
       setEditingProject(null);
     } catch (err) {
       console.error("Failed to update project:", err);
@@ -1239,14 +1458,18 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
 
   const handleDeleteProject = async () => {
     if (!deletingProject) return;
-    
+
     setIsDeleting(true);
     try {
       await projectService.deleteProject(deletingProject.project_id);
-      
+
       // Remove from local state
-      setProjects(prev => prev.filter(p => p.project_id !== deletingProject.project_id));
-      setSelectedProjects(prev => prev.filter(id => id !== deletingProject.project_id));
+      setProjects((prev) =>
+        prev.filter((p) => p.project_id !== deletingProject.project_id),
+      );
+      setSelectedProjects((prev) =>
+        prev.filter((id) => id !== deletingProject.project_id),
+      );
       setDeletingProject(null);
     } catch (err) {
       console.error("Failed to delete project:", err);
@@ -1257,7 +1480,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   };
 
   const selectedWithEmail = filteredProjects.filter(
-    p => selectedProjects.includes(p.project_id) && p.client_email
+    (p) => selectedProjects.includes(p.project_id) && p.client_email,
   ).length;
 
   if (loading) {
@@ -1283,7 +1506,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         onCancel={() => setEditingProject(null)}
         isSaving={isSaving}
       />
-      
+
       {/* Delete Modal */}
       <DeleteConfirmModal
         isOpen={!!deletingProject}
@@ -1292,7 +1515,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         onCancel={() => setDeletingProject(null)}
         isDeleting={isDeleting}
       />
-    
+
       {/* Filters */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1329,8 +1552,10 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
               className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
             >
               <option value="">Alle vakken</option>
-              {availableCourses.map(course => (
-                <option key={course} value={course}>{course}</option>
+              {availableCourses.map((course) => (
+                <option key={course} value={course}>
+                  {course}
+                </option>
               ))}
             </select>
 
@@ -1341,8 +1566,10 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
               className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
             >
               <option value="">Alle schooljaren</option>
-              {availableAcademicYears.map(year => (
-                <option key={year} value={year}>{year}</option>
+              {availableAcademicYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
               ))}
             </select>
 
@@ -1353,8 +1580,10 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
               className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
             >
               <option value="">Alle periodes</option>
-              {availablePeriods.map(period => (
-                <option key={period} value={period}>{period}</option>
+              {availablePeriods.map((period) => (
+                <option key={period} value={period}>
+                  {period}
+                </option>
               ))}
             </select>
 
@@ -1387,13 +1616,15 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           <span className="h-2 w-2 rounded-full bg-green-400" /> alles ingericht
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-yellow-400" /> deels ingericht
+          <span className="h-2 w-2 rounded-full bg-yellow-400" /> deels
+          ingericht
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="h-2 w-2 rounded-full bg-gray-300" /> nog niet gestart
         </span>
         <span className="ml-auto text-[11px] text-gray-500">
-          Tip: gebruik de projectwizard om in één keer evaluaties, peer en scan aan een project te koppelen.
+          Tip: gebruik de projectwizard om in één keer evaluaties, peer en scan
+          aan een project te koppelen.
         </span>
       </div>
 
@@ -1403,7 +1634,8 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <div className="flex-1">
               <p className="text-sm font-medium text-slate-900">
-                {selectedProjects.length} project{selectedProjects.length !== 1 ? "en" : ""} geselecteerd
+                {selectedProjects.length} project
+                {selectedProjects.length !== 1 ? "en" : ""} geselecteerd
               </p>
               <p className="text-xs text-slate-600 mt-0.5">
                 {selectedWithEmail} opdrachtgever(s) met email
@@ -1420,14 +1652,22 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
                   <option>Laden...</option>
                 ) : mailTemplates.length > 0 ? (
                   mailTemplates.map((t) => (
-                    <option key={t.id} value={t.type}>{t.name}</option>
+                    <option key={t.id} value={t.type}>
+                      {t.name}
+                    </option>
                   ))
                 ) : (
                   <>
                     <option value="opvolgmail">Opvolgmail</option>
-                    <option value="startproject">Startproject uitnodiging</option>
-                    <option value="tussenpresentatie">Tussenpresentatie uitnodiging</option>
-                    <option value="eindpresentatie">Eindpresentatie uitnodiging</option>
+                    <option value="startproject">
+                      Startproject uitnodiging
+                    </option>
+                    <option value="tussenpresentatie">
+                      Tussenpresentatie uitnodiging
+                    </option>
+                    <option value="eindpresentatie">
+                      Eindpresentatie uitnodiging
+                    </option>
                     <option value="bedankmail">Bedankmail</option>
                   </>
                 )}
@@ -1456,7 +1696,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         onDeleteProject={setDeletingProject}
         onAddSubproject={setSubprojectModalProject}
       />
-      
+
       {/* Subproject Modal for bovenbouw */}
       <SubprojectModal
         isOpen={subprojectModalProject !== null}
@@ -1474,12 +1714,12 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
                   title: subprojectData.title,
                   client_id: subprojectData.client_id,
                   team_number: subprojectData.team_number,
-                }
+                },
               );
-              
+
               // Update the project in the projects list with the new subproject
-              setProjects(prev => {
-                const updated = prev.map(p => {
+              setProjects((prev) => {
+                const updated = prev.map((p) => {
                   if (p.project_id === subprojectModalProject.project_id) {
                     return {
                       ...p,
@@ -1490,7 +1730,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
                 });
                 return updated;
               });
-              
+
               setSubprojectModalProject(null);
             } catch (err) {
               console.error("Failed to create subproject:", err);
@@ -1509,15 +1749,31 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
 
 // ===== Projectfeedback Tab =====
 
-const FEEDBACK_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  draft: { label: "Concept", color: "bg-gray-100 text-gray-600 border-gray-200" },
-  open: { label: "Open", color: "bg-green-100 text-green-700 border-green-200" },
-  closed: { label: "Gesloten", color: "bg-slate-100 text-slate-600 border-slate-200" },
-};
+const FEEDBACK_STATUS_LABELS: Record<string, { label: string; color: string }> =
+  {
+    draft: {
+      label: "Concept",
+      color: "bg-gray-100 text-gray-600 border-gray-200",
+    },
+    open: {
+      label: "Open",
+      color: "bg-green-100 text-green-700 border-green-200",
+    },
+    closed: {
+      label: "Gesloten",
+      color: "bg-slate-100 text-slate-600 border-slate-200",
+    },
+  };
 
 const NO_COURSE_FILTER_VALUE = "__none__";
 
-type FeedbackSortField = "title" | "course_name" | "response_count" | "project_grade" | "status" | "created_at";
+type FeedbackSortField =
+  | "title"
+  | "course_name"
+  | "response_count"
+  | "project_grade"
+  | "status"
+  | "created_at";
 type FeedbackSortDir = "asc" | "desc";
 
 function ProjectFeedbackTab() {
@@ -1546,7 +1802,9 @@ function ProjectFeedbackTab() {
 
   // Collect unique course names for filter
   const courseOptions = React.useMemo(() => {
-    const names = Array.from(new Set(rounds.map((r) => r.course_name).filter(Boolean) as string[]));
+    const names = Array.from(
+      new Set(rounds.map((r) => r.course_name).filter(Boolean) as string[]),
+    );
     return names.sort();
   }, [rounds]);
 
@@ -1569,7 +1827,9 @@ function ProjectFeedbackTab() {
       const matchStatus = statusFilter === "all" || r.status === statusFilter;
       const matchCourse =
         courseFilter === "all" ||
-        (courseFilter === NO_COURSE_FILTER_VALUE ? !r.course_name : r.course_name === courseFilter);
+        (courseFilter === NO_COURSE_FILTER_VALUE
+          ? !r.course_name
+          : r.course_name === courseFilter);
       return matchSearch && matchStatus && matchCourse;
     });
 
@@ -1594,7 +1854,11 @@ function ProjectFeedbackTab() {
           bv = b.project_grade ?? -1;
           break;
         case "status": {
-          const order: Record<string, number> = { draft: 0, open: 1, closed: 2 };
+          const order: Record<string, number> = {
+            draft: 0,
+            open: 1,
+            closed: 2,
+          };
           av = order[a.status] ?? 0;
           bv = order[b.status] ?? 0;
           break;
@@ -1713,7 +1977,9 @@ function ProjectFeedbackTab() {
             </thead>
             <tbody>
               {filtered.map((r) => {
-                const info = FEEDBACK_STATUS_LABELS[r.status] ?? FEEDBACK_STATUS_LABELS.draft;
+                const info =
+                  FEEDBACK_STATUS_LABELS[r.status] ??
+                  FEEDBACK_STATUS_LABELS.draft;
                 return (
                   <tr
                     key={r.id}
@@ -1726,7 +1992,9 @@ function ProjectFeedbackTab() {
                       {r.title}
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">
-                      {r.course_name ?? <span className="text-gray-400">—</span>}
+                      {r.course_name ?? (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {r.response_count}/{r.total_students}
@@ -1735,7 +2003,10 @@ function ProjectFeedbackTab() {
                       {r.project_grade != null ? (
                         <span className="font-semibold tabular-nums">
                           {r.project_grade.toFixed(1)}
-                          <span className="text-gray-400 font-normal"> /10</span>
+                          <span className="text-gray-400 font-normal">
+                            {" "}
+                            /10
+                          </span>
                         </span>
                       ) : (
                         <span className="text-gray-400">—</span>
@@ -1802,8 +2073,9 @@ export default function ProjectsPage() {
               Projecten
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Overzicht van alle projecten per <span className="font-medium">Course (Vak)</span>, met gekoppelde evaluaties,
-              peerevaluaties, competentiescans en aantekeningen.
+              Overzicht van alle projecten per{" "}
+              <span className="font-medium">Course (Vak)</span>, met gekoppelde
+              evaluaties, peerevaluaties, competentiescans en aantekeningen.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

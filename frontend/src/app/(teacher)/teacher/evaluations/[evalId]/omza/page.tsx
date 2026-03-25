@@ -6,8 +6,16 @@ import { useNumericEvalId } from "@/utils";
 import { Loading, ErrorMessage } from "@/components";
 import { omzaService } from "@/services/omza.service";
 import { evaluationService } from "@/services";
-import { OmzaDataResponse, OmzaStudentData, StandardComment } from "@/dtos/omza.dto";
-import { mapPeerScoreToIconLevel, ICON_LABELS, ICON_DESCRIPTIONS } from "@/utils/omza.utils";
+import {
+  OmzaDataResponse,
+  OmzaStudentData,
+  StandardComment,
+} from "@/dtos/omza.dto";
+import {
+  mapPeerScoreToIconLevel,
+  ICON_LABELS,
+  ICON_DESCRIPTIONS,
+} from "@/utils/omza.utils";
 import { ProjectNotesPanel } from "@/components/teacher/omza/ProjectNotesPanel";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
 import { useEvaluationFocusMode } from "../layout";
@@ -52,8 +60,8 @@ function LevelSelector({
                 ? label === "!!"
                   ? "border-rose-500 bg-rose-100 text-rose-700 shadow-sm"
                   : label === "!"
-                  ? "border-amber-400 bg-amber-100 text-amber-700 shadow-sm"
-                  : "border-green-500 bg-green-100 text-green-700 shadow-sm"
+                    ? "border-amber-400 bg-amber-100 text-amber-700 shadow-sm"
+                    : "border-green-500 bg-green-100 text-green-700 shadow-sm"
                 : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700")
             }
             aria-label={ICON_DESCRIPTIONS[index]}
@@ -82,7 +90,9 @@ function OmzaQuickCommentsGrid({
   addStandardComment: (category: string, text: string) => void;
   deleteStandardComment: (commentId: string) => void;
 }) {
-  const [newCommentTexts, setNewCommentTexts] = useState<Record<string, string>>({});
+  const [newCommentTexts, setNewCommentTexts] = useState<
+    Record<string, string>
+  >({});
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -109,7 +119,9 @@ function OmzaQuickCommentsGrid({
                     <button
                       type="button"
                       className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
-                      onClick={() => appendStandardComment(studentId, comment.text)}
+                      onClick={() =>
+                        appendStandardComment(studentId, comment.text)
+                      }
                     >
                       {comment.text}
                     </button>
@@ -137,7 +149,10 @@ function OmzaQuickCommentsGrid({
                 placeholder="Nieuwe opmerking..."
                 value={newCommentText}
                 onChange={(e) =>
-                  setNewCommentTexts((prev) => ({ ...prev, [cat]: e.target.value }))
+                  setNewCommentTexts((prev) => ({
+                    ...prev,
+                    [cat]: e.target.value,
+                  }))
                 }
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && newCommentText.trim()) {
@@ -174,30 +189,40 @@ export default function OMZAOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<number | null>(null);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  
-  const [teacherScores, setTeacherScores] = useState<Record<string, number | null>>({});
-  const [teacherComments, setTeacherComments] = useState<Record<string, string>>({});
-  const [standardComments, setStandardComments] = useState<Record<string, StandardComment[]>>({});
-  
+
+  const [teacherScores, setTeacherScores] = useState<
+    Record<string, number | null>
+  >({});
+  const [teacherComments, setTeacherComments] = useState<
+    Record<string, string>
+  >({});
+  const [standardComments, setStandardComments] = useState<
+    Record<string, StandardComment[]>
+  >({});
+
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
-  const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
+  const [savingComments, setSavingComments] = useState<Record<string, boolean>>(
+    {},
+  );
   const [toast, setToast] = useState<string | null>(null);
-  
+
   // Focus mode state
   const { focusMode, setFocusMode } = useEvaluationFocusMode();
   const [notesWidth, setNotesWidth] = useState(0);
   const { setSidebarCollapsed } = useTeacherLayout();
   const maxNotesWidth = focusMode ? 1500 : 600;
-  
+
   // Sorting state
-  const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
+  const [sortColumn, setSortColumn] = useState<
+    "team" | "name" | "class" | null
+  >(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  
+
   // Refs for debouncing
   const scoreTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   const commentTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
@@ -212,16 +237,16 @@ export default function OMZAOverviewPage() {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    
+
     omzaService
       .getOmzaData(evalIdNum, controller.signal)
       .then((data) => {
         setOmzaData(data);
-        
+
         // Initialize teacher scores and comments from loaded data
         const scores: Record<string, number | null> = {};
         const comments: Record<string, string> = {};
-        
+
         data.students.forEach((student) => {
           data.categories.forEach((cat) => {
             const key = `${student.student_id}-${cat}`;
@@ -230,49 +255,60 @@ export default function OMZAOverviewPage() {
               scores[key] = catScore.teacher_score;
             }
           });
-          
+
           if (student.teacher_comment) {
             comments[student.student_id] = student.teacher_comment;
           }
         });
-        
+
         setTeacherScores(scores);
         setTeacherComments(comments);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
-          setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        if (
+          err.name !== "AbortError" &&
+          err.name !== "CanceledError" &&
+          err.message !== "canceled"
+        ) {
+          setError(
+            err?.response?.data?.detail || err?.message || "Laden mislukt",
+          );
         }
       })
       .finally(() => {
         setLoading(false);
       });
-      
+
     return () => controller.abort();
   }, [evalIdNum]);
 
   // Load evaluation details to get project_id
   useEffect(() => {
     if (!evalIdNum) return;
-    
+
     const controller = new AbortController();
-    
-    evaluationService.getEvaluation(evalIdNum)
+
+    evaluationService
+      .getEvaluation(evalIdNum)
       .then((evaluation) => {
         setProjectId(evaluation.project_id ?? null);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
+        if (
+          err.name !== "AbortError" &&
+          err.name !== "CanceledError" &&
+          err.message !== "canceled"
+        ) {
           console.error("Failed to load evaluation:", err);
         }
       });
-      
+
     return () => controller.abort();
   }, [evalIdNum]);
 
   // Set notes panel width when opening focus mode
   useEffect(() => {
-    if (focusMode && notesWidth === 0 && typeof window !== 'undefined') {
+    if (focusMode && notesWidth === 0 && typeof window !== "undefined") {
       setNotesWidth(Math.floor(window.innerWidth * 0.4));
     }
   }, [focusMode, notesWidth]);
@@ -293,10 +329,11 @@ export default function OMZAOverviewPage() {
   // Load standard comments
   useEffect(() => {
     if (!evalIdNum) return;
-    
+
     const controller = new AbortController();
-    
-    omzaService.getStandardComments(evalIdNum, controller.signal)
+
+    omzaService
+      .getStandardComments(evalIdNum, controller.signal)
       .then((comments) => {
         const byCategory: Record<string, StandardComment[]> = {};
         comments.forEach((comment) => {
@@ -308,11 +345,15 @@ export default function OMZAOverviewPage() {
         setStandardComments(byCategory);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
+        if (
+          err.name !== "AbortError" &&
+          err.name !== "CanceledError" &&
+          err.message !== "canceled"
+        ) {
           console.error("Error loading standard comments:", err);
         }
       });
-      
+
     return () => controller.abort();
   }, [evalIdNum]);
 
@@ -323,84 +364,94 @@ export default function OMZAOverviewPage() {
   }, []);
 
   // Save teacher score (icon level)
-  const handleScoreChange = useCallback((studentId: number, category: string, level: number) => {
-    const key = `${studentId}-${category}`;
-    
-    setTeacherScores((prev) => ({ ...prev, [key]: level }));
-    
-    // Clear existing timeout
-    if (scoreTimeouts.current[key]) {
-      clearTimeout(scoreTimeouts.current[key]);
-    }
-    
-    // Set new timeout for autosave
-    scoreTimeouts.current[key] = setTimeout(() => {
-      setSavingScores((prev) => ({ ...prev, [key]: true }));
-      
-      omzaService
-        .saveTeacherScore(evalIdNum!, {
-          student_id: studentId,
-          category,
-          score: level,
-        })
-        .then(() => {
-          showToast("Docentscore opgeslagen");
-        })
-        .catch((err) => {
-          showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
-        })
-        .finally(() => {
-          setSavingScores((prev) => ({ ...prev, [key]: false }));
-        });
-    }, 500);
-  }, [evalIdNum, showToast]);
+  const handleScoreChange = useCallback(
+    (studentId: number, category: string, level: number) => {
+      const key = `${studentId}-${category}`;
+
+      setTeacherScores((prev) => ({ ...prev, [key]: level }));
+
+      // Clear existing timeout
+      if (scoreTimeouts.current[key]) {
+        clearTimeout(scoreTimeouts.current[key]);
+      }
+
+      // Set new timeout for autosave
+      scoreTimeouts.current[key] = setTimeout(() => {
+        setSavingScores((prev) => ({ ...prev, [key]: true }));
+
+        omzaService
+          .saveTeacherScore(evalIdNum!, {
+            student_id: studentId,
+            category,
+            score: level,
+          })
+          .then(() => {
+            showToast("Docentscore opgeslagen");
+          })
+          .catch((err) => {
+            showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
+          })
+          .finally(() => {
+            setSavingScores((prev) => ({ ...prev, [key]: false }));
+          });
+      }, 500);
+    },
+    [evalIdNum, showToast],
+  );
 
   // Debounced save teacher comment
-  const handleCommentChange = useCallback((studentId: number, value: string) => {
-    setTeacherComments((prev) => ({ ...prev, [studentId]: value }));
-    
-    // Clear existing timeout
-    if (commentTimeouts.current[studentId]) {
-      clearTimeout(commentTimeouts.current[studentId]);
-    }
-    
-    // Set new timeout for autosave
-    commentTimeouts.current[studentId] = setTimeout(() => {
-      setSavingComments((prev) => ({ ...prev, [studentId]: true }));
-      
-      omzaService
-        .saveTeacherComment(evalIdNum!, {
-          student_id: studentId,
-          comment: value,
-        })
-        .then(() => {
-          showToast("Docentopmerking opgeslagen");
-        })
-        .catch((err) => {
-          showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
-        })
-        .finally(() => {
-          setSavingComments((prev) => ({ ...prev, [studentId]: false }));
-        });
-    }, 500);
-  }, [evalIdNum, showToast]);
+  const handleCommentChange = useCallback(
+    (studentId: number, value: string) => {
+      setTeacherComments((prev) => ({ ...prev, [studentId]: value }));
+
+      // Clear existing timeout
+      if (commentTimeouts.current[studentId]) {
+        clearTimeout(commentTimeouts.current[studentId]);
+      }
+
+      // Set new timeout for autosave
+      commentTimeouts.current[studentId] = setTimeout(() => {
+        setSavingComments((prev) => ({ ...prev, [studentId]: true }));
+
+        omzaService
+          .saveTeacherComment(evalIdNum!, {
+            student_id: studentId,
+            comment: value,
+          })
+          .then(() => {
+            showToast("Docentopmerking opgeslagen");
+          })
+          .catch((err) => {
+            showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
+          })
+          .finally(() => {
+            setSavingComments((prev) => ({ ...prev, [studentId]: false }));
+          });
+      }, 500);
+    },
+    [evalIdNum, showToast],
+  );
 
   // Apply peer scores for all students (map to icon levels)
   const applyPeerScoresAll = useCallback(async () => {
     if (!omzaData || !evalIdNum) return;
-    
-    const updates: Array<{ student_id: number; category: string; score: number }> = [];
+
+    const updates: Array<{
+      student_id: number;
+      category: string;
+      score: number;
+    }> = [];
     const newScores: Record<string, number | null> = { ...teacherScores };
-    
+
     omzaData.students.forEach((student) => {
       omzaData.categories.forEach((cat) => {
         const catScore = student.category_scores[cat];
         if (catScore && catScore.peer_avg != null) {
           const iconLevel = mapPeerScoreToIconLevel(catScore.peer_avg);
-          
+
           const key = `${student.student_id}-${cat}`;
           newScores[key] = iconLevel;
-          
+
           updates.push({
             student_id: student.student_id,
             category: cat,
@@ -409,9 +460,9 @@ export default function OMZAOverviewPage() {
         }
       });
     });
-    
+
     setTeacherScores(newScores);
-    
+
     // Batch in chunks of 10 to avoid overwhelming the server
     const chunkSize = 10;
     try {
@@ -419,8 +470,8 @@ export default function OMZAOverviewPage() {
         const chunk = updates.slice(i, i + chunkSize);
         await Promise.all(
           chunk.map((update) =>
-            omzaService.saveTeacherScore(evalIdNum, update)
-          )
+            omzaService.saveTeacherScore(evalIdNum, update),
+          ),
         );
       }
       showToast("Docentscores overgenomen van peer scores");
@@ -431,51 +482,64 @@ export default function OMZAOverviewPage() {
   }, [omzaData, evalIdNum, teacherScores, showToast]);
 
   // Add standard comment to teacher comment
-  const appendStandardComment = useCallback((studentId: number, text: string) => {
-    const currentComment = teacherComments[studentId] || "";
-    const newComment = currentComment ? `${currentComment} ${text}` : text;
-    handleCommentChange(studentId, newComment);
-  }, [teacherComments, handleCommentChange]);
+  const appendStandardComment = useCallback(
+    (studentId: number, text: string) => {
+      const currentComment = teacherComments[studentId] || "";
+      const newComment = currentComment ? `${currentComment} ${text}` : text;
+      handleCommentChange(studentId, newComment);
+    },
+    [teacherComments, handleCommentChange],
+  );
 
   // Add new standard comment
-  const addStandardComment = useCallback((category: string, text: string) => {
-    if (!text.trim() || !evalIdNum) return;
-    
-    omzaService
-      .addStandardComment(evalIdNum, { category, text: text.trim() })
-      .then((newComment) => {
-        setStandardComments((prev) => ({
-          ...prev,
-          [category]: [...(prev[category] || []), newComment],
-        }));
-        showToast("Standaardopmerking toegevoegd");
-      })
-      .catch((err) => {
-        showToast(`Fout bij toevoegen: ${err?.message || "Onbekende fout"}`);
-      });
-  }, [evalIdNum, showToast]);
+  const addStandardComment = useCallback(
+    (category: string, text: string) => {
+      if (!text.trim() || !evalIdNum) return;
+
+      omzaService
+        .addStandardComment(evalIdNum, { category, text: text.trim() })
+        .then((newComment) => {
+          setStandardComments((prev) => ({
+            ...prev,
+            [category]: [...(prev[category] || []), newComment],
+          }));
+          showToast("Standaardopmerking toegevoegd");
+        })
+        .catch((err) => {
+          showToast(`Fout bij toevoegen: ${err?.message || "Onbekende fout"}`);
+        });
+    },
+    [evalIdNum, showToast],
+  );
 
   // Delete standard comment
-  const deleteStandardComment = useCallback((commentId: string) => {
-    if (!evalIdNum) return;
-    
-    omzaService
-      .deleteStandardComment(evalIdNum, commentId)
-      .then(() => {
-        // Remove from state
-        setStandardComments((prev) => {
-          const newComments = { ...prev };
-          Object.keys(newComments).forEach((cat) => {
-            newComments[cat] = newComments[cat].filter((c) => c.id !== commentId);
+  const deleteStandardComment = useCallback(
+    (commentId: string) => {
+      if (!evalIdNum) return;
+
+      omzaService
+        .deleteStandardComment(evalIdNum, commentId)
+        .then(() => {
+          // Remove from state
+          setStandardComments((prev) => {
+            const newComments = { ...prev };
+            Object.keys(newComments).forEach((cat) => {
+              newComments[cat] = newComments[cat].filter(
+                (c) => c.id !== commentId,
+              );
+            });
+            return newComments;
           });
-          return newComments;
+          showToast("Standaardopmerking verwijderd");
+        })
+        .catch((err) => {
+          showToast(
+            `Fout bij verwijderen: ${err?.message || "Onbekende fout"}`,
+          );
         });
-        showToast("Standaardopmerking verwijderd");
-      })
-      .catch((err) => {
-        showToast(`Fout bij verwijderen: ${err?.message || "Onbekende fout"}`);
-      });
-  }, [evalIdNum, showToast]);
+    },
+    [evalIdNum, showToast],
+  );
 
   // Toggle sort
   const handleSort = (column: "team" | "name" | "class") => {
@@ -489,18 +553,24 @@ export default function OMZAOverviewPage() {
 
   // Filter and sort students
   const filteredStudents = React.useMemo(() => {
-    let filtered = omzaData?.students.filter((student) => {
-      const matchesSearch = student.student_name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTeam = teamFilter === "all" || student.team_number?.toString() === teamFilter;
-      const matchesClass = classFilter === "all" || student.class_name === classFilter;
-      return matchesSearch && matchesTeam && matchesClass;
-    }) || [];
+    let filtered =
+      omzaData?.students.filter((student) => {
+        const matchesSearch = student.student_name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesTeam =
+          teamFilter === "all" ||
+          student.team_number?.toString() === teamFilter;
+        const matchesClass =
+          classFilter === "all" || student.class_name === classFilter;
+        return matchesSearch && matchesTeam && matchesClass;
+      }) || [];
 
     // Apply sorting
     if (sortColumn) {
       filtered = [...filtered].sort((a, b) => {
         let aVal: any, bVal: any;
-        
+
         if (sortColumn === "team") {
           aVal = a.team_number || 0;
           bVal = b.team_number || 0;
@@ -511,7 +581,7 @@ export default function OMZAOverviewPage() {
           aVal = a.class_name || "";
           bVal = b.class_name || "";
         }
-        
+
         if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
         if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
         return 0;
@@ -519,11 +589,24 @@ export default function OMZAOverviewPage() {
     }
 
     return filtered;
-  }, [omzaData?.students, searchQuery, teamFilter, classFilter, sortColumn, sortDirection]);
+  }, [
+    omzaData?.students,
+    searchQuery,
+    teamFilter,
+    classFilter,
+    sortColumn,
+    sortDirection,
+  ]);
 
   // Get unique teams and classes
-  const teams = Array.from(new Set(omzaData?.students.map((s) => s.team_number).filter((t) => t != null)));
-  const classes = Array.from(new Set(omzaData?.students.map((s) => s.class_name).filter((c) => c)));
+  const teams = Array.from(
+    new Set(
+      omzaData?.students.map((s) => s.team_number).filter((t) => t != null),
+    ),
+  );
+  const classes = Array.from(
+    new Set(omzaData?.students.map((s) => s.class_name).filter((c) => c)),
+  );
 
   return (
     <>
@@ -549,32 +632,35 @@ export default function OMZAOverviewPage() {
                 placeholder="Zoek op naam…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <select
-                  className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
-                  value={teamFilter}
-                  onChange={(e) => setTeamFilter(e.target.value)}
-                >
-                  <option value="all">Alle teams</option>
-                  {teams.map((team) => (
-                    <option key={team} value={team?.toString()}>
-                      Team {team}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
-                  value={classFilter}
-                  onChange={(e) => setClassFilter(e.target.value)}
-                >
-                  <option value="all">Alle klassen</option>
-                  {classes.map((cls) => cls && (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              />
+              <select
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+                value={teamFilter}
+                onChange={(e) => setTeamFilter(e.target.value)}
+              >
+                <option value="all">Alle teams</option>
+                {teams.map((team) => (
+                  <option key={team} value={team?.toString()}>
+                    Team {team}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+              >
+                <option value="all">Alle klassen</option>
+                {classes.map(
+                  (cls) =>
+                    cls && (
+                      <option key={cls} value={cls}>
+                        {cls}
+                      </option>
+                    ),
+                )}
+              </select>
+            </div>
 
             <div className="flex gap-2">
               {projectId && (
@@ -588,23 +674,28 @@ export default function OMZAOverviewPage() {
                   onClick={() => setFocusMode(!focusMode)}
                   title="Toon projectaantekeningen"
                 >
-                  📝 {focusMode ? "Verberg aantekeningen" : "Toon aantekeningen"}
+                  📝{" "}
+                  {focusMode ? "Verberg aantekeningen" : "Toon aantekeningen"}
                 </button>
               )}
               <button
                 type="button"
                 className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
-              onClick={applyPeerScoresAll}
-            >
-              Neem peer score over
-            </button>
-          </div>
+                onClick={applyPeerScoresAll}
+              >
+                Neem peer score over
+              </button>
+            </div>
           </div>
 
           {/* Conditional grid wrapper for focus mode */}
-          <div 
+          <div
             className={focusMode && projectId ? "grid gap-6 min-w-0" : ""}
-            style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
+            style={
+              focusMode && projectId
+                ? { gridTemplateColumns: `${notesWidth}px 1fr` }
+                : undefined
+            }
           >
             {/* Notes panel - only in focus mode */}
             {focusMode && projectId && (
@@ -616,228 +707,255 @@ export default function OMZAOverviewPage() {
                 onWidthChange={setNotesWidth}
               />
             )}
-            
+
             {/* Table wrapper - always present, but inside grid column when focus mode active */}
             <div className="min-w-0">
               {/* Table */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th 
-                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-20 cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("team")}
-                      >
-                        <div className="flex items-center gap-1">
-                          Team
-                          {sortColumn === "team" && (
-                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("name")}
-                      >
-                        <div className="flex items-center gap-1">
-                          Leerling
-                          {sortColumn === "name" && (
-                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("class")}
-                      >
-                        <div className="flex items-center gap-1">
-                          Klas
-                          {sortColumn === "class" && (
-                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
-                          )}
-                        </div>
-                      </th>
-                      {omzaData.categories.map((cat) => (
+                    <thead className="bg-gray-50">
+                      <tr>
                         <th
-                          key={cat}
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide"
+                          className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-20 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort("team")}
                         >
-                          <div className="flex flex-col gap-0.5">
-                            <span>{CATEGORY_LABELS[cat] || cat}</span>
-                            <span className="text-[11px] font-normal text-slate-400">
-                              Peer • Self • Docent
-                            </span>
+                          <div className="flex items-center gap-1">
+                            Team
+                            {sortColumn === "team" && (
+                              <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                            )}
                           </div>
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredStudents.map((student) => {
-                      const isExpanded = expandedRow === student.student_id;
-
-                      return (
-                        <React.Fragment key={student.student_id}>
-                          <tr
-                            className={
-                              isExpanded
-                                ? "bg-indigo-50/40"
-                                : "bg-white hover:bg-gray-50"
-                            }
+                        <th
+                          className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort("name")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Leerling
+                            {sortColumn === "name" && (
+                              <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort("class")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Klas
+                            {sortColumn === "class" && (
+                              <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </div>
+                        </th>
+                        {omzaData.categories.map((cat) => (
+                          <th
+                            key={cat}
+                            className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide"
                           >
-                            <td className="px-5 py-3 align-top text-xs text-gray-500">
-                              {student.team_number && (
-                                <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
-                                  {student.team_number}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-5 py-3 align-top">
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  href={`/teacher/evaluations/${evalId}/students/${student.student_id}`}
-                                  className="text-sm font-medium text-indigo-700 hover:underline"
-                                >
-                                  {student.student_name}
-                                </Link>
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-50"
-                                  onClick={() =>
-                                    setExpandedRow(isExpanded ? null : student.student_id)
-                                  }
-                                  title="Open docentopmerking"
-                                >
-                                  💬
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-3 py-3 align-top text-xs text-gray-500">
-                              {student.class_name}
-                            </td>
+                            <div className="flex flex-col gap-0.5">
+                              <span>{CATEGORY_LABELS[cat] || cat}</span>
+                              <span className="text-[11px] font-normal text-slate-400">
+                                Peer • Self • Docent
+                              </span>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
 
-                            {omzaData.categories.map((cat) => {
-                              const catScore = student.category_scores[cat];
-                              const key = `${student.student_id}-${cat}`;
-                              const teacherValue = teacherScores[key];
+                    <tbody className="divide-y divide-gray-100">
+                      {filteredStudents.map((student) => {
+                        const isExpanded = expandedRow === student.student_id;
 
-                              return (
-                                <td key={cat} className="px-4 py-3 align-middle">
-                                  <div className="flex flex-col gap-1.5">
-                                    <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
-                                      <span className="rounded-full bg-slate-100 px-2 py-0.5">
-                                        Peer: {catScore?.peer_avg?.toFixed(1) || "—"}
-                                      </span>
-                                      <span className="rounded-full bg-slate-100 px-2 py-0.5">
-                                        Self: {catScore?.self_avg?.toFixed(1) || "—"}
-                                      </span>
-                                    </div>
-                                    <LevelSelector
-                                      value={teacherValue ?? null}
-                                      onChange={(level) =>
-                                        handleScoreChange(student.student_id, cat, level)
-                                      }
-                                    />
-                                  </div>
-                                </td>
-                              );
-                            })}
-                          </tr>
-
-                          {/* Inline expanded row */}
-                          {isExpanded && (
-                            <tr className="bg-indigo-50/60">
-                              <td
-                                colSpan={3 + omzaData.categories.length}
-                                className="px-5 pb-4 pt-0"
-                              >
-                                <div className="pt-2 flex flex-col gap-3">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-xs font-medium text-gray-700">
-                                      Docentopmerking voor {student.student_name}
-                                    </p>
-                                    <span className="text-[11px] text-gray-500">
-                                      Tip: klik op een quick comment om deze toe te voegen.
-                                    </span>
-                                  </div>
-
-                                  <OmzaQuickCommentsGrid
-                                    categories={omzaData.categories}
-                                    standardComments={standardComments}
-                                    studentId={student.student_id}
-                                    appendStandardComment={appendStandardComment}
-                                    addStandardComment={addStandardComment}
-                                    deleteStandardComment={deleteStandardComment}
-                                  />
-
-                                  <div className="mt-3">
-                                    <textarea
-                                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-800 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
-                                      rows={4}
-                                      placeholder="Eigen notitie of motivatie over het samenwerken in dit project…"
-                                      value={teacherComments[student.student_id] || ""}
-                                      onChange={(e) =>
-                                        handleCommentChange(student.student_id, e.target.value)
-                                      }
-                                      disabled={savingComments[student.student_id]}
-                                    />
-                                    {savingComments[student.student_id] && (
-                                      <span className="text-[10px] text-gray-500">
-                                        Opslaan...
-                                      </span>
-                                    )}
-                                  </div>
+                        return (
+                          <React.Fragment key={student.student_id}>
+                            <tr
+                              className={
+                                isExpanded
+                                  ? "bg-indigo-50/40"
+                                  : "bg-white hover:bg-gray-50"
+                              }
+                            >
+                              <td className="px-5 py-3 align-top text-xs text-gray-500">
+                                {student.team_number && (
+                                  <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                                    {student.team_number}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3 align-top">
+                                <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/teacher/evaluations/${evalId}/students/${student.student_id}`}
+                                    className="text-sm font-medium text-indigo-700 hover:underline"
+                                  >
+                                    {student.student_name}
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-50"
+                                    onClick={() =>
+                                      setExpandedRow(
+                                        isExpanded ? null : student.student_id,
+                                      )
+                                    }
+                                    title="Open docentopmerking"
+                                  >
+                                    💬
+                                  </button>
                                 </div>
                               </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                              <td className="px-3 py-3 align-top text-xs text-gray-500">
+                                {student.class_name}
+                              </td>
 
-              {/* Footer */}
-              <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
-                <p className="mb-2 font-medium">Leeswijzer</p>
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
-                      🙂
-                    </span>
-                    <span>Gaat goed</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
-                      V
-                    </span>
-                    <span>Voldoet aan verwachting</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
-                      !
-                    </span>
-                    <span>Let op / bespreken</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
-                      !!
-                    </span>
-                    <span>Urgent</span>
-                  </div>
+                              {omzaData.categories.map((cat) => {
+                                const catScore = student.category_scores[cat];
+                                const key = `${student.student_id}-${cat}`;
+                                const teacherValue = teacherScores[key];
+
+                                return (
+                                  <td
+                                    key={cat}
+                                    className="px-4 py-3 align-middle"
+                                  >
+                                    <div className="flex flex-col gap-1.5">
+                                      <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
+                                        <span className="rounded-full bg-slate-100 px-2 py-0.5">
+                                          Peer:{" "}
+                                          {catScore?.peer_avg?.toFixed(1) ||
+                                            "—"}
+                                        </span>
+                                        <span className="rounded-full bg-slate-100 px-2 py-0.5">
+                                          Self:{" "}
+                                          {catScore?.self_avg?.toFixed(1) ||
+                                            "—"}
+                                        </span>
+                                      </div>
+                                      <LevelSelector
+                                        value={teacherValue ?? null}
+                                        onChange={(level) =>
+                                          handleScoreChange(
+                                            student.student_id,
+                                            cat,
+                                            level,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+
+                            {/* Inline expanded row */}
+                            {isExpanded && (
+                              <tr className="bg-indigo-50/60">
+                                <td
+                                  colSpan={3 + omzaData.categories.length}
+                                  className="px-5 pb-4 pt-0"
+                                >
+                                  <div className="pt-2 flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-medium text-gray-700">
+                                        Docentopmerking voor{" "}
+                                        {student.student_name}
+                                      </p>
+                                      <span className="text-[11px] text-gray-500">
+                                        Tip: klik op een quick comment om deze
+                                        toe te voegen.
+                                      </span>
+                                    </div>
+
+                                    <OmzaQuickCommentsGrid
+                                      categories={omzaData.categories}
+                                      standardComments={standardComments}
+                                      studentId={student.student_id}
+                                      appendStandardComment={
+                                        appendStandardComment
+                                      }
+                                      addStandardComment={addStandardComment}
+                                      deleteStandardComment={
+                                        deleteStandardComment
+                                      }
+                                    />
+
+                                    <div className="mt-3">
+                                      <textarea
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-800 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                                        rows={4}
+                                        placeholder="Eigen notitie of motivatie over het samenwerken in dit project…"
+                                        value={
+                                          teacherComments[student.student_id] ||
+                                          ""
+                                        }
+                                        onChange={(e) =>
+                                          handleCommentChange(
+                                            student.student_id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        disabled={
+                                          savingComments[student.student_id]
+                                        }
+                                      />
+                                      {savingComments[student.student_id] && (
+                                        <span className="text-[10px] text-gray-500">
+                                          Opslaan...
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <p>
-                  De icoontjes geven per categorie het niveau aan dat jij als docent
-                  inschat. Peer- en selfscores uit de peerreview worden apart
-                  weergegeven op de detailpagina van de leerling.
-                </p>
+
+                {/* Footer */}
+                <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
+                  <p className="mb-2 font-medium">Leeswijzer</p>
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                        🙂
+                      </span>
+                      <span>Gaat goed</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                        V
+                      </span>
+                      <span>Voldoet aan verwachting</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
+                        !
+                      </span>
+                      <span>Let op / bespreken</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
+                        !!
+                      </span>
+                      <span>Urgent</span>
+                    </div>
+                  </div>
+                  <p>
+                    De icoontjes geven per categorie het niveau aan dat jij als
+                    docent inschat. Peer- en selfscores uit de peerreview worden
+                    apart weergegeven op de detailpagina van de leerling.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       )}
 

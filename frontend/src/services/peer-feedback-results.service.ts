@@ -7,7 +7,9 @@ export const peerFeedbackResultsService = {
    * Returns data in OMZA format for the student results page.
    */
   async getMyPeerResults(): Promise<EvaluationResult[]> {
-    const { data } = await api.get<EvaluationResult[]>("/evaluations/my/peer-results");
+    const { data } = await api.get<EvaluationResult[]>(
+      "/evaluations/my/peer-results",
+    );
     return data || [];
   },
 };

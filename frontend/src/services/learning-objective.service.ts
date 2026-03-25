@@ -12,58 +12,54 @@ import {
 // ============ CRUD Operations ============
 
 export async function createLearningObjective(
-  data: LearningObjectiveCreateDto
+  data: LearningObjectiveCreateDto,
 ): Promise<LearningObjectiveDto> {
   const response = await api.post<LearningObjectiveDto>(
     `/learning-objectives`,
-    data
+    data,
   );
   return response.data;
 }
 
-export async function listLearningObjectives(
-  params?: {
-    page?: number;
-    limit?: number;
-    domain?: string;
-    phase?: string;
-    search?: string;
-    subject_id?: number;
-    objective_type?: "template" | "teacher" | "all";
-    include_teacher_objectives?: boolean;
-    include_course_objectives?: boolean;
-  }
-): Promise<LearningObjectiveListResponse> {
+export async function listLearningObjectives(params?: {
+  page?: number;
+  limit?: number;
+  domain?: string;
+  phase?: string;
+  search?: string;
+  subject_id?: number;
+  objective_type?: "template" | "teacher" | "all";
+  include_teacher_objectives?: boolean;
+  include_course_objectives?: boolean;
+}): Promise<LearningObjectiveListResponse> {
   const response = await api.get<LearningObjectiveListResponse>(
     `/learning-objectives`,
-    { params }
+    { params },
   );
   return response.data;
 }
 
 export async function getLearningObjective(
-  id: number
+  id: number,
 ): Promise<LearningObjectiveDto> {
   const response = await api.get<LearningObjectiveDto>(
-    `/learning-objectives/${id}`
+    `/learning-objectives/${id}`,
   );
   return response.data;
 }
 
 export async function updateLearningObjective(
   id: number,
-  data: LearningObjectiveUpdateDto
+  data: LearningObjectiveUpdateDto,
 ): Promise<LearningObjectiveDto> {
   const response = await api.put<LearningObjectiveDto>(
     `/learning-objectives/${id}`,
-    data
+    data,
   );
   return response.data;
 }
 
-export async function deleteLearningObjective(
-  id: number
-): Promise<void> {
+export async function deleteLearningObjective(id: number): Promise<void> {
   await api.delete(`/learning-objectives/${id}`);
 }
 
@@ -72,35 +68,33 @@ export async function deleteLearningObjective(
 export async function importLearningObjectives(
   data: LearningObjectiveImportRequest,
   subject_id?: number,
-  is_template: boolean = true
+  is_template: boolean = true,
 ): Promise<LearningObjectiveImportResponse> {
   const params: { subject_id?: number; is_template?: boolean } = {};
   if (subject_id) params.subject_id = subject_id;
   params.is_template = is_template;
-  
+
   const response = await api.post<LearningObjectiveImportResponse>(
     `/learning-objectives/import`,
     data,
-    { params }
+    { params },
   );
   return response.data;
 }
 
 // ============ Overview ============
 
-export async function getLearningObjectivesOverview(
-  params?: {
-    class_name?: string;
-    course_id?: number;
-    evaluation_id?: number;
-    learning_objective_id?: number;
-    include_teacher_objectives?: boolean;
-    include_course_objectives?: boolean;
-  }
-): Promise<LearningObjectiveOverviewResponse> {
+export async function getLearningObjectivesOverview(params?: {
+  class_name?: string;
+  course_id?: number;
+  evaluation_id?: number;
+  learning_objective_id?: number;
+  include_teacher_objectives?: boolean;
+  include_course_objectives?: boolean;
+}): Promise<LearningObjectiveOverviewResponse> {
   const response = await api.get<LearningObjectiveOverviewResponse>(
     `/learning-objectives/overview/students`,
-    { params }
+    { params },
   );
   return response.data;
 }

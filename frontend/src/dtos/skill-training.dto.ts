@@ -4,29 +4,38 @@
 
 // ============ Status Types ============
 
-export type SkillTrainingStatus = 
-  | "none" 
-  | "planned" 
-  | "in_progress" 
-  | "submitted" 
-  | "completed" 
+export type SkillTrainingStatus =
+  | "none"
+  | "planned"
+  | "in_progress"
+  | "submitted"
+  | "completed"
   | "mastered";
 
 export const STUDENT_ALLOWED_STATUSES: SkillTrainingStatus[] = [
   "none",
-  "planned", 
+  "planned",
   "in_progress",
-  "submitted"
+  "submitted",
 ];
 
 // Status metadata for UI display
-export const STATUS_META: Record<SkillTrainingStatus, { label: string; colorClass: string }> = {
+export const STATUS_META: Record<
+  SkillTrainingStatus,
+  { label: string; colorClass: string }
+> = {
   none: { label: "Niet gestart", colorClass: "bg-gray-100 text-gray-800" },
   planned: { label: "Gepland", colorClass: "bg-blue-100 text-blue-800" },
   in_progress: { label: "Bezig", colorClass: "bg-yellow-100 text-yellow-800" },
-  submitted: { label: "Ingeleverd", colorClass: "bg-purple-100 text-purple-800" },
+  submitted: {
+    label: "Ingeleverd",
+    colorClass: "bg-purple-100 text-purple-800",
+  },
   completed: { label: "Voltooid", colorClass: "bg-green-100 text-green-800" },
-  mastered: { label: "Beheerst", colorClass: "bg-emerald-100 text-emerald-800" },
+  mastered: {
+    label: "Beheerst",
+    colorClass: "bg-emerald-100 text-emerald-800",
+  },
 };
 
 // ============ Skill Training DTOs ============

@@ -68,7 +68,8 @@ export default function CSVImportModal({
   };
 
   const downloadTemplate = () => {
-    const csvContent = "name,email,role\nAnna de Vries,a.devries@school.nl,admin\nPeter Jansen,p.jansen@school.nl,teacher";
+    const csvContent =
+      "name,email,role\nAnna de Vries,a.devries@school.nl,admin\nPeter Jansen,p.jansen@school.nl,teacher";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -93,9 +94,7 @@ export default function CSVImportModal({
           <p className="text-sm text-blue-900 font-medium mb-1">
             Verwacht CSV-formaat:
           </p>
-          <code className="text-xs text-blue-700 block">
-            name,email,role
-          </code>
+          <code className="text-xs text-blue-700 block">name,email,role</code>
           <p className="text-xs text-blue-700 mt-2">
             Rol moet &apos;teacher&apos; of &apos;admin&apos; zijn
           </p>

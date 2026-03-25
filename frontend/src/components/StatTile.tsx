@@ -19,7 +19,7 @@ export function StatTile({
 }: StatTileProps) {
   const Component = onClick ? "button" : "div";
   const boldColor = valueBoldColor || textColor.replace("700", "900");
-  
+
   return (
     <Component
       onClick={onClick}
@@ -31,9 +31,7 @@ export function StatTile({
         <span className="text-2xl">{icon}</span>
         <div className={`text-sm font-medium ${textColor}`}>{label}</div>
       </div>
-      <div className={`text-3xl font-bold ${boldColor}`}>
-        {value}
-      </div>
+      <div className={`text-3xl font-bold ${boldColor}`}>{value}</div>
     </Component>
   );
 }

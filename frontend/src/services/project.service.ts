@@ -27,7 +27,9 @@ export const projectService = {
     status?: string;
     search?: string;
   }): Promise<ProjectListResponse> {
-    const response = await api.get<ProjectListResponse>("/projects", { params });
+    const response = await api.get<ProjectListResponse>("/projects", {
+      params,
+    });
     return response.data;
   },
 
@@ -50,7 +52,10 @@ export const projectService = {
   /**
    * Update a project
    */
-  async updateProject(projectId: number, data: ProjectUpdate): Promise<Project> {
+  async updateProject(
+    projectId: number,
+    data: ProjectUpdate,
+  ): Promise<Project> {
     const response = await api.patch<Project>(`/projects/${projectId}`, data);
     return response.data;
   },
@@ -73,8 +78,13 @@ export const projectService = {
   /**
    * Create a project via the wizard with linked evaluations, notes, and clients
    */
-  async wizardCreateProject(data: WizardProjectCreate): Promise<WizardProjectOut> {
-    const response = await api.post<WizardProjectOut>("/projects/wizard-create", data);
+  async wizardCreateProject(
+    data: WizardProjectCreate,
+  ): Promise<WizardProjectOut> {
+    const response = await api.post<WizardProjectOut>(
+      "/projects/wizard-create",
+      data,
+    );
     return response.data;
   },
 
@@ -82,7 +92,9 @@ export const projectService = {
    * Get KPI statistics for running projects overview
    */
   async getRunningProjectsKPI(): Promise<RunningProjectKPI> {
-    const response = await api.get<RunningProjectKPI>("/projects/running-overview/kpi");
+    const response = await api.get<RunningProjectKPI>(
+      "/projects/running-overview/kpi",
+    );
     return response.data;
   },
 
@@ -99,7 +111,10 @@ export const projectService = {
     sort_by?: string;
     sort_order?: "asc" | "desc";
   }): Promise<RunningProjectsListResponse> {
-    const response = await api.get<RunningProjectsListResponse>("/projects/running-overview", { params });
+    const response = await api.get<RunningProjectsListResponse>(
+      "/projects/running-overview",
+      { params },
+    );
     return response.data;
   },
 
@@ -109,38 +124,61 @@ export const projectService = {
    * Get all subprojects for a project
    */
   async listSubprojects(projectId: number): Promise<SubprojectListResponse> {
-    const response = await api.get<SubprojectListResponse>(`/projects/${projectId}/subprojects`);
+    const response = await api.get<SubprojectListResponse>(
+      `/projects/${projectId}/subprojects`,
+    );
     return response.data;
   },
 
   /**
    * Get a specific subproject
    */
-  async getSubproject(projectId: number, subprojectId: number): Promise<Subproject> {
-    const response = await api.get<Subproject>(`/projects/${projectId}/subprojects/${subprojectId}`);
+  async getSubproject(
+    projectId: number,
+    subprojectId: number,
+  ): Promise<Subproject> {
+    const response = await api.get<Subproject>(
+      `/projects/${projectId}/subprojects/${subprojectId}`,
+    );
     return response.data;
   },
 
   /**
    * Create a new subproject for a project
    */
-  async createSubproject(projectId: number, data: SubprojectCreate): Promise<Subproject> {
-    const response = await api.post<Subproject>(`/projects/${projectId}/subprojects`, data);
+  async createSubproject(
+    projectId: number,
+    data: SubprojectCreate,
+  ): Promise<Subproject> {
+    const response = await api.post<Subproject>(
+      `/projects/${projectId}/subprojects`,
+      data,
+    );
     return response.data;
   },
 
   /**
    * Update a subproject
    */
-  async updateSubproject(projectId: number, subprojectId: number, data: SubprojectUpdate): Promise<Subproject> {
-    const response = await api.patch<Subproject>(`/projects/${projectId}/subprojects/${subprojectId}`, data);
+  async updateSubproject(
+    projectId: number,
+    subprojectId: number,
+    data: SubprojectUpdate,
+  ): Promise<Subproject> {
+    const response = await api.patch<Subproject>(
+      `/projects/${projectId}/subprojects/${subprojectId}`,
+      data,
+    );
     return response.data;
   },
 
   /**
    * Delete a subproject
    */
-  async deleteSubproject(projectId: number, subprojectId: number): Promise<void> {
+  async deleteSubproject(
+    projectId: number,
+    subprojectId: number,
+  ): Promise<void> {
     await api.delete(`/projects/${projectId}/subprojects/${subprojectId}`);
   },
 };

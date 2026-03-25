@@ -28,14 +28,16 @@ export default function ReflectionPage() {
 
   const [window, setWindow] = useState<CompetencyWindow | null>(null);
   const [goals, setGoals] = useState<CompetencyGoal[]>([]);
-  const [existingReflections, setExistingReflections] = useState<CompetencyReflection[]>([]);
-  
+  const [existingReflections, setExistingReflections] = useState<
+    CompetencyReflection[]
+  >([]);
+
   // Active goal being edited
   const [activeGoalId, setActiveGoalId] = useState<number | null>(null);
-  
+
   // Draft reflections keyed by goal ID
   const [drafts, setDrafts] = useState<Record<number, GoalReflectionDraft>>({});
-  
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +63,11 @@ export default function ReflectionPage() {
 
       // Initialize drafts from existing reflections
       const initialDrafts: Record<number, GoalReflectionDraft> = {};
-      
+
       for (const goal of windowGoals) {
-        const existingReflection = reflections.find((r) => r.goal_id === goal.id);
+        const existingReflection = reflections.find(
+          (r) => r.goal_id === goal.id,
+        );
         initialDrafts[goal.id] = {
           goalId: goal.id,
           text: existingReflection?.text || "",
@@ -93,7 +97,7 @@ export default function ReflectionPage() {
 
   const updateDraft = (field: keyof GoalReflectionDraft, value: any) => {
     if (activeGoalId === null) return;
-    
+
     setDrafts((prev) => ({
       ...prev,
       [activeGoalId]: {
@@ -107,7 +111,7 @@ export default function ReflectionPage() {
   const getReflectionStatus = (goalId: number): string => {
     const existing = existingReflections.find((r) => r.goal_id === goalId);
     const draft = drafts[goalId];
-    
+
     // Check submitted status first (highest priority)
     if (existing && existing.submitted_at) {
       return "Ingediend";
@@ -136,7 +140,7 @@ export default function ReflectionPage() {
 
     // Gather all drafts that have content
     const reflectionsToSubmit = Object.values(drafts).filter(
-      (draft) => draft.text.trim().length > 0
+      (draft) => draft.text.trim().length > 0,
     );
 
     if (reflectionsToSubmit.length === 0) {
@@ -161,11 +165,12 @@ export default function ReflectionPage() {
       await competencyService.createReflectionsBulk(bulkData);
 
       const count = reflectionsToSubmit.length;
-      const message = count === 1 
-        ? "1 reflectie succesvol opgeslagen!" 
-        : `${count} reflecties succesvol opgeslagen!`;
+      const message =
+        count === 1
+          ? "1 reflectie succesvol opgeslagen!"
+          : `${count} reflecties succesvol opgeslagen!`;
       setSuccessMessage(message);
-      
+
       // Mark all submitted drafts as not dirty
       setDrafts((prev) => {
         const updated = { ...prev };
@@ -179,7 +184,9 @@ export default function ReflectionPage() {
         router.push("/student");
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save reflections");
+      setError(
+        err instanceof Error ? err.message : "Failed to save reflections",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -195,7 +202,9 @@ export default function ReflectionPage() {
         <div className={studentStyles.header.container}>
           <header className={studentStyles.header.wrapper}>
             <div className={studentStyles.header.titleSection}>
-              <h1 className={studentStyles.header.title}>Reflectie Schrijven</h1>
+              <h1 className={studentStyles.header.title}>
+                Reflectie Schrijven
+              </h1>
               <p className={studentStyles.header.subtitle}>
                 Reflecteer op je competentieontwikkeling tijdens {window.title}
               </p>
@@ -205,12 +214,14 @@ export default function ReflectionPage() {
         <main className={studentStyles.layout.contentWrapper}>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
             <p className="text-slate-600">
-              Je hebt nog geen leerdoelen ingesteld voor deze periode. Stel eerst
-              leerdoelen in voordat je een reflectie kunt schrijven.
+              Je hebt nog geen leerdoelen ingesteld voor deze periode. Stel
+              eerst leerdoelen in voordat je een reflectie kunt schrijven.
             </p>
             <button
               onClick={() => router.push("/student")}
-              className={studentStyles.buttons.primary + " mt-4 px-6 py-2 text-white"}
+              className={
+                studentStyles.buttons.primary + " mt-4 px-6 py-2 text-white"
+              }
             >
               Terug naar Dashboard
             </button>
@@ -276,14 +287,18 @@ export default function ReflectionPage() {
                         {goal.goal_text}
                       </p>
                       {goal.success_criteria && (
-                        <p className={studentStyles.typography.infoText + " mt-1"}>
+                        <p
+                          className={
+                            studentStyles.typography.infoText + " mt-1"
+                          }
+                        >
                           Criterium: {goal.success_criteria}
                         </p>
                       )}
                     </div>
                     <span
                       className={`ml-3 rounded-lg border px-3 py-1 text-xs font-medium ${getStatusColor(
-                        status
+                        status,
                       )}`}
                     >
                       {status}
@@ -394,7 +409,9 @@ export default function ReflectionPage() {
               <button
                 type="button"
                 onClick={() => router.push("/student")}
-                className={studentStyles.buttons.secondary + " border px-6 py-2"}
+                className={
+                  studentStyles.buttons.secondary + " border px-6 py-2"
+                }
               >
                 Annuleren
               </button>
@@ -406,9 +423,7 @@ export default function ReflectionPage() {
                   " px-6 py-2 text-white disabled:opacity-50"
                 }
               >
-                {submitting
-                  ? "Opslaan..."
-                  : "Alle Reflecties Indienen"}
+                {submitting ? "Opslaan..." : "Alle Reflecties Indienen"}
               </button>
             </div>
           </form>

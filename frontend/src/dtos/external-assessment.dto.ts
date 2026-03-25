@@ -37,7 +37,7 @@ export interface ExternalAssessmentTeamInfo {
   project_title?: string;
   class_name?: string;
   description?: string;
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED';
+  status: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED";
 }
 
 export interface ExternalAssessmentTokenInfo {
@@ -84,7 +84,7 @@ export interface ExternalAssessmentDetail {
   rubric: RubricForExternal;
   existing_scores: ExternalAssessmentScoreOut[];
   general_comment?: string;
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED';
+  status: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED";
 }
 
 // ============ Submission ============
@@ -104,7 +104,7 @@ export interface ExternalAssessmentSubmit {
 export interface ExternalAssessmentSubmitResponse {
   success: boolean;
   message: string;
-  status: 'IN_PROGRESS' | 'SUBMITTED';
+  status: "IN_PROGRESS" | "SUBMITTED";
 }
 
 // ============ Teacher Management ============
@@ -118,7 +118,7 @@ export interface ProjectTeamExternal {
   project_id?: number;
   invitation_token: string;
   token_expires_at?: string;
-  status: 'NOT_INVITED' | 'INVITED' | 'IN_PROGRESS' | 'SUBMITTED';
+  status: "NOT_INVITED" | "INVITED" | "IN_PROGRESS" | "SUBMITTED";
   created_at: string;
   updated_at: string;
   invited_at?: string;
@@ -147,7 +147,7 @@ export interface ExternalAssessmentAllTeamsConfig {
 }
 
 export interface BulkInviteRequest {
-  mode: 'PER_TEAM' | 'ALL_TEAMS';
+  mode: "PER_TEAM" | "ALL_TEAMS";
   assessment_id?: number;
   per_team_configs?: ExternalAssessmentPerTeamConfig[];
   all_teams_config?: ExternalAssessmentAllTeamsConfig;

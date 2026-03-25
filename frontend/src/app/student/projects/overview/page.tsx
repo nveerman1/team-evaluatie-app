@@ -17,9 +17,7 @@ const PageHeader = () => {
       <header className={studentStyles.header.wrapper}>
         <div className={studentStyles.header.flexContainer}>
           <div className={studentStyles.header.titleSection}>
-            <h1 className={studentStyles.header.title}>
-              Projectoverzicht
-            </h1>
+            <h1 className={studentStyles.header.title}>Projectoverzicht</h1>
             <p className={studentStyles.header.subtitle}>
               Overzicht van jouw projectbeoordelingen, cijfers en ontwikkeling.
             </p>
@@ -48,7 +46,7 @@ export default function ProjectOverviewPage() {
 
   // Fetch detailed assessment data for all projects
   const assessmentIds = useMemo(() => {
-    return projectAssessments?.map(a => a.id) || [];
+    return projectAssessments?.map((a) => a.id) || [];
   }, [projectAssessments]);
 
   const {
@@ -66,12 +64,15 @@ export default function ProjectOverviewPage() {
         categoryAverages: {},
         gradesTrend: [],
         topCategories: [],
-        assessmentCategoryScores: new Map<number, Record<string, { avg: number; min: number; max: number }>>(),
+        assessmentCategoryScores: new Map<
+          number,
+          Record<string, { avg: number; min: number; max: number }>
+        >(),
       };
     }
 
     const completedCount = projectAssessments.length;
-    
+
     // Calculate real average grade from detailed assessments
     let totalGrade = 0;
     let gradeCount = 0;
@@ -82,25 +83,35 @@ export default function ProjectOverviewPage() {
       }
     });
     const avgGrade = gradeCount > 0 ? totalGrade / gradeCount : 0;
-    
+
     // Calculate category weighted averages from criterion scores
     const categoryWeightedSums: Record<string, number> = {};
     const categoryWeights: Record<string, number> = {};
-    
+
     // Calculate per-assessment category scores
-    const assessmentCategoryScores = new Map<number, Record<string, { avg: number; min: number; max: number }>>();
-    
+    const assessmentCategoryScores = new Map<
+      number,
+      Record<string, { avg: number; min: number; max: number }>
+    >();
+
     projectDetails.forEach((detail, assessmentId) => {
-      const categoryData: Record<string, { weightedSum: number; weight: number; min: number; max: number }> = {};
-      
+      const categoryData: Record<
+        string,
+        { weightedSum: number; weight: number; min: number; max: number }
+      > = {};
+
       // Group scores by category using weighted average
       // Prioritize student-specific overrides over team scores
       detail.criteria.forEach((criterion) => {
         if (criterion.category) {
           // First try to find student-specific score, then fall back to team score
-          let score = detail.scores.find(s => s.criterion_id === criterion.id && s.student_id != null);
+          let score = detail.scores.find(
+            (s) => s.criterion_id === criterion.id && s.student_id != null,
+          );
           if (!score) {
-            score = detail.scores.find(s => s.criterion_id === criterion.id && s.student_id == null);
+            score = detail.scores.find(
+              (s) => s.criterion_id === criterion.id && s.student_id == null,
+            );
           }
           if (score) {
             // Add to global category weighted averages
@@ -108,21 +119,31 @@ export default function ProjectOverviewPage() {
               categoryWeightedSums[criterion.category] = 0;
               categoryWeights[criterion.category] = 0;
             }
-            categoryWeightedSums[criterion.category] += score.score * criterion.weight;
+            categoryWeightedSums[criterion.category] +=
+              score.score * criterion.weight;
             categoryWeights[criterion.category] += criterion.weight;
-            
+
             // Add to per-assessment category scores
             if (!categoryData[criterion.category]) {
-              categoryData[criterion.category] = { weightedSum: 0, weight: 0, min: detail.rubric_scale_min, max: detail.rubric_scale_max };
+              categoryData[criterion.category] = {
+                weightedSum: 0,
+                weight: 0,
+                min: detail.rubric_scale_min,
+                max: detail.rubric_scale_max,
+              };
             }
-            categoryData[criterion.category].weightedSum += score.score * criterion.weight;
+            categoryData[criterion.category].weightedSum +=
+              score.score * criterion.weight;
             categoryData[criterion.category].weight += criterion.weight;
           }
         }
       });
-      
+
       // Calculate weighted averages for this assessment
-      const assessmentScores: Record<string, { avg: number; min: number; max: number }> = {};
+      const assessmentScores: Record<
+        string,
+        { avg: number; min: number; max: number }
+      > = {};
       Object.keys(categoryData).forEach((category) => {
         const data = categoryData[category];
         assessmentScores[category] = {
@@ -133,11 +154,12 @@ export default function ProjectOverviewPage() {
       });
       assessmentCategoryScores.set(assessmentId, assessmentScores);
     });
-    
+
     const categoryAverages: Record<string, number> = {};
     Object.keys(categoryWeightedSums).forEach((category) => {
       if (categoryWeights[category] > 0) {
-        categoryAverages[category] = categoryWeightedSums[category] / categoryWeights[category];
+        categoryAverages[category] =
+          categoryWeightedSums[category] / categoryWeights[category];
       }
     });
 
@@ -185,7 +207,9 @@ export default function ProjectOverviewPage() {
       <main className={studentStyles.layout.pageContainer}>
         <PageHeader />
         <div className={studentStyles.layout.contentWrapper}>
-          <ErrorMessage message={error || detailsError || "An error occurred"} />
+          <ErrorMessage
+            message={error || detailsError || "An error occurred"}
+          />
         </div>
       </main>
     );
@@ -208,7 +232,10 @@ export default function ProjectOverviewPage() {
             </p>
             <Link
               href="/student#projecten"
-              className={studentStyles.buttons.primary + " inline-block px-4 py-2 text-white"}
+              className={
+                studentStyles.buttons.primary +
+                " inline-block px-4 py-2 text-white"
+              }
             >
               Ga terug naar dashboard
             </Link>
@@ -221,7 +248,7 @@ export default function ProjectOverviewPage() {
   return (
     <main className={studentStyles.layout.pageContainer}>
       <PageHeader />
-      
+
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-8">
         {/* KPI tiles */}
         <section className="grid gap-4 md:grid-cols-4">
@@ -235,7 +262,9 @@ export default function ProjectOverviewPage() {
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-3xl font-semibold text-slate-900">{stats.avgGrade.toFixed(1)}</span>
+              <span className="text-3xl font-semibold text-slate-900">
+                {stats.avgGrade.toFixed(1)}
+              </span>
               <span className="text-xs text-slate-500">/ 10</span>
             </div>
             <p className="mt-2 text-[11px] text-slate-500">
@@ -248,11 +277,14 @@ export default function ProjectOverviewPage() {
               Afgeronde projecten
             </span>
             <div className="mt-3 flex items-end gap-2">
-              <span className="text-3xl font-semibold text-slate-900">{stats.completedCount}</span>
+              <span className="text-3xl font-semibold text-slate-900">
+                {stats.completedCount}
+              </span>
               <span className="text-[11px] text-slate-500">totaal</span>
             </div>
             <p className="mt-2 text-[11px] text-slate-500">
-              {stats.completedCount === 1 ? 'project' : 'projecten'} in totaal beoordeeld.
+              {stats.completedCount === 1 ? "project" : "projecten"} in totaal
+              beoordeeld.
             </p>
           </div>
 
@@ -267,10 +299,10 @@ export default function ProjectOverviewPage() {
                     <p key={category}>
                       <span
                         className={`inline-block h-2 w-2 rounded-full ${
-                          index === 0 ? 'bg-sky-500' : 'bg-violet-500'
+                          index === 0 ? "bg-sky-500" : "bg-violet-500"
                         }`}
                         aria-hidden="true"
-                      ></span>{' '}
+                      ></span>{" "}
                       {category} • {score.toFixed(1)}/5
                     </p>
                   ))}
@@ -289,7 +321,8 @@ export default function ProjectOverviewPage() {
               Focus voor volgende project
             </span>
             <p className="mt-3 text-[11px] text-slate-600">
-              Bekijk je feedback per project om specifieke tips te vinden voor jouw ontwikkeling.
+              Bekijk je feedback per project om specifieke tips te vinden voor
+              jouw ontwikkeling.
             </p>
             <span className="mt-3 inline-flex w-fit items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">
               Zie projecten
@@ -301,7 +334,9 @@ export default function ProjectOverviewPage() {
         <section className="grid gap-4 lg:grid-cols-5">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:col-span-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">Cijfers per project</h2>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Cijfers per project
+              </h2>
               <span className="text-[11px] text-slate-500">Lijngrafiek</span>
             </div>
             <div className="mt-3 h-56">
@@ -377,7 +412,12 @@ export default function ProjectOverviewPage() {
             </h2>
             <ul className="mt-3 space-y-2 text-xs text-slate-600">
               {Object.keys(stats.categoryAverages).map((category, index) => {
-                const colors = ['bg-sky-500', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500'];
+                const colors = [
+                  "bg-sky-500",
+                  "bg-violet-500",
+                  "bg-emerald-500",
+                  "bg-amber-500",
+                ];
                 return (
                   <li key={category} className="flex items-center gap-2">
                     <span
@@ -390,8 +430,8 @@ export default function ProjectOverviewPage() {
               })}
             </ul>
             <p className="mt-3 text-[11px] text-slate-500">
-              De kleuren sluiten aan bij de grafieken op deze pagina en bij
-              de projectrubric.
+              De kleuren sluiten aan bij de grafieken op deze pagina en bij de
+              projectrubric.
             </p>
           </div>
         </section>
@@ -433,36 +473,40 @@ export default function ProjectOverviewPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {projectAssessments.map((assessment) => {
-                  const categoryScores = stats.assessmentCategoryScores.get(assessment.id) || {};
+                  const categoryScores =
+                    stats.assessmentCategoryScores.get(assessment.id) || {};
                   const detail = projectDetails.get(assessment.id);
-                  
+
                   const getCategoryDisplay = (category: string) => {
                     const data = categoryScores[category];
-                    if (!data) return '—';
+                    if (!data) return "—";
                     // Convert to 1-10 scale using curved mapping
                     const GRADE_CURVE_EXPONENT = 0.85;
                     const scaleRange = data.max - data.min;
                     if (scaleRange > 0) {
                       const normalized = (data.avg - data.min) / scaleRange;
-                      const curved = 1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
+                      const curved =
+                        1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
                       return Math.round(curved * 10) / 10;
                     }
                     return data.avg.toFixed(1);
                   };
-                  
+
                   // Get grade color based on value
                   const getGradeColor = (grade: number | null | undefined) => {
-                    if (grade === null || grade === undefined) return 'text-slate-600';
-                    if (grade >= 8.0) return 'text-green-700';
-                    if (grade >= 6.5) return 'text-amber-600';
-                    return 'text-red-600';
+                    if (grade === null || grade === undefined)
+                      return "text-slate-600";
+                    if (grade >= 8.0) return "text-green-700";
+                    if (grade >= 6.5) return "text-amber-600";
+                    return "text-red-600";
                   };
-                  
+
                   // Extract opdrachtgever from metadata_json
-                  const opdrachtgever = assessment.metadata_json?.opdrachtgever || 
-                                       assessment.metadata_json?.client || 
-                                       '—';
-                  
+                  const opdrachtgever =
+                    assessment.metadata_json?.opdrachtgever ||
+                    assessment.metadata_json?.client ||
+                    "—";
+
                   return (
                     <tr key={assessment.id} className="hover:bg-slate-50/80">
                       <td className="px-3 py-2 align-top">
@@ -471,7 +515,7 @@ export default function ProjectOverviewPage() {
                             {assessment.title}
                           </span>
                           <span className="text-[11px] text-slate-500">
-                            {assessment.course_name || '—'}
+                            {assessment.course_name || "—"}
                           </span>
                         </div>
                       </td>
@@ -480,30 +524,34 @@ export default function ProjectOverviewPage() {
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
                         {assessment.published_at
-                          ? new Date(assessment.published_at).toLocaleDateString('nl-NL', {
-                              year: 'numeric',
-                              month: 'long',
+                          ? new Date(
+                              assessment.published_at,
+                            ).toLocaleDateString("nl-NL", {
+                              year: "numeric",
+                              month: "long",
                             })
-                          : '—'}
+                          : "—"}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {assessment.teacher_name || '—'}
+                        {assessment.teacher_name || "—"}
                       </td>
                       <td className="px-3 py-2 align-top">
-                        <span className={`text-xs font-bold ${getGradeColor(detail?.grade)}`}>
-                          {detail?.grade !== null && detail?.grade !== undefined 
-                            ? detail.grade.toFixed(1) 
-                            : '—'}
+                        <span
+                          className={`text-xs font-bold ${getGradeColor(detail?.grade)}`}
+                        >
+                          {detail?.grade !== null && detail?.grade !== undefined
+                            ? detail.grade.toFixed(1)
+                            : "—"}
                         </span>
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getCategoryDisplay('projectproces')}
+                        {getCategoryDisplay("projectproces")}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getCategoryDisplay('eindresultaat')}
+                        {getCategoryDisplay("eindresultaat")}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getCategoryDisplay('communicatie')}
+                        {getCategoryDisplay("communicatie")}
                       </td>
                       <td className="px-3 py-2 align-top text-right">
                         <Link

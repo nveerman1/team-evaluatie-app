@@ -50,27 +50,32 @@ export function SpreadChartCompact({
   if (!chartData || scans.length < 2) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-slate-400">
-        {scans.length === 1 
-          ? "Minimaal 2 scans vereist voor vergelijking" 
+        {scans.length === 1
+          ? "Minimaal 2 scans vereist voor vergelijking"
           : "Geen data beschikbaar"}
       </div>
     );
   }
 
-  const { padding, chartWidth, chartHeight, yScale, xScale, yMin, yMax } = chartData;
+  const { padding, chartWidth, chartHeight, yScale, xScale, yMin, yMax } =
+    chartData;
 
   // Generate paths
-  const averageLine = scans.map((scan, i) => {
-    const x = xScale(i);
-    const y = yScale(scan.overallAverage);
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
+  const averageLine = scans
+    .map((scan, i) => {
+      const x = xScale(i);
+      const y = yScale(scan.overallAverage);
+      return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+    })
+    .join(" ");
 
-  const medianLine = scans.map((scan, i) => {
-    const x = xScale(i);
-    const y = yScale(scan.median);
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
+  const medianLine = scans
+    .map((scan, i) => {
+      const x = xScale(i);
+      const y = yScale(scan.median);
+      return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+    })
+    .join(" ");
 
   // Band width for spread visualization (per scan)
   const bandWidth = 22;
@@ -142,65 +147,68 @@ export function SpreadChartCompact({
                 textAnchor="middle"
                 className="text-[10px] fill-slate-500"
               >
-                {scan.label.length > 12 ? scan.label.substring(0, 10) + '...' : scan.label}
+                {scan.label.length > 12
+                  ? scan.label.substring(0, 10) + "..."
+                  : scan.label}
               </text>
             </g>
           );
         })}
 
         {/* Spread bands (only in spread mode) - per scan vertical bands */}
-        {mode === "spread" && scans.map((scan, i) => {
-          const x = xScale(i);
-          const xLeft = x - bandWidth / 2;
-          
-          // Safety check: skip rendering if x is not finite
-          if (!Number.isFinite(x)) return null;
-          
-          // P10-P90 band (lighter)
-          const yP90 = yScale(scan.p90);
-          const yP10 = yScale(scan.p10);
-          const heightP1090 = yP10 - yP90;
-          
-          // P25-P75 band (darker, on top of P10-P90)
-          const yP75 = yScale(scan.p75);
-          const yP25 = yScale(scan.p25);
-          const heightP2575 = yP25 - yP75;
-          
-          return (
-            <g key={`spread-${scan.scanId}`}>
-              {/* P10-P90 band */}
-              <rect
-                x={xLeft}
-                y={yP90}
-                width={bandWidth}
-                height={heightP1090}
-                fill="#3b82f6"
-                fillOpacity={0.1}
-                rx={2}
-              />
-              {/* P25-P75 band */}
-              <rect
-                x={xLeft}
-                y={yP75}
-                width={bandWidth}
-                height={heightP2575}
-                fill="#3b82f6"
-                fillOpacity={0.15}
-                rx={2}
-              />
-              {/* Small median tick */}
-              <line
-                x1={x - 5}
-                y1={yScale(scan.median)}
-                x2={x + 5}
-                y2={yScale(scan.median)}
-                stroke="#94a3b8"
-                strokeWidth={2}
-                opacity={0.7}
-              />
-            </g>
-          );
-        })}
+        {mode === "spread" &&
+          scans.map((scan, i) => {
+            const x = xScale(i);
+            const xLeft = x - bandWidth / 2;
+
+            // Safety check: skip rendering if x is not finite
+            if (!Number.isFinite(x)) return null;
+
+            // P10-P90 band (lighter)
+            const yP90 = yScale(scan.p90);
+            const yP10 = yScale(scan.p10);
+            const heightP1090 = yP10 - yP90;
+
+            // P25-P75 band (darker, on top of P10-P90)
+            const yP75 = yScale(scan.p75);
+            const yP25 = yScale(scan.p25);
+            const heightP2575 = yP25 - yP75;
+
+            return (
+              <g key={`spread-${scan.scanId}`}>
+                {/* P10-P90 band */}
+                <rect
+                  x={xLeft}
+                  y={yP90}
+                  width={bandWidth}
+                  height={heightP1090}
+                  fill="#3b82f6"
+                  fillOpacity={0.1}
+                  rx={2}
+                />
+                {/* P25-P75 band */}
+                <rect
+                  x={xLeft}
+                  y={yP75}
+                  width={bandWidth}
+                  height={heightP2575}
+                  fill="#3b82f6"
+                  fillOpacity={0.15}
+                  rx={2}
+                />
+                {/* Small median tick */}
+                <line
+                  x1={x - 5}
+                  y1={yScale(scan.median)}
+                  x2={x + 5}
+                  y2={yScale(scan.median)}
+                  stroke="#94a3b8"
+                  strokeWidth={2}
+                  opacity={0.7}
+                />
+              </g>
+            );
+          })}
 
         {/* Median line (dashed) */}
         <path
@@ -212,12 +220,7 @@ export function SpreadChartCompact({
         />
 
         {/* Average line (solid with dots) */}
-        <path
-          d={averageLine}
-          fill="none"
-          stroke="#3b82f6"
-          strokeWidth={2}
-        />
+        <path d={averageLine} fill="none" stroke="#3b82f6" strokeWidth={2} />
         {scans.map((scan, i) => {
           const x = xScale(i);
           const y = yScale(scan.overallAverage);

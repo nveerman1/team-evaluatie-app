@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { shortName } from '@/lib/format';
+import React from "react";
+import { shortName } from "@/lib/format";
 
 interface TeamMember {
   id: number;
@@ -36,8 +36,9 @@ export function TeamBar({
   hasPrevTeam,
   hasNextTeam,
 }: TeamBarProps) {
-  const gradeDisplay = grade !== null && grade !== undefined ? grade.toFixed(1) : '—';
-  
+  const gradeDisplay =
+    grade !== null && grade !== undefined ? grade.toFixed(1) : "—";
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -69,18 +70,22 @@ export function TeamBar({
 
         {/* Tekst rechts */}
         <div className="text-right">
-          <div className="text-sm font-semibold text-slate-900">Team {teamNumber}</div>
+          <div className="text-sm font-semibold text-slate-900">
+            Team {teamNumber}
+          </div>
           <div className="mt-1 text-sm text-slate-500">
             {teamIndex + 1} van {totalTeams}
             <span className="mx-2 text-slate-300">•</span>
-            Teamleden: <span 
+            Teamleden:{" "}
+            <span
               className="text-slate-600 max-w-xs truncate align-baseline"
-              title={members.map(m => m.name).join(', ')}
+              title={members.map((m) => m.name).join(", ")}
             >
-              {members.map(m => shortName(m.name)).join(', ')}
+              {members.map((m) => shortName(m.name)).join(", ")}
             </span>
             <span className="mx-2 text-slate-300">•</span>
-            Eindcijfer: <span className="text-slate-900 font-semibold">{gradeDisplay}</span>
+            Eindcijfer:{" "}
+            <span className="text-slate-900 font-semibold">{gradeDisplay}</span>
           </div>
         </div>
       </div>

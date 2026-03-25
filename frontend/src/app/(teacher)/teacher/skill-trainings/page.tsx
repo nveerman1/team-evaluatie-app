@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { skillTrainingService, courseService, competencyService, listLearningObjectives } from "@/services";
+import {
+  skillTrainingService,
+  courseService,
+  competencyService,
+  listLearningObjectives,
+} from "@/services";
 import type {
   SkillTraining,
   SkillTrainingCreate,
@@ -16,10 +21,32 @@ import { STATUS_META } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, ExternalLink, Users, ChevronDown, Circle, Clock, CheckCircle2, ClipboardCheck, BadgeCheck as BadgeCheckIcon } from "lucide-react";
+import {
+  Plus,
+  ExternalLink,
+  Users,
+  ChevronDown,
+  Circle,
+  Clock,
+  CheckCircle2,
+  ClipboardCheck,
+  BadgeCheck as BadgeCheckIcon,
+} from "lucide-react";
 
 // Helper function for class names
 function cn(...classes: (string | false | null | undefined)[]) {
@@ -33,23 +60,28 @@ export default function SkillTrainingsPage() {
   const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Tab state
   const [tab, setTab] = useState<"matrix" | "overview" | "manage">("matrix");
-  
+
   // Progress matrix state
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("");
-  const [progressData, setProgressData] = useState<TeacherProgressMatrixResponse | null>(null);
+  const [progressData, setProgressData] =
+    useState<TeacherProgressMatrixResponse | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
-  
+
   // Selection for bulk actions
-  const [selectedTrainings, setSelectedTrainings] = useState<Record<string, boolean>>({});
-  
+  const [selectedTrainings, setSelectedTrainings] = useState<
+    Record<string, boolean>
+  >({});
+
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingTraining, setEditingTraining] = useState<SkillTraining | null>(null);
+  const [editingTraining, setEditingTraining] = useState<SkillTraining | null>(
+    null,
+  );
   const [createForm, setCreateForm] = useState<SkillTrainingCreate>({
     title: "",
     url: "https://technasiummbh.nl/vaardigheden/",
@@ -64,17 +96,18 @@ export default function SkillTrainingsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [trainingsData, coursesData, categoriesData, objectivesResponse] = await Promise.all([
-        skillTrainingService.listTrainings(),
-        courseService.getCourses(),
-        competencyService.getCategories(),
-        listLearningObjectives({
-          limit: 100,
-          include_teacher_objectives: true,
-          include_course_objectives: true,
-        }),
-      ]);
-      
+      const [trainingsData, coursesData, categoriesData, objectivesResponse] =
+        await Promise.all([
+          skillTrainingService.listTrainings(),
+          courseService.getCourses(),
+          competencyService.getCategories(),
+          listLearningObjectives({
+            limit: 100,
+            include_teacher_objectives: true,
+            include_course_objectives: true,
+          }),
+        ]);
+
       setTrainings(trainingsData);
       setCourses(coursesData);
       setCategories(categoriesData);
@@ -89,7 +122,10 @@ export default function SkillTrainingsPage() {
   const loadProgressMatrix = async (courseId: number, className?: string) => {
     try {
       setLoadingProgress(true);
-      const data = await skillTrainingService.getProgressMatrix(courseId, className);
+      const data = await skillTrainingService.getProgressMatrix(
+        courseId,
+        className,
+      );
       setProgressData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load progress");
@@ -117,11 +153,15 @@ export default function SkillTrainingsPage() {
 
   const handleCreateTraining = async () => {
     try {
-      if (!createForm.title || !createForm.url || !createForm.competency_category_id) {
+      if (
+        !createForm.title ||
+        !createForm.url ||
+        !createForm.competency_category_id
+      ) {
         alert("Vul alle verplichte velden in");
         return;
       }
-      
+
       await skillTrainingService.createTraining(createForm);
       setIsCreateModalOpen(false);
       setCreateForm({
@@ -132,7 +172,10 @@ export default function SkillTrainingsPage() {
       });
       loadData();
       if (selectedCourseId) {
-        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+        loadProgressMatrix(
+          parseInt(selectedCourseId),
+          selectedClass || undefined,
+        );
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create training");
@@ -142,27 +185,35 @@ export default function SkillTrainingsPage() {
   const handleEditTraining = async () => {
     try {
       if (!editingTraining) return;
-      
-      if (!editingTraining.title || !editingTraining.url || !editingTraining.competency_category_id) {
+
+      if (
+        !editingTraining.title ||
+        !editingTraining.url ||
+        !editingTraining.competency_category_id
+      ) {
         alert("Vul alle verplichte velden in");
         return;
       }
-      
+
       await skillTrainingService.updateTraining(editingTraining.id, {
         title: editingTraining.title,
         url: editingTraining.url,
         competency_category_id: editingTraining.competency_category_id,
-        learning_objective_id: editingTraining.learning_objective_id || undefined,
+        learning_objective_id:
+          editingTraining.learning_objective_id || undefined,
         level: editingTraining.level || undefined,
         est_minutes: editingTraining.est_minutes || undefined,
         is_active: editingTraining.is_active,
       });
-      
+
       setIsEditModalOpen(false);
       setEditingTraining(null);
       loadData();
       if (selectedCourseId) {
-        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+        loadProgressMatrix(
+          parseInt(selectedCourseId),
+          selectedClass || undefined,
+        );
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update training");
@@ -174,22 +225,36 @@ export default function SkillTrainingsPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleStatusClick = async (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => {
+  const handleStatusClick = async (
+    studentId: number,
+    trainingId: number,
+    currentStatus: SkillTrainingStatus,
+  ) => {
     if (!selectedCourseId) return;
-    
-    const statuses: SkillTrainingStatus[] = ["none", "planned", "in_progress", "submitted", "completed", "mastered"];
+
+    const statuses: SkillTrainingStatus[] = [
+      "none",
+      "planned",
+      "in_progress",
+      "submitted",
+      "completed",
+      "mastered",
+    ];
     const currentIndex = statuses.indexOf(currentStatus);
     const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-    
+
     try {
       await skillTrainingService.updateProgressSingle(
         studentId,
         trainingId,
         parseInt(selectedCourseId),
-        nextStatus
+        nextStatus,
       );
       if (selectedCourseId) {
-        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+        loadProgressMatrix(
+          parseInt(selectedCourseId),
+          selectedClass || undefined,
+        );
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
@@ -204,15 +269,21 @@ export default function SkillTrainingsPage() {
   }, [categories, trainings]);
 
   const filteredStudents = progressData?.students || [];
-  
-  const allTrainingIds = useMemo(() => trainings.map((t) => String(t.id)), [trainings]);
-  
+
+  const allTrainingIds = useMemo(
+    () => trainings.map((t) => String(t.id)),
+    [trainings],
+  );
+
   const anyTrainingSelected = useMemo(() => {
     return allTrainingIds.some((id) => !!selectedTrainings[id]);
   }, [allTrainingIds, selectedTrainings]);
-  
+
   const allTrainingsSelected = useMemo(() => {
-    return allTrainingIds.length > 0 && allTrainingIds.every((id) => !!selectedTrainings[id]);
+    return (
+      allTrainingIds.length > 0 &&
+      allTrainingIds.every((id) => !!selectedTrainings[id])
+    );
   }, [allTrainingIds, selectedTrainings]);
 
   const toggleSelectTraining = (trainingId: string, next: boolean) => {
@@ -229,18 +300,26 @@ export default function SkillTrainingsPage() {
 
   const bulkSetStatus = async (status: SkillTrainingStatus) => {
     if (!selectedCourseId) return;
-    const trainingIds = allTrainingIds.filter((id) => selectedTrainings[id]).map((id) => parseInt(id));
+    const trainingIds = allTrainingIds
+      .filter((id) => selectedTrainings[id])
+      .map((id) => parseInt(id));
     if (trainingIds.length === 0) return;
     const studentIds = filteredStudents.map((s) => s.student_id);
 
     try {
-      await skillTrainingService.bulkUpdateProgress(parseInt(selectedCourseId), {
-        student_ids: studentIds,
-        training_ids: trainingIds,
-        status,
-      });
+      await skillTrainingService.bulkUpdateProgress(
+        parseInt(selectedCourseId),
+        {
+          student_ids: studentIds,
+          training_ids: trainingIds,
+          status,
+        },
+      );
       if (selectedCourseId) {
-        loadProgressMatrix(parseInt(selectedCourseId), selectedClass || undefined);
+        loadProgressMatrix(
+          parseInt(selectedCourseId),
+          selectedClass || undefined,
+        );
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to bulk update");
@@ -250,7 +329,9 @@ export default function SkillTrainingsPage() {
   // Get unique class names from students
   const availableClasses = useMemo(() => {
     if (!progressData) return [];
-    const classes = new Set(progressData.students.map((s) => s.class_name).filter(Boolean));
+    const classes = new Set(
+      progressData.students.map((s) => s.class_name).filter(Boolean),
+    );
     return Array.from(classes).sort();
   }, [progressData]);
 
@@ -269,142 +350,186 @@ export default function SkillTrainingsPage() {
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Vaardigheidstrainingen</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Vaardigheidstrainingen
+            </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Docentoverzicht — voortgang per leerling (trainingen staan op technasiummbh.nl)
+              Docentoverzicht — voortgang per leerling (trainingen staan op
+              technasiummbh.nl)
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <Dialog
+              open={isCreateModalOpen}
+              onOpenChange={setIsCreateModalOpen}
+            >
               <DialogTrigger asChild>
                 <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                   <Plus className="h-4 w-4" />
                   Training aanmaken
                 </button>
               </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Nieuwe training aanmaken</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-4">
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Nieuwe training aanmaken</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <Label htmlFor="title">Titel *</Label>
+                    <Input
+                      id="title"
+                      value={createForm.title}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, title: e.target.value })
+                      }
+                      placeholder="Bijv. Onderzoeksmethoden - Basis"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="url">URL *</Label>
+                    <Input
+                      id="url"
+                      value={createForm.url}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, url: e.target.value })
+                      }
+                      placeholder="https://technasiummbh.nl/vaardigheden/..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="category">Competentiecategorie *</Label>
+                    <Select
+                      value={
+                        createForm.competency_category_id
+                          ? String(createForm.competency_category_id)
+                          : ""
+                      }
+                      onValueChange={(value) =>
+                        setCreateForm({
+                          ...createForm,
+                          competency_category_id: parseInt(value),
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecteer categorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={String(cat.id)}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="objective">Leerdoel (optioneel)</Label>
+                    <Select
+                      value={
+                        createForm.learning_objective_id
+                          ? String(createForm.learning_objective_id)
+                          : "none"
+                      }
+                      onValueChange={(value) =>
+                        setCreateForm({
+                          ...createForm,
+                          learning_objective_id:
+                            value === "none" ? undefined : parseInt(value),
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Geen leerdoel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Geen leerdoel</SelectItem>
+                        {objectives.map((obj) => (
+                          <SelectItem key={obj.id} value={String(obj.id)}>
+                            {obj.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="title">Titel *</Label>
-                      <Input
-                        id="title"
-                        value={createForm.title}
-                        onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                        placeholder="Bijv. Onderzoeksmethoden - Basis"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="url">URL *</Label>
-                      <Input
-                        id="url"
-                        value={createForm.url}
-                        onChange={(e) => setCreateForm({ ...createForm, url: e.target.value })}
-                        placeholder="https://technasiummbh.nl/vaardigheden/..."
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="category">Competentiecategorie *</Label>
+                      <Label htmlFor="level">Niveau</Label>
                       <Select
-                        value={createForm.competency_category_id ? String(createForm.competency_category_id) : ""}
-                        onValueChange={(value) => setCreateForm({ ...createForm, competency_category_id: parseInt(value) })}
+                        value={createForm.level || "none"}
+                        onValueChange={(value) =>
+                          setCreateForm({
+                            ...createForm,
+                            level: value === "none" ? undefined : value,
+                          })
+                        }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecteer categorie" />
+                          <SelectValue placeholder="Geen niveau" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={String(cat.id)}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="none">Geen niveau</SelectItem>
+                          <SelectItem value="basis">Basis</SelectItem>
+                          <SelectItem value="plus">Plus</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
-                      <Label htmlFor="objective">Leerdoel (optioneel)</Label>
-                      <Select
-                        value={createForm.learning_objective_id ? String(createForm.learning_objective_id) : "none"}
-                        onValueChange={(value) => setCreateForm({ 
-                          ...createForm, 
-                          learning_objective_id: value === "none" ? undefined : parseInt(value) 
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Geen leerdoel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Geen leerdoel</SelectItem>
-                          {objectives.map((obj) => (
-                            <SelectItem key={obj.id} value={String(obj.id)}>
-                              {obj.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="level">Niveau</Label>
-                        <Select
-                          value={createForm.level || "none"}
-                          onValueChange={(value) => setCreateForm({ 
-                            ...createForm, 
-                            level: value === "none" ? undefined : value 
-                          })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Geen niveau" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Geen niveau</SelectItem>
-                            <SelectItem value="basis">Basis</SelectItem>
-                            <SelectItem value="plus">Plus</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="minutes">Geschatte tijd</Label>
-                        <Input
-                          id="minutes"
-                          value={createForm.est_minutes || ""}
-                          onChange={(e) => setCreateForm({ ...createForm, est_minutes: e.target.value })}
-                          placeholder="Bijv. 10-15 min"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="is_active"
-                        checked={createForm.is_active}
-                        onChange={(e) => setCreateForm({ ...createForm, is_active: e.target.checked })}
-                        className="rounded"
+                      <Label htmlFor="minutes">Geschatte tijd</Label>
+                      <Input
+                        id="minutes"
+                        value={createForm.est_minutes || ""}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            est_minutes: e.target.value,
+                          })
+                        }
+                        placeholder="Bijv. 10-15 min"
                       />
-                      <Label htmlFor="is_active">Actief</Label>
-                    </div>
-                    
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                        Annuleren
-                      </Button>
-                      <Button onClick={handleCreateTraining}>
-                        Aanmaken
-                      </Button>
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={createForm.is_active}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          is_active: e.target.checked,
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <Label htmlFor="is_active">Actief</Label>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateModalOpen(false)}
+                    >
+                      Annuleren
+                    </Button>
+                    <Button onClick={handleCreateTraining}>Aanmaken</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <button
-              onClick={() => window?.open?.("https://technasiummbh.nl/vaardigheden", "_blank")}
+              onClick={() =>
+                window?.open?.(
+                  "https://technasiummbh.nl/vaardigheden",
+                  "_blank",
+                )
+              }
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
               <ExternalLink className="h-4 w-4" />
@@ -416,7 +541,6 @@ export default function SkillTrainingsPage() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
           <nav className="flex gap-8" aria-label="Tabs">
@@ -430,7 +554,7 @@ export default function SkillTrainingsPage() {
                     "py-4 px-1 border-b-2 font-medium text-sm transition-colors",
                     active
                       ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
                   )}
                   aria-current={active ? "page" : undefined}
                 >
@@ -440,59 +564,63 @@ export default function SkillTrainingsPage() {
             })}
           </nav>
         </div>
-        
+
         {/* Filter bar - only show for matrix and overview tabs */}
         {tab !== "manage" && (
-        <div className="rounded-lg border border-gray-200/80 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className="md:col-span-7">
-              <label className="block">
-                <div className="mb-1 text-xs font-medium text-gray-600">Vak (course_id) *</div>
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <ExternalLink className="h-4 w-4" />
+          <div className="rounded-lg border border-gray-200/80 bg-white p-5 shadow-sm">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+              <div className="md:col-span-7">
+                <label className="block">
+                  <div className="mb-1 text-xs font-medium text-gray-600">
+                    Vak (course_id) *
                   </div>
-                  <select
-                    value={selectedCourseId}
-                    onChange={(e) => handleCourseChange(e.target.value)}
-                    className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Selecteer een vak</option>
-                    {courses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                </div>
-              </label>
-            </div>
-            <div className="md:col-span-5">
-              <label className="block">
-                <div className="mb-1 text-xs font-medium text-gray-600">Klas (optioneel)</div>
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <Users className="h-4 w-4" />
+                  <div className="relative">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <ExternalLink className="h-4 w-4" />
+                    </div>
+                    <select
+                      value={selectedCourseId}
+                      onChange={(e) => handleCourseChange(e.target.value)}
+                      className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecteer een vak</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   </div>
-                  <select
-                    value={selectedClass}
-                    onChange={(e) => handleClassChange(e.target.value)}
-                    className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Alle klassen</option>
-                    {availableClasses.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                </div>
-              </label>
+                </label>
+              </div>
+              <div className="md:col-span-5">
+                <label className="block">
+                  <div className="mb-1 text-xs font-medium text-gray-600">
+                    Klas (optioneel)
+                  </div>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => handleClassChange(e.target.value)}
+                      className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Alle klassen</option>
+                      {availableClasses.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
-        </div>
         )}
 
         {/* Bulk action bar (only for Overzicht trainingen) */}
@@ -500,8 +628,14 @@ export default function SkillTrainingsPage() {
           <div className="rounded-lg border border-gray-200/80 bg-white px-5 py-3 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm text-gray-600">
-                <span className="font-semibold text-gray-900">{filteredStudents.length}</span> leerlingen •{" "}
-                <span className="font-semibold text-gray-900">{trainings.length}</span> trainingen
+                <span className="font-semibold text-gray-900">
+                  {filteredStudents.length}
+                </span>{" "}
+                leerlingen •{" "}
+                <span className="font-semibold text-gray-900">
+                  {trainings.length}
+                </span>{" "}
+                trainingen
                 <span className="mx-2 text-gray-300">•</span>
                 <span className={cn(!anyTrainingSelected && "text-gray-400")}>
                   Bulk: vink trainingen (kolommen) aan en kies status
@@ -510,13 +644,26 @@ export default function SkillTrainingsPage() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => toggleSelectAllTrainings(!allTrainingsSelected)}
+                  onClick={() =>
+                    toggleSelectAllTrainings(!allTrainingsSelected)
+                  }
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm bg-white text-gray-700 hover:bg-gray-50"
                 >
-                  {allTrainingsSelected ? "Alle trainingen uit" : "Alle trainingen aan"}
+                  {allTrainingsSelected
+                    ? "Alle trainingen uit"
+                    : "Alle trainingen aan"}
                 </button>
 
-                {(["none", "planned", "in_progress", "submitted", "completed", "mastered"] as SkillTrainingStatus[]).map((st) => (
+                {(
+                  [
+                    "none",
+                    "planned",
+                    "in_progress",
+                    "submitted",
+                    "completed",
+                    "mastered",
+                  ] as SkillTrainingStatus[]
+                ).map((st) => (
                   <button
                     key={st}
                     disabled={!anyTrainingSelected}
@@ -525,7 +672,7 @@ export default function SkillTrainingsPage() {
                       "rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm transition",
                       !anyTrainingSelected
                         ? "cursor-not-allowed bg-gray-50 text-gray-400"
-                        : "bg-white text-gray-700 hover:bg-gray-50"
+                        : "bg-white text-gray-700 hover:bg-gray-50",
                     )}
                   >
                     {STATUS_META[st].label}
@@ -537,7 +684,9 @@ export default function SkillTrainingsPage() {
                   onClick={() => setSelectedTrainings({})}
                   className={cn(
                     "rounded-lg px-3 py-2 text-sm font-medium",
-                    !anyTrainingSelected ? "cursor-not-allowed text-gray-400" : "text-gray-600 hover:text-gray-900"
+                    !anyTrainingSelected
+                      ? "cursor-not-allowed text-gray-400"
+                      : "text-gray-600 hover:text-gray-900",
                   )}
                 >
                   Selectie wissen
@@ -550,13 +699,23 @@ export default function SkillTrainingsPage() {
         {/* Content area - manage tab doesn't need course selection */}
         {tab === "manage" ? (
           <div className="rounded-lg border border-gray-200/80 bg-white shadow-sm">
-            <AllTrainingsTable trainings={trainings} categories={categories} objectives={objectives} onEdit={openEditModal} />
+            <AllTrainingsTable
+              trainings={trainings}
+              categories={categories}
+              objectives={objectives}
+              onEdit={openEditModal}
+            />
           </div>
         ) : !selectedCourseId ? (
           <div className="rounded-lg border border-gray-200/80 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto max-w-md">
-              <div className="text-lg font-semibold text-gray-900">Selecteer eerst een vak</div>
-              <div className="mt-2 text-sm text-gray-600">Zonder vak (course_id) kunnen we geen leerlingen en trainingen tonen.</div>
+              <div className="text-lg font-semibold text-gray-900">
+                Selecteer eerst een vak
+              </div>
+              <div className="mt-2 text-sm text-gray-600">
+                Zonder vak (course_id) kunnen we geen leerlingen en trainingen
+                tonen.
+              </div>
             </div>
           </div>
         ) : loadingProgress ? (
@@ -566,7 +725,11 @@ export default function SkillTrainingsPage() {
         ) : (
           <div className="rounded-lg border border-gray-200/80 bg-white shadow-sm">
             {tab === "matrix" ? (
-              <MatrixView students={filteredStudents} groupedTrainings={groupedTrainings} progressData={progressData} />
+              <MatrixView
+                students={filteredStudents}
+                groupedTrainings={groupedTrainings}
+                progressData={progressData}
+              />
             ) : (
               <OverviewTable
                 students={filteredStudents}
@@ -595,26 +758,45 @@ export default function SkillTrainingsPage() {
                 <Input
                   id="edit-title"
                   value={editingTraining.title}
-                  onChange={(e) => setEditingTraining({ ...editingTraining, title: e.target.value })}
+                  onChange={(e) =>
+                    setEditingTraining({
+                      ...editingTraining,
+                      title: e.target.value,
+                    })
+                  }
                   placeholder="Bijv. Onderzoeksmethoden - Basis"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="edit-url">URL *</Label>
                 <Input
                   id="edit-url"
                   value={editingTraining.url}
-                  onChange={(e) => setEditingTraining({ ...editingTraining, url: e.target.value })}
+                  onChange={(e) =>
+                    setEditingTraining({
+                      ...editingTraining,
+                      url: e.target.value,
+                    })
+                  }
                   placeholder="https://technasiummbh.nl/vaardigheden/..."
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="edit-category">Competentiecategorie *</Label>
                 <Select
-                  value={editingTraining.competency_category_id ? String(editingTraining.competency_category_id) : ""}
-                  onValueChange={(value) => setEditingTraining({ ...editingTraining, competency_category_id: parseInt(value) })}
+                  value={
+                    editingTraining.competency_category_id
+                      ? String(editingTraining.competency_category_id)
+                      : ""
+                  }
+                  onValueChange={(value) =>
+                    setEditingTraining({
+                      ...editingTraining,
+                      competency_category_id: parseInt(value),
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecteer categorie" />
@@ -628,15 +810,22 @@ export default function SkillTrainingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="edit-objective">Leerdoel (optioneel)</Label>
                 <Select
-                  value={editingTraining.learning_objective_id ? String(editingTraining.learning_objective_id) : "none"}
-                  onValueChange={(value) => setEditingTraining({ 
-                    ...editingTraining, 
-                    learning_objective_id: value === "none" ? undefined : parseInt(value) 
-                  })}
+                  value={
+                    editingTraining.learning_objective_id
+                      ? String(editingTraining.learning_objective_id)
+                      : "none"
+                  }
+                  onValueChange={(value) =>
+                    setEditingTraining({
+                      ...editingTraining,
+                      learning_objective_id:
+                        value === "none" ? undefined : parseInt(value),
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Geen leerdoel" />
@@ -651,16 +840,18 @@ export default function SkillTrainingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-level">Niveau</Label>
                   <Select
                     value={editingTraining.level || "none"}
-                    onValueChange={(value) => setEditingTraining({ 
-                      ...editingTraining, 
-                      level: value === "none" ? undefined : value 
-                    })}
+                    onValueChange={(value) =>
+                      setEditingTraining({
+                        ...editingTraining,
+                        level: value === "none" ? undefined : value,
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Geen niveau" />
@@ -672,36 +863,47 @@ export default function SkillTrainingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="edit-minutes">Geschatte tijd</Label>
                   <Input
                     id="edit-minutes"
                     value={editingTraining.est_minutes || ""}
-                    onChange={(e) => setEditingTraining({ ...editingTraining, est_minutes: e.target.value })}
+                    onChange={(e) =>
+                      setEditingTraining({
+                        ...editingTraining,
+                        est_minutes: e.target.value,
+                      })
+                    }
                     placeholder="Bijv. 10-15 min"
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   id="edit_is_active"
                   checked={editingTraining.is_active}
-                  onChange={(e) => setEditingTraining({ ...editingTraining, is_active: e.target.checked })}
+                  onChange={(e) =>
+                    setEditingTraining({
+                      ...editingTraining,
+                      is_active: e.target.checked,
+                    })
+                  }
                   className="rounded"
                 />
                 <Label htmlFor="edit_is_active">Actief</Label>
               </div>
-              
+
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
                   Annuleren
                 </Button>
-                <Button onClick={handleEditTraining}>
-                  Opslaan
-                </Button>
+                <Button onClick={handleEditTraining}>Opslaan</Button>
               </div>
             </div>
           )}
@@ -725,8 +927,15 @@ interface MatrixViewProps {
 }
 
 // Matrix View Component
-function MatrixView({ students, groupedTrainings, progressData }: MatrixViewProps) {
-  const getStatus = (studentId: number, trainingId: number): SkillTrainingStatus => {
+function MatrixView({
+  students,
+  groupedTrainings,
+  progressData,
+}: MatrixViewProps) {
+  const getStatus = (
+    studentId: number,
+    trainingId: number,
+  ): SkillTrainingStatus => {
     const student = students.find((s) => s.student_id === studentId);
     return (student?.progress[trainingId] || "none") as SkillTrainingStatus;
   };
@@ -736,9 +945,14 @@ function MatrixView({ students, groupedTrainings, progressData }: MatrixViewProp
       <table className="min-w-[980px] w-full">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Leerling</th>
+            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Leerling
+            </th>
             {groupedTrainings.map((group) => (
-              <th key={group.id} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th
+                key={group.id}
+                className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+              >
                 {group.name}
               </th>
             ))}
@@ -747,7 +961,9 @@ function MatrixView({ students, groupedTrainings, progressData }: MatrixViewProp
         <tbody>
           {students.map((s) => (
             <tr key={s.student_id} className="border-t hover:bg-gray-50/60">
-              <td className="px-5 py-3 text-sm font-bold text-slate-900">{s.student_name}</td>
+              <td className="px-5 py-3 text-sm font-bold text-slate-900">
+                {s.student_name}
+              </td>
               {groupedTrainings.map((group) => {
                 const total = group.trainings.length;
                 const done = group.trainings.filter((t) => {
@@ -758,7 +974,10 @@ function MatrixView({ students, groupedTrainings, progressData }: MatrixViewProp
                 return (
                   <td key={group.id} className="px-5 py-3">
                     <div className="h-2 w-full rounded-full bg-gray-100">
-                      <div className="h-2 rounded-full bg-blue-600" style={{ width: `${pct}%` }} />
+                      <div
+                        className="h-2 rounded-full bg-blue-600"
+                        style={{ width: `${pct}%` }}
+                      />
                     </div>
                     <div className="mt-1 text-xs text-gray-500">
                       {done}/{total}
@@ -790,13 +1009,25 @@ interface OverviewTableProps {
   groupedTrainings: GroupedTraining[];
   trainings: SkillTraining[];
   progressData: TeacherProgressMatrixResponse | null;
-  onCycle: (studentId: number, trainingId: number, currentStatus: SkillTrainingStatus) => void;
+  onCycle: (
+    studentId: number,
+    trainingId: number,
+    currentStatus: SkillTrainingStatus,
+  ) => void;
   selectedTrainings: Record<string, boolean>;
   onToggleTraining: (trainingId: string, next: boolean) => void;
 }
 
 // Overview Table Component
-function OverviewTable({ students, groupedTrainings, trainings, progressData, onCycle, selectedTrainings, onToggleTraining }: OverviewTableProps) {
+function OverviewTable({
+  students,
+  groupedTrainings,
+  trainings,
+  progressData,
+  onCycle,
+  selectedTrainings,
+  onToggleTraining,
+}: OverviewTableProps) {
   const flatTrainings = useMemo(() => {
     const cols: FlatTraining[] = [];
     for (const g of groupedTrainings) {
@@ -815,7 +1046,10 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
     }));
   }, [groupedTrainings]);
 
-  const getStatus = (studentId: number, trainingId: number): SkillTrainingStatus => {
+  const getStatus = (
+    studentId: number,
+    trainingId: number,
+  ): SkillTrainingStatus => {
     const student = students.find((s) => s.student_id === studentId);
     return (student?.progress[trainingId] || "none") as SkillTrainingStatus;
   };
@@ -831,9 +1065,14 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
       mastered: BadgeCheckIcon,
     };
     const Icon = icons[status] || Circle;
-    
+
     return (
-      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold", meta.colorClass)}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+          meta.colorClass,
+        )}
+      >
         <Icon className="h-3.5 w-3.5" />
         {meta.label}
       </span>
@@ -851,7 +1090,7 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                 <th
                   className={cn(
                     "sticky left-0 top-0 z-30 min-w-[260px] w-auto border-b border-gray-200 bg-gray-50 px-5 py-3",
-                    "shadow-[1px_0_0_0_rgba(229,231,235,1)]"
+                    "shadow-[1px_0_0_0_rgba(229,231,235,1)]",
                   )}
                 />
                 {spans.map((g: any) => (
@@ -870,10 +1109,12 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                 <th
                   className={cn(
                     "sticky left-0 top-[44px] z-30 border-b border-gray-200 bg-gray-100 px-5 py-3 text-left",
-                    "shadow-[1px_0_0_0_rgba(229,231,235,1)]"
+                    "shadow-[1px_0_0_0_rgba(229,231,235,1)]",
                   )}
                 >
-                  <div className="text-xs font-semibold text-gray-700">Leerlingen</div>
+                  <div className="text-xs font-semibold text-gray-700">
+                    Leerlingen
+                  </div>
                 </th>
 
                 {flatTrainings.map((t: any) => (
@@ -881,19 +1122,24 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                     key={t.id}
                     className={cn(
                       "sticky top-[44px] z-20 border-b border-l border-gray-200 bg-gray-100 px-4 py-3 text-left",
-                      selectedTrainings?.[t.id] && "bg-gray-200/60"
+                      selectedTrainings?.[t.id] && "bg-gray-200/60",
                     )}
                   >
                     <div className="flex items-start gap-2">
                       <input
                         type="checkbox"
                         checked={!!selectedTrainings?.[t.id]}
-                        onChange={(e) => onToggleTraining(String(t.id), e.target.checked)}
+                        onChange={(e) =>
+                          onToggleTraining(String(t.id), e.target.checked)
+                        }
                         className="mt-0.5 h-4 w-4 rounded border-gray-300"
                         title="Selecteer kolom voor bulk"
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold text-gray-800" title={t.title}>
+                        <div
+                          className="text-xs font-semibold text-gray-800"
+                          title={t.title}
+                        >
                           {t.title}
                         </div>
                         <div className="mt-1">
@@ -921,18 +1167,26 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
                   <td
                     className={cn(
                       "sticky left-0 z-10 min-w-[260px] w-auto border-b border-gray-200 bg-white px-5 py-3",
-                      "shadow-[1px_0_0_0_rgba(229,231,235,1)]"
+                      "shadow-[1px_0_0_0_rgba(229,231,235,1)]",
                     )}
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900">{s.student_name}</div>
+                      <div className="text-sm font-bold text-slate-900">
+                        {s.student_name}
+                      </div>
                     </div>
                   </td>
 
                   {flatTrainings.map((t: any) => {
-                    const st: SkillTrainingStatus = getStatus(s.student_id, t.id);
+                    const st: SkillTrainingStatus = getStatus(
+                      s.student_id,
+                      t.id,
+                    );
                     return (
-                      <td key={`${s.student_id}:${t.id}`} className="border-b border-l border-gray-200 bg-white px-4 py-3">
+                      <td
+                        key={`${s.student_id}:${t.id}`}
+                        className="border-b border-l border-gray-200 bg-white px-4 py-3"
+                      >
                         <button
                           onClick={() => onCycle(s.student_id, t.id, st)}
                           className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:bg-gray-50"
@@ -954,19 +1208,24 @@ function OverviewTable({ students, groupedTrainings, trainings, progressData, on
 }
 
 // All Trainings Table Component
-function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
+function AllTrainingsTable({
+  trainings,
+  categories,
+  objectives,
+  onEdit,
+}: {
   trainings: SkillTraining[];
   categories: CompetencyCategory[];
   objectives: LearningObjectiveDto[];
   onEdit: (training: SkillTraining) => void;
 }) {
   const getCategoryName = (categoryId: number) => {
-    return categories.find(c => c.id === categoryId)?.name || "-";
+    return categories.find((c) => c.id === categoryId)?.name || "-";
   };
 
   const getObjectiveTitle = (objectiveId?: number) => {
     if (!objectiveId) return "-";
-    return objectives.find(o => o.id === objectiveId)?.title || "-";
+    return objectives.find((o) => o.id === objectiveId)?.title || "-";
   };
 
   return (
@@ -986,7 +1245,10 @@ function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
         <tbody className="bg-white">
           {trainings.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-5 py-8 text-center text-sm text-gray-500">
+              <td
+                colSpan={7}
+                className="px-5 py-8 text-center text-sm text-gray-500"
+              >
                 Geen trainingen gevonden
               </td>
             </tr>
@@ -994,7 +1256,9 @@ function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
             trainings.map((training) => (
               <tr key={training.id} className="border-t hover:bg-gray-50/60">
                 <td className="px-5 py-4">
-                  <span className="text-sm font-medium text-gray-900">{training.title}</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {training.title}
+                  </span>
                 </td>
                 <td className="px-5 py-4 text-sm text-gray-700">
                   {getCategoryName(training.competency_category_id)}
@@ -1009,12 +1273,14 @@ function AllTrainingsTable({ trainings, categories, objectives, onEdit }: {
                   {training.est_minutes || "-"}
                 </td>
                 <td className="px-5 py-4">
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                    training.is_active 
-                      ? "bg-green-50 text-green-700" 
-                      : "bg-gray-100 text-gray-600"
-                  )}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                      training.is_active
+                        ? "bg-green-50 text-green-700"
+                        : "bg-gray-100 text-gray-600",
+                    )}
+                  >
                     {training.is_active ? "Ja" : "Nee"}
                   </span>
                 </td>

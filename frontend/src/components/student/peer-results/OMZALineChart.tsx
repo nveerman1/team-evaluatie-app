@@ -18,7 +18,7 @@ Chart.register(
   PointElement,
   LinearScale,
   CategoryScale,
-  Tooltip
+  Tooltip,
 );
 
 export type OmzaTrendPoint = {
@@ -95,7 +95,8 @@ export function OMZALineChart({ data }: OMZALineChartProps) {
           },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : 'N/A'}`,
+              label: (ctx) =>
+                `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : "N/A"}`,
             },
           },
         },

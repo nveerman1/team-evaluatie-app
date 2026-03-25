@@ -28,9 +28,7 @@ export function useStudentDashboard() {
         // For 403, getDashboard already handled the business case
       } else {
         setError(
-          e?.response?.data?.detail ||
-            e?.message ||
-            "Could not load dashboard"
+          e?.response?.data?.detail || e?.message || "Could not load dashboard",
         );
       }
     } finally {

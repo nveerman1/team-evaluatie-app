@@ -63,7 +63,7 @@ export default function CoursesPage() {
   const handleDeleteCourse = async (courseId: number) => {
     if (
       !confirm(
-        "Weet je zeker dat je dit vak wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden."
+        "Weet je zeker dat je dit vak wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden.",
       )
     ) {
       return;
@@ -98,7 +98,9 @@ export default function CoursesPage() {
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Vakken beheren</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Vakken beheren
+            </h1>
             <p className="text-gray-600 mt-1 text-sm">
               Beheer alle vakken en docenten voor jouw school
             </p>
@@ -114,7 +116,6 @@ export default function CoursesPage() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-
         {/* Filters */}
         <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -166,7 +167,9 @@ export default function CoursesPage() {
                 type="number"
                 value={filterYear || ""}
                 onChange={(e) =>
-                  setFilterYear(e.target.value ? parseInt(e.target.value) : undefined)
+                  setFilterYear(
+                    e.target.value ? parseInt(e.target.value) : undefined,
+                  )
                 }
                 placeholder="2024"
                 min="2020"
@@ -202,14 +205,14 @@ export default function CoursesPage() {
         {error && (
           <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
             <div className="rounded-lg bg-red-50 p-4 text-red-800">
-            <p className="font-medium">Fout bij laden</p>
-            <p className="text-sm">{error}</p>
-            <button
-              onClick={loadCourses}
-              className="mt-2 rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
-            >
-              Opnieuw proberen
-            </button>
+              <p className="font-medium">Fout bij laden</p>
+              <p className="text-sm">{error}</p>
+              <button
+                onClick={loadCourses}
+                className="mt-2 rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+              >
+                Opnieuw proberen
+              </button>
             </div>
           </div>
         )}
@@ -224,14 +227,14 @@ export default function CoursesPage() {
             {courses.length === 0 ? (
               <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-8">
                 <div className="rounded-lg bg-yellow-50 p-8 text-center">
-                <p className="text-lg font-medium text-yellow-900">
-                  Geen vakken gevonden
-                </p>
-                <p className="mt-1 text-yellow-700">
-                  {searchTerm || filterLevel || filterYear
-                    ? "Probeer andere filters"
-                    : "Maak je eerste vak aan om te beginnen"}
-                </p>
+                  <p className="text-lg font-medium text-yellow-900">
+                    Geen vakken gevonden
+                  </p>
+                  <p className="mt-1 text-yellow-700">
+                    {searchTerm || filterLevel || filterYear
+                      ? "Probeer andere filters"
+                      : "Maak je eerste vak aan om te beginnen"}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -267,12 +270,13 @@ export default function CoursesPage() {
 
                         <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
                           {course.year && <span>📚 Jaar: {course.year}</span>}
-                          {course.teacher_names && course.teacher_names.length > 0 && (
-                            <span>👥 Docenten: {course.teacher_names.join(", ")}</span>
-                          )}
-                          <span>
-                            🆔 ID: {course.id}
-                          </span>
+                          {course.teacher_names &&
+                            course.teacher_names.length > 0 && (
+                              <span>
+                                👥 Docenten: {course.teacher_names.join(", ")}
+                              </span>
+                            )}
+                          <span>🆔 ID: {course.id}</span>
                         </div>
                       </div>
 
@@ -381,7 +385,7 @@ function CreateCourseModal({
       console.error("Failed to create course:", err);
       setError(
         err?.response?.data?.detail ||
-          "Kon vak niet aanmaken. Probeer het opnieuw."
+          "Kon vak niet aanmaken. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);

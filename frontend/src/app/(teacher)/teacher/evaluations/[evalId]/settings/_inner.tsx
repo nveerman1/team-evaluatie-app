@@ -62,7 +62,7 @@ export default function EvaluationSettingsPageInner() {
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
     if (!courseId || typeof courseId !== "number") return [];
-    return projects.filter(p => p.course_id === Number(courseId));
+    return projects.filter((p) => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
   function toDateOnly(s: string) {
@@ -192,16 +192,20 @@ export default function EvaluationSettingsPageInner() {
         </div>
       )}
       {info && (
-        <div className="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">{info}</div>
+        <div className="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">
+          {info}
+        </div>
       )}
 
-        <form
-          onSubmit={handleSave}
-          className="bg-white border border-slate-200 rounded-2xl p-5 space-y-6 shadow-sm"
-        >
+      <form
+        onSubmit={handleSave}
+        className="bg-white border border-slate-200 rounded-2xl p-5 space-y-6 shadow-sm"
+      >
         {/* Titel */}
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-slate-900">Titel</label>
+          <label className="block text-sm font-medium text-slate-900">
+            Titel
+          </label>
           <input
             className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
             value={title}
@@ -213,7 +217,9 @@ export default function EvaluationSettingsPageInner() {
         {/* Course (verplicht) + Project + Rubric */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-900">Course</label>
+            <label className="block text-sm font-medium text-slate-900">
+              Course
+            </label>
             <select
               className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={courseId === "" ? "" : Number(courseId)}
@@ -238,11 +244,15 @@ export default function EvaluationSettingsPageInner() {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-900">Project</label>
+            <label className="block text-sm font-medium text-slate-900">
+              Project
+            </label>
             <select
               className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={projectId === "" ? "" : Number(projectId)}
-              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) =>
+                setProjectId(e.target.value ? Number(e.target.value) : "")
+              }
               required
               disabled={anyLoading || !courseId}
             >
@@ -259,7 +269,9 @@ export default function EvaluationSettingsPageInner() {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-900">Rubric</label>
+            <label className="block text-sm font-medium text-slate-900">
+              Rubric
+            </label>
             <select
               className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={rubricId === "" ? "" : Number(rubricId)}
@@ -351,7 +363,13 @@ export default function EvaluationSettingsPageInner() {
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            disabled={saving || anyLoading || !courseId || rubricId === "" || projectId === ""}
+            disabled={
+              saving ||
+              anyLoading ||
+              !courseId ||
+              rubricId === "" ||
+              projectId === ""
+            }
             className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 shadow-sm"
           >
             {saving ? "Opslaan…" : "Opslaan"}
@@ -363,7 +381,7 @@ export default function EvaluationSettingsPageInner() {
             Terug
           </a>
         </div>
-        </form>
+      </form>
     </>
   );
 }

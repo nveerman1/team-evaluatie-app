@@ -33,7 +33,17 @@ const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
 };
 
 // Helper function for building mailto links
-function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; subject: string; body: string }) {
+function buildMailto({
+  to,
+  bcc,
+  subject,
+  body,
+}: {
+  to?: string;
+  bcc?: string;
+  subject: string;
+  body: string;
+}) {
   if (bcc) {
     return `mailto:?bcc=${bcc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
@@ -50,7 +60,7 @@ export default function ClientsPage() {
 
   const handleClientCreated = () => {
     // Trigger a refresh by updating the key
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
 
   return (
@@ -63,10 +73,11 @@ export default function ClientsPage() {
               Opdrachtgevers
             </h1>
             <p className="text-slate-600 mt-1 text-sm">
-              Beheer organisaties en contactpersonen. Klik op een opdrachtgever voor details.
+              Beheer organisaties en contactpersonen. Klik op een opdrachtgever
+              voor details.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
           >
@@ -86,27 +97,27 @@ export default function ClientsPage() {
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab("list")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "list"
-              ? "border-sky-500 text-sky-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Alle opdrachtgevers
-        </button>
-        <button
-          onClick={() => setActiveTab("communication")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "communication"
-              ? "border-sky-500 text-sky-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Communicatie &amp; bulkmail
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab("list")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "list"
+                ? "border-sky-500 text-sky-700"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Alle opdrachtgevers
+          </button>
+          <button
+            onClick={() => setActiveTab("communication")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "communication"
+                ? "border-sky-500 text-sky-700"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Communicatie &amp; bulkmail
+          </button>
+        </div>
 
         {/* Tab Content */}
         {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
@@ -121,7 +132,6 @@ function ListTab({ refreshKey }: { refreshKey?: number }) {
   return <ClientsList refreshKey={refreshKey} />;
 }
 
-
 // Tab 2: Communication
 function CommunicationTab() {
   const [schoolYear, setSchoolYear] = useState("2025-2026");
@@ -130,11 +140,11 @@ function CommunicationTab() {
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
   const [allClients, setAllClients] = useState<any[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
-  
+
   // Mail templates from API
   const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
-  
+
   // Fetch mail templates
   useEffect(() => {
     async function fetchMailTemplates() {
@@ -144,14 +154,14 @@ function CommunicationTab() {
         setMailTemplates(templates);
         // Set default template to first one if available (only on initial load)
         if (templates.length > 0) {
-          setTemplate((prev) => prev === "" ? templates[0].type : prev);
+          setTemplate((prev) => (prev === "" ? templates[0].type : prev));
         } else {
-          setTemplate((prev) => prev === "" ? "opvolgmail" : prev);
+          setTemplate((prev) => (prev === "" ? "opvolgmail" : prev));
         }
       } catch (err) {
         console.error("Error fetching mail templates:", err);
         // Fall back to default template type (only on initial load)
-        setTemplate((prev) => prev === "" ? "opvolgmail" : prev);
+        setTemplate((prev) => (prev === "" ? "opvolgmail" : prev));
       } finally {
         setTemplatesLoading(false);
       }
@@ -177,7 +187,7 @@ function CommunicationTab() {
 
   // Filter clients based on criteria
   // For simplicity, we'll show all active clients that can be filtered by level
-  const filteredClients = allClients.filter(client => {
+  const filteredClients = allClients.filter((client) => {
     if (!client.active) return false;
     if (level !== "Alle" && client.level !== level) return false;
     return true;
@@ -185,7 +195,7 @@ function CommunicationTab() {
 
   const toggleClient = (clientId: number) => {
     if (selectedClients.includes(clientId)) {
-      setSelectedClients(selectedClients.filter(id => id !== clientId));
+      setSelectedClients(selectedClients.filter((id) => id !== clientId));
     } else {
       setSelectedClients([...selectedClients, clientId]);
     }
@@ -195,29 +205,33 @@ function CommunicationTab() {
     if (selectedClients.length === filteredClients.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(filteredClients.map(c => c.id));
+      setSelectedClients(filteredClients.map((c) => c.id));
     }
   };
 
   const handleSendBulkEmail = () => {
     const selectedEmails = filteredClients
-      .filter(c => selectedClients.includes(c.id))
-      .map(c => c.email)
+      .filter((c) => selectedClients.includes(c.id))
+      .map((c) => c.email)
       .join(";");
 
     // First try to find the template from API, then fall back to default
-    const apiTemplate = mailTemplates.find(t => t.type === template);
+    const apiTemplate = mailTemplates.find((t) => t.type === template);
     let emailSubject: string;
     let emailBody: string;
-    
+
     if (apiTemplate) {
       // Use template from API, replace {schoolYear} variable if present
       emailSubject = apiTemplate.subject.replace(/\{schoolYear\}/g, schoolYear);
       emailBody = apiTemplate.body.replace(/\{schoolYear\}/g, schoolYear);
     } else {
       // Fall back to default templates
-      const defaultTemplate = DEFAULT_TEMPLATES[template] || DEFAULT_TEMPLATES.opvolgmail;
-      emailSubject = defaultTemplate.subject.replace(/volgend schooljaar/g, `schooljaar ${schoolYear}`);
+      const defaultTemplate =
+        DEFAULT_TEMPLATES[template] || DEFAULT_TEMPLATES.opvolgmail;
+      emailSubject = defaultTemplate.subject.replace(
+        /volgend schooljaar/g,
+        `schooljaar ${schoolYear}`,
+      );
       emailBody = defaultTemplate.body;
     }
 
@@ -227,7 +241,7 @@ function CommunicationTab() {
       body: emailBody,
     });
 
-    window.open(mailtoLink, '_self');
+    window.open(mailtoLink, "_self");
   };
 
   // Fetch recent communications
@@ -255,9 +269,12 @@ function CommunicationTab() {
       <div className="grid gap-4 lg:grid-cols-[3fr,2fr]">
         {/* Left column: Mail naar opdrachtgevers */}
         <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-          <h2 className="text-sm font-semibold text-slate-900">Mail naar opdrachtgevers</h2>
+          <h2 className="text-sm font-semibold text-slate-900">
+            Mail naar opdrachtgevers
+          </h2>
           <p className="mt-1 text-xs text-slate-500">
-            Kies een schooljaar, niveau en mailtemplate om meerdere opdrachtgevers tegelijk te mailen.
+            Kies een schooljaar, niveau en mailtemplate om meerdere
+            opdrachtgevers tegelijk te mailen.
           </p>
 
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -297,14 +314,22 @@ function CommunicationTab() {
                   <option>Laden...</option>
                 ) : mailTemplates.length > 0 ? (
                   mailTemplates.map((t) => (
-                    <option key={t.id} value={t.type}>{t.name}</option>
+                    <option key={t.id} value={t.type}>
+                      {t.name}
+                    </option>
                   ))
                 ) : (
                   <>
-                    <option value="opvolgmail">Opvolgmail volgend schooljaar</option>
+                    <option value="opvolgmail">
+                      Opvolgmail volgend schooljaar
+                    </option>
                     <option value="startproject">Startproject-mail</option>
-                    <option value="tussenpresentatie">Uitnodiging tussenpresentatie</option>
-                    <option value="eindpresentatie">Uitnodiging eindpresentatie</option>
+                    <option value="tussenpresentatie">
+                      Uitnodiging tussenpresentatie
+                    </option>
+                    <option value="eindpresentatie">
+                      Uitnodiging eindpresentatie
+                    </option>
                     <option value="bedankmail">Bedankmail</option>
                   </>
                 )}
@@ -314,12 +339,16 @@ function CommunicationTab() {
 
           <div className="mt-4 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
             <div className="flex items-center justify-between gap-2 text-xs">
-              <p className="font-medium text-slate-800">Geselecteerde opdrachtgevers</p>
+              <p className="font-medium text-slate-800">
+                Geselecteerde opdrachtgevers
+              </p>
               <button
                 onClick={toggleAll}
                 className="text-xs font-medium text-indigo-600 hover:underline"
               >
-                {selectedClients.length === filteredClients.length ? "Deselecteer alles" : "Selecteer alles"}
+                {selectedClients.length === filteredClients.length
+                  ? "Deselecteer alles"
+                  : "Selecteer alles"}
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2 text-sm max-h-64 overflow-y-auto">
@@ -333,7 +362,10 @@ function CommunicationTab() {
                 </div>
               ) : (
                 filteredClients.map((client) => (
-                  <label key={client.id} className="flex items-start gap-2 text-xs text-slate-700">
+                  <label
+                    key={client.id}
+                    className="flex items-start gap-2 text-xs text-slate-700"
+                  >
                     <input
                       type="checkbox"
                       checked={selectedClients.includes(client.id)}
@@ -344,7 +376,8 @@ function CommunicationTab() {
                       <span className="font-medium">{client.organization}</span>
                       <span className="text-slate-400"> · {client.email}</span>
                       <span className="block text-[11px] text-slate-500">
-                        {client.level} · {client.projects_this_year || 0} projecten totaal
+                        {client.level} · {client.projects_this_year || 0}{" "}
+                        projecten totaal
                       </span>
                     </span>
                   </label>
@@ -369,11 +402,17 @@ function CommunicationTab() {
         {/* Right column: Laatste communicatie log */}
         <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-slate-900">Laatste communicatie</h3>
-            <button className="text-xs font-medium text-indigo-600 hover:underline">Nieuwe notitie</button>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Laatste communicatie
+            </h3>
+            <button className="text-xs font-medium text-indigo-600 hover:underline">
+              Nieuwe notitie
+            </button>
           </div>
           {communicationsLoading ? (
-            <div className="text-center py-8 text-slate-500 text-sm">Laden...</div>
+            <div className="text-center py-8 text-slate-500 text-sm">
+              Laden...
+            </div>
           ) : recentCommunications.length > 0 ? (
             <ul className="space-y-3 text-sm">
               {recentCommunications.map((comm) => (
@@ -385,13 +424,17 @@ function CommunicationTab() {
                     <p className="text-xs font-medium text-slate-700">Email</p>
                     <p className="text-[11px] text-slate-400">{comm.date}</p>
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{comm.title}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {comm.title}
+                  </p>
                   <p className="text-xs text-slate-500">{comm.organization}</p>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-center py-8 text-slate-500 text-sm">Nog geen communicatie gelogd</div>
+            <div className="text-center py-8 text-slate-500 text-sm">
+              Nog geen communicatie gelogd
+            </div>
           )}
         </div>
       </div>

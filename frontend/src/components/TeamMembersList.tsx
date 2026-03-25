@@ -10,27 +10,25 @@ export function TeamMembersList({
   showAllocatedStatus = false,
 }: TeamMembersListProps) {
   if (members.length === 0) {
-    return (
-      <div className="text-sm text-gray-500 italic">Geen teamleden</div>
-    );
+    return <div className="text-sm text-gray-500 italic">Geen teamleden</div>;
   }
 
   // Helper function to safely get initials from full name
   const getInitials = (name: string): string => {
     if (!name || name.length === 0) return "??";
-    
+
     // Split name into words and take first letter of each word
     const words = name.trim().split(/\s+/);
     if (words.length === 0) return "??";
-    
+
     if (words.length === 1) {
       // Single word: take first two characters if available
       const word = words[0];
-      return word.length === 1 
-        ? word.toUpperCase() 
+      return word.length === 1
+        ? word.toUpperCase()
         : word.substring(0, 2).toUpperCase();
     }
-    
+
     // Multiple words: take first letter of first two words
     return (words[0][0] + words[1][0]).toUpperCase();
   };

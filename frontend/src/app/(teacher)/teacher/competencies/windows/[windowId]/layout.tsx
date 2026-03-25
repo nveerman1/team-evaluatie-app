@@ -22,7 +22,9 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
   const [windowData, setWindowData] = useState<CompetencyWindow | null>(null);
   const [updating, setUpdating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [selectedClass, setSelectedClass] = useState<string | undefined>(undefined);
+  const [selectedClass, setSelectedClass] = useState<string | undefined>(
+    undefined,
+  );
 
   const loadData = useCallback(async () => {
     if (!windowId) return;
@@ -32,7 +34,10 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
       const result = await competencyService.getWindow(Number(windowId));
       setWindowData(result);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
       setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
     } finally {
       setLoading(false);
@@ -52,28 +57,37 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
   // Handle status change from toggle
   async function handleStatusChange(newStatus: string) {
     if (!windowData || updating) return;
-    
+
     // Don't do anything if status is the same
     if (windowData.status === newStatus) return;
-    
+
     setUpdating(true);
     try {
       await competencyService.updateWindow(Number(windowId), {
         status: newStatus,
       });
-      
+
       // Reload data to get updated status
       await loadData();
-      
+
       const statusLabels: Record<string, string> = {
         draft: "Concept",
         open: "Open",
         closed: "Gesloten",
       };
-      showToast(`Status gewijzigd naar ${statusLabels[newStatus] || newStatus}`);
+      showToast(
+        `Status gewijzigd naar ${statusLabels[newStatus] || newStatus}`,
+      );
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      showToast(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Status wijzigen mislukt",
+      );
     } finally {
       setUpdating(false);
     }
@@ -84,7 +98,7 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
     if (!windowData) return;
 
     const confirmed = confirm(
-      `Weet je zeker dat je "${windowData.title}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
+      `Weet je zeker dat je "${windowData.title}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`,
     );
 
     if (!confirmed) return;
@@ -94,8 +108,13 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
       showToast("Venster succesvol verwijderd");
       router.push("/teacher/competencies");
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      showToast(err?.response?.data?.detail || err?.message || "Verwijderen mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      showToast(
+        err?.response?.data?.detail || err?.message || "Verwijderen mislukt",
+      );
     }
   }
 
@@ -137,7 +156,9 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
           <div className="mb-4">
             <Link
               href="/teacher/competencies"
-              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+              prefetch={
+                process.env.NODE_ENV === "production" ? false : undefined
+              }
               className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ← Terug naar overzicht
@@ -152,7 +173,9 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
                 <p className="text-gray-600 mt-1 text-sm">{subtitle}</p>
               )}
               {windowData.description && (
-                <p className="text-gray-500 mt-2 text-sm">{windowData.description}</p>
+                <p className="text-gray-500 mt-2 text-sm">
+                  {windowData.description}
+                </p>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -162,7 +185,7 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
                   value={selectedClass || "all"}
                   onChange={(e) =>
                     setSelectedClass(
-                      e.target.value === "all" ? undefined : e.target.value
+                      e.target.value === "all" ? undefined : e.target.value,
                     )
                   }
                   className="px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -175,7 +198,7 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
                   ))}
                 </select>
               )}
-              
+
               {/* Status Toggle */}
               <StatusToggle
                 options={[
@@ -187,7 +210,7 @@ export default function CompetencyWindowLayout({ children }: LayoutProps) {
                 onChange={handleStatusChange}
                 disabled={updating}
               />
-              
+
               {/* Delete Button */}
               <button
                 onClick={handleDelete}

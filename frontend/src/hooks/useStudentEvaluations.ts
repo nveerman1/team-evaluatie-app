@@ -20,9 +20,7 @@ export function useStudentEvaluations() {
       setEvaluations(data);
     } catch (e: any) {
       setError(
-        e?.response?.data?.detail ||
-          e?.message ||
-          "Could not load evaluations"
+        e?.response?.data?.detail || e?.message || "Could not load evaluations",
       );
     } finally {
       setLoading(false);

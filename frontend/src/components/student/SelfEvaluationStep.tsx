@@ -77,7 +77,8 @@ export function SelfEvaluationStep({
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg">
         <p className="text-sm text-blue-800">
-          Beoordeel jezelf op elk criterium. Klik op het niveau dat het beste bij jouw prestatie past.
+          Beoordeel jezelf op elk criterium. Klik op het niveau dat het beste
+          bij jouw prestatie past.
         </p>
       </div>
 
@@ -88,37 +89,49 @@ export function SelfEvaluationStep({
           <div className="divide-y divide-slate-100">
             {(() => {
               // Group criteria by category
-              const grouped = criteria.reduce((acc, c) => {
-                const cat = c.category || "Overig";
-                if (!acc[cat]) acc[cat] = [];
-                acc[cat].push(c);
-                return acc;
-              }, {} as Record<string, Criterion[]>);
+              const grouped = criteria.reduce(
+                (acc, c) => {
+                  const cat = c.category || "Overig";
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push(c);
+                  return acc;
+                },
+                {} as Record<string, Criterion[]>,
+              );
 
               // OMZA category order
-              const omzaOrder = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
-              
+              const omzaOrder = [
+                "Organiseren",
+                "Meedoen",
+                "Zelfvertrouwen",
+                "Autonomie",
+              ];
+
               // Sort entries by OMZA order, then alphabetically for others
-              const sortedEntries = Object.entries(grouped).sort(([catA], [catB]) => {
-                const indexA = omzaOrder.indexOf(catA);
-                const indexB = omzaOrder.indexOf(catB);
-                
-                // Both in OMZA order
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                // Only A in OMZA order - A comes first
-                if (indexA !== -1) return -1;
-                // Only B in OMZA order - B comes first
-                if (indexB !== -1) return 1;
-                // Neither in OMZA order - alphabetical
-                return catA.localeCompare(catB);
-              });
+              const sortedEntries = Object.entries(grouped).sort(
+                ([catA], [catB]) => {
+                  const indexA = omzaOrder.indexOf(catA);
+                  const indexB = omzaOrder.indexOf(catB);
+
+                  // Both in OMZA order
+                  if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                  // Only A in OMZA order - A comes first
+                  if (indexA !== -1) return -1;
+                  // Only B in OMZA order - B comes first
+                  if (indexB !== -1) return 1;
+                  // Neither in OMZA order - alphabetical
+                  return catA.localeCompare(catB);
+                },
+              );
 
               // Render each category with its criteria
               return sortedEntries.map(([category, categoryCriteria]) => (
                 <div key={category}>
                   {/* Category header */}
                   <div className="px-6 py-3 bg-slate-100">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                      {category}
+                    </h3>
                   </div>
                   {/* Criteria in this category */}
                   {categoryCriteria.map((criterion) => (
@@ -131,7 +144,10 @@ export function SelfEvaluationStep({
                         setValues((s) => ({ ...s, [criterion.id]: newValue }))
                       }
                       onCommentChange={(newComment) =>
-                        setComments((s) => ({ ...s, [criterion.id]: newComment }))
+                        setComments((s) => ({
+                          ...s,
+                          [criterion.id]: newComment,
+                        }))
                       }
                     />
                   ))}

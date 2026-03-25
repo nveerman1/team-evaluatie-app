@@ -48,7 +48,7 @@ export default function YearTransitionWizard({
   // Handle prefilled source year
   useEffect(() => {
     if (isOpen && prefilledSourceYearId && academicYears.length > 0) {
-      const year = academicYears.find(y => y.id === prefilledSourceYearId);
+      const year = academicYears.find((y) => y.id === prefilledSourceYearId);
       if (year) {
         setSourceYear(year);
         loadSourceClasses(year.id);
@@ -81,7 +81,7 @@ export default function YearTransitionWizard({
         per_page: 100,
       });
       setSourceClasses(response.classes);
-      
+
       // Initialize class mapping with suggested names
       const mapping: ClassMapping = {};
       response.classes.forEach((cls) => {
@@ -133,17 +133,17 @@ export default function YearTransitionWizard({
   const validateClassMapping = (): boolean => {
     const targetNames = Object.values(classMapping);
     const uniqueTargets = new Set(targetNames);
-    
+
     if (targetNames.length !== uniqueTargets.size) {
       setError("Doelklasnamen moeten uniek zijn.");
       return false;
     }
-    
+
     if (targetNames.some((name) => !name || name.trim() === "")) {
       setError("Alle klassen moeten een doelnaam hebben.");
       return false;
     }
-    
+
     setError(null);
     return true;
   };
@@ -156,7 +156,7 @@ export default function YearTransitionWizard({
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await academicYearService.executeTransition(
         sourceYear.id,
@@ -164,14 +164,14 @@ export default function YearTransitionWizard({
           target_academic_year_id: targetYear.id,
           class_mapping: classMapping,
           copy_course_enrollments: copyCourseEnrollments,
-        }
+        },
       );
       setResult(result);
       setStep(6);
     } catch (err: any) {
       const errorDetail = err?.response?.data?.detail;
-      const errorMessage = errorDetail 
-        ? `Transitie mislukt: ${errorDetail}` 
+      const errorMessage = errorDetail
+        ? `Transitie mislukt: ${errorDetail}`
         : "Transitie mislukt. Probeer het opnieuw of neem contact op met support.";
       setError(errorMessage);
       console.error("Transition failed:", err);
@@ -205,7 +205,7 @@ export default function YearTransitionWizard({
         handleClose();
       }
     };
-    
+
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
@@ -218,7 +218,7 @@ export default function YearTransitionWizard({
   const progressPercent = (step / totalSteps) * 100;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
       role="dialog"
       aria-labelledby="wizard-title"
@@ -226,18 +226,22 @@ export default function YearTransitionWizard({
     >
       <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-6">
-          <h2 id="wizard-title" className="text-2xl font-bold text-gray-900 mb-2">
+          <h2
+            id="wizard-title"
+            className="text-2xl font-bold text-gray-900 mb-2"
+          >
             Academisch Jaar Transitie
           </h2>
           <Progress value={progressPercent} className="h-2" />
           <p className="text-sm text-gray-600 mt-2">
             Stap {step} van {totalSteps}
           </p>
-          
+
           {/* Context Row showing source and target years */}
           <div className="mt-3 p-3 bg-blue-50 rounded-md">
             <p className="text-sm font-medium text-blue-900">
-              Bronjaar: {sourceYear?.label || "—"} → Doeljaar: {targetYear?.label || "—"}
+              Bronjaar: {sourceYear?.label || "—"} → Doeljaar:{" "}
+              {targetYear?.label || "—"}
             </p>
           </div>
         </div>
@@ -258,7 +262,7 @@ export default function YearTransitionWizard({
               Kies het academisch jaar waarvandaan studenten en klassen worden
               overgedragen.
             </p>
-            
+
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
@@ -280,7 +284,7 @@ export default function YearTransitionWizard({
                 ))}
               </div>
             )}
-            
+
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="secondary" onClick={handleClose}>
                 Annuleren
@@ -343,8 +347,8 @@ export default function YearTransitionWizard({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Klas mapping configureren</h3>
             <p className="text-sm text-gray-600">
-              Wijs elke klas van het bronjaar toe aan een nieuwe klasnaam in
-              het doeljaar.
+              Wijs elke klas van het bronjaar toe aan een nieuwe klasnaam in het
+              doeljaar.
             </p>
             <div className="text-sm text-gray-700 space-y-1">
               <p>
@@ -422,9 +426,7 @@ export default function YearTransitionWizard({
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <div className="flex-1">
-                  <div className="font-medium">
-                    Vak inschrijvingen kopiëren
-                  </div>
+                  <div className="font-medium">Vak inschrijvingen kopiëren</div>
                   <div className="text-sm text-gray-600">
                     Als dit is ingeschakeld, worden vakken gekopieerd naar het
                     nieuwe jaar en blijven student inschrijvingen behouden voor
@@ -494,7 +496,7 @@ export default function YearTransitionWizard({
                 <strong>Totaal:</strong> {sourceClasses.length} klassen,{" "}
                 {sourceClasses.reduce(
                   (sum, cls) => sum + (cls.student_count || 0),
-                  0
+                  0,
                 )}{" "}
                 studenten
               </div>
@@ -551,13 +553,17 @@ export default function YearTransitionWizard({
             <Card className="p-4 space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-gray-600">Klassen aangemaakt</div>
+                  <div className="text-sm text-gray-600">
+                    Klassen aangemaakt
+                  </div>
                   <div className="text-2xl font-bold">
                     {result.classes_created}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">Studenten verplaatst</div>
+                  <div className="text-sm text-gray-600">
+                    Studenten verplaatst
+                  </div>
                   <div className="text-2xl font-bold">
                     {result.students_moved}
                   </div>

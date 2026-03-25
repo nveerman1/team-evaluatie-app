@@ -41,9 +41,7 @@ export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
       </div>
 
       {/* Tab Content */}
-      <div>
-        {tabs.find((tab) => tab.id === activeTab)?.content}
-      </div>
+      <div>{tabs.find((tab) => tab.id === activeTab)?.content}</div>
     </div>
   );
 }

@@ -14,11 +14,11 @@ export default function SchoolbeheerPageInner() {
   const { isAdmin, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // Get initial tab from URL or default to "secties"
   const tabParam = searchParams?.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam || "secties");
-  
+
   // Refs to call methods on child components
   const sectiesRef = useRef<any>(null);
   const vakkenRef = useRef<any>(null);
@@ -181,12 +181,11 @@ export default function SchoolbeheerPageInner() {
               Schoolbeheer
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Beheer secties, vakken, docenten, leerlingen en academische jaren van jouw school
+              Beheer secties, vakken, docenten, leerlingen en academische jaren
+              van jouw school
             </p>
           </div>
-          <div className="flex gap-3">
-            {renderHeaderActions()}
-          </div>
+          <div className="flex gap-3">{renderHeaderActions()}</div>
         </header>
       </div>
 

@@ -28,7 +28,9 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
           q: query?.trim() ? query.trim() : undefined,
           status: status?.trim() ? status.trim() : undefined,
           course_id: course_id,
-          evaluation_type: evaluation_type?.trim() ? evaluation_type.trim() : undefined,
+          evaluation_type: evaluation_type?.trim()
+            ? evaluation_type.trim()
+            : undefined,
         });
         if (!mounted) return;
         setEvaluations(Array.isArray(data) ? data : []);

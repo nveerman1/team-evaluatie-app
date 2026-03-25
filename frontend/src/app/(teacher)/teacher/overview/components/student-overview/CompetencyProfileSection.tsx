@@ -21,7 +21,7 @@ ChartJS.register(
   LineElement,
   Filler,
   Tooltip,
-  Legend
+  Legend,
 );
 
 interface CompetencyProfileSectionProps {
@@ -42,7 +42,10 @@ interface CategoryScore {
   avg_score: number | null;
 }
 
-export function CompetencyProfileSection({ studentId, courseId }: CompetencyProfileSectionProps) {
+export function CompetencyProfileSection({
+  studentId,
+  courseId,
+}: CompetencyProfileSectionProps) {
   const [scans, setScans] = useState<ScanData[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [categoryScores, setCategoryScores] = useState<CategoryScore[]>([]);
@@ -55,9 +58,9 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
         setLoading(true);
         const data = await competencyMonitorService.getStudentHistoricalScores(
           studentId,
-          courseId
+          courseId,
         );
-        
+
         if (data && data.scans && data.scans.length > 0) {
           setScans(data.scans);
           // Select latest scan by default
@@ -85,7 +88,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
         return;
       }
 
-      const selectedScan = scans.find(s => s.scanId === selectedScanId);
+      const selectedScan = scans.find((s) => s.scanId === selectedScanId);
       if (!selectedScan || !selectedScan.categoryScores) {
         setCategoryScores([]);
         return;
@@ -94,9 +97,9 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       try {
         // Fetch ALL categories for the school to ensure we show all categories
         const allCategories = await competencyService.getCategories();
-        
+
         // Create array with ALL categories, including those without scores
-        const categories: CategoryScore[] = allCategories.map(cat => ({
+        const categories: CategoryScore[] = allCategories.map((cat) => ({
           category_id: cat.id,
           category_name: cat.name,
           avg_score: selectedScan.categoryScores[cat.id] ?? null,
@@ -106,11 +109,13 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       } catch (error) {
         console.error("Error fetching category names:", error);
         // Fallback to category IDs if fetch fails
-        const categories = Object.entries(selectedScan.categoryScores).map(([catId, score]) => ({
-          category_id: Number(catId),
-          category_name: `Categorie ${catId}`,
-          avg_score: score,
-        }));
+        const categories = Object.entries(selectedScan.categoryScores).map(
+          ([catId, score]) => ({
+            category_id: Number(catId),
+            category_name: `Categorie ${catId}`,
+            avg_score: score,
+          }),
+        );
         setCategoryScores(categories);
       }
     }
@@ -153,28 +158,28 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
           font: {
             size: 11,
           },
-          callback: function(label: string) {
+          callback: function (label: string) {
             // Allow labels to wrap by splitting on spaces
             const maxCharsPerLine = 15;
             if (label.length <= maxCharsPerLine) return label;
-            
-            const words = label.split(' ');
+
+            const words = label.split(" ");
             const lines = [];
-            let currentLine = '';
-            
-            words.forEach(word => {
-              if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
-                currentLine = currentLine ? currentLine + ' ' + word : word;
+            let currentLine = "";
+
+            words.forEach((word) => {
+              if ((currentLine + " " + word).trim().length <= maxCharsPerLine) {
+                currentLine = currentLine ? currentLine + " " + word : word;
               } else {
                 if (currentLine) lines.push(currentLine);
                 currentLine = word;
               }
             });
             if (currentLine) lines.push(currentLine);
-            
+
             return lines;
-          }
-        }
+          },
+        },
       },
     },
     plugins: {
@@ -187,7 +192,9 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Competentieprofiel</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Competentieprofiel
+        </h3>
         <div className="animate-pulse h-64 bg-gray-200 rounded"></div>
       </div>
     );
@@ -196,12 +203,16 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Competentieprofiel</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900">
+          Competentieprofiel
+        </h3>
+
         {scans.length > 0 && (
           <select
             value={selectedScanId || ""}
-            onChange={(e) => setSelectedScanId(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) =>
+              setSelectedScanId(e.target.value ? Number(e.target.value) : null)
+            }
             className="px-3 py-1.5 text-sm border rounded-lg"
           >
             {scans.map((scan) => (
@@ -214,9 +225,13 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       </div>
 
       {scans.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen competentiescans gevonden</p>
+        <p className="text-gray-500 text-center py-4">
+          Geen competentiescans gevonden
+        </p>
       ) : categoryScores.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen data beschikbaar voor deze scan</p>
+        <p className="text-gray-500 text-center py-4">
+          Geen data beschikbaar voor deze scan
+        </p>
       ) : (
         <div className="h-72">
           <Radar data={chartData} options={chartOptions} />

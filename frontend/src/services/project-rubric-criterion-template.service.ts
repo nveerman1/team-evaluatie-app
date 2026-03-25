@@ -20,7 +20,7 @@ interface ListProjectRubricCriteriaOptions {
 
 export async function listProjectRubricCriteria(
   subjectId: number,
-  options?: ListProjectRubricCriteriaOptions
+  options?: ListProjectRubricCriteriaOptions,
 ): Promise<ProjectRubricCriterionTemplateDto[]> {
   let url = `/templates/project-rubric-criteria?subject_id=${subjectId}`;
   if (options?.target_level) {
@@ -34,22 +34,22 @@ export async function listProjectRubricCriteria(
 }
 
 export async function createProjectRubricCriterion(
-  data: ProjectRubricCriterionTemplateCreateDto
+  data: ProjectRubricCriterionTemplateCreateDto,
 ): Promise<ProjectRubricCriterionTemplateDto> {
   const response = await api.post<ProjectRubricCriterionTemplateDto>(
     `/templates/project-rubric-criteria`,
-    data
+    data,
   );
   return response.data;
 }
 
 export async function updateProjectRubricCriterion(
   id: number,
-  data: ProjectRubricCriterionTemplateUpdateDto
+  data: ProjectRubricCriterionTemplateUpdateDto,
 ): Promise<ProjectRubricCriterionTemplateDto> {
   const response = await api.patch<ProjectRubricCriterionTemplateDto>(
     `/templates/project-rubric-criteria/${id}`,
-    data
+    data,
   );
   return response.data;
 }

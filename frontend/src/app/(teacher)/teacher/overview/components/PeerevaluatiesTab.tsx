@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Suspense,
+} from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   ArrowUp,
@@ -26,7 +32,10 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
+import {
+  usePeerOverview,
+  type PeerOverviewFilters,
+} from "@/hooks/usePeerOverview";
 import { useTeacherFeedback } from "@/hooks/useTeacherFeedback";
 import { useReflections } from "@/hooks/useReflections";
 import { overviewService } from "@/services/overview.service";
@@ -44,7 +53,7 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 /* =========================================
@@ -84,12 +93,12 @@ function CardSkeleton() {
 
 function renderTeacherEmoticon(score: number | null | undefined) {
   if (!score) return null;
-  
+
   // 4-level system matching OMZA evaluation page: 1=best (🙂), 4=worst (!!)
   if (score === 1) {
     return (
-      <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+      <span
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1"
         title="Gaat goed"
       >
         🙂
@@ -98,8 +107,8 @@ function renderTeacherEmoticon(score: number | null | undefined) {
   }
   if (score === 2) {
     return (
-      <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+      <span
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1"
         title="Voldoet aan verwachting"
       >
         ✓
@@ -108,8 +117,8 @@ function renderTeacherEmoticon(score: number | null | undefined) {
   }
   if (score === 3) {
     return (
-      <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700 ml-1" 
+      <span
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700 ml-1"
         title="Let op: verbeterpunt"
       >
         !
@@ -118,8 +127,8 @@ function renderTeacherEmoticon(score: number | null | undefined) {
   }
   if (score === 4) {
     return (
-      <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700 ml-1" 
+      <span
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700 ml-1"
         title="Urgent: direct bespreken"
       >
         !!
@@ -135,7 +144,7 @@ function renderTeacherEmoticon(score: number | null | undefined) {
 
 function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
   const { data, loading, error } = usePeerOverview(filters);
-  const [viewMode, setViewMode] = useState<'latest' | 'average'>('latest');
+  const [viewMode, setViewMode] = useState<"latest" | "average">("latest");
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Helper functions for evaluation calculations
@@ -152,28 +161,40 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
   const calculateLatestScores = (row: any) => {
     const latest = getLatestEvaluation(row);
     if (!latest) return null;
-    
+
     return {
-      organiseren: latest.scores['O'] || null,
-      meedoen: latest.scores['M'] || null,
-      zelfvertrouwen: latest.scores['Z'] || null,
-      autonomie: latest.scores['A'] || null,
+      organiseren: latest.scores["O"] || null,
+      meedoen: latest.scores["M"] || null,
+      zelfvertrouwen: latest.scores["Z"] || null,
+      autonomie: latest.scores["A"] || null,
     };
   };
 
   const calculateAverageScores = (row: any) => {
     if (!row.evaluations || row.evaluations.length === 0) return null;
-    
+
     const sums = { O: 0, M: 0, Z: 0, A: 0 };
     const counts = { O: 0, M: 0, Z: 0, A: 0 };
-    
+
     row.evaluations.forEach((evaluation: any) => {
-      if (evaluation.scores['O']) { sums.O += evaluation.scores['O']; counts.O++; }
-      if (evaluation.scores['M']) { sums.M += evaluation.scores['M']; counts.M++; }
-      if (evaluation.scores['Z']) { sums.Z += evaluation.scores['Z']; counts.Z++; }
-      if (evaluation.scores['A']) { sums.A += evaluation.scores['A']; counts.A++; }
+      if (evaluation.scores["O"]) {
+        sums.O += evaluation.scores["O"];
+        counts.O++;
+      }
+      if (evaluation.scores["M"]) {
+        sums.M += evaluation.scores["M"];
+        counts.M++;
+      }
+      if (evaluation.scores["Z"]) {
+        sums.Z += evaluation.scores["Z"];
+        counts.Z++;
+      }
+      if (evaluation.scores["A"]) {
+        sums.A += evaluation.scores["A"];
+        counts.A++;
+      }
     });
-    
+
     return {
       organiseren: counts.O > 0 ? sums.O / counts.O : null,
       meedoen: counts.M > 0 ? sums.M / counts.M : null,
@@ -182,13 +203,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
     };
   };
 
-  const calculateDelta = (row: any, category: 'O' | 'M' | 'Z' | 'A') => {
+  const calculateDelta = (row: any, category: "O" | "M" | "Z" | "A") => {
     const latest = getLatestEvaluation(row);
     const previous = getPreviousEvaluation(row);
-    
+
     if (!latest || !previous) return null;
     if (!latest.scores[category] || !previous.scores[category]) return null;
-    
+
     return latest.scores[category] - previous.scores[category];
   };
 
@@ -205,10 +226,10 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
   // Memoized display scores based on view mode
   const getDisplayScores = useMemo(() => {
     if (!data?.heatmapData) return {};
-    
+
     const scores: Record<number, any> = {};
     data.heatmapData.forEach((row) => {
-      if (viewMode === 'latest') {
+      if (viewMode === "latest") {
         scores[row.student_id] = calculateLatestScores(row);
       } else {
         scores[row.student_id] = calculateAverageScores(row);
@@ -310,7 +331,9 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
             <TrendingUp className="w-5 h-5 text-blue-600" />
             OMZA Trends over tijd
           </h3>
-          <p className="text-sm text-slate-600 mt-1">Gemiddelde scores per maand over alle peer evaluaties</p>
+          <p className="text-sm text-slate-600 mt-1">
+            Gemiddelde scores per maand over alle peer evaluaties
+          </p>
         </div>
         <Suspense fallback={<ChartSkeleton />}>
           {loading ? (
@@ -346,44 +369,54 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900 leading-6">Leerling Heatmap</h3>
+            <h3 className="text-base font-semibold text-slate-900 leading-6">
+              Leerling Heatmap
+            </h3>
             <p className="text-sm text-slate-600">
-              {viewMode === 'latest' 
-                ? 'OMZA-scores van laatste peerevaluatie'
-                : 'Gemiddelde OMZA-scores per leerling (over alle peer evaluaties)'}
+              {viewMode === "latest"
+                ? "OMZA-scores van laatste peerevaluatie"
+                : "Gemiddelde OMZA-scores per leerling (over alle peer evaluaties)"}
             </p>
           </div>
           {/* View Mode Toggle */}
           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
             <button
-              onClick={() => setViewMode('latest')}
+              onClick={() => setViewMode("latest")}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'latest'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                viewMode === "latest"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
               aria-label="Toon laatste evaluatie"
-              aria-pressed={viewMode === 'latest'}
+              aria-pressed={viewMode === "latest"}
             >
               Laatste evaluatie
             </button>
             <button
-              onClick={() => setViewMode('average')}
+              onClick={() => setViewMode("average")}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'average'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                viewMode === "average"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
               aria-label="Toon gemiddelde periode"
-              aria-pressed={viewMode === 'average'}
+              aria-pressed={viewMode === "average"}
             >
               Gemiddelde periode
             </button>
           </div>
         </div>
-        <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+        <Suspense
+          fallback={
+            <div className="p-6">
+              <TableSkeleton />
+            </div>
+          }
+        >
           {loading ? (
-            <div className="p-6"><TableSkeleton /></div>
+            <div className="p-6">
+              <TableSkeleton />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -416,23 +449,25 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                   {data?.heatmapData.map((student) => {
                     const displayScores = getDisplayScores[student.student_id];
                     const isExpanded = expandedRows.has(student.student_id);
-                    const hasEvaluations = student.evaluations && student.evaluations.length > 0;
-                    
+                    const hasEvaluations =
+                      student.evaluations && student.evaluations.length > 0;
+
                     return (
                       <React.Fragment key={student.student_id}>
-                        <tr 
-                          className={`bg-white hover:bg-slate-50 ${hasEvaluations ? 'cursor-pointer' : ''}`}
-                          onClick={() => hasEvaluations && toggleRow(student.student_id)}
+                        <tr
+                          className={`bg-white hover:bg-slate-50 ${hasEvaluations ? "cursor-pointer" : ""}`}
+                          onClick={() =>
+                            hasEvaluations && toggleRow(student.student_id)
+                          }
                         >
                           <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
                             <div className="flex items-center gap-2">
-                              {hasEvaluations && (
-                                isExpanded ? (
+                              {hasEvaluations &&
+                                (isExpanded ? (
                                   <ChevronDown className="w-4 h-4 text-slate-400" />
                                 ) : (
                                   <ChevronRight className="w-4 h-4 text-slate-400" />
-                                )
-                              )}
+                                ))}
                               <span>{student.student_name}</span>
                             </div>
                           </td>
@@ -443,16 +478,25 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                           <td className="px-3 py-2 text-left">
                             {displayScores?.organiseren ? (
                               <div className="flex items-center gap-1">
-                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.organiseren)}`}>
+                                <span
+                                  className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.organiseren)}`}
+                                >
                                   {displayScores.organiseren.toFixed(1)}
                                 </span>
-                                {renderTeacherEmoticon(student.scores.O?.teacher_score)}
+                                {renderTeacherEmoticon(
+                                  student.scores.O?.teacher_score,
+                                )}
                                 {(() => {
-                                  const delta = calculateDelta(student, 'O');
-                                  return delta !== null && (
-                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
-                                    </span>
+                                  const delta = calculateDelta(student, "O");
+                                  return (
+                                    delta !== null && (
+                                      <span
+                                        className={`text-[10px] font-medium tabular-nums ${delta > 0 ? "text-green-600" : "text-red-600"}`}
+                                      >
+                                        {delta > 0 ? "+" : ""}
+                                        {delta.toFixed(1)}
+                                      </span>
+                                    )
                                   );
                                 })()}
                               </div>
@@ -464,16 +508,25 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                           <td className="px-3 py-2 text-left">
                             {displayScores?.meedoen ? (
                               <div className="flex items-center gap-1">
-                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.meedoen)}`}>
+                                <span
+                                  className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.meedoen)}`}
+                                >
                                   {displayScores.meedoen.toFixed(1)}
                                 </span>
-                                {renderTeacherEmoticon(student.scores.M?.teacher_score)}
+                                {renderTeacherEmoticon(
+                                  student.scores.M?.teacher_score,
+                                )}
                                 {(() => {
-                                  const delta = calculateDelta(student, 'M');
-                                  return delta !== null && (
-                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
-                                    </span>
+                                  const delta = calculateDelta(student, "M");
+                                  return (
+                                    delta !== null && (
+                                      <span
+                                        className={`text-[10px] font-medium tabular-nums ${delta > 0 ? "text-green-600" : "text-red-600"}`}
+                                      >
+                                        {delta > 0 ? "+" : ""}
+                                        {delta.toFixed(1)}
+                                      </span>
+                                    )
                                   );
                                 })()}
                               </div>
@@ -485,16 +538,25 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                           <td className="px-3 py-2 text-left">
                             {displayScores?.zelfvertrouwen ? (
                               <div className="flex items-center gap-1">
-                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.zelfvertrouwen)}`}>
+                                <span
+                                  className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.zelfvertrouwen)}`}
+                                >
                                   {displayScores.zelfvertrouwen.toFixed(1)}
                                 </span>
-                                {renderTeacherEmoticon(student.scores.Z?.teacher_score)}
+                                {renderTeacherEmoticon(
+                                  student.scores.Z?.teacher_score,
+                                )}
                                 {(() => {
-                                  const delta = calculateDelta(student, 'Z');
-                                  return delta !== null && (
-                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
-                                    </span>
+                                  const delta = calculateDelta(student, "Z");
+                                  return (
+                                    delta !== null && (
+                                      <span
+                                        className={`text-[10px] font-medium tabular-nums ${delta > 0 ? "text-green-600" : "text-red-600"}`}
+                                      >
+                                        {delta > 0 ? "+" : ""}
+                                        {delta.toFixed(1)}
+                                      </span>
+                                    )
                                   );
                                 })()}
                               </div>
@@ -506,16 +568,25 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                           <td className="px-3 py-2 text-left">
                             {displayScores?.autonomie ? (
                               <div className="flex items-center gap-1">
-                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.autonomie)}`}>
+                                <span
+                                  className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.autonomie)}`}
+                                >
                                   {displayScores.autonomie.toFixed(1)}
                                 </span>
-                                {renderTeacherEmoticon(student.scores.A?.teacher_score)}
+                                {renderTeacherEmoticon(
+                                  student.scores.A?.teacher_score,
+                                )}
                                 {(() => {
-                                  const delta = calculateDelta(student, 'A');
-                                  return delta !== null && (
-                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
-                                    </span>
+                                  const delta = calculateDelta(student, "A");
+                                  return (
+                                    delta !== null && (
+                                      <span
+                                        className={`text-[10px] font-medium tabular-nums ${delta > 0 ? "text-green-600" : "text-red-600"}`}
+                                      >
+                                        {delta > 0 ? "+" : ""}
+                                        {delta.toFixed(1)}
+                                      </span>
+                                    )
                                   );
                                 })()}
                               </div>
@@ -525,18 +596,20 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                           </td>
                           {/* Self vs Peer */}
                           <td className="px-3 py-2 text-center">
-                            <span className={`text-sm font-medium tabular-nums ${
-                              (student.self_vs_peer_diff || 0) > 0.3
-                                ? "text-red-600"
-                                : (student.self_vs_peer_diff || 0) < -0.3
-                                ? "text-amber-600"
-                                : "text-slate-600"
-                            }`}>
+                            <span
+                              className={`text-sm font-medium tabular-nums ${
+                                (student.self_vs_peer_diff || 0) > 0.3
+                                  ? "text-red-600"
+                                  : (student.self_vs_peer_diff || 0) < -0.3
+                                    ? "text-amber-600"
+                                    : "text-slate-600"
+                              }`}
+                            >
                               {formatSigned1dp(student.self_vs_peer_diff)}
                             </span>
                           </td>
                         </tr>
-                        
+
                         {/* Expanded Row Content */}
                         {isExpanded && hasEvaluations && (
                           <tr className="bg-slate-50">
@@ -545,98 +618,215 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                 <table className="min-w-full text-sm">
                                   <thead className="border-b border-slate-300">
                                     <tr>
-                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Datum</th>
-                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Evaluatie</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">O</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">M</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Z</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">A</th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                                        Datum
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                                        Evaluatie
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        O
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        M
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        Z
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        A
+                                      </th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-200">
                                     {student.evaluations!.map((evaluation) => (
-                                      <tr key={evaluation.id} className="hover:bg-slate-100">
+                                      <tr
+                                        key={evaluation.id}
+                                        className="hover:bg-slate-100"
+                                      >
                                         <td className="px-3 py-2 text-slate-600">
-                                          {new Date(evaluation.date).toLocaleDateString('nl-NL')}
+                                          {new Date(
+                                            evaluation.date,
+                                          ).toLocaleDateString("nl-NL")}
                                         </td>
-                                        <td className="px-3 py-2 text-slate-900 font-medium">{evaluation.label}</td>
-                                        <td className="px-3 py-2 text-center">
-                                          {evaluation.scores['O'] ? (
-                                            <div className="inline-flex items-center gap-1">
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['O'])}`}>
-                                                {evaluation.scores['O'].toFixed(1)}
-                                              </span>
-                                              {evaluation.teacher_scores?.['O'] && renderTeacherEmoticon(evaluation.teacher_scores['O'])}
-                                            </div>
-                                          ) : <span className="text-slate-300">–</span>}
+                                        <td className="px-3 py-2 text-slate-900 font-medium">
+                                          {evaluation.label}
                                         </td>
                                         <td className="px-3 py-2 text-center">
-                                          {evaluation.scores['M'] ? (
+                                          {evaluation.scores["O"] ? (
                                             <div className="inline-flex items-center gap-1">
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['M'])}`}>
-                                                {evaluation.scores['M'].toFixed(1)}
+                                              <span
+                                                className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores["O"])}`}
+                                              >
+                                                {evaluation.scores["O"].toFixed(
+                                                  1,
+                                                )}
                                               </span>
-                                              {evaluation.teacher_scores?.['M'] && renderTeacherEmoticon(evaluation.teacher_scores['M'])}
+                                              {evaluation.teacher_scores?.[
+                                                "O"
+                                              ] &&
+                                                renderTeacherEmoticon(
+                                                  evaluation.teacher_scores[
+                                                    "O"
+                                                  ],
+                                                )}
                                             </div>
-                                          ) : <span className="text-slate-300">–</span>}
+                                          ) : (
+                                            <span className="text-slate-300">
+                                              –
+                                            </span>
+                                          )}
                                         </td>
                                         <td className="px-3 py-2 text-center">
-                                          {evaluation.scores['Z'] ? (
+                                          {evaluation.scores["M"] ? (
                                             <div className="inline-flex items-center gap-1">
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['Z'])}`}>
-                                                {evaluation.scores['Z'].toFixed(1)}
+                                              <span
+                                                className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores["M"])}`}
+                                              >
+                                                {evaluation.scores["M"].toFixed(
+                                                  1,
+                                                )}
                                               </span>
-                                              {evaluation.teacher_scores?.['Z'] && renderTeacherEmoticon(evaluation.teacher_scores['Z'])}
+                                              {evaluation.teacher_scores?.[
+                                                "M"
+                                              ] &&
+                                                renderTeacherEmoticon(
+                                                  evaluation.teacher_scores[
+                                                    "M"
+                                                  ],
+                                                )}
                                             </div>
-                                          ) : <span className="text-slate-300">–</span>}
+                                          ) : (
+                                            <span className="text-slate-300">
+                                              –
+                                            </span>
+                                          )}
                                         </td>
                                         <td className="px-3 py-2 text-center">
-                                          {evaluation.scores['A'] ? (
+                                          {evaluation.scores["Z"] ? (
                                             <div className="inline-flex items-center gap-1">
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['A'])}`}>
-                                                {evaluation.scores['A'].toFixed(1)}
+                                              <span
+                                                className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores["Z"])}`}
+                                              >
+                                                {evaluation.scores["Z"].toFixed(
+                                                  1,
+                                                )}
                                               </span>
-                                              {evaluation.teacher_scores?.['A'] && renderTeacherEmoticon(evaluation.teacher_scores['A'])}
+                                              {evaluation.teacher_scores?.[
+                                                "Z"
+                                              ] &&
+                                                renderTeacherEmoticon(
+                                                  evaluation.teacher_scores[
+                                                    "Z"
+                                                  ],
+                                                )}
                                             </div>
-                                          ) : <span className="text-slate-300">–</span>}
+                                          ) : (
+                                            <span className="text-slate-300">
+                                              –
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores["A"] ? (
+                                            <div className="inline-flex items-center gap-1">
+                                              <span
+                                                className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores["A"])}`}
+                                              >
+                                                {evaluation.scores["A"].toFixed(
+                                                  1,
+                                                )}
+                                              </span>
+                                              {evaluation.teacher_scores?.[
+                                                "A"
+                                              ] &&
+                                                renderTeacherEmoticon(
+                                                  evaluation.teacher_scores[
+                                                    "A"
+                                                  ],
+                                                )}
+                                            </div>
+                                          ) : (
+                                            <span className="text-slate-300">
+                                              –
+                                            </span>
+                                          )}
                                         </td>
                                       </tr>
                                     ))}
                                     {/* Average Period Row */}
                                     {(() => {
-                                      const avgScores = calculateAverageScores(student);
-                                      return avgScores && (
-                                        <tr className="bg-slate-100 border-t-2 border-slate-300 font-semibold">
-                                          <td className="px-3 py-2 text-slate-900" colSpan={2}>Gemiddelde periode</td>
-                                          <td className="px-3 py-2 text-center">
-                                            {avgScores.organiseren ? (
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.organiseren)}`}>
-                                                {avgScores.organiseren.toFixed(1)}
-                                              </span>
-                                            ) : <span className="text-slate-300">–</span>}
-                                          </td>
-                                          <td className="px-3 py-2 text-center">
-                                            {avgScores.meedoen ? (
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.meedoen)}`}>
-                                                {avgScores.meedoen.toFixed(1)}
-                                              </span>
-                                            ) : <span className="text-slate-300">–</span>}
-                                          </td>
-                                          <td className="px-3 py-2 text-center">
-                                            {avgScores.zelfvertrouwen ? (
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.zelfvertrouwen)}`}>
-                                                {avgScores.zelfvertrouwen.toFixed(1)}
-                                              </span>
-                                            ) : <span className="text-slate-300">–</span>}
-                                          </td>
-                                          <td className="px-3 py-2 text-center">
-                                            {avgScores.autonomie ? (
-                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.autonomie)}`}>
-                                                {avgScores.autonomie.toFixed(1)}
-                                              </span>
-                                            ) : <span className="text-slate-300">–</span>}
-                                          </td>
-                                        </tr>
+                                      const avgScores =
+                                        calculateAverageScores(student);
+                                      return (
+                                        avgScores && (
+                                          <tr className="bg-slate-100 border-t-2 border-slate-300 font-semibold">
+                                            <td
+                                              className="px-3 py-2 text-slate-900"
+                                              colSpan={2}
+                                            >
+                                              Gemiddelde periode
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              {avgScores.organiseren ? (
+                                                <span
+                                                  className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.organiseren)}`}
+                                                >
+                                                  {avgScores.organiseren.toFixed(
+                                                    1,
+                                                  )}
+                                                </span>
+                                              ) : (
+                                                <span className="text-slate-300">
+                                                  –
+                                                </span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              {avgScores.meedoen ? (
+                                                <span
+                                                  className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.meedoen)}`}
+                                                >
+                                                  {avgScores.meedoen.toFixed(1)}
+                                                </span>
+                                              ) : (
+                                                <span className="text-slate-300">
+                                                  –
+                                                </span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              {avgScores.zelfvertrouwen ? (
+                                                <span
+                                                  className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.zelfvertrouwen)}`}
+                                                >
+                                                  {avgScores.zelfvertrouwen.toFixed(
+                                                    1,
+                                                  )}
+                                                </span>
+                                              ) : (
+                                                <span className="text-slate-300">
+                                                  –
+                                                </span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              {avgScores.autonomie ? (
+                                                <span
+                                                  className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.autonomie)}`}
+                                                >
+                                                  {avgScores.autonomie.toFixed(
+                                                    1,
+                                                  )}
+                                                </span>
+                                              ) : (
+                                                <span className="text-slate-300">
+                                                  –
+                                                </span>
+                                              )}
+                                            </td>
+                                          </tr>
+                                        )
                                       );
                                     })()}
                                   </tbody>
@@ -672,9 +862,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
                     <ArrowUp className="w-5 h-5 text-green-600" />
-                    <h4 className="font-semibold text-gray-900">Grootste stijgers</h4>
+                    <h4 className="font-semibold text-gray-900">
+                      Grootste stijgers
+                    </h4>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Hoogste gemiddelde scores</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Hoogste gemiddelde scores
+                  </p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.grootsteStijgers.map((student, idx) => (
@@ -701,9 +895,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
                     <ArrowDown className="w-5 h-5 text-red-600" />
-                    <h4 className="font-semibold text-gray-900">Grootste dalers</h4>
+                    <h4 className="font-semibold text-gray-900">
+                      Grootste dalers
+                    </h4>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Laagste gemiddelde scores</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Laagste gemiddelde scores
+                  </p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.grootsteDalers.map((student, idx) => (
@@ -730,9 +928,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-amber-600" />
-                    <h4 className="font-semibold text-gray-900">Structureel laag</h4>
+                    <h4 className="font-semibold text-gray-900">
+                      Structureel laag
+                    </h4>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Gemiddeld onder 3.0</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Gemiddeld onder 3.0
+                  </p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.structureelLaag.map((student, idx) => (
@@ -759,9 +961,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-violet-600" />
-                    <h4 className="font-semibold text-gray-900">Inconsistenties</h4>
+                    <h4 className="font-semibold text-gray-900">
+                      Inconsistenties
+                    </h4>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Grootste self vs peer verschil</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Grootste self vs peer verschil
+                  </p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.inconsistenties.map((student, idx) => (
@@ -794,10 +1000,14 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
    TAB 2: PEERFEEDBACK - Aggregated per allocation
    ========================================= */
 
-function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+function PeerfeedbackTab({
+  parentFilters,
+}: {
+  parentFilters: PeerOverviewFilters;
+}) {
   return (
     <div className="space-y-6">
-      <PeerfeedbackTable 
+      <PeerfeedbackTable
         filters={{
           courseId: parentFilters.courseId,
           projectId: parentFilters.projectId,
@@ -813,15 +1023,22 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
    TAB 3: DOCENTFEEDBACK
    ========================================= */
 
-function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+function DocentfeedbackTab({
+  parentFilters,
+}: {
+  parentFilters: PeerOverviewFilters;
+}) {
   const { data, loading, error } = useTeacherFeedback({
     courseId: parentFilters.courseId,
     projectId: parentFilters.projectId,
   });
 
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
-    key: 'student_name',
-    direction: 'asc'
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>({
+    key: "student_name",
+    direction: "asc",
   });
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
@@ -829,10 +1046,10 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
   const filteredData = useMemo(() => {
     if (!data?.feedbackItems) return [];
     if (!parentFilters.studentName) return data.feedbackItems;
-    
+
     const searchLower = parentFilters.studentName.toLowerCase();
-    return data.feedbackItems.filter(item =>
-      item.student_name.toLowerCase().includes(searchLower)
+    return data.feedbackItems.filter((item) =>
+      item.student_name.toLowerCase().includes(searchLower),
     );
   }, [data?.feedbackItems, parentFilters.studentName]);
 
@@ -842,38 +1059,38 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
     items.sort((a, b) => {
       let aVal: any = a[sortConfig.key as keyof typeof a];
       let bVal: any = b[sortConfig.key as keyof typeof b];
-      
-      if (sortConfig.key === 'date') {
+
+      if (sortConfig.key === "date") {
         aVal = new Date(aVal).getTime();
         bVal = new Date(bVal).getTime();
       }
-      
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-      
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
     return items;
   }, [filteredData, sortConfig]);
 
   const handleSort = (key: string) => {
-    setSortConfig(prev => ({
+    setSortConfig((prev) => ({
       key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
   };
 
   const getSortIndicator = (key: string) => {
     if (sortConfig.key !== key) return null;
-    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+    return sortConfig.direction === "asc" ? " ▲" : " ▼";
   };
 
   const toggleRow = (id: number) => {
-    setExpandedRows(prev => {
+    setExpandedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -898,46 +1115,69 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
         <h3 className="text-base font-semibold text-slate-900 leading-6">
           Docentbeoordelingen ({sortedData.length})
         </h3>
-        <p className="text-sm text-slate-600">Meest recente OMZA-beoordeling per leerling door docent</p>
+        <p className="text-sm text-slate-600">
+          Meest recente OMZA-beoordeling per leerling door docent
+        </p>
       </div>
 
-      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+      <Suspense
+        fallback={
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
+        }
+      >
         {loading ? (
-          <div className="p-6"><TableSkeleton /></div>
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('student_name')}
+                    onClick={() => handleSort("student_name")}
                   >
-                    Student{getSortIndicator('student_name')}
+                    Student{getSortIndicator("student_name")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('project_name')}
+                    onClick={() => handleSort("project_name")}
                   >
-                    Project/Scan{getSortIndicator('project_name')}
+                    Project/Scan{getSortIndicator("project_name")}
                   </th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">O</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">M</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Z</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">A</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">Opmerking</th>
-                  <th 
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    O
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    M
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Z
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    A
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Opmerking
+                  </th>
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('date')}
+                    onClick={() => handleSort("date")}
                   >
-                    Datum{getSortIndicator('date')}
+                    Datum{getSortIndicator("date")}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sortedData.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                    <td
+                      colSpan={8}
+                      className="px-4 py-8 text-center text-slate-500"
+                    >
                       Geen docentbeoordelingen gevonden
                     </td>
                   </tr>
@@ -946,7 +1186,7 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
                     const isExpanded = expandedRows.has(item.id);
                     return (
                       <React.Fragment key={item.id}>
-                        <tr 
+                        <tr
                           className="hover:bg-slate-50 cursor-pointer"
                           onClick={() => toggleRow(item.id)}
                         >
@@ -976,13 +1216,15 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
                             {renderTeacherEmoticon(item.autonomie_score)}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-700 max-w-xs">
-                            <p className="line-clamp-2">{item.teacher_comment || '–'}</p>
+                            <p className="line-clamp-2">
+                              {item.teacher_comment || "–"}
+                            </p>
                           </td>
                           <td className="px-4 py-3 text-center text-sm text-slate-600">
-                            {new Date(item.date).toLocaleDateString('nl-NL', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
+                            {new Date(item.date).toLocaleDateString("nl-NL", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
                             })}
                           </td>
                         </tr>
@@ -991,19 +1233,35 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
                             <td colSpan={8} className="px-4 py-4">
                               <div className="prose prose-sm max-w-none">
                                 <div className="mb-3">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">Volledige opmerking:</span>
+                                  <span className="text-xs font-medium text-slate-500 uppercase">
+                                    Volledige opmerking:
+                                  </span>
                                   <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">
-                                    {item.teacher_comment || 'Geen opmerking'}
+                                    {item.teacher_comment || "Geen opmerking"}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-4 text-xs text-slate-500">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium">OMZA Scores:</span>
+                                    <span className="font-medium">
+                                      OMZA Scores:
+                                    </span>
                                     <div className="flex gap-1 items-center">
-                                      <span>O:</span> {renderTeacherEmoticon(item.organiseren_score)}
-                                      <span className="ml-2">M:</span> {renderTeacherEmoticon(item.meedoen_score)}
-                                      <span className="ml-2">Z:</span> {renderTeacherEmoticon(item.zelfvertrouwen_score)}
-                                      <span className="ml-2">A:</span> {renderTeacherEmoticon(item.autonomie_score)}
+                                      <span>O:</span>{" "}
+                                      {renderTeacherEmoticon(
+                                        item.organiseren_score,
+                                      )}
+                                      <span className="ml-2">M:</span>{" "}
+                                      {renderTeacherEmoticon(
+                                        item.meedoen_score,
+                                      )}
+                                      <span className="ml-2">Z:</span>{" "}
+                                      {renderTeacherEmoticon(
+                                        item.zelfvertrouwen_score,
+                                      )}
+                                      <span className="ml-2">A:</span>{" "}
+                                      {renderTeacherEmoticon(
+                                        item.autonomie_score,
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -1028,15 +1286,22 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
    TAB 4: REFLECTIES
    ========================================= */
 
-function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+function ReflectiesTab({
+  parentFilters,
+}: {
+  parentFilters: PeerOverviewFilters;
+}) {
   const { data, loading, error } = useReflections({
     courseId: parentFilters.courseId,
     projectId: parentFilters.projectId,
   });
 
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
-    key: 'student_name',
-    direction: 'asc'
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>({
+    key: "student_name",
+    direction: "asc",
   });
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
@@ -1044,10 +1309,10 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
   const filteredData = useMemo(() => {
     if (!data?.reflectionItems) return [];
     if (!parentFilters.studentName) return data.reflectionItems;
-    
+
     const searchLower = parentFilters.studentName.toLowerCase();
-    return data.reflectionItems.filter(item =>
-      item.student_name.toLowerCase().includes(searchLower)
+    return data.reflectionItems.filter((item) =>
+      item.student_name.toLowerCase().includes(searchLower),
     );
   }, [data?.reflectionItems, parentFilters.studentName]);
 
@@ -1057,42 +1322,42 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
     items.sort((a, b) => {
       let aVal: any = a[sortConfig.key as keyof typeof a];
       let bVal: any = b[sortConfig.key as keyof typeof b];
-      
-      if (sortConfig.key === 'date') {
+
+      if (sortConfig.key === "date") {
         aVal = new Date(aVal).getTime();
         bVal = new Date(bVal).getTime();
       }
-      
-      if (sortConfig.key === 'word_count') {
-        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+
+      if (sortConfig.key === "word_count") {
+        return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
       }
-      
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-      
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
     return items;
   }, [filteredData, sortConfig]);
 
   const handleSort = (key: string) => {
-    setSortConfig(prev => ({
+    setSortConfig((prev) => ({
       key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
   };
 
   const getSortIndicator = (key: string) => {
     if (sortConfig.key !== key) return null;
-    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+    return sortConfig.direction === "asc" ? " ▲" : " ▼";
   };
 
   const toggleRow = (id: number) => {
-    setExpandedRows(prev => {
+    setExpandedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -1117,44 +1382,57 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
         <h3 className="text-base font-semibold text-slate-900 leading-6">
           Reflecties ({sortedData.length})
         </h3>
-        <p className="text-sm text-slate-600">Alle reflecties van leerlingen uit peer evaluaties</p>
+        <p className="text-sm text-slate-600">
+          Alle reflecties van leerlingen uit peer evaluaties
+        </p>
       </div>
 
-      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+      <Suspense
+        fallback={
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
+        }
+      >
         {loading ? (
-          <div className="p-6"><TableSkeleton /></div>
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('student_name')}
+                    onClick={() => handleSort("student_name")}
                   >
-                    Student{getSortIndicator('student_name')}
+                    Student{getSortIndicator("student_name")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
                     Reflectie
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('date')}
+                    onClick={() => handleSort("date")}
                   >
-                    Datum{getSortIndicator('date')}
+                    Datum{getSortIndicator("date")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('word_count')}
+                    onClick={() => handleSort("word_count")}
                   >
-                    Woorden{getSortIndicator('word_count')}
+                    Woorden{getSortIndicator("word_count")}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sortedData.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    <td
+                      colSpan={4}
+                      className="px-4 py-8 text-center text-slate-500"
+                    >
                       Geen reflecties gevonden
                     </td>
                   </tr>
@@ -1163,7 +1441,7 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
                     const isExpanded = expandedRows.has(item.id);
                     return (
                       <React.Fragment key={item.id}>
-                        <tr 
+                        <tr
                           className="hover:bg-slate-50 cursor-pointer"
                           onClick={() => toggleRow(item.id)}
                         >
@@ -1178,13 +1456,15 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-700">
-                            <p className="line-clamp-2">{item.reflection_text}</p>
+                            <p className="line-clamp-2">
+                              {item.reflection_text}
+                            </p>
                           </td>
                           <td className="px-4 py-3 text-center text-sm text-slate-600">
-                            {new Date(item.date).toLocaleDateString('nl-NL', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
+                            {new Date(item.date).toLocaleDateString("nl-NL", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
                             })}
                           </td>
                           <td className="px-4 py-3 text-center text-sm text-slate-600">
@@ -1199,7 +1479,8 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
                                   {item.reflection_text}
                                 </p>
                                 <div className="mt-2 text-xs text-slate-500">
-                                  <span className="font-medium">Project:</span> {item.project_name}
+                                  <span className="font-medium">Project:</span>{" "}
+                                  {item.project_name}
                                 </div>
                               </div>
                             </td>
@@ -1226,57 +1507,65 @@ export default function PeerevaluatiesTab() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  
+
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
-  
+
   // Initialize filter values from URL
   const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
     courseId: searchParams.get("subjectId") || undefined,
     period: searchParams.get("period") || "6months",
     searchQuery: searchParams.get("q") || undefined,
   });
-  
+
   const [filters, setFilters] = useState<PeerOverviewFilters>({
-    period: (filterValues.period as "3months" | "6months" | "year") || "6months",
+    period:
+      (filterValues.period as "3months" | "6months" | "year") || "6months",
     courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
     studentName: filterValues.searchQuery,
   });
-  
-  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
-  const [projects, setProjects] = useState<Array<{id: number; title: string}>>([]);
+
+  const [courses, setCourses] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
+  const [projects, setProjects] = useState<
+    Array<{ id: number; title: string }>
+  >([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
   // Sync URL with filter values
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     if (filterValues.courseId) {
       params.set("subjectId", filterValues.courseId);
     } else {
       params.delete("subjectId");
     }
-    
+
     if (filterValues.period && filterValues.period !== "6months") {
       params.set("period", filterValues.period);
     } else {
       params.delete("period");
     }
-    
+
     if (filterValues.searchQuery) {
       params.set("q", filterValues.searchQuery);
     } else {
       params.delete("q");
     }
-    
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [filterValues, pathname, router, searchParams]);
-  
+
   // Update internal filters when filterValues change
   useEffect(() => {
     setFilters({
-      period: (filterValues.period as "3months" | "6months" | "year") || "6months",
-      courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
+      period:
+        (filterValues.period as "3months" | "6months" | "year") || "6months",
+      courseId: filterValues.courseId
+        ? Number(filterValues.courseId)
+        : undefined,
       studentName: filterValues.searchQuery,
     });
   }, [filterValues]);
@@ -1303,7 +1592,7 @@ export default function PeerevaluatiesTab() {
       setProjects([]);
       return;
     }
-    
+
     const fetchProjects = async () => {
       setLoadingProjects(true);
       try {
@@ -1327,24 +1616,26 @@ export default function PeerevaluatiesTab() {
     { id: "docentfeedback", label: "Docentfeedback", icon: Users },
     { id: "reflecties", label: "Reflecties", icon: MessageSquare },
   ];
-  
+
   const handleFilterChange = (newFilters: OverviewFilterValues) => {
     setFilterValues(newFilters);
   };
-  
+
   // Period options
   const periodOptions = [
     { value: "3months", label: "Laatste 3 maanden" },
     { value: "6months", label: "Laatste 6 maanden" },
     { value: "year", label: "Hele jaar" },
   ];
-  
+
   // Show empty state if no course selected
   if (!filterValues.courseId) {
     return (
       <div className="space-y-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Peerevaluaties</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Peerevaluaties
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
             Overzicht van OMZA scores en peerfeedback
           </p>
@@ -1374,7 +1665,7 @@ export default function PeerevaluatiesTab() {
           Overzicht van OMZA scores en peerfeedback
         </p>
       </div>
-      
+
       {/* Filter Bar */}
       <OverviewFilters
         filters={filterValues}
@@ -1418,9 +1709,15 @@ export default function PeerevaluatiesTab() {
       {/* Tab Content */}
       <div>
         {activeSubTab === "dashboard" && <DashboardTab filters={filters} />}
-        {activeSubTab === "peerfeedback" && <PeerfeedbackTab parentFilters={filters} />}
-        {activeSubTab === "docentfeedback" && <DocentfeedbackTab parentFilters={filters} />}
-        {activeSubTab === "reflecties" && <ReflectiesTab parentFilters={filters} />}
+        {activeSubTab === "peerfeedback" && (
+          <PeerfeedbackTab parentFilters={filters} />
+        )}
+        {activeSubTab === "docentfeedback" && (
+          <DocentfeedbackTab parentFilters={filters} />
+        )}
+        {activeSubTab === "reflecties" && (
+          <ReflectiesTab parentFilters={filters} />
+        )}
       </div>
     </div>
   );

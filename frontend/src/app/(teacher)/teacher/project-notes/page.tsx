@@ -17,10 +17,14 @@ const INITIAL_PROJECT_STATE = {
 export default function ProjectNotesOverviewPage() {
   const [projects, setProjects] = useState<ProjectNotesContext[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [existingProjects, setExistingProjects] = useState<ProjectListItem[]>([]);
+  const [existingProjects, setExistingProjects] = useState<ProjectListItem[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
-  const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
+  const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
+    new Set(),
+  );
   const [linkToExistingProject, setLinkToExistingProject] = useState(false);
   const [newProject, setNewProject] = useState(INITIAL_PROJECT_STATE);
 
@@ -61,11 +65,16 @@ export default function ProjectNotesOverviewPage() {
   };
 
   const handleCreateProject = async () => {
-    if (!newProject.title || (!newProject.project_id && !newProject.course_id)) {
-      alert("Vul minimaal een projectnaam in en selecteer een bestaand project of vak.");
+    if (
+      !newProject.title ||
+      (!newProject.project_id && !newProject.course_id)
+    ) {
+      alert(
+        "Vul minimaal een projectnaam in en selecteer een bestaand project of vak.",
+      );
       return;
     }
-    
+
     try {
       await projectNotesService.createContext({
         title: newProject.title,
@@ -98,7 +107,7 @@ export default function ProjectNotesOverviewPage() {
     if (selectedProjects.size === projects.length) {
       setSelectedProjects(new Set());
     } else {
-      setSelectedProjects(new Set(projects.map(p => p.id)));
+      setSelectedProjects(new Set(projects.map((p) => p.id)));
     }
   };
 
@@ -109,16 +118,16 @@ export default function ProjectNotesOverviewPage() {
     }
 
     const confirmed = confirm(
-      `Weet je zeker dat je ${selectedProjects.size} project(en) wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
+      `Weet je zeker dat je ${selectedProjects.size} project(en) wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`,
     );
 
     if (!confirmed) return;
 
     try {
       await Promise.all(
-        Array.from(selectedProjects).map(id => 
-          projectNotesService.deleteContext(id)
-        )
+        Array.from(selectedProjects).map((id) =>
+          projectNotesService.deleteContext(id),
+        ),
       );
       setSelectedProjects(new Set());
       loadProjects();
@@ -138,7 +147,8 @@ export default function ProjectNotesOverviewPage() {
               Projectaantekeningen
             </h1>
             <p className="text-gray-600 mt-1 text-sm max-w-xl">
-              Overzicht van alle projecten waarin je observaties en aantekeningen bijhoudt.
+              Overzicht van alle projecten waarin je observaties en
+              aantekeningen bijhoudt.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -183,7 +193,7 @@ export default function ProjectNotesOverviewPage() {
                   placeholder="Bijvoorbeeld: Duurzame wijk"
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -199,7 +209,10 @@ export default function ProjectNotesOverviewPage() {
                   }}
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <label htmlFor="link-existing" className="text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="link-existing"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Koppel aan bestaand project
                 </label>
               </div>
@@ -212,7 +225,12 @@ export default function ProjectNotesOverviewPage() {
                   <select
                     value={newProject.project_id || ""}
                     onChange={(e) =>
-                      setNewProject({ ...newProject, project_id: e.target.value ? Number(e.target.value) : undefined })
+                      setNewProject({
+                        ...newProject,
+                        project_id: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      })
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -232,7 +250,12 @@ export default function ProjectNotesOverviewPage() {
                   <select
                     value={newProject.course_id || ""}
                     onChange={(e) =>
-                      setNewProject({ ...newProject, course_id: e.target.value ? Number(e.target.value) : undefined })
+                      setNewProject({
+                        ...newProject,
+                        course_id: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      })
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -245,7 +268,7 @@ export default function ProjectNotesOverviewPage() {
                   </select>
                 </div>
               )}
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Beschrijving (optioneel)
@@ -253,7 +276,10 @@ export default function ProjectNotesOverviewPage() {
                 <textarea
                   value={newProject.description}
                   onChange={(e) =>
-                    setNewProject({ ...newProject, description: e.target.value })
+                    setNewProject({
+                      ...newProject,
+                      description: e.target.value,
+                    })
                   }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
@@ -293,21 +319,29 @@ export default function ProjectNotesOverviewPage() {
               <input
                 type="checkbox"
                 id="select-all"
-                checked={selectedProjects.size === projects.length && projects.length > 0}
+                checked={
+                  selectedProjects.size === projects.length &&
+                  projects.length > 0
+                }
                 onChange={handleToggleAll}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="select-all" className="text-sm text-gray-600 cursor-pointer">
+              <label
+                htmlFor="select-all"
+                className="text-sm text-gray-600 cursor-pointer"
+              >
                 Selecteer alle projecten
               </label>
             </div>
-            
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
                 <div
                   key={project.id}
                   className={`rounded-xl bg-white border shadow-sm p-5 hover:shadow-md transition-shadow ${
-                    selectedProjects.has(project.id) ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200/80'
+                    selectedProjects.has(project.id)
+                      ? "border-blue-500 ring-2 ring-blue-200"
+                      : "border-gray-200/80"
                   }`}
                 >
                   <div className="space-y-3">
@@ -340,14 +374,17 @@ export default function ProjectNotesOverviewPage() {
 
                     <div className="flex items-center gap-3 text-xs text-gray-500 ml-7">
                       {project.note_count !== undefined && (
-                        <span>{project.note_count} {project.note_count === 1 ? 'notitie' : 'notities'}</span>
+                        <span>
+                          {project.note_count}{" "}
+                          {project.note_count === 1 ? "notitie" : "notities"}
+                        </span>
                       )}
                     </div>
 
                     <Link
                       href={`/teacher/project-notes/${project.id}`}
                       className="block w-full rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-medium text-white hover:bg-slate-800 transition-colors ml-7"
-                      style={{ marginLeft: 0, width: '100%' }}
+                      style={{ marginLeft: 0, width: "100%" }}
                     >
                       Bekijk aantekeningen
                     </Link>
@@ -361,7 +398,8 @@ export default function ProjectNotesOverviewPage() {
         {!loading && projects.length === 0 && (
           <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-12 text-center">
             <p className="text-gray-500">
-              Nog geen projecten aangemaakt. Klik op &quot;Nieuw project&quot; om te beginnen.
+              Nog geen projecten aangemaakt. Klik op &quot;Nieuw project&quot;
+              om te beginnen.
             </p>
           </div>
         )}

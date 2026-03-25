@@ -1,15 +1,26 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { SubmissionWithTeamInfo } from '@/dtos/submission.dto';
-import { ExternalLink, ChevronDown, Circle, CheckCircle, Lock, LinkIcon, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+} from "@/components/ui/dropdown-menu";
+import { SubmissionWithTeamInfo } from "@/dtos/submission.dto";
+import {
+  ExternalLink,
+  ChevronDown,
+  Circle,
+  CheckCircle,
+  Lock,
+  LinkIcon,
+  AlertCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 
 interface SubmissionsTableProps {
   submissions: SubmissionWithTeamInfo[];
@@ -19,29 +30,29 @@ interface SubmissionsTableProps {
 
 const statusConfig = {
   missing: {
-    label: 'Nog niet ingeleverd',
+    label: "Nog niet ingeleverd",
     icon: Circle,
-    color: 'text-gray-500',
+    color: "text-gray-500",
   },
   submitted: {
-    label: 'Ingeleverd',
+    label: "Ingeleverd",
     icon: AlertCircle,
-    color: 'text-blue-600',
+    color: "text-blue-600",
   },
   ok: {
-    label: 'Akkoord',
+    label: "Akkoord",
     icon: CheckCircle,
-    color: 'text-green-600',
+    color: "text-green-600",
   },
   access_requested: {
-    label: 'Toegang vereist',
+    label: "Toegang vereist",
     icon: Lock,
-    color: 'text-orange-600',
+    color: "text-orange-600",
   },
   broken: {
-    label: 'Link werkt niet',
+    label: "Link werkt niet",
     icon: LinkIcon,
-    color: 'text-red-600',
+    color: "text-red-600",
   },
 } as const;
 
@@ -56,7 +67,7 @@ export function SubmissionsTable({
   onStatusChange,
   onOpenRubric,
 }: SubmissionsTableProps) {
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
 
   const handleStatusChange = async (submissionId: number, status: string) => {
     await onStatusChange(submissionId, status);
@@ -64,9 +75,9 @@ export function SubmissionsTable({
 
   const toggleSort = () => {
     if (sortOrder === null) {
-      setSortOrder('asc');
-    } else if (sortOrder === 'asc') {
-      setSortOrder('desc');
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
     } else {
       setSortOrder(null);
     }
@@ -80,8 +91,8 @@ export function SubmissionsTable({
     return [...submissions].sort((a, b) => {
       const aTeamNum = a.team_number ?? 0;
       const bTeamNum = b.team_number ?? 0;
-      
-      if (sortOrder === 'asc') {
+
+      if (sortOrder === "asc") {
         return aTeamNum - bTeamNum;
       } else {
         return bTeamNum - aTeamNum;
@@ -97,13 +108,18 @@ export function SubmissionsTable({
     );
   }
 
-  const SortIcon = sortOrder === 'asc' ? ArrowUp : sortOrder === 'desc' ? ArrowDown : ArrowUpDown;
+  const SortIcon =
+    sortOrder === "asc"
+      ? ArrowUp
+      : sortOrder === "desc"
+        ? ArrowDown
+        : ArrowUpDown;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Header */}
       <div className="grid grid-cols-12 gap-3 border-b bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 tracking-wide">
-        <button 
+        <button
           onClick={toggleSort}
           className="col-span-1 flex items-center gap-1 hover:text-gray-900 transition-colors text-left"
         >
@@ -120,18 +136,18 @@ export function SubmissionsTable({
       {/* Rows */}
       {sortedSubmissions.map((item, index) => {
         const status = item.submission.status;
-        const validStatus = isValidStatus(status) ? status : 'missing';
+        const validStatus = isValidStatus(status) ? status : "missing";
         const StatusIcon = statusConfig[validStatus].icon;
         const statusColor = statusConfig[validStatus].color;
         const statusLabel = statusConfig[validStatus].label;
         const hasUrl = !!item.submission.url;
-        const isMissing = status === 'missing';
+        const isMissing = status === "missing";
         const isLastItem = index === sortedSubmissions.length - 1;
 
         return (
           <div
             key={item.submission.id}
-            className={`grid grid-cols-12 items-center gap-3 px-5 py-3 hover:bg-gray-50 ${!isLastItem ? 'border-b border-gray-100' : ''}`}
+            className={`grid grid-cols-12 items-center gap-3 px-5 py-3 hover:bg-gray-50 ${!isLastItem ? "border-b border-gray-100" : ""}`}
           >
             {/* Team */}
             <div className="col-span-1 font-medium text-sm">
@@ -150,12 +166,14 @@ export function SubmissionsTable({
                   size="sm"
                   variant="secondary"
                   className="h-8 gap-1"
-                  onClick={() => window.open(item.submission.url || '', '_blank')}
+                  onClick={() =>
+                    window.open(item.submission.url || "", "_blank")
+                  }
                 >
                   <ExternalLink className="h-4 w-4" />
-                  {item.submission.doc_type === 'report' && 'Open verslag'}
-                  {item.submission.doc_type === 'slides' && 'Open presentatie'}
-                  {item.submission.doc_type === 'attachment' && 'Open bijlage'}
+                  {item.submission.doc_type === "report" && "Open verslag"}
+                  {item.submission.doc_type === "slides" && "Open presentatie"}
+                  {item.submission.doc_type === "attachment" && "Open bijlage"}
                 </Button>
               ) : (
                 <span className="text-sm text-gray-600">-</span>
@@ -179,23 +197,41 @@ export function SubmissionsTable({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-[200px]">
-                  <DropdownMenuItem onClick={() => handleStatusChange(item.submission.id, 'missing')}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleStatusChange(item.submission.id, "missing")
+                    }
+                  >
                     <Circle className="mr-2 h-4 w-4 text-gray-500" />
                     Nog niet ingeleverd
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item.submission.id, 'submitted')}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleStatusChange(item.submission.id, "submitted")
+                    }
+                  >
                     <AlertCircle className="mr-2 h-4 w-4 text-blue-600" />
                     Ingeleverd
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item.submission.id, 'ok')}>
+                  <DropdownMenuItem
+                    onClick={() => handleStatusChange(item.submission.id, "ok")}
+                  >
                     <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
                     Akkoord
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item.submission.id, 'access_requested')}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleStatusChange(item.submission.id, "access_requested")
+                    }
+                  >
                     <Lock className="mr-2 h-4 w-4 text-orange-600" />
                     Toegang vereist
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item.submission.id, 'broken')}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleStatusChange(item.submission.id, "broken")
+                    }
+                  >
                     <LinkIcon className="mr-2 h-4 w-4 text-red-600" />
                     Link werkt niet
                   </DropdownMenuItem>
@@ -206,20 +242,23 @@ export function SubmissionsTable({
             {/* Ingeleverd op */}
             <div className="col-span-2 text-sm text-gray-600">
               {item.submission.submitted_at
-                ? new Date(item.submission.submitted_at).toLocaleDateString('nl-NL', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                  })
-                : '—'}
+                ? new Date(item.submission.submitted_at).toLocaleDateString(
+                    "nl-NL",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    },
+                  )
+                : "—"}
             </div>
 
             {/* Actie */}
             <div className="col-span-1 flex justify-end">
               {isMissing ? (
-                <Button 
-                  size="sm" 
-                  variant="secondary" 
+                <Button
+                  size="sm"
+                  variant="secondary"
                   className="h-8"
                   disabled
                   title="Herinnering sturen (nog niet geïmplementeerd)"

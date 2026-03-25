@@ -68,7 +68,9 @@ export const teacherService = {
     sort?: "name" | "email" | "role";
     direction?: "asc" | "desc";
   }): Promise<TeacherListResponse> {
-    const response = await api.get<TeacherListResponse>("/teachers", { params });
+    const response = await api.get<TeacherListResponse>("/teachers", {
+      params,
+    });
     return response.data;
   },
 
@@ -115,11 +117,11 @@ export const teacherService = {
    */
   async assignCourse(
     teacherId: number,
-    assignment: TeacherCourseAssignment
+    assignment: TeacherCourseAssignment,
   ): Promise<Teacher> {
     const response = await api.post<Teacher>(
       `/teachers/${teacherId}/courses`,
-      assignment
+      assignment,
     );
     return response.data;
   },
@@ -145,7 +147,7 @@ export const teacherService = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return response.data;
   },

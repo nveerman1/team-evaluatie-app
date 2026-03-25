@@ -12,7 +12,7 @@ export function ResultsView({ result }: ResultsViewProps) {
       {/* Grade Section */}
       <div className="p-6 border rounded-xl bg-white">
         <h3 className="text-xl font-semibold mb-4">Jouw Cijfer</h3>
-        
+
         <div className="grid md:grid-cols-3 gap-4">
           {result.final_grade !== undefined && result.final_grade !== null && (
             <div className="p-4 bg-green-50 rounded-lg">
@@ -22,7 +22,7 @@ export function ResultsView({ result }: ResultsViewProps) {
               </div>
             </div>
           )}
-          
+
           {result.group_grade !== undefined && result.group_grade !== null && (
             <div className="p-4 bg-blue-50 rounded-lg">
               <div className="text-sm text-gray-600">Groepscijfer</div>
@@ -31,7 +31,7 @@ export function ResultsView({ result }: ResultsViewProps) {
               </div>
             </div>
           )}
-          
+
           {result.gcf !== undefined && result.gcf !== null && (
             <div className="p-4 bg-purple-50 rounded-lg">
               <div className="text-sm text-gray-600">GCF</div>
@@ -68,7 +68,7 @@ export function ResultsView({ result }: ResultsViewProps) {
                 <div className="font-medium text-gray-700 mb-3">
                   Peer {idx + 1} (anoniem)
                 </div>
-                
+
                 <div className="space-y-2">
                   {feedback.comments.map((comment) => (
                     <div key={comment.criterion_id} className="text-sm">
@@ -98,7 +98,7 @@ export function ResultsView({ result }: ResultsViewProps) {
       {result.criteria_summary.length > 0 && (
         <div className="p-6 border rounded-xl bg-white">
           <h3 className="text-xl font-semibold mb-4">Scores per Criterium</h3>
-          
+
           <div className="space-y-3">
             {result.criteria_summary.map((criterion) => (
               <div
@@ -106,12 +106,14 @@ export function ResultsView({ result }: ResultsViewProps) {
                 className="p-3 border rounded-lg bg-gray-50"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">{criterion.criterion_name}</span>
+                  <span className="font-medium">
+                    {criterion.criterion_name}
+                  </span>
                   <span className="text-sm text-gray-500">
                     Gewicht: {criterion.weight}
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">Jouw score: </span>
@@ -136,18 +138,20 @@ export function ResultsView({ result }: ResultsViewProps) {
       {result.reflection && (
         <div className="p-6 border rounded-xl bg-white">
           <h3 className="text-xl font-semibold mb-4">Jouw Reflectie</h3>
-          
+
           {result.reflection.submitted_at && (
             <div className="text-sm text-gray-500 mb-3">
               Ingediend op:{" "}
-              {new Date(result.reflection.submitted_at).toLocaleDateString("nl-NL")}
+              {new Date(result.reflection.submitted_at).toLocaleDateString(
+                "nl-NL",
+              )}
             </div>
           )}
-          
+
           <div className="p-4 bg-gray-50 rounded-lg whitespace-pre-wrap">
             {result.reflection.text}
           </div>
-          
+
           {result.reflection.editable && (
             <div className="mt-3 text-sm text-blue-600">
               Je kunt je reflectie nog bewerken via de wizard.

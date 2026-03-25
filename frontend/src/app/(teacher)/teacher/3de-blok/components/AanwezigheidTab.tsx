@@ -44,7 +44,9 @@ export default function AanwezigheidTab() {
   const fetchPresence = async () => {
     try {
       setError(null);
-      const response = await fetchWithErrorHandling("/api/v1/attendance/presence");
+      const response = await fetchWithErrorHandling(
+        "/api/v1/attendance/presence",
+      );
       const data = await response.json();
       setOpenSessions(data);
     } catch (err) {
@@ -56,19 +58,23 @@ export default function AanwezigheidTab() {
     }
   };
 
-  const filteredSessions = openSessions.filter((session) =>
-    session.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (session.class_name?.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredSessions = openSessions.filter(
+    (session) =>
+      session.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.class_name?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const groupedByClass = filteredSessions.reduce((acc, session) => {
-    const className = session.class_name || "Geen klas";
-    if (!acc[className]) {
-      acc[className] = [];
-    }
-    acc[className].push(session);
-    return acc;
-  }, {} as Record<string, OpenSession[]>);
+  const groupedByClass = filteredSessions.reduce(
+    (acc, session) => {
+      const className = session.class_name || "Geen klas";
+      if (!acc[className]) {
+        acc[className] = [];
+      }
+      acc[className].push(session);
+      return acc;
+    },
+    {} as Record<string, OpenSession[]>,
+  );
 
   if (loading) {
     return (
@@ -109,26 +115,34 @@ export default function AanwezigheidTab() {
       {filteredSessions.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-600">Niemand aanwezig</h3>
-          <p className="text-gray-500 mt-2">Er zijn momenteel geen studenten ingecheckt</p>
+          <h3 className="text-xl font-semibold text-gray-600">
+            Niemand aanwezig
+          </h3>
+          <p className="text-gray-500 mt-2">
+            Er zijn momenteel geen studenten ingecheckt
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(groupedByClass)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([className, sessions]) => (
-              <div key={className} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+              <div
+                key={className}
+                className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <Badge variant="outline" className="text-base">
                       {className}
                     </Badge>
                     <span className="text-sm text-gray-600">
-                      ({sessions.length} {sessions.length === 1 ? "student" : "studenten"})
+                      ({sessions.length}{" "}
+                      {sessions.length === 1 ? "student" : "studenten"})
                     </span>
                   </h2>
                 </div>
-                
+
                 <div className="grid gap-3">
                   {sessions.map((session) => (
                     <div
@@ -138,23 +152,33 @@ export default function AanwezigheidTab() {
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                           <span className="text-green-700 font-semibold">
-                            {session.user_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                            {session.user_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
                           </span>
                         </div>
                         <div>
                           <p className="font-medium">{session.user_name}</p>
-                          <p className="text-sm text-gray-600">{session.user_email}</p>
+                          <p className="text-sm text-gray-600">
+                            {session.user_email}
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Clock className="h-4 w-4" />
                           <span>
-                            {new Date(session.check_in).toLocaleTimeString("nl-NL", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {new Date(session.check_in).toLocaleTimeString(
+                              "nl-NL",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">

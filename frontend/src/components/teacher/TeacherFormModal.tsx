@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Teacher, TeacherCreate, TeacherUpdate } from "@/services/teacher.service";
+import {
+  Teacher,
+  TeacherCreate,
+  TeacherUpdate,
+} from "@/services/teacher.service";
 
 type TeacherFormModalProps = {
   isOpen: boolean;
@@ -181,8 +185,8 @@ export default function TeacherFormModal({
               {isSubmitting
                 ? "Bezig..."
                 : mode === "create"
-                ? "Aanmaken"
-                : "Opslaan"}
+                  ? "Aanmaken"
+                  : "Opslaan"}
             </button>
           </div>
         </form>

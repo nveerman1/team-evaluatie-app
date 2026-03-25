@@ -1,24 +1,29 @@
-'use client';
+"use client";
 
-import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { submissionService } from '@/services/submission.service';
-import { SubmissionWithTeamInfo, SubmissionStatusUpdate } from '@/dtos/submission.dto';
-import { SubmissionsTable } from '@/components/submissions/SubmissionsTable';
-import { SubmissionFilters } from '@/components/submissions/SubmissionFilters';
-import { Loading } from '@/components';
-import { toast } from '@/lib/toast';
+import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { submissionService } from "@/services/submission.service";
+import {
+  SubmissionWithTeamInfo,
+  SubmissionStatusUpdate,
+} from "@/dtos/submission.dto";
+import { SubmissionsTable } from "@/components/submissions/SubmissionsTable";
+import { SubmissionFilters } from "@/components/submissions/SubmissionFilters";
+import { Loading } from "@/components";
+import { toast } from "@/lib/toast";
 
 export default function TeacherSubmissionsPage() {
   const params = useParams();
   const router = useRouter();
   const assessmentId = parseInt(params.assessmentId as string);
-  
+
   const [submissions, setSubmissions] = useState<SubmissionWithTeamInfo[]>([]);
-  const [filteredSubmissions, setFilteredSubmissions] = useState<SubmissionWithTeamInfo[]>([]);
+  const [filteredSubmissions, setFilteredSubmissions] = useState<
+    SubmissionWithTeamInfo[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [missingOnly, setMissingOnly] = useState(false);
   const [actionRequiredOnly, setActionRequiredOnly] = useState(false);
@@ -38,25 +43,28 @@ export default function TeacherSubmissionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await submissionService.getSubmissionsForAssessment(assessmentId);
+      const data =
+        await submissionService.getSubmissionsForAssessment(assessmentId);
       setSubmissions(data.items);
     } catch (err: any) {
-      console.error('Failed to load submissions:', err);
-      
+      console.error("Failed to load submissions:", err);
+
       // Handle different error types
-      if (err.name === 'ApiAuthError') {
+      if (err.name === "ApiAuthError") {
         if (err.status === 403) {
           // Permission error - user is authenticated but doesn't own this assessment
-          setError('Je hebt geen toegang tot deze inleveringen. Je moet de eigenaar van deze projectbeoordeling zijn.');
+          setError(
+            "Je hebt geen toegang tot deze inleveringen. Je moet de eigenaar van deze projectbeoordeling zijn.",
+          );
         } else if (err.status === 401) {
           // Authentication error - not logged in
-          setError('Je bent niet ingelogd. Log opnieuw in.');
+          setError("Je bent niet ingelogd. Log opnieuw in.");
         }
       } else {
-        setError('Kon inleveringen niet laden. Probeer het opnieuw.');
+        setError("Kon inleveringen niet laden. Probeer het opnieuw.");
       }
-      
-      toast.error(error || 'Kon inleveringen niet laden');
+
+      toast.error(error || "Kon inleveringen niet laden");
     } finally {
       setLoading(false);
     }
@@ -66,22 +74,26 @@ export default function TeacherSubmissionsPage() {
     let filtered = [...submissions];
 
     if (missingOnly) {
-      filtered = filtered.filter((item) => item.submission.status === 'missing');
+      filtered = filtered.filter(
+        (item) => item.submission.status === "missing",
+      );
     }
 
     if (actionRequiredOnly) {
       filtered = filtered.filter(
         (item) =>
-          item.submission.status === 'access_requested' ||
-          item.submission.status === 'broken' ||
-          item.submission.status === 'submitted'
+          item.submission.status === "access_requested" ||
+          item.submission.status === "broken" ||
+          item.submission.status === "submitted",
       );
     }
 
     // Only filter by doc_type if there's an actual submission (not missing)
     if (docType) {
-      filtered = filtered.filter((item) => 
-        item.submission.status === 'missing' || item.submission.doc_type === docType
+      filtered = filtered.filter(
+        (item) =>
+          item.submission.status === "missing" ||
+          item.submission.doc_type === docType,
       );
     }
 
@@ -93,29 +105,34 @@ export default function TeacherSubmissionsPage() {
       const updateData: SubmissionStatusUpdate = {
         status: status as any,
       };
-      
+
       await submissionService.updateStatus(submissionId, updateData);
-      
+
       // Optimistic update
       setSubmissions((prev) =>
         prev.map((item) =>
           item.submission.id === submissionId
-            ? { ...item, submission: { ...item.submission, status: status as any } }
-            : item
-        )
+            ? {
+                ...item,
+                submission: { ...item.submission, status: status as any },
+              }
+            : item,
+        ),
       );
-      
-      toast.success('Status bijgewerkt');
+
+      toast.success("Status bijgewerkt");
     } catch (err: any) {
-      console.error('Failed to update status:', err);
-      toast.error('Kon status niet bijwerken');
+      console.error("Failed to update status:", err);
+      toast.error("Kon status niet bijwerken");
       // Reload to get fresh data
       await loadSubmissions();
     }
   };
 
   const handleOpenRubric = (teamId: number) => {
-    router.push(`/teacher/project-assessments/${assessmentId}/edit?team=${teamId}`);
+    router.push(
+      `/teacher/project-assessments/${assessmentId}/edit?team=${teamId}`,
+    );
   };
 
   if (loading) {
@@ -126,7 +143,9 @@ export default function TeacherSubmissionsPage() {
     return (
       <div className="container mx-auto py-6">
         <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-2xl font-semibold mb-4">Fout bij laden van inleveringen</h2>
+          <h2 className="text-2xl font-semibold mb-4">
+            Fout bij laden van inleveringen
+          </h2>
           <p className="text-red-600">{error}</p>
           <button
             onClick={() => router.back()}
@@ -141,11 +160,15 @@ export default function TeacherSubmissionsPage() {
 
   const stats = {
     total: submissions.length,
-    missing: submissions.filter((s) => s.submission.status === 'missing').length,
-    submitted: submissions.filter((s) => s.submission.status === 'submitted').length,
-    ok: submissions.filter((s) => s.submission.status === 'ok').length,
+    missing: submissions.filter((s) => s.submission.status === "missing")
+      .length,
+    submitted: submissions.filter((s) => s.submission.status === "submitted")
+      .length,
+    ok: submissions.filter((s) => s.submission.status === "ok").length,
     actionRequired: submissions.filter(
-      (s) => s.submission.status === 'access_requested' || s.submission.status === 'broken'
+      (s) =>
+        s.submission.status === "access_requested" ||
+        s.submission.status === "broken",
     ).length,
   };
 
@@ -157,25 +180,27 @@ export default function TeacherSubmissionsPage() {
           <p className="text-xs text-muted-foreground">Totaal</p>
           <p className="text-2xl font-bold">{stats.total}</p>
         </div>
-        
+
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <p className="text-xs text-muted-foreground">Ontbrekend</p>
           <p className="text-2xl font-bold text-red-600">{stats.missing}</p>
         </div>
-        
+
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <p className="text-xs text-muted-foreground">Ingeleverd</p>
           <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
         </div>
-        
+
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <p className="text-xs text-muted-foreground">Akkoord</p>
           <p className="text-2xl font-bold text-green-600">{stats.ok}</p>
         </div>
-        
+
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <p className="text-xs text-muted-foreground">Actie vereist</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.actionRequired}</p>
+          <p className="text-2xl font-bold text-orange-600">
+            {stats.actionRequired}
+          </p>
         </div>
       </div>
 

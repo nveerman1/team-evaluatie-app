@@ -35,7 +35,9 @@ export default function HeatmapTabPage() {
   if (error) return <ErrorMessage message={error} />;
   if (!heatmap) return <ErrorMessage message="Data not found" />;
 
-  const filledScans = heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length;
+  const filledScans = heatmap.rows.filter(
+    (r) => Object.keys(r.scores).length > 0,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -44,7 +46,10 @@ export default function HeatmapTabPage() {
         <Tile label="Leerlingen" value={heatmap.rows.length} />
         <Tile label="Competenties" value={heatmap.competencies.length} />
         <Tile label="Ingevulde scans" value={filledScans} />
-        <Tile label="Nog niet ingevuld" value={heatmap.rows.length - filledScans} />
+        <Tile
+          label="Nog niet ingevuld"
+          value={heatmap.rows.length - filledScans}
+        />
       </section>
 
       {/* Heatmap Table */}
@@ -102,8 +107,8 @@ export default function HeatmapTabPage() {
                                   score >= 4
                                     ? "bg-green-100 text-green-700"
                                     : score >= 3
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-orange-100 text-orange-700"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-orange-100 text-orange-700"
                                 }`}
                               >
                                 {score.toFixed(1)}
@@ -111,7 +116,9 @@ export default function HeatmapTabPage() {
                               {delta !== undefined && delta !== 0 && (
                                 <span
                                   className={`text-xs font-medium ${
-                                    delta > 0 ? "text-green-600" : "text-red-600"
+                                    delta > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
                                   }`}
                                 >
                                   {delta > 0 ? "+" : ""}

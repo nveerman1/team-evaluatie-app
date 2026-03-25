@@ -17,9 +17,12 @@ export const projectFeedbackService = {
     project_id?: number;
     status?: string;
   }): Promise<ProjectFeedbackRound[]> {
-    const response = await api.get<ProjectFeedbackRound[]>("/project-feedback", {
-      params,
-    });
+    const response = await api.get<ProjectFeedbackRound[]>(
+      "/project-feedback",
+      {
+        params,
+      },
+    );
     return response.data;
   },
 
@@ -28,7 +31,7 @@ export const projectFeedbackService = {
    */
   async listStudentRounds(): Promise<ProjectFeedbackRound[]> {
     const response = await api.get<ProjectFeedbackRound[]>(
-      "/project-feedback/student"
+      "/project-feedback/student",
     );
     return response.data;
   },
@@ -38,7 +41,7 @@ export const projectFeedbackService = {
    */
   async getRound(roundId: number): Promise<ProjectFeedbackRoundDetail> {
     const response = await api.get<ProjectFeedbackRoundDetail>(
-      `/project-feedback/${roundId}`
+      `/project-feedback/${roundId}`,
     );
     return response.data;
   },
@@ -46,8 +49,13 @@ export const projectFeedbackService = {
   /**
    * Create a new feedback round (seeds default questions if none provided)
    */
-  async createRound(data: ProjectFeedbackRoundCreate): Promise<ProjectFeedbackRound> {
-    const response = await api.post<ProjectFeedbackRound>("/project-feedback", data);
+  async createRound(
+    data: ProjectFeedbackRoundCreate,
+  ): Promise<ProjectFeedbackRound> {
+    const response = await api.post<ProjectFeedbackRound>(
+      "/project-feedback",
+      data,
+    );
     return response.data;
   },
 
@@ -56,11 +64,11 @@ export const projectFeedbackService = {
    */
   async updateRound(
     roundId: number,
-    data: ProjectFeedbackRoundUpdate
+    data: ProjectFeedbackRoundUpdate,
   ): Promise<ProjectFeedbackRound> {
     const response = await api.put<ProjectFeedbackRound>(
       `/project-feedback/${roundId}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -77,7 +85,7 @@ export const projectFeedbackService = {
    */
   async openRound(roundId: number): Promise<ProjectFeedbackRound> {
     const response = await api.post<ProjectFeedbackRound>(
-      `/project-feedback/${roundId}/open`
+      `/project-feedback/${roundId}/open`,
     );
     return response.data;
   },
@@ -87,7 +95,7 @@ export const projectFeedbackService = {
    */
   async closeRound(roundId: number): Promise<ProjectFeedbackRound> {
     const response = await api.post<ProjectFeedbackRound>(
-      `/project-feedback/${roundId}/close`
+      `/project-feedback/${roundId}/close`,
     );
     return response.data;
   },
@@ -97,7 +105,7 @@ export const projectFeedbackService = {
    */
   async getResults(roundId: number): Promise<ProjectFeedbackResults> {
     const response = await api.get<ProjectFeedbackResults>(
-      `/project-feedback/${roundId}/results`
+      `/project-feedback/${roundId}/results`,
     );
     return response.data;
   },
@@ -107,7 +115,7 @@ export const projectFeedbackService = {
    */
   async getMyResponse(roundId: number): Promise<ProjectFeedbackResponse> {
     const response = await api.get<ProjectFeedbackResponse>(
-      `/project-feedback/${roundId}/my-response`
+      `/project-feedback/${roundId}/my-response`,
     );
     return response.data;
   },
@@ -117,11 +125,11 @@ export const projectFeedbackService = {
    */
   async submitFeedback(
     roundId: number,
-    data: ProjectFeedbackSubmission
+    data: ProjectFeedbackSubmission,
   ): Promise<ProjectFeedbackResponse> {
     const response = await api.post<ProjectFeedbackResponse>(
       `/project-feedback/${roundId}/submit`,
-      data
+      data,
     );
     return response.data;
   },

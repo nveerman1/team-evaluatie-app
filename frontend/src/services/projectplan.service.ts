@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+import api from "@/lib/api";
 import {
   ProjectPlan,
   ProjectPlanDetail,
@@ -14,7 +14,7 @@ import {
   LinkClientRequest,
   SuggestClientItem,
   LinkedClientResponse,
-} from '@/dtos/projectplan.dto';
+} from "@/dtos/projectplan.dto";
 
 export const projectPlanService = {
   // ========== Teacher Endpoints ==========
@@ -29,15 +29,17 @@ export const projectPlanService = {
     page?: number;
     limit?: number;
   }): Promise<ProjectPlanListResponse> {
-    const { data } = await api.get('/projectplans', { params });
+    const { data } = await api.get("/projectplans", { params });
     return data;
   },
 
   /**
    * Create a new projectplan component (teacher/admin)
    */
-  async createProjectPlan(payload: ProjectPlanCreate): Promise<ProjectPlanDetail> {
-    const { data } = await api.post('/projectplans', payload);
+  async createProjectPlan(
+    payload: ProjectPlanCreate,
+  ): Promise<ProjectPlanDetail> {
+    const { data } = await api.post("/projectplans", payload);
     return data;
   },
 
@@ -54,7 +56,7 @@ export const projectPlanService = {
    */
   async getProjectPlanOverview(
     id: number,
-    params?: { search?: string; status?: string }
+    params?: { search?: string; status?: string },
   ): Promise<ProjectPlanTeamOverviewItem[]> {
     const { data } = await api.get(`/projectplans/${id}/overview`, { params });
     return data;
@@ -63,7 +65,10 @@ export const projectPlanService = {
   /**
    * Update projectplan component metadata (teacher/admin)
    */
-  async updateProjectPlan(id: number, payload: ProjectPlanUpdate): Promise<ProjectPlan> {
+  async updateProjectPlan(
+    id: number,
+    payload: ProjectPlanUpdate,
+  ): Promise<ProjectPlan> {
     const { data } = await api.patch(`/projectplans/${id}`, payload);
     return data;
   },
@@ -75,11 +80,11 @@ export const projectPlanService = {
   async updateTeamStatus(
     projectPlanId: number,
     teamId: number,
-    payload: ProjectPlanTeamUpdate
+    payload: ProjectPlanTeamUpdate,
   ): Promise<ProjectPlanTeam> {
     const { data } = await api.patch(
       `/projectplans/${projectPlanId}/teams/${teamId}`,
-      payload
+      payload,
     );
     return data;
   },
@@ -92,11 +97,11 @@ export const projectPlanService = {
     projectPlanId: number,
     teamId: number,
     sectionKey: SectionKey,
-    payload: ProjectPlanSectionUpdate
+    payload: ProjectPlanSectionUpdate,
   ): Promise<void> {
     await api.patch(
       `/projectplans/${projectPlanId}/teams/${teamId}/sections/${sectionKey}`,
-      payload
+      payload,
     );
   },
 
@@ -112,10 +117,10 @@ export const projectPlanService = {
    */
   async suggestClient(
     projectPlanId: number,
-    teamId: number
+    teamId: number,
   ): Promise<SuggestClientItem[]> {
     const { data } = await api.get(
-      `/projectplans/${projectPlanId}/teams/${teamId}/suggest-client`
+      `/projectplans/${projectPlanId}/teams/${teamId}/suggest-client`,
     );
     return data;
   },
@@ -126,11 +131,11 @@ export const projectPlanService = {
   async linkClient(
     projectPlanId: number,
     teamId: number,
-    payload: LinkClientRequest
+    payload: LinkClientRequest,
   ): Promise<LinkedClientResponse> {
     const { data } = await api.post(
       `/projectplans/${projectPlanId}/teams/${teamId}/link-client`,
-      payload
+      payload,
     );
     return data;
   },
@@ -141,7 +146,7 @@ export const projectPlanService = {
    * List projectplans for current student
    */
   async listMyProjectPlans(): Promise<ProjectPlanDetail[]> {
-    const { data } = await api.get('/me/projectplans');
+    const { data } = await api.get("/me/projectplans");
     return data;
   },
 
@@ -158,7 +163,7 @@ export const projectPlanService = {
    */
   async updateMyProjectPlanTitle(
     teamId: number,
-    payload: ProjectPlanTeamUpdate
+    payload: ProjectPlanTeamUpdate,
   ): Promise<void> {
     await api.patch(`/me/projectplans/${teamId}`, payload);
   },
@@ -169,11 +174,11 @@ export const projectPlanService = {
   async updateMySection(
     projectPlanTeamId: number,
     sectionKey: SectionKey,
-    payload: ProjectPlanSectionUpdate
+    payload: ProjectPlanSectionUpdate,
   ): Promise<void> {
     await api.patch(
       `/me/projectplans/${projectPlanTeamId}/sections/${sectionKey}`,
-      payload
+      payload,
     );
   },
 
@@ -190,7 +195,7 @@ export const projectPlanService = {
   async exportToWord(projectPlanTeamId: number): Promise<Blob> {
     const response = await api.get(
       `/me/projectplans/${projectPlanTeamId}/export-docx`,
-      { responseType: 'blob' }
+      { responseType: "blob" },
     );
     return response.data;
   },

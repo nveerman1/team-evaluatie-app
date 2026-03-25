@@ -2,11 +2,15 @@
 
 import React, { useState, useMemo, Suspense } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useAggregatedFeedback, type AggregatedFeedbackItem, type AggregatedFeedbackFilters } from "@/hooks/useAggregatedFeedback";
+import {
+  useAggregatedFeedback,
+  type AggregatedFeedbackItem,
+  type AggregatedFeedbackFilters,
+} from "@/hooks/useAggregatedFeedback";
 
 type SortConfig = {
   key: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 };
 
 type PeerfeedbackTableProps = {
@@ -26,38 +30,43 @@ function TableSkeleton() {
   );
 }
 
-export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all" }: PeerfeedbackTableProps) {
+export function PeerfeedbackTable({
+  filters,
+  searchQuery = "",
+  typeFilter = "all",
+}: PeerfeedbackTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'student_name',
-    direction: 'asc'
+    key: "student_name",
+    direction: "asc",
   });
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  
+
   // Use aggregated feedback hook
   const { data, loading, error } = useAggregatedFeedback(filters);
 
   // Filter by search query and type filter
   const filteredData = useMemo(() => {
     if (!data?.feedbackItems) return [];
-    
+
     let items = data.feedbackItems;
-    
+
     // Apply type filter
     if (typeFilter !== "all") {
-      items = items.filter(item => item.feedback_type === typeFilter);
+      items = items.filter((item) => item.feedback_type === typeFilter);
     }
-    
+
     // Apply search query
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
-      items = items.filter(item =>
-        item.student_name.toLowerCase().includes(searchLower) ||
-        (item.from_student_name || "").toLowerCase().includes(searchLower) ||
-        item.project_name.toLowerCase().includes(searchLower) ||
-        item.combined_feedback.toLowerCase().includes(searchLower)
+      items = items.filter(
+        (item) =>
+          item.student_name.toLowerCase().includes(searchLower) ||
+          (item.from_student_name || "").toLowerCase().includes(searchLower) ||
+          item.project_name.toLowerCase().includes(searchLower) ||
+          item.combined_feedback.toLowerCase().includes(searchLower),
       );
     }
-    
+
     return items;
   }, [data?.feedbackItems, searchQuery, typeFilter]);
 
@@ -67,46 +76,48 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
     items.sort((a, b) => {
       let aVal: any = a[sortConfig.key as keyof typeof a];
       let bVal: any = b[sortConfig.key as keyof typeof b];
-      
+
       // Handle date sorting
-      if (sortConfig.key === 'date') {
+      if (sortConfig.key === "date") {
         aVal = new Date(aVal).getTime();
         bVal = new Date(bVal).getTime();
       }
-      
+
       // Handle OMZA score sorting (O, M, Z, A)
-      if (['score_O', 'score_M', 'score_Z', 'score_A'].includes(sortConfig.key)) {
+      if (
+        ["score_O", "score_M", "score_Z", "score_A"].includes(sortConfig.key)
+      ) {
         aVal = aVal || 0;
         bVal = bVal || 0;
       }
-      
+
       // Handle string sorting
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
+      if (typeof aVal === "string" && typeof bVal === "string") {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-      
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
     return items;
   }, [filteredData, sortConfig]);
 
   const handleSort = (key: string) => {
-    setSortConfig(prev => ({
+    setSortConfig((prev) => ({
       key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
   };
 
   const getSortIndicator = (key: string) => {
     if (sortConfig.key !== key) return null;
-    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+    return sortConfig.direction === "asc" ? " ▲" : " ▼";
   };
 
   const toggleRow = (id: number) => {
-    setExpandedRows(prev => {
+    setExpandedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -141,80 +152,93 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
         <h3 className="text-base font-semibold text-slate-900 leading-6">
           Peerfeedback ({sortedData.length} resultaten)
         </h3>
-        <p className="text-sm text-slate-600">Peer evaluaties geaggregeerd per beoordeling met OMZA scores</p>
+        <p className="text-sm text-slate-600">
+          Peer evaluaties geaggregeerd per beoordeling met OMZA scores
+        </p>
       </div>
 
-      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+      <Suspense
+        fallback={
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
+        }
+      >
         {loading ? (
-          <div className="p-6"><TableSkeleton /></div>
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('student_name')}
+                    onClick={() => handleSort("student_name")}
                   >
-                    Leerling{getSortIndicator('student_name')}
+                    Leerling{getSortIndicator("student_name")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('project_name')}
+                    onClick={() => handleSort("project_name")}
                   >
-                    Project/Scan{getSortIndicator('project_name')}
+                    Project/Scan{getSortIndicator("project_name")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('feedback_type')}
+                    onClick={() => handleSort("feedback_type")}
                   >
-                    Type{getSortIndicator('feedback_type')}
+                    Type{getSortIndicator("feedback_type")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[100px] cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('from_student_name')}
+                    onClick={() => handleSort("from_student_name")}
                   >
-                    Van{getSortIndicator('from_student_name')}
+                    Van{getSortIndicator("from_student_name")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('score_O')}
+                    onClick={() => handleSort("score_O")}
                   >
-                    O{getSortIndicator('score_O')}
+                    O{getSortIndicator("score_O")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('score_M')}
+                    onClick={() => handleSort("score_M")}
                   >
-                    M{getSortIndicator('score_M')}
+                    M{getSortIndicator("score_M")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('score_Z')}
+                    onClick={() => handleSort("score_Z")}
                   >
-                    Z{getSortIndicator('score_Z')}
+                    Z{getSortIndicator("score_Z")}
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('score_A')}
+                    onClick={() => handleSort("score_A")}
                   >
-                    A{getSortIndicator('score_A')}
+                    A{getSortIndicator("score_A")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px]">
                     Feedback
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort('date')}
+                    onClick={() => handleSort("date")}
                   >
-                    Datum{getSortIndicator('date')}
+                    Datum{getSortIndicator("date")}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sortedData.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
+                    <td
+                      colSpan={10}
+                      className="px-4 py-8 text-center text-slate-500"
+                    >
                       Geen feedback gevonden
                     </td>
                   </tr>
@@ -223,7 +247,7 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
                     const isExpanded = expandedRows.has(item.allocation_id);
                     return (
                       <React.Fragment key={item.allocation_id}>
-                        <tr 
+                        <tr
                           className="hover:bg-slate-50 cursor-pointer"
                           onClick={() => toggleRow(item.allocation_id)}
                         >
@@ -241,35 +265,49 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
                             {item.project_name}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              item.feedback_type === 'self' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {item.feedback_type === 'self' ? 'Self' : 'Peer'}
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                item.feedback_type === "self"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-purple-100 text-purple-700"
+                              }`}
+                            >
+                              {item.feedback_type === "self" ? "Self" : "Peer"}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-800">
-                            {item.from_student_name || '–'}
+                            {item.from_student_name || "–"}
                           </td>
-                          <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_O)}`}>
-                            {item.score_O ? item.score_O.toFixed(1) : '–'}
+                          <td
+                            className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_O)}`}
+                          >
+                            {item.score_O ? item.score_O.toFixed(1) : "–"}
                           </td>
-                          <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_M)}`}>
-                            {item.score_M ? item.score_M.toFixed(1) : '–'}
+                          <td
+                            className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_M)}`}
+                          >
+                            {item.score_M ? item.score_M.toFixed(1) : "–"}
                           </td>
-                          <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_Z)}`}>
-                            {item.score_Z ? item.score_Z.toFixed(1) : '–'}
+                          <td
+                            className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_Z)}`}
+                          >
+                            {item.score_Z ? item.score_Z.toFixed(1) : "–"}
                           </td>
-                          <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_A)}`}>
-                            {item.score_A ? item.score_A.toFixed(1) : '–'}
+                          <td
+                            className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_A)}`}
+                          >
+                            {item.score_A ? item.score_A.toFixed(1) : "–"}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
-                            <p className="line-clamp-2">{item.combined_feedback}</p>
+                            <p className="line-clamp-2">
+                              {item.combined_feedback}
+                            </p>
                           </td>
                           <td className="px-4 py-3 text-center text-sm text-slate-600">
                             {new Date(item.date).toLocaleDateString("nl-NL", {
                               day: "2-digit",
                               month: "2-digit",
-                              year: "numeric"
+                              year: "numeric",
                             })}
                           </td>
                         </tr>
@@ -281,40 +319,60 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
                                   Individuele Criteria:
                                 </div>
                                 {item.criteria_details.length === 0 ? (
-                                  <p className="text-sm text-slate-500">Geen criteria details beschikbaar</p>
+                                  <p className="text-sm text-slate-500">
+                                    Geen criteria details beschikbaar
+                                  </p>
                                 ) : (
                                   <div className="space-y-2">
-                                    {item.criteria_details.map((criterion, idx) => (
-                                      <div key={idx} className="bg-white rounded-lg p-3 border border-slate-200">
-                                        <div className="flex items-start gap-3">
-                                          <div className="flex-shrink-0">
-                                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${
-                                              criterion.category === 'O' ? 'bg-blue-100 text-blue-700' :
-                                              criterion.category === 'M' ? 'bg-green-100 text-green-700' :
-                                              criterion.category === 'Z' ? 'bg-amber-100 text-amber-700' :
-                                              'bg-violet-100 text-violet-700'
-                                            }`}>
-                                              {criterion.category}
-                                            </span>
-                                          </div>
-                                          {criterion.score !== null && criterion.score !== undefined && (
+                                    {item.criteria_details.map(
+                                      (criterion, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="bg-white rounded-lg p-3 border border-slate-200"
+                                        >
+                                          <div className="flex items-start gap-3">
                                             <div className="flex-shrink-0">
-                                              <span className={`text-sm font-semibold ${getScoreColor(criterion.score)}`}>
-                                                {criterion.score.toFixed(1)}
+                                              <span
+                                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${
+                                                  criterion.category === "O"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : criterion.category === "M"
+                                                      ? "bg-green-100 text-green-700"
+                                                      : criterion.category ===
+                                                          "Z"
+                                                        ? "bg-amber-100 text-amber-700"
+                                                        : "bg-violet-100 text-violet-700"
+                                                }`}
+                                              >
+                                                {criterion.category}
                                               </span>
                                             </div>
-                                          )}
-                                          <div className="flex-1">
-                                            <div className="mb-1">
-                                              <span className="text-sm font-medium text-slate-800">{criterion.criterion_name}</span>
+                                            {criterion.score !== null &&
+                                              criterion.score !== undefined && (
+                                                <div className="flex-shrink-0">
+                                                  <span
+                                                    className={`text-sm font-semibold ${getScoreColor(criterion.score)}`}
+                                                  >
+                                                    {criterion.score.toFixed(1)}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            <div className="flex-1">
+                                              <div className="mb-1">
+                                                <span className="text-sm font-medium text-slate-800">
+                                                  {criterion.criterion_name}
+                                                </span>
+                                              </div>
+                                              {criterion.feedback && (
+                                                <p className="text-sm text-slate-600 mt-1">
+                                                  {criterion.feedback}
+                                                </p>
+                                              )}
                                             </div>
-                                            {criterion.feedback && (
-                                              <p className="text-sm text-slate-600 mt-1">{criterion.feedback}</p>
-                                            )}
                                           </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      ),
+                                    )}
                                   </div>
                                 )}
                               </div>

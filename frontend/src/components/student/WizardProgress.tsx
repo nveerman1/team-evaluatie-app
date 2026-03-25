@@ -12,7 +12,7 @@ export function WizardProgress({
   onStepClick,
 }: WizardProgressProps) {
   return (
-    <nav 
+    <nav
       className="flex items-center justify-center gap-2"
       aria-label="Wizard voortgang"
     >
@@ -35,17 +35,16 @@ export function WizardProgress({
           >
             <span className="flex items-center gap-2">
               {step.completed && currentStep !== step.number && (
-                <span className="text-green-600" aria-hidden="true">✓</span>
+                <span className="text-green-600" aria-hidden="true">
+                  ✓
+                </span>
               )}
               <span className="font-medium">{step.label}</span>
             </span>
           </button>
-          
+
           {index < steps.length - 1 && (
-            <div 
-              className="w-8 h-0.5 bg-gray-300 mx-1" 
-              aria-hidden="true"
-            />
+            <div className="w-8 h-0.5 bg-gray-300 mx-1" aria-hidden="true" />
           )}
         </div>
       ))}

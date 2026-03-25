@@ -93,7 +93,9 @@ export default function OverzichtTab() {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetchWithErrorHandling(`/api/v1/attendance/courses`);
+      const response = await fetchWithErrorHandling(
+        `/api/v1/attendance/courses`,
+      );
       const data = await response.json();
       setCourses(data);
     } catch (err) {
@@ -106,8 +108,10 @@ export default function OverzichtTab() {
     try {
       const params = new URLSearchParams();
       if (courseFilter) params.append("course_id", courseFilter);
-      
-      const response = await fetchWithErrorHandling(`/api/v1/attendance/projects-by-course?${params.toString()}`);
+
+      const response = await fetchWithErrorHandling(
+        `/api/v1/attendance/projects-by-course?${params.toString()}`,
+      );
       const data = await response.json();
       setProjects(data);
       console.log(`Fetched ${data.length} projects for course ${courseFilter}`);
@@ -122,15 +126,17 @@ export default function OverzichtTab() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams();
       if (debouncedSearchTerm) params.append("q", debouncedSearchTerm);
       if (courseFilter) params.append("course_id", courseFilter);
       if (projectFilter) params.append("project_id", projectFilter);
       params.append("page", page.toString());
       params.append("per_page", pageSize.toString());
-      
-      const response = await fetchWithErrorHandling(`/api/v1/attendance/overview?${params.toString()}`);
+
+      const response = await fetchWithErrorHandling(
+        `/api/v1/attendance/overview?${params.toString()}`,
+      );
       const data: OverviewResponse = await response.json();
       setStudents(data.items);
       setTotal(data.total);
@@ -145,7 +151,9 @@ export default function OverzichtTab() {
   };
 
   // Get unique classes
-  const uniqueClasses = Array.from(new Set(students.map(s => s.class_name).filter(Boolean)));
+  const uniqueClasses = Array.from(
+    new Set(students.map((s) => s.class_name).filter(Boolean)),
+  );
 
   return (
     <div className="space-y-6">
@@ -176,7 +184,7 @@ export default function OverzichtTab() {
             <option value="">Alle vakken</option>
             {courses.map((course) => (
               <option key={course.id} value={course.id}>
-                {course.name} {course.code ? `(${course.code})` : ''}
+                {course.name} {course.code ? `(${course.code})` : ""}
               </option>
             ))}
           </select>
@@ -188,27 +196,31 @@ export default function OverzichtTab() {
           >
             <option value="">Alle projecten</option>
             {projects.map((project) => {
-              let dateRange = '';
+              let dateRange = "";
               try {
                 if (project.start_date && project.end_date) {
                   const startDate = new Date(project.start_date);
                   const endDate = new Date(project.end_date);
-                  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                    dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
+                  if (
+                    !isNaN(startDate.getTime()) &&
+                    !isNaN(endDate.getTime())
+                  ) {
+                    dateRange = ` (${startDate.toLocaleDateString("nl-NL")} - ${endDate.toLocaleDateString("nl-NL")})`;
                   }
                 } else if (project.start_date) {
                   const startDate = new Date(project.start_date);
                   if (!isNaN(startDate.getTime())) {
-                    dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
+                    dateRange = ` (vanaf ${startDate.toLocaleDateString("nl-NL")})`;
                   }
                 }
               } catch (error) {
                 // Ignore date parsing errors
-                console.warn('Error parsing project dates:', error);
+                console.warn("Error parsing project dates:", error);
               }
               return (
                 <option key={project.id} value={project.id}>
-                  {project.title}{dateRange}
+                  {project.title}
+                  {dateRange}
                 </option>
               );
             })}
@@ -219,7 +231,8 @@ export default function OverzichtTab() {
       {/* Students Table */}
       <div className="space-y-4">
         <div className="text-sm text-gray-600">
-          Toont {students.length > 0 ? (page - 1) * pageSize + 1 : 0} tot {Math.min(page * pageSize, total)} van {total} studenten
+          Toont {students.length > 0 ? (page - 1) * pageSize + 1 : 0} tot{" "}
+          {Math.min(page * pageSize, total)} van {total} studenten
         </div>
         <div className="overflow-x-auto overflow-y-hidden rounded-xl">
           <table className="w-full bg-white">
@@ -252,20 +265,31 @@ export default function OverzichtTab() {
                 </tr>
               ) : (
                 students.map((student, index) => (
-                  <tr key={student.user_id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <tr
+                    key={student.user_id}
+                    className="border-b border-gray-200 hover:bg-gray-50"
+                  >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         {(page - 1) * pageSize + index < 3 ? (
                           <span className="text-2xl">
-                            {(page - 1) * pageSize + index === 0 ? "🥇" : (page - 1) * pageSize + index === 1 ? "🥈" : "🥉"}
+                            {(page - 1) * pageSize + index === 0
+                              ? "🥇"
+                              : (page - 1) * pageSize + index === 1
+                                ? "🥈"
+                                : "🥉"}
                           </span>
                         ) : (
-                          <span className="text-gray-500 font-medium">#{(page - 1) * pageSize + index + 1}</span>
+                          <span className="text-gray-500 font-medium">
+                            #{(page - 1) * pageSize + index + 1}
+                          </span>
                         )}
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="text-base font-bold text-slate-900">{student.user_name}</div>
+                      <div className="text-base font-bold text-slate-900">
+                        {student.user_name}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       {student.class_name ? (
@@ -281,7 +305,9 @@ export default function OverzichtTab() {
                     </td>
                     <td className="px-5 py-4">
                       <span className="text-sm text-green-600">
-                        {formatDuration(student.total_external_approved_seconds)}
+                        {formatDuration(
+                          student.total_external_approved_seconds,
+                        )}
                       </span>
                     </td>
                     <td className="px-5 py-4">

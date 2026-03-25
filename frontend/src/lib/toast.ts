@@ -1,15 +1,15 @@
 // Simple toast notification utility
 // This is a lightweight replacement for sonner that doesn't require additional dependencies
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = "success" | "error" | "info";
 
 class ToastManager {
   private container: HTMLDivElement | null = null;
 
   private getContainer(): HTMLDivElement {
     if (!this.container) {
-      this.container = document.createElement('div');
-      this.container.id = 'toast-container';
+      this.container = document.createElement("div");
+      this.container.id = "toast-container";
       this.container.style.cssText = `
         position: fixed;
         top: 20px;
@@ -25,16 +25,16 @@ class ToastManager {
     return this.container;
   }
 
-  private show(message: string, type: ToastType = 'info') {
+  private show(message: string, type: ToastType = "info") {
     const container = this.getContainer();
-    const toast = document.createElement('div');
-    
+    const toast = document.createElement("div");
+
     const bgColors = {
-      success: '#10b981',
-      error: '#ef4444',
-      info: '#3b82f6',
+      success: "#10b981",
+      error: "#ef4444",
+      info: "#3b82f6",
     };
-    
+
     toast.style.cssText = `
       background: ${bgColors[type]};
       color: white;
@@ -46,12 +46,12 @@ class ToastManager {
       max-width: 350px;
       word-wrap: break-word;
     `;
-    
+
     toast.textContent = message;
     container.appendChild(toast);
 
     setTimeout(() => {
-      toast.style.animation = 'slideOut 0.3s ease-out';
+      toast.style.animation = "slideOut 0.3s ease-out";
       setTimeout(() => {
         container.removeChild(toast);
       }, 300);
@@ -59,21 +59,21 @@ class ToastManager {
   }
 
   success(message: string) {
-    this.show(message, 'success');
+    this.show(message, "success");
   }
 
   error(message: string) {
-    this.show(message, 'error');
+    this.show(message, "error");
   }
 
   info(message: string) {
-    this.show(message, 'info');
+    this.show(message, "info");
   }
 }
 
 // Add CSS animations
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
+if (typeof document !== "undefined") {
+  const style = document.createElement("style");
   style.textContent = `
     @keyframes slideIn {
       from {

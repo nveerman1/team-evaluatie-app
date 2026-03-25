@@ -1,15 +1,14 @@
 import api from "@/lib/api";
-import {
-  RubricListResponse,
-  RubricOut,
-  CriterionOut,
-} from "@/dtos/rubric.dto";
+import { RubricListResponse, RubricOut, CriterionOut } from "@/dtos/rubric.dto";
 
 export const rubricService = {
   /**
    * Get list of rubrics with optional search and scope filter
    */
-  async getRubrics(query?: string, scope?: string): Promise<RubricListResponse> {
+  async getRubrics(
+    query?: string,
+    scope?: string,
+  ): Promise<RubricListResponse> {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (scope) params.set("scope", scope);

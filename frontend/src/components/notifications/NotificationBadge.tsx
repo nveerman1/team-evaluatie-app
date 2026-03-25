@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from "react";
+import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
-import { notificationService } from '@/services/notification.service';
-import { NotificationsList } from './NotificationsList';
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { notificationService } from "@/services/notification.service";
+import { NotificationsList } from "./NotificationsList";
 
 export function NotificationBadge() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -18,7 +18,7 @@ export function NotificationBadge() {
 
   useEffect(() => {
     loadUnreadCount();
-    
+
     // Poll for new notifications every 30 seconds
     const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
@@ -29,7 +29,7 @@ export function NotificationBadge() {
       const data = await notificationService.getNotifications(true);
       setUnreadCount(data.unread_count);
     } catch (err) {
-      console.error('Failed to load notification count:', err);
+      console.error("Failed to load notification count:", err);
     }
   };
 
@@ -48,7 +48,7 @@ export function NotificationBadge() {
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
         </Button>

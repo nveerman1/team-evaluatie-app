@@ -4,7 +4,9 @@ import api from "@/lib/api";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
-import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEditor";
+import RubricEditor, {
+  type CriterionItem,
+} from "@/components/teacher/RubricEditor";
 import { subjectService } from "@/services/subject.service";
 import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
 import { listProjectRubricCriteria } from "@/services/project-rubric-criterion-template.service";
@@ -49,9 +51,9 @@ const EMPTY_DESC = {
 // Maps lowercase project category names (stored in DB / seed data) to the capitalized
 // values expected by RubricEditor's PROJECT_CATEGORIES.
 const PROJECT_CATEGORY_NORM: Record<string, string> = {
-  "projectproces": "Projectproces",
-  "eindresultaat": "Eindresultaat",
-  "communicatie": "Communicatie",
+  projectproces: "Projectproces",
+  eindresultaat: "Eindresultaat",
+  communicatie: "Communicatie",
 };
 
 export default function EditRubricPageInner() {
@@ -68,18 +70,28 @@ export default function EditRubricPageInner() {
   // Template import modal state
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
-  const [peerCriteria, setPeerCriteria] = useState<PeerEvaluationCriterionTemplateDto[]>([]);
-  const [projectCriteria, setProjectCriteria] = useState<ProjectRubricCriterionTemplateDto[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+    null,
+  );
+  const [peerCriteria, setPeerCriteria] = useState<
+    PeerEvaluationCriterionTemplateDto[]
+  >([]);
+  const [projectCriteria, setProjectCriteria] = useState<
+    ProjectRubricCriterionTemplateDto[]
+  >([]);
   const [selectedCriteriaIds, setSelectedCriteriaIds] = useState<number[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingCriteria, setLoadingCriteria] = useState(false);
-  
+
   // Multi-select dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   // Calculate dropdown position (fixed positioning uses viewport coords)
   const updateDropdownPosition = useCallback(() => {
@@ -87,7 +99,7 @@ export default function EditRubricPageInner() {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + 4, // NO window.scrollY for fixed positioning
-        left: rect.left,      // NO window.scrollX for fixed positioning
+        left: rect.left, // NO window.scrollX for fixed positioning
         width: rect.width,
       });
     }
@@ -101,8 +113,10 @@ export default function EditRubricPageInner() {
       const target = event.target as Node;
       // Close only if click is outside both button and panel
       if (
-        buttonRef.current && !buttonRef.current.contains(target) &&
-        panelRef.current && !panelRef.current.contains(target)
+        buttonRef.current &&
+        !buttonRef.current.contains(target) &&
+        panelRef.current &&
+        !panelRef.current.contains(target)
       ) {
         setIsDropdownOpen(false);
       }
@@ -152,31 +166,38 @@ export default function EditRubricPageInner() {
           id: ci.id,
           name: ci.name,
           weight: ci.weight * 100,
-          category: (ci.category ? (PROJECT_CATEGORY_NORM[ci.category] ?? ci.category) : null),
+          category: ci.category
+            ? (PROJECT_CATEGORY_NORM[ci.category] ?? ci.category)
+            : null,
           order: ci.order ?? null,
           descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
           learning_objective_ids: ci.learning_objective_ids || [],
         }));
-        
+
         // Sort items by category order (as defined in RubricEditor), then by order within category
         // This ensures the items array matches the visual display order
         const categoryOrder: Record<string, number> = {
-          "Projectproces": 0,
-          "Eindresultaat": 1,
-          "Communicatie": 2,
+          Projectproces: 0,
+          Eindresultaat: 1,
+          Communicatie: 2,
         };
-        
+
         const sortedItems = [...mappedItems].sort((a, b) => {
           const catOrderA = categoryOrder[a.category || ""] ?? 999;
           const catOrderB = categoryOrder[b.category || ""] ?? 999;
           if (catOrderA !== catOrderB) return catOrderA - catOrderB;
           return (a.order ?? 0) - (b.order ?? 0);
         });
-        
+
         setItems(sortedItems);
       } catch (e: unknown) {
-        const err = e as { response?: { data?: { detail?: string } }; message?: string };
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
+        );
       } finally {
         setLoading(false);
       }
@@ -193,9 +214,12 @@ export default function EditRubricPageInner() {
     async function loadSubjects() {
       setLoadingSubjects(true);
       try {
-        const subjectsResponse = await subjectService.listSubjects({ per_page: 100, is_active: true });
+        const subjectsResponse = await subjectService.listSubjects({
+          per_page: 100,
+          is_active: true,
+        });
         setSubjects(subjectsResponse.subjects);
-        
+
         // Auto-select first subject if we have subjects
         if (subjectsResponse.subjects.length > 0 && !selectedSubjectId) {
           setSelectedSubjectId(subjectsResponse.subjects[0].id);
@@ -277,7 +301,7 @@ export default function EditRubricPageInner() {
   const capitalizeWords = (str: string): string => {
     return str
       .split(/[\s_-]+/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   };
 
@@ -285,7 +309,7 @@ export default function EditRubricPageInner() {
   const groupPeerCriteria = () => {
     const grouped: Record<string, typeof peerCriteria> = {};
     const knownKeys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"];
-    
+
     peerCriteria.forEach((criterion) => {
       const normalizedKey = normalizeCategory(criterion.omza_category);
       const key = normalizedKey || "overig";
@@ -297,13 +321,13 @@ export default function EditRubricPageInner() {
 
     // Sort groups: known keys first in order, then others alphabetically, then "overig"
     const sortedKeys: string[] = [];
-    knownKeys.forEach(key => {
+    knownKeys.forEach((key) => {
       if (grouped[key]) sortedKeys.push(key);
     });
     Object.keys(grouped)
-      .filter(k => !knownKeys.includes(k) && k !== "overig")
+      .filter((k) => !knownKeys.includes(k) && k !== "overig")
       .sort()
-      .forEach(k => sortedKeys.push(k));
+      .forEach((k) => sortedKeys.push(k));
     if (grouped["overig"]) sortedKeys.push("overig");
 
     return { grouped, sortedKeys };
@@ -313,7 +337,7 @@ export default function EditRubricPageInner() {
   const groupProjectCriteria = () => {
     const grouped: Record<string, typeof projectCriteria> = {};
     const knownKeys = ["projectproces", "eindresultaat", "communicatie"];
-    
+
     projectCriteria.forEach((criterion) => {
       const normalizedKey = normalizeCategory(criterion.category);
       const key = normalizedKey || "overig";
@@ -325,13 +349,13 @@ export default function EditRubricPageInner() {
 
     // Sort groups: known keys first in order, then others alphabetically, then "overig"
     const sortedKeys: string[] = [];
-    knownKeys.forEach(key => {
+    knownKeys.forEach((key) => {
       if (grouped[key]) sortedKeys.push(key);
     });
     Object.keys(grouped)
-      .filter(k => !knownKeys.includes(k) && k !== "overig")
+      .filter((k) => !knownKeys.includes(k) && k !== "overig")
       .sort()
-      .forEach(k => sortedKeys.push(k));
+      .forEach((k) => sortedKeys.push(k));
     if (grouped["overig"]) sortedKeys.push("overig");
 
     return { grouped, sortedKeys };
@@ -340,18 +364,18 @@ export default function EditRubricPageInner() {
   // Get label for a category key
   const getCategoryLabel = (key: string, isPeer: boolean): string => {
     const peerLabels: Record<string, string> = {
-      "organiseren": "Organiseren",
-      "meedoen": "Meedoen",
-      "zelfvertrouwen": "Zelfvertrouwen",
-      "autonomie": "Autonomie",
-      "overig": "Overig",
+      organiseren: "Organiseren",
+      meedoen: "Meedoen",
+      zelfvertrouwen: "Zelfvertrouwen",
+      autonomie: "Autonomie",
+      overig: "Overig",
     };
-    
+
     const projectLabels: Record<string, string> = {
-      "projectproces": "Projectproces",
-      "eindresultaat": "Eindresultaat",
-      "communicatie": "Communicatie",
-      "overig": "Overig",
+      projectproces: "Projectproces",
+      eindresultaat: "Eindresultaat",
+      communicatie: "Communicatie",
+      overig: "Overig",
     };
 
     const labels = isPeer ? peerLabels : projectLabels;
@@ -371,14 +395,16 @@ export default function EditRubricPageInner() {
     let newItems: CriterionItem[] = [];
 
     if (rubric?.scope === "peer") {
-      const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
-      
+      const selectedTemplates = peerCriteria.filter((c) =>
+        selectedCriteriaIds.includes(c.id),
+      );
+
       // Map OMZA category to proper category format
       const categoryMap: Record<string, string> = {
-        "organiseren": "Organiseren",
-        "meedoen": "Meedoen",
-        "zelfvertrouwen": "Zelfvertrouwen",
-        "autonomie": "Autonomie",
+        organiseren: "Organiseren",
+        meedoen: "Meedoen",
+        zelfvertrouwen: "Zelfvertrouwen",
+        autonomie: "Autonomie",
       };
 
       newItems = selectedTemplates.map((template, idx) => ({
@@ -396,13 +422,15 @@ export default function EditRubricPageInner() {
         learning_objective_ids: template.learning_objective_ids || [],
       }));
     } else {
-      const selectedTemplates = projectCriteria.filter(c => selectedCriteriaIds.includes(c.id));
-      
+      const selectedTemplates = projectCriteria.filter((c) =>
+        selectedCriteriaIds.includes(c.id),
+      );
+
       // Map project category to proper category format
       const categoryMap: Record<string, string> = {
-        "projectproces": "Projectproces",
-        "eindresultaat": "Eindresultaat",
-        "communicatie": "Communicatie",
+        projectproces: "Projectproces",
+        eindresultaat: "Eindresultaat",
+        communicatie: "Communicatie",
       };
 
       newItems = selectedTemplates.map((template, idx) => ({
@@ -425,11 +453,11 @@ export default function EditRubricPageInner() {
     setShowTemplateModal(false);
     setSelectedCriteriaIds([]);
     setSelectedSubjectId(null);
-    setInfo(`${newItems.length} criterium/criteria toegevoegd. Vergeet niet op te slaan!`);
+    setInfo(
+      `${newItems.length} criterium/criteria toegevoegd. Vergeet niet op te slaan!`,
+    );
     setTimeout(() => setInfo(null), 4000);
   };
-
-
 
   async function saveAll() {
     if (!rubric) return;
@@ -440,7 +468,7 @@ export default function EditRubricPageInner() {
       const totalPct = items.reduce((s, it) => s + (Number(it.weight) || 0), 0);
       if (Math.abs(totalPct - 100) > 1) {
         setError(
-          `Totale weging is ${totalPct.toFixed(1)}%, moet 100% zijn (±1%). Pas de wegingen aan.`
+          `Totale weging is ${totalPct.toFixed(1)}%, moet 100% zijn (±1%). Pas de wegingen aan.`,
         );
         return;
       }
@@ -450,7 +478,7 @@ export default function EditRubricPageInner() {
           name: it.name?.trim() || `Criterium ${i + 1}`,
           weight: (Number(it.weight) || 0) / 100,
           category: it.category ?? null,
-          order: i + 1,  // Use array index as global order, not per-category order
+          order: i + 1, // Use array index as global order, not per-category order
           descriptors: {
             level1: it.descriptors?.level1 ?? "",
             level2: it.descriptors?.level2 ?? "",
@@ -481,8 +509,13 @@ export default function EditRubricPageInner() {
       setInfo("Opgeslagen ✔");
       setTimeout(() => setInfo(null), 1800);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      setError(err?.response?.data?.detail || err?.message || "Opslaan mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      setError(
+        err?.response?.data?.detail || err?.message || "Opslaan mislukt",
+      );
     } finally {
       setSaving(false);
     }
@@ -495,8 +528,13 @@ export default function EditRubricPageInner() {
       const newId = res.data?.id;
       if (newId) router.replace(`/teacher/rubrics/${newId}/edit`);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      alert(err?.response?.data?.detail || err?.message || "Dupliceren mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      alert(
+        err?.response?.data?.detail || err?.message || "Dupliceren mislukt",
+      );
     }
   }
   async function deleteRubric() {
@@ -506,8 +544,13 @@ export default function EditRubricPageInner() {
       await api.delete(`/rubrics/${rubric.id}`);
       router.replace("/teacher/rubrics");
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      alert(err?.response?.data?.detail || err?.message || "Verwijderen mislukt");
+      const err = e as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      alert(
+        err?.response?.data?.detail || err?.message || "Verwijderen mislukt",
+      );
     }
   }
 
@@ -532,8 +575,8 @@ export default function EditRubricPageInner() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <a 
-              href="/teacher/rubrics" 
+            <a
+              href="/teacher/rubrics"
               className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
             >
               Terug
@@ -542,7 +585,7 @@ export default function EditRubricPageInner() {
               <button
                 onClick={() => setShowTemplateModal(true)}
                 className={`px-3 py-1.5 rounded-lg border bg-white text-sm font-medium shadow-sm ${
-                  isPeerRubric 
+                  isPeerRubric
                     ? "border-blue-200 text-blue-600 hover:bg-blue-50"
                     : "border-green-200 text-green-600 hover:bg-green-50"
                 }`}
@@ -579,7 +622,9 @@ export default function EditRubricPageInner() {
           <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
         )}
         {info && (
-          <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
+          <div className="p-3 rounded-lg bg-green-50 text-green-700">
+            {info}
+          </div>
         )}
 
         {rubric && (
@@ -597,7 +642,9 @@ export default function EditRubricPageInner() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 my-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Criteria uit template importeren</h2>
+              <h2 className="text-xl font-bold">
+                Criteria uit template importeren
+              </h2>
               <button
                 onClick={() => {
                   setShowTemplateModal(false);
@@ -612,7 +659,9 @@ export default function EditRubricPageInner() {
 
             {/* Subject selector */}
             <div className="space-y-2 mb-4">
-              <label className="block text-sm font-medium">Vakgebied / Sectie</label>
+              <label className="block text-sm font-medium">
+                Vakgebied / Sectie
+              </label>
               {loadingSubjects ? (
                 <div className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
                   Vakgebieden laden...
@@ -626,7 +675,9 @@ export default function EditRubricPageInner() {
                   className="w-full border rounded-lg px-3 py-2"
                   value={selectedSubjectId || ""}
                   onChange={(e) => {
-                    setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null);
+                    setSelectedSubjectId(
+                      e.target.value ? parseInt(e.target.value) : null,
+                    );
                     setSelectedCriteriaIds([]);
                   }}
                 >
@@ -642,14 +693,19 @@ export default function EditRubricPageInner() {
             {/* Criteria multi-select dropdown */}
             {selectedSubjectId && (
               <div className="space-y-2">
-                <label className="block text-sm font-medium">Beschikbare criteria</label>
+                <label className="block text-sm font-medium">
+                  Beschikbare criteria
+                </label>
                 <p className="text-sm text-gray-500">
                   Selecteer welke criteria je wilt importeren
                 </p>
-                
+
                 {loadingCriteria ? (
-                  <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
-                ) : (isPeerRubric ? peerCriteria : projectCriteria).length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    Criteria laden...
+                  </div>
+                ) : (isPeerRubric ? peerCriteria : projectCriteria).length ===
+                  0 ? (
                   <div className="p-4 text-center text-gray-500 text-sm border rounded-lg bg-gray-50">
                     Geen criteria templates gevonden voor dit vakgebied.
                   </div>
@@ -661,7 +717,13 @@ export default function EditRubricPageInner() {
                       onClick={toggleDropdown}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
                     >
-                      <span className={selectedCriteriaIds.length === 0 ? "text-gray-500" : ""}>
+                      <span
+                        className={
+                          selectedCriteriaIds.length === 0
+                            ? "text-gray-500"
+                            : ""
+                        }
+                      >
                         {getSelectedCriteriaText()}
                       </span>
                       <svg
@@ -670,137 +732,180 @@ export default function EditRubricPageInner() {
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
 
-                    {isDropdownOpen && dropdownPosition && createPortal(
-                      <div 
-                        ref={panelRef}
-                        className="fixed z-[9999] bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
-                        style={{
-                          top: `${dropdownPosition.top}px`,
-                          left: `${dropdownPosition.left}px`,
-                          width: `${dropdownPosition.width}px`,
-                        }}
-                      >
-                        <div className="py-1">
-                          {(() => {
-                            if (isPeerRubric) {
-                              const { grouped, sortedKeys } = groupPeerCriteria();
-                              
-                              // Check if we have any items at all
-                              const totalItems = Object.values(grouped).reduce((sum, items) => sum + items.length, 0);
-                              
-                              if (totalItems === 0) {
-                                return (
-                                  <div className="px-3 py-2 text-sm text-gray-500">
-                                    Geen criteria beschikbaar
-                                  </div>
-                                );
-                              }
-                              
-                              // If no groups were created (shouldn't happen), show all items without grouping
-                              if (sortedKeys.length === 0 && peerCriteria.length > 0) {
-                                return peerCriteria.map((criterion) => (
-                                  <label
-                                    key={criterion.id}
-                                    className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedCriteriaIds.includes(criterion.id)}
-                                      onChange={() => handleCriterionToggle(criterion.id)}
-                                      className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm">{criterion.title}</span>
-                                  </label>
-                                ));
-                              }
-                              
-                              // Render grouped items
-                              return sortedKeys.map((key) => (
-                                <div key={key}>
-                                  <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
-                                    {getCategoryLabel(key, true)}
-                                  </div>
-                                  {grouped[key].map((criterion) => (
+                    {isDropdownOpen &&
+                      dropdownPosition &&
+                      createPortal(
+                        <div
+                          ref={panelRef}
+                          className="fixed z-[9999] bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                          style={{
+                            top: `${dropdownPosition.top}px`,
+                            left: `${dropdownPosition.left}px`,
+                            width: `${dropdownPosition.width}px`,
+                          }}
+                        >
+                          <div className="py-1">
+                            {(() => {
+                              if (isPeerRubric) {
+                                const { grouped, sortedKeys } =
+                                  groupPeerCriteria();
+
+                                // Check if we have any items at all
+                                const totalItems = Object.values(
+                                  grouped,
+                                ).reduce((sum, items) => sum + items.length, 0);
+
+                                if (totalItems === 0) {
+                                  return (
+                                    <div className="px-3 py-2 text-sm text-gray-500">
+                                      Geen criteria beschikbaar
+                                    </div>
+                                  );
+                                }
+
+                                // If no groups were created (shouldn't happen), show all items without grouping
+                                if (
+                                  sortedKeys.length === 0 &&
+                                  peerCriteria.length > 0
+                                ) {
+                                  return peerCriteria.map((criterion) => (
                                     <label
                                       key={criterion.id}
                                       className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
                                     >
                                       <input
                                         type="checkbox"
-                                        checked={selectedCriteriaIds.includes(criterion.id)}
-                                        onChange={() => handleCriterionToggle(criterion.id)}
+                                        checked={selectedCriteriaIds.includes(
+                                          criterion.id,
+                                        )}
+                                        onChange={() =>
+                                          handleCriterionToggle(criterion.id)
+                                        }
                                         className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                       />
-                                      <span className="text-sm">{criterion.title}</span>
+                                      <span className="text-sm">
+                                        {criterion.title}
+                                      </span>
                                     </label>
-                                  ))}
-                                </div>
-                              ));
-                            } else {
-                              // Project rubric
-                              const { grouped, sortedKeys } = groupProjectCriteria();
-                              
-                              // Check if we have any items at all
-                              const totalItems = Object.values(grouped).reduce((sum, items) => sum + items.length, 0);
-                              
-                              if (totalItems === 0) {
-                                return (
-                                  <div className="px-3 py-2 text-sm text-gray-500">
-                                    Geen criteria beschikbaar
+                                  ));
+                                }
+
+                                // Render grouped items
+                                return sortedKeys.map((key) => (
+                                  <div key={key}>
+                                    <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                      {getCategoryLabel(key, true)}
+                                    </div>
+                                    {grouped[key].map((criterion) => (
+                                      <label
+                                        key={criterion.id}
+                                        className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedCriteriaIds.includes(
+                                            criterion.id,
+                                          )}
+                                          onChange={() =>
+                                            handleCriterionToggle(criterion.id)
+                                          }
+                                          className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm">
+                                          {criterion.title}
+                                        </span>
+                                      </label>
+                                    ))}
                                   </div>
-                                );
-                              }
-                              
-                              // If no groups were created (shouldn't happen), show all items without grouping
-                              if (sortedKeys.length === 0 && projectCriteria.length > 0) {
-                                return projectCriteria.map((criterion) => (
-                                  <label
-                                    key={criterion.id}
-                                    className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedCriteriaIds.includes(criterion.id)}
-                                      onChange={() => handleCriterionToggle(criterion.id)}
-                                      className="mr-3 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                                    />
-                                    <span className="text-sm">{criterion.title}</span>
-                                  </label>
                                 ));
-                              }
-                              
-                              // Render grouped items
-                              return sortedKeys.map((key) => (
-                                <div key={key}>
-                                  <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
-                                    {getCategoryLabel(key, false)}
-                                  </div>
-                                  {grouped[key].map((criterion) => (
+                              } else {
+                                // Project rubric
+                                const { grouped, sortedKeys } =
+                                  groupProjectCriteria();
+
+                                // Check if we have any items at all
+                                const totalItems = Object.values(
+                                  grouped,
+                                ).reduce((sum, items) => sum + items.length, 0);
+
+                                if (totalItems === 0) {
+                                  return (
+                                    <div className="px-3 py-2 text-sm text-gray-500">
+                                      Geen criteria beschikbaar
+                                    </div>
+                                  );
+                                }
+
+                                // If no groups were created (shouldn't happen), show all items without grouping
+                                if (
+                                  sortedKeys.length === 0 &&
+                                  projectCriteria.length > 0
+                                ) {
+                                  return projectCriteria.map((criterion) => (
                                     <label
                                       key={criterion.id}
                                       className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
                                     >
                                       <input
                                         type="checkbox"
-                                        checked={selectedCriteriaIds.includes(criterion.id)}
-                                        onChange={() => handleCriterionToggle(criterion.id)}
+                                        checked={selectedCriteriaIds.includes(
+                                          criterion.id,
+                                        )}
+                                        onChange={() =>
+                                          handleCriterionToggle(criterion.id)
+                                        }
                                         className="mr-3 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                                       />
-                                      <span className="text-sm">{criterion.title}</span>
+                                      <span className="text-sm">
+                                        {criterion.title}
+                                      </span>
                                     </label>
-                                  ))}
-                                </div>
-                              ));
-                            }
-                          })()}
-                        </div>
-                      </div>,
-                      document.body
-                    )}
+                                  ));
+                                }
+
+                                // Render grouped items
+                                return sortedKeys.map((key) => (
+                                  <div key={key}>
+                                    <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                      {getCategoryLabel(key, false)}
+                                    </div>
+                                    {grouped[key].map((criterion) => (
+                                      <label
+                                        key={criterion.id}
+                                        className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedCriteriaIds.includes(
+                                            criterion.id,
+                                          )}
+                                          onChange={() =>
+                                            handleCriterionToggle(criterion.id)
+                                          }
+                                          className="mr-3 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                        />
+                                        <span className="text-sm">
+                                          {criterion.title}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                ));
+                              }
+                            })()}
+                          </div>
+                        </div>,
+                        document.body,
+                      )}
                   </>
                 )}
                 {selectedCriteriaIds.length > 0 && (

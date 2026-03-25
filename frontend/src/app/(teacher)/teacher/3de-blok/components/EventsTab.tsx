@@ -10,13 +10,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Pagination } from "@/components/ui/pagination";
+import { Trash2, Edit, Download, X } from "lucide-react";
 import {
-  Trash2,
-  Edit,
-  Download,
-  X,
-} from "lucide-react";
-import { attendanceService, type AttendanceEvent } from "@/services/attendance.service";
+  attendanceService,
+  type AttendanceEvent,
+} from "@/services/attendance.service";
 import { toast } from "@/lib/toast";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -77,17 +75,17 @@ function calculateDuration(start: string, end: string | null): string {
 export default function EventsTab() {
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [nameQuery, setNameQuery] = useState("");
   const [classQuery, setClassQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  
+
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  
+
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<SchoolCheckRow | null>(null);
@@ -104,7 +102,7 @@ export default function EventsTab() {
   const fetchSchoolEvents = async () => {
     try {
       setLoading(true);
-      
+
       const params: Record<string, boolean | number | string> = {
         is_external: false,
         per_page: pageSize,
@@ -132,7 +130,9 @@ export default function EventsTab() {
     } catch (err) {
       console.error("Error fetching school events:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      toast.error(`Kon school check-in/out gebeurtenissen niet ophalen: ${errorMessage}`);
+      toast.error(
+        `Kon school check-in/out gebeurtenissen niet ophalen: ${errorMessage}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -162,9 +162,16 @@ export default function EventsTab() {
   // Use rows directly without client-side filtering (server-side pagination handles it)
   const filtered = rows;
 
-  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[Number(id)]).map(Number), [selected]);
+  const selectedIds = useMemo(
+    () =>
+      Object.keys(selected)
+        .filter((id) => selected[Number(id)])
+        .map(Number),
+    [selected],
+  );
   const selectedCount = selectedIds.length;
-  const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selected[r.id]);
+  const allVisibleSelected =
+    filtered.length > 0 && filtered.every((r) => selected[r.id]);
 
   function toggleSelectAllVisible() {
     setSelected((prev) => {
@@ -180,17 +187,41 @@ export default function EventsTab() {
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; text: string; clear: () => void }> = [];
-    if (nameQuery.trim()) chips.push({ key: "name", text: `Naam: ${nameQuery}`, clear: () => setNameQuery("") });
-    if (classQuery.trim()) chips.push({ key: "class", text: `Klas: ${classQuery}`, clear: () => setClassQuery("") });
-    if (startDate) chips.push({ key: "startDate", text: `Van: ${startDate}`, clear: () => setStartDate("") });
-    if (endDate) chips.push({ key: "endDate", text: `Tot: ${endDate}`, clear: () => setEndDate("") });
+    if (nameQuery.trim())
+      chips.push({
+        key: "name",
+        text: `Naam: ${nameQuery}`,
+        clear: () => setNameQuery(""),
+      });
+    if (classQuery.trim())
+      chips.push({
+        key: "class",
+        text: `Klas: ${classQuery}`,
+        clear: () => setClassQuery(""),
+      });
+    if (startDate)
+      chips.push({
+        key: "startDate",
+        text: `Van: ${startDate}`,
+        clear: () => setStartDate(""),
+      });
+    if (endDate)
+      chips.push({
+        key: "endDate",
+        text: `Tot: ${endDate}`,
+        clear: () => setEndDate(""),
+      });
     return chips;
   }, [nameQuery, classQuery, startDate, endDate]);
 
   async function bulkDelete() {
     if (selectedCount === 0) return;
-    
-    if (!confirm(`Weet je zeker dat je ${selectedCount} registratie(s) wilt verwijderen?`)) {
+
+    if (
+      !confirm(
+        `Weet je zeker dat je ${selectedCount} registratie(s) wilt verwijderen?`,
+      )
+    ) {
       return;
     }
 
@@ -229,7 +260,7 @@ export default function EventsTab() {
         formatDateTime(r.check_in),
         r.check_out ? formatDateTime(r.check_out) : "-",
         r.duration,
-      ].join(",")
+      ].join(","),
     );
     const csv = [header, ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -308,7 +339,9 @@ export default function EventsTab() {
 
           {activeChips.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <div className="text-xs font-medium text-slate-500">Actieve filters:</div>
+              <div className="text-xs font-medium text-slate-500">
+                Actieve filters:
+              </div>
               {activeChips.map((c) => (
                 <Chip key={c.key} text={c.text} onRemove={c.clear} />
               ))}
@@ -323,11 +356,15 @@ export default function EventsTab() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
               <span className="text-slate-500">Geselecteerd</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{selectedCount}</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">
+                {selectedCount}
+              </span>
             </span>
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
               <span className="text-slate-500">Zichtbaar</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{filtered.length}</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">
+                {filtered.length}
+              </span>
             </span>
           </div>
 
@@ -348,8 +385,12 @@ export default function EventsTab() {
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
-            <div className="text-sm font-semibold text-slate-900">In-/Uitcheck gebeurtenissen</div>
-            <div className="text-xs text-slate-500">Alle school check-in/out registraties binnen je filters</div>
+            <div className="text-sm font-semibold text-slate-900">
+              In-/Uitcheck gebeurtenissen
+            </div>
+            <div className="text-xs text-slate-500">
+              Alle school check-in/out registraties binnen je filters
+            </div>
           </div>
           <Button variant="secondary" onClick={exportCsv} className="gap-2">
             <Download className="h-4 w-4" />
@@ -391,65 +432,79 @@ export default function EventsTab() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center">
-                    <div className="text-sm font-medium text-slate-900">Geen resultaten</div>
-                    <div className="mt-1 text-xs text-slate-500">Pas je filters aan of wis ze om alles te zien.</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      Geen resultaten
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Pas je filters aan of wis ze om alles te zien.
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filtered.map((r) => (
-                <tr key={r.id} className="group hover:bg-slate-50/60">
-                  <td className="px-5 py-4 align-top">
-                    <input
-                      type="checkbox"
-                      checked={!!selected[r.id]}
-                      onChange={() => toggleSelectOne(r.id)}
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                      aria-label={`Selecteer ${r.student_name}`}
-                    />
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm font-bold text-slate-900">{r.student_name}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                      {r.class_name}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm text-slate-700">{formatDateTime(r.check_in)}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm text-slate-700">
-                      {r.check_out ? formatDateTime(r.check_out) : <span className="text-slate-400">Nog open</span>}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm font-semibold text-slate-900">{r.duration}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(r)}
-                        className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                        aria-label="Bewerken"
-                        title="Bewerken"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteOne(r.id)}
-                        className="rounded-lg p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                        aria-label="Verwijderen"
-                        title="Verwijderen"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                  <tr key={r.id} className="group hover:bg-slate-50/60">
+                    <td className="px-5 py-4 align-top">
+                      <input
+                        type="checkbox"
+                        checked={!!selected[r.id]}
+                        onChange={() => toggleSelectOne(r.id)}
+                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                        aria-label={`Selecteer ${r.student_name}`}
+                      />
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm font-bold text-slate-900">
+                        {r.student_name}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                        {r.class_name}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm text-slate-700">
+                        {formatDateTime(r.check_in)}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm text-slate-700">
+                        {r.check_out ? (
+                          formatDateTime(r.check_out)
+                        ) : (
+                          <span className="text-slate-400">Nog open</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm font-semibold text-slate-900">
+                        {r.duration}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(r)}
+                          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          aria-label="Bewerken"
+                          title="Bewerken"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteOne(r.id)}
+                          className="rounded-lg p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          aria-label="Verwijderen"
+                          title="Verwijderen"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -457,7 +512,9 @@ export default function EventsTab() {
 
         <div className="flex flex-col gap-4 border-t border-slate-200 px-5 py-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between text-xs text-slate-500">
-            <div>Toont {filtered.length} van {total} registraties</div>
+            <div>
+              Toont {filtered.length} van {total} registraties
+            </div>
           </div>
           {totalPages > 1 && (
             <Pagination
@@ -478,7 +535,10 @@ export default function EventsTab() {
             <DialogDescription>
               {selectedRow && (
                 <>
-                  <span className="font-semibold">{selectedRow.student_name}</span> • {selectedRow.class_name}
+                  <span className="font-semibold">
+                    {selectedRow.student_name}
+                  </span>{" "}
+                  • {selectedRow.class_name}
                 </>
               )}
             </DialogDescription>
@@ -486,17 +546,25 @@ export default function EventsTab() {
           {selectedRow && (
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-2">Check-in tijd</label>
+                <label className="text-sm font-medium text-slate-700 block mb-2">
+                  Check-in tijd
+                </label>
                 <input
                   type="datetime-local"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
-                  value={editCheckIn ? (() => {
-                    try {
-                      return new Date(editCheckIn).toISOString().slice(0, 16);
-                    } catch {
-                      return "";
-                    }
-                  })() : ""}
+                  value={
+                    editCheckIn
+                      ? (() => {
+                          try {
+                            return new Date(editCheckIn)
+                              .toISOString()
+                              .slice(0, 16);
+                          } catch {
+                            return "";
+                          }
+                        })()
+                      : ""
+                  }
                   onChange={(e) => {
                     if (e.target.value) {
                       try {
@@ -509,17 +577,25 @@ export default function EventsTab() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-2">Check-out tijd</label>
+                <label className="text-sm font-medium text-slate-700 block mb-2">
+                  Check-out tijd
+                </label>
                 <input
                   type="datetime-local"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
-                  value={editCheckOut ? (() => {
-                    try {
-                      return new Date(editCheckOut).toISOString().slice(0, 16);
-                    } catch {
-                      return "";
-                    }
-                  })() : ""}
+                  value={
+                    editCheckOut
+                      ? (() => {
+                          try {
+                            return new Date(editCheckOut)
+                              .toISOString()
+                              .slice(0, 16);
+                          } catch {
+                            return "";
+                          }
+                        })()
+                      : ""
+                  }
                   onChange={(e) => {
                     if (e.target.value) {
                       try {
@@ -534,12 +610,13 @@ export default function EventsTab() {
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditModalOpen(false)}
+                >
                   Annuleren
                 </Button>
-                <Button onClick={saveEdit}>
-                  Opslaan
-                </Button>
+                <Button onClick={saveEdit}>Opslaan</Button>
               </div>
             </div>
           )}

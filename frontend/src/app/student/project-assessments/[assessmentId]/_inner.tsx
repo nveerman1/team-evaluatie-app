@@ -28,9 +28,7 @@ function RubricMatrixRow({
         {score && (
           <span className="inline-flex items-baseline gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
             <span className="font-medium text-slate-700">Score</span>
-            <span className="text-slate-400">
-              {score} / 5
-            </span>
+            <span className="text-slate-400">{score} / 5</span>
           </span>
         )}
       </div>
@@ -164,19 +162,29 @@ export default function StudentProjectAssessmentInner() {
   // Prioritize student-specific overrides over team scores
   const scoreMap: Record<number, { score: number; comment?: string }> = {};
   // First, add all team scores (student_id is null)
-  data.scores.filter(s => s.student_id == null).forEach((s) => {
-    scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
-  });
+  data.scores
+    .filter((s) => s.student_id == null)
+    .forEach((s) => {
+      scoreMap[s.criterion_id] = {
+        score: s.score,
+        comment: s.comment || undefined,
+      };
+    });
   // Then, override with student-specific scores if any exist
-  data.scores.filter(s => s.student_id != null).forEach((s) => {
-    scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
-  });
+  data.scores
+    .filter((s) => s.student_id != null)
+    .forEach((s) => {
+      scoreMap[s.criterion_id] = {
+        score: s.score,
+        comment: s.comment || undefined,
+      };
+    });
 
   // Calculate category weighted averages and convert to 1-10 scale
   const categoryGrades: Record<string, number> = {};
   const categoryWeightedSums: Record<string, number> = {};
   const categoryWeights: Record<string, number> = {};
-  
+
   data.criteria.forEach((criterion) => {
     const category = criterion.category || "Overig";
     const score = scoreMap[criterion.id];
@@ -190,7 +198,7 @@ export default function StudentProjectAssessmentInner() {
       categoryWeights[category] += criterion.weight;
     }
   });
-  
+
   // Convert category weighted averages to 1-10 scale using curved mapping
   // Backend formula: grade = 1 + (normalized ** 0.85) * 9
   // With default exponent 0.85: 1/5 → 1.0, 3/5 → 6.0, 5/5 → 10.0
@@ -200,9 +208,13 @@ export default function StudentProjectAssessmentInner() {
     Object.keys(categoryWeightedSums).forEach((category) => {
       if (categoryWeights[category] > 0) {
         // Calculate weighted average
-        const avgScore = categoryWeightedSums[category] / categoryWeights[category];
+        const avgScore =
+          categoryWeightedSums[category] / categoryWeights[category];
         // Clamp score to valid range
-        const clampedScore = Math.max(data.rubric_scale_min, Math.min(data.rubric_scale_max, avgScore));
+        const clampedScore = Math.max(
+          data.rubric_scale_min,
+          Math.min(data.rubric_scale_max, avgScore),
+        );
         // Normalize to 0-1 range
         const normalized = (clampedScore - data.rubric_scale_min) / scaleRange;
         // Apply curved mapping
@@ -224,9 +236,17 @@ export default function StudentProjectAssessmentInner() {
               </h1>
               <p className={studentStyles.header.subtitle}>
                 Rubric: {data.rubric_title}
-                {data.teacher_name && <> • Beoordeeld door: {data.teacher_name}</>}
+                {data.teacher_name && (
+                  <> • Beoordeeld door: {data.teacher_name}</>
+                )}
                 {data.assessment.published_at && (
-                  <> • Datum: {new Date(data.assessment.published_at).toLocaleDateString("nl-NL")}</>
+                  <>
+                    {" "}
+                    • Datum:{" "}
+                    {new Date(data.assessment.published_at).toLocaleDateString(
+                      "nl-NL",
+                    )}
+                  </>
                 )}
               </p>
             </div>
@@ -242,61 +262,71 @@ export default function StudentProjectAssessmentInner() {
 
       {/* Main Content */}
       <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
-
-      {successMsg && (
-        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-emerald-700">
-          <span>✓</span>
-          <span>{successMsg}</span>
-        </div>
-      )}
-      {error && (
-        <div className="rounded-xl bg-rose-50 p-3 text-rose-700">{error}</div>
-      )}
+        {successMsg && (
+          <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-emerald-700">
+            <span>✓</span>
+            <span>{successMsg}</span>
+          </div>
+        )}
+        {error && (
+          <div className="rounded-xl bg-rose-50 p-3 text-rose-700">{error}</div>
+        )}
 
         {/* Rubric matrices grouped by category */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="divide-y divide-slate-100">
-        {(() => {
-          // Group criteria by category
-          const grouped = data.criteria.reduce((acc, c) => {
-            const cat = c.category || "Overig";
-            if (!acc[cat]) acc[cat] = [];
-            acc[cat].push(c);
-            return acc;
-          }, {} as Record<string, typeof data.criteria>);
+            {(() => {
+              // Group criteria by category
+              const grouped = data.criteria.reduce(
+                (acc, c) => {
+                  const cat = c.category || "Overig";
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push(c);
+                  return acc;
+                },
+                {} as Record<string, typeof data.criteria>,
+              );
 
-          // Render each category with its criteria
-          return Object.entries(grouped).map(([category, categoryCriteria]) => (
-            <div key={category}>
-              {/* Category header */}
-              <div className="px-6 py-3 bg-slate-100">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
-              </div>
-              {/* Criteria in this category */}
-              {categoryCriteria.map((criterion) => {
-                const scoreData = scoreMap[criterion.id];
-                // Get all level descriptions for this criterion
-                const levels: string[] = [];
-                for (let i = data.rubric_scale_min; i <= data.rubric_scale_max; i++) {
-                  const levelKey = `level${i}`;
-                  levels.push(criterion.descriptors[levelKey] || "");
-                }
-                
-                return (
-                  <RubricMatrixRow
-                    key={criterion.id}
-                    name={criterion.name}
-                    score={scoreData?.score ?? null}
-                    levels={levels}
-                    comment={scoreData?.comment}
-                  />
-                );
-              })}
-            </div>
-          ));
-        })()}
+              // Render each category with its criteria
+              return Object.entries(grouped).map(
+                ([category, categoryCriteria]) => (
+                  <div key={category}>
+                    {/* Category header */}
+                    <div className="px-6 py-3 bg-slate-100">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                        {category}
+                      </h3>
+                    </div>
+                    {/* Criteria in this category */}
+                    {categoryCriteria.map((criterion) => {
+                      const scoreData = scoreMap[criterion.id];
+                      // Get all level descriptions for this criterion
+                      const levels: string[] = [];
+                      for (
+                        let i = data.rubric_scale_min;
+                        i <= data.rubric_scale_max;
+                        i++
+                      ) {
+                        const levelKey = `level${i}`;
+                        levels.push(criterion.descriptors[levelKey] || "");
+                      }
+
+                      return (
+                        <RubricMatrixRow
+                          key={criterion.id}
+                          name={criterion.name}
+                          score={scoreData?.score ?? null}
+                          levels={levels}
+                          comment={scoreData?.comment}
+                        />
+                      );
+                    })}
+                  </div>
+                ),
+              );
+            })()}
           </div>
-      </div>
+        </div>
 
         {/* Category Grades and Final Grade */}
         {Object.keys(categoryGrades).length > 0 && (
@@ -307,26 +337,35 @@ export default function StudentProjectAssessmentInner() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Sort categories in desired order: Projectproces, Eindresultaat, Communicatie */}
                 {(() => {
-                  const sortedCategories = Object.entries(categoryGrades).sort(([a], [b]) => {
-                    // Use lowercase for comparison since backend stores categories in lowercase
-                    const order = ['projectproces', 'eindresultaat', 'communicatie'];
-                    const indexA = order.indexOf(a.toLowerCase());
-                    const indexB = order.indexOf(b.toLowerCase());
-                    // If both are in order array, sort by order
-                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    // If only one is in order array, it comes first
-                    if (indexA !== -1) return -1;
-                    if (indexB !== -1) return 1;
-                    // Otherwise sort alphabetically
-                    return a.localeCompare(b);
-                  });
+                  const sortedCategories = Object.entries(categoryGrades).sort(
+                    ([a], [b]) => {
+                      // Use lowercase for comparison since backend stores categories in lowercase
+                      const order = [
+                        "projectproces",
+                        "eindresultaat",
+                        "communicatie",
+                      ];
+                      const indexA = order.indexOf(a.toLowerCase());
+                      const indexB = order.indexOf(b.toLowerCase());
+                      // If both are in order array, sort by order
+                      if (indexA !== -1 && indexB !== -1)
+                        return indexA - indexB;
+                      // If only one is in order array, it comes first
+                      if (indexA !== -1) return -1;
+                      if (indexB !== -1) return 1;
+                      // Otherwise sort alphabetically
+                      return a.localeCompare(b);
+                    },
+                  );
                   return sortedCategories.map(([category, grade]) => (
                     <div key={category} className="flex flex-col">
                       <p className="text-xs text-gray-600 mb-1">{category}</p>
                       <p className="text-3xl font-bold text-blue-600">
                         {grade.toFixed(1)}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">schaal 1-10</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        schaal 1-10
+                      </p>
                     </div>
                   ));
                 })()}
@@ -353,49 +392,52 @@ export default function StudentProjectAssessmentInner() {
 
         {/* Reflection Section */}
         <div className="bg-white border border-gray-200/80 shadow-sm rounded-xl p-6">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <h2 className="text-2xl font-bold">Jouw reflectie</h2>
-            <p className="text-sm text-gray-600 mt-2">
-              Beschrijf kort wat je hebt geleerd en wat je meeneemt naar het volgende project.
-            </p>
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h2 className="text-2xl font-bold">Jouw reflectie</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Beschrijf kort wat je hebt geleerd en wat je meeneemt naar het
+                volgende project.
+              </p>
+            </div>
+            {/* Reflection status badge */}
+            {data.reflection ? (
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium whitespace-nowrap">
+                Ingeleverd
+              </span>
+            ) : (
+              <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium whitespace-nowrap">
+                Niet ingeleverd
+              </span>
+            )}
           </div>
-          {/* Reflection status badge */}
-          {data.reflection ? (
-            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium whitespace-nowrap">
-              Ingeleverd
-            </span>
-          ) : (
-            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium whitespace-nowrap">
-              Niet ingeleverd
-            </span>
+
+          {data.reflection && (
+            <p className="text-xs text-gray-500 mb-4">
+              Opgeslagen op{" "}
+              {data.reflection.submitted_at
+                ? new Date(data.reflection.submitted_at).toLocaleDateString(
+                    "nl-NL",
+                  )
+                : "onbekende datum"}
+            </p>
           )}
-        </div>
 
-        {data.reflection && (
-          <p className="text-xs text-gray-500 mb-4">
-            Opgeslagen op{" "}
-            {data.reflection.submitted_at
-              ? new Date(data.reflection.submitted_at).toLocaleDateString("nl-NL")
-              : "onbekende datum"}
+          <textarea
+            className="w-full border rounded-lg px-4 py-3 min-h-32 mb-2 mt-4"
+            value={reflectionText}
+            onChange={(e) => setReflectionText(e.target.value)}
+            placeholder="Jouw reflectie..."
+          />
+          <p className="text-sm text-gray-500 mb-4">
+            {reflectionText.split(/\s+/).filter((w) => w).length} woorden
           </p>
-        )}
 
-        <textarea
-          className="w-full border rounded-lg px-4 py-3 min-h-32 mb-2 mt-4"
-          value={reflectionText}
-          onChange={(e) => setReflectionText(e.target.value)}
-          placeholder="Jouw reflectie..."
-        />
-        <p className="text-sm text-gray-500 mb-4">
-          {reflectionText.split(/\s+/).filter((w) => w).length} woorden
-        </p>
-
-        <button
-          onClick={handleSaveReflection}
-          disabled={saving || !reflectionText.trim()}
-          className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
-        >
+          <button
+            onClick={handleSaveReflection}
+            disabled={saving || !reflectionText.trim()}
+            className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
+          >
             {saving ? "Opslaan…" : "Reflectie opslaan"}
           </button>
         </div>

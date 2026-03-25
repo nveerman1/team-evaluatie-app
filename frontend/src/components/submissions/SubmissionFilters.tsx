@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SubmissionFiltersProps {
   missingOnly: boolean;
@@ -21,20 +21,29 @@ export function SubmissionFilters({
   setDocType,
 }: SubmissionFiltersProps) {
   // Determine current status tab value
-  const statusValue = missingOnly ? 'ontbrekend' : actionRequiredOnly ? 'actie' : 'alle';
-  
+  const statusValue = missingOnly
+    ? "ontbrekend"
+    : actionRequiredOnly
+      ? "actie"
+      : "alle";
+
   const handleStatusChange = (value: string) => {
-    setMissingOnly(value === 'ontbrekend');
-    setActionRequiredOnly(value === 'actie');
+    setMissingOnly(value === "ontbrekend");
+    setActionRequiredOnly(value === "actie");
   };
-  
+
   // Determine current doc type tab value
-  const docTypeValue = docType === 'report' ? 'verslag' : docType === 'slides' ? 'presentatie' : 'alle';
-  
+  const docTypeValue =
+    docType === "report"
+      ? "verslag"
+      : docType === "slides"
+        ? "presentatie"
+        : "alle";
+
   const handleDocTypeChange = (value: string) => {
-    if (value === 'alle') setDocType(null);
-    else if (value === 'verslag') setDocType('report');
-    else if (value === 'presentatie') setDocType('slides');
+    if (value === "alle") setDocType(null);
+    else if (value === "verslag") setDocType("report");
+    else if (value === "presentatie") setDocType("slides");
   };
 
   return (

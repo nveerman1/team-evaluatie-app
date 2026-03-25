@@ -18,12 +18,32 @@ interface TeamNotesCardProps {
 
 // Quick notes with pre-linked OMZA category and tags
 const QUICK_NOTES = [
-  { text: "Mindere communicatie", omza: "Communicatie", tags: ["communicatie", "aandachtspunt"] },
+  {
+    text: "Mindere communicatie",
+    omza: "Communicatie",
+    tags: ["communicatie", "aandachtspunt"],
+  },
   { text: "Veel afgeleid", omza: "Meedoen", tags: ["focus", "aandachtspunt"] },
-  { text: "Goede rolverdeling", omza: "Organiseren", tags: ["samenwerking", "organisatie"] },
-  { text: "Neemt weinig initiatief", omza: "Meedoen", tags: ["initiatief", "aandachtspunt"] },
-  { text: "Actief betrokken bij groep", omza: "Meedoen", tags: ["betrokkenheid", "samenwerking"] },
-  { text: "Sterke uitleg aan klasgenoten", omza: "Communicatie", tags: ["communicatie", "helpend"] },
+  {
+    text: "Goede rolverdeling",
+    omza: "Organiseren",
+    tags: ["samenwerking", "organisatie"],
+  },
+  {
+    text: "Neemt weinig initiatief",
+    omza: "Meedoen",
+    tags: ["initiatief", "aandachtspunt"],
+  },
+  {
+    text: "Actief betrokken bij groep",
+    omza: "Meedoen",
+    tags: ["betrokkenheid", "samenwerking"],
+  },
+  {
+    text: "Sterke uitleg aan klasgenoten",
+    omza: "Communicatie",
+    tags: ["communicatie", "helpend"],
+  },
 ];
 
 // Checklist items definition
@@ -58,15 +78,17 @@ export function TeamNotesCard({
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Form state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [omzaCategory, setOmzaCategory] = useState<string>("");
   const [learningObjectiveId, setLearningObjectiveId] = useState<string>("");
   const [isCompetencyEvidence, setIsCompetencyEvidence] = useState(false);
-  
+
   // Checklist state - stored per team
-  const [checklistState, setChecklistState] = useState<Record<string, boolean>>({});
+  const [checklistState, setChecklistState] = useState<Record<string, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     loadNotes();
@@ -76,7 +98,7 @@ export function TeamNotesCard({
   const loadChecklistState = async () => {
     try {
       const context = await projectNotesService.getContext(contextId);
-      
+
       // Load team-specific checklist state from context settings
       const teamChecklistKey = `team_${team.id}_checklist`;
       const savedState = context.settings?.[teamChecklistKey] || {};
@@ -90,14 +112,14 @@ export function TeamNotesCard({
     try {
       // Fetch current context to get all settings
       const context = await projectNotesService.getContext(contextId);
-      
+
       // Merge the new checklist state with existing settings
       const teamChecklistKey = `team_${team.id}_checklist`;
       const updatedSettings = {
         ...context.settings,
         [teamChecklistKey]: newState,
       };
-      
+
       // Save complete settings back to backend
       await projectNotesService.updateContext(contextId, {
         settings: updatedSettings,
@@ -112,9 +134,9 @@ export function TeamNotesCard({
       ...checklistState,
       [itemId]: checked,
     };
-    
+
     setChecklistState(newState);
-    
+
     // Auto-save to backend
     await saveChecklistState(newState);
   };
@@ -134,15 +156,15 @@ export function TeamNotesCard({
     }
   };
 
-  const handleQuickNoteClick = (quickNote: typeof QUICK_NOTES[0]) => {
+  const handleQuickNoteClick = (quickNote: (typeof QUICK_NOTES)[0]) => {
     onQuickNoteClick(quickNote.text);
     setOmzaCategory(quickNote.omza);
     setSelectedTags(quickNote.tags);
   };
 
   const handleToggleTag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -160,19 +182,21 @@ export function TeamNotesCard({
         text: quickNoteText,
         tags: selectedTags,
         omza_category: omzaCategory || null,
-        learning_objective_id: learningObjectiveId ? Number(learningObjectiveId) : null,
+        learning_objective_id: learningObjectiveId
+          ? Number(learningObjectiveId)
+          : null,
         is_competency_evidence: isCompetencyEvidence,
         is_portfolio_evidence: false,
         metadata: {},
       });
-      
+
       // Reset form
       onQuickNoteTextChange("");
       setSelectedTags([]);
       setOmzaCategory("");
       setLearningObjectiveId("");
       setIsCompetencyEvidence(false);
-      
+
       loadNotes(); // Reload notes
     } catch (error) {
       console.error("Failed to save note:", error);
@@ -183,8 +207,11 @@ export function TeamNotesCard({
   };
 
   // Filter notes
-  const filteredNotes = notes.filter(note => {
-    if (searchText && !note.text.toLowerCase().includes(searchText.toLowerCase())) {
+  const filteredNotes = notes.filter((note) => {
+    if (
+      searchText &&
+      !note.text.toLowerCase().includes(searchText.toLowerCase())
+    ) {
       return false;
     }
     if (filterCategory && note.omza_category !== filterCategory) {
@@ -199,15 +226,19 @@ export function TeamNotesCard({
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Team</p>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+              Team
+            </p>
             <h2 className="text-sm font-semibold text-slate-900">
               {team.team_number ? `Team ${team.team_number}` : team.name}
             </h2>
-            <p className="text-xs text-slate-500">Leerlingen: {team.members.join(", ")}</p>
+            <p className="text-xs text-slate-500">
+              Leerlingen: {team.members.join(", ")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700 border border-indigo-100">
-              {notes.length} {notes.length === 1 ? 'observatie' : 'observaties'}
+              {notes.length} {notes.length === 1 ? "observatie" : "observaties"}
             </span>
           </div>
         </div>
@@ -232,27 +263,37 @@ export function TeamNotesCard({
         {/* Linkerkolom: checklists */}
         <div className="space-y-3 md:space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500 mb-2">Teamchecklists</p>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500 mb-2">
+              Teamchecklists
+            </p>
             <div className="grid md:grid-cols-3 gap-3 text-[11px]">
               <div className="space-y-1.5">
-                <p className="font-semibold text-slate-800 text-xs">Voortgang</p>
+                <p className="font-semibold text-slate-800 text-xs">
+                  Voortgang
+                </p>
                 {CHECKLIST_ITEMS.voortgang.map((item) => (
                   <ChecklistItem
                     key={item.id}
                     label={item.label}
                     checked={checklistState[item.id] || false}
-                    onChange={(checked) => handleChecklistToggle(item.id, checked)}
+                    onChange={(checked) =>
+                      handleChecklistToggle(item.id, checked)
+                    }
                   />
                 ))}
               </div>
               <div className="space-y-1.5">
-                <p className="font-semibold text-slate-800 text-xs">Taakverdeling</p>
+                <p className="font-semibold text-slate-800 text-xs">
+                  Taakverdeling
+                </p>
                 {CHECKLIST_ITEMS.taakverdeling.map((item) => (
                   <ChecklistItem
                     key={item.id}
                     label={item.label}
                     checked={checklistState[item.id] || false}
-                    onChange={(checked) => handleChecklistToggle(item.id, checked)}
+                    onChange={(checked) =>
+                      handleChecklistToggle(item.id, checked)
+                    }
                   />
                 ))}
               </div>
@@ -263,7 +304,9 @@ export function TeamNotesCard({
                     key={item.id}
                     label={item.label}
                     checked={checklistState[item.id] || false}
-                    onChange={(checked) => handleChecklistToggle(item.id, checked)}
+                    onChange={(checked) =>
+                      handleChecklistToggle(item.id, checked)
+                    }
                   />
                 ))}
               </div>
@@ -279,7 +322,8 @@ export function TeamNotesCard({
                 Nieuwe aantekening voor team
               </p>
               <p className="text-xs text-slate-500">
-                Gebruik een snelnotitie en vul zo nodig kort aan in het tekstvak.
+                Gebruik een snelnotitie en vul zo nodig kort aan in het
+                tekstvak.
               </p>
             </div>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-700">
@@ -294,7 +338,7 @@ export function TeamNotesCard({
                 key={q.text}
                 onClick={() => handleQuickNoteClick(q)}
                 className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] text-slate-800 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
-                title={`OMZA: ${q.omza} | Tags: ${q.tags.join(', ')}`}
+                title={`OMZA: ${q.omza} | Tags: ${q.tags.join(", ")}`}
               >
                 {q.text}
               </button>
@@ -313,31 +357,33 @@ export function TeamNotesCard({
           <div className="flex flex-wrap items-center gap-2 text-[11px] mt-1">
             <div className="flex flex-wrap gap-1.5">
               <span className="text-slate-500 mr-1">Tags:</span>
-              {["samenwerking", "proces", "reflectie", "communicatie"].map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => handleToggleTag(tag)}
-                  className={`rounded-full border px-2.5 py-1 ${
-                    selectedTags.includes(tag)
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
-                      : 'border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800'
-                  }`}
-                >
-                  #{tag}
-                </button>
-              ))}
+              {["samenwerking", "proces", "reflectie", "communicatie"].map(
+                (tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => handleToggleTag(tag)}
+                    className={`rounded-full border px-2.5 py-1 ${
+                      selectedTags.includes(tag)
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-800"
+                        : "border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ),
+              )}
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <label className="inline-flex items-center gap-1 text-slate-600">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   className="h-3 w-3 rounded border-slate-300"
                   checked={isCompetencyEvidence}
                   onChange={(e) => setIsCompetencyEvidence(e.target.checked)}
                 />
                 Markeer als competentiebewijs
               </label>
-              <select 
+              <select
                 className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700"
                 value={omzaCategory}
                 onChange={(e) => setOmzaCategory(e.target.value)}
@@ -349,7 +395,7 @@ export function TeamNotesCard({
                 <option value="Autonomie">Autonomie</option>
                 <option value="Communicatie">Communicatie</option>
               </select>
-              <select 
+              <select
                 className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700"
                 value={learningObjectiveId}
                 onChange={(e) => setLearningObjectiveId(e.target.value)}
@@ -362,7 +408,7 @@ export function TeamNotesCard({
           </div>
 
           <div className="flex justify-end mt-1">
-            <button 
+            <button
               onClick={handleSave}
               disabled={saving}
               className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -400,17 +446,19 @@ export function TeamNotesCard({
                 <div className="flex justify-between gap-3">
                   <div>
                     <p className="text-[11px] text-slate-500">
-                      {new Date(note.created_at).toLocaleDateString('nl-NL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                      {new Date(note.created_at).toLocaleDateString("nl-NL", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                       {note.created_by_name && ` • ${note.created_by_name}`}
                     </p>
                     {note.omza_category && (
-                      <p className="text-[11px] text-slate-500 mt-0.5">{note.omza_category}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {note.omza_category}
+                      </p>
                     )}
                     <p className="text-sm text-slate-800 mt-0.5">{note.text}</p>
                     {note.tags.length > 0 && (

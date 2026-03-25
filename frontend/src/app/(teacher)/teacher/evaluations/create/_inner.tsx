@@ -65,7 +65,7 @@ export default function CreateEvaluationPageInner() {
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
     if (!courseId || typeof courseId !== "number") return [];
-    return projects.filter(p => p.course_id === Number(courseId));
+    return projects.filter((p) => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
   // Rubrics en projects laden
@@ -79,13 +79,13 @@ export default function CreateEvaluationPageInner() {
           api.get<RubricListResponse>("/rubrics?scope=peer"),
           projectService.listProjects(),
         ]);
-        
+
         if (!mounted) return;
 
         const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];
         setRubrics(list);
         if (!preRubricId && list.length === 1) setRubricId(list[0].id);
-        
+
         setProjects(projRes.items || []);
       } catch (e: any) {
         setError(
@@ -154,7 +154,10 @@ export default function CreateEvaluationPageInner() {
       setInfo("Evaluatie aangemaakt ✔");
       router.replace("/teacher/evaluations");
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: unknown } }; message?: string };
+      const err = e as {
+        response?: { data?: { detail?: unknown } };
+        message?: string;
+      };
       const detail = err?.response?.data?.detail;
       setError(
         typeof detail === "string"
@@ -192,13 +195,15 @@ export default function CreateEvaluationPageInner() {
         </div>
       </header>
 
-      {(error) && (
+      {error && (
         <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 break-words">
           {error}
         </div>
       )}
       {info && (
-        <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-700">{info}</div>
+        <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-700">
+          {info}
+        </div>
       )}
 
       <form
@@ -266,7 +271,8 @@ export default function CreateEvaluationPageInner() {
               ))}
             </select>
             <p className="text-xs text-gray-500">
-              Alle teams van dit project worden automatisch gekoppeld aan deze evaluatie.
+              Alle teams van dit project worden automatisch gekoppeld aan deze
+              evaluatie.
             </p>
           </div>
         </div>

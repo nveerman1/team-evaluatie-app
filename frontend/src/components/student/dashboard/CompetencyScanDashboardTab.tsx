@@ -4,20 +4,28 @@ import { useState, useEffect } from "react";
 import { competencyService } from "@/services";
 import type { CompetencyWindow } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
 import { ScanDashboardCard } from "./ScanDashboardCard";
 import {
   ExternalInviteModal,
   ExternalInviteList,
 } from "@/components/competency/ExternalInviteComponents";
+import { cn } from "@/lib/utils";
+
+type FilterType = "open" | "alles" | "gesloten";
+
+const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
+  { value: "open", label: "Open" },
+  { value: "alles", label: "Alles" },
+  { value: "gesloten", label: "Gesloten" },
+];
 
 type CompetencyScanDashboardTabProps = {
   searchQuery?: string;
 };
 
-export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanDashboardTabProps) {
+export function CompetencyScanDashboardTab({
+  searchQuery = "",
+}: CompetencyScanDashboardTabProps) {
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +35,7 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
     userId: number;
   } | null>(null);
   const [expandedWindow, setExpandedWindow] = useState<number | null>(null);
+  const [filter, setFilter] = useState<FilterType>("open");
 
   useEffect(() => {
     loadData();
@@ -35,10 +44,9 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
   const loadData = async () => {
     try {
       setLoading(true);
-      const wins = await competencyService.getWindows("open");
+      const wins = await competencyService.getWindows();
       setWindows(wins);
 
-      // Get current user ID from any completed window overview
       if (wins.length > 0 && !currentUserId) {
         for (const win of wins) {
           try {
@@ -84,39 +92,52 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
     );
   }
 
-  // Filter windows by search query
-  const filteredWindows = searchQuery.trim()
-    ? windows.filter((w) => w.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  const searchFiltered = searchQuery.trim()
+    ? windows.filter((w) =>
+        w.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
     : windows;
 
-  const openScansCount = windows.filter((w) => w.status === "open").length;
+  const filteredWindows = searchFiltered.filter((w) => {
+    if (filter === "open") return w.status === "open";
+    if (filter === "gesloten") return w.status !== "open";
+    return true;
+  });
 
   return (
-    <div className="space-y-4">
-      {/* Mijn ontwikkeling Card */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-slate-600" />
-                <p className="text-sm font-semibold text-slate-900">Mijn ontwikkeling</p>
-              </div>
-              <p className="text-sm text-slate-600">
-                Hier vind je je competentiescans, leerdoelen en reflecties.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700">
-                Open scans: {openScansCount}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Card header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Competentiescans
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Krijg inzicht in je competenties en werk aan je leerdoelen.
+          </p>
+        </div>
+
+        {/* Filter pills */}
+        <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1">
+          {FILTER_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setFilter(value)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-sm font-medium transition",
+                filter === value
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Scan Cards */}
-      <div className="grid gap-4">
+      <div className="mt-5 space-y-3">
         {filteredWindows.length > 0 ? (
           filteredWindows.map((window) => (
             <div key={window.id} className="space-y-2">
@@ -136,7 +157,8 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
                   let userId = currentUserId;
                   if (!userId) {
                     try {
-                      const overview = await competencyService.getMyWindowOverview(window.id);
+                      const overview =
+                        await competencyService.getMyWindowOverview(window.id);
                       userId = overview.user_id;
                       setCurrentUserId(userId);
                     } catch (err) {
@@ -151,22 +173,26 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
                   }
                 }}
               />
-              {isExternalFeedbackEnabled(window) && 
-               expandedWindow === window.id && 
-               currentUserId && (
-                <div className="ml-4 pl-4 border-l-2 border-slate-200">
-                  <ExternalInviteList
-                    windowId={window.id}
-                    subjectUserId={currentUserId}
-                  />
-                </div>
-              )}
+              {isExternalFeedbackEnabled(window) &&
+                expandedWindow === window.id &&
+                currentUserId && (
+                  <div className="ml-4 pl-4 border-l-2 border-slate-200">
+                    <ExternalInviteList
+                      windowId={window.id}
+                      subjectUserId={currentUserId}
+                    />
+                  </div>
+                )}
             </div>
           ))
         ) : (
-          <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+          <div className="rounded-xl bg-slate-50 p-8 text-center">
             <p className="text-slate-500">
-              {searchQuery ? "Geen competentiescans gevonden met deze zoekopdracht." : "Geen open competentiescans op dit moment."}
+              {searchQuery
+                ? "Geen competentiescans gevonden met deze zoekopdracht."
+                : filter === "gesloten"
+                  ? "Geen gesloten competentiescans."
+                  : "Geen open competentiescans op dit moment."}
             </p>
           </div>
         )}

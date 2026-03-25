@@ -10,7 +10,11 @@ interface ClientFormModalProps {
   onSuccess: () => void;
 }
 
-export function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFormModalProps) {
+export function ClientFormModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: ClientFormModalProps) {
   const [formData, setFormData] = useState<ClientCreate>({
     organization: "",
     contact_name: "",

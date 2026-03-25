@@ -143,13 +143,13 @@ export default function GradesPageInner() {
   // Set publish function in context (only once on mount)
   useEffect(() => {
     setPublishGrades(handlePublish);
-    
+
     // Cleanup on unmount
     return () => {
       setPublishGrades(null);
     };
   }, [setPublishGrades]);
-  
+
   // Note: We intentionally don't include handlePublish in dependencies
   // because we want to set it once. The function will always have access
   // to the latest rows, evalIdNum, etc. via closures.
@@ -222,10 +222,7 @@ export default function GradesPageInner() {
     setSaving(true);
     try {
       const overrides = Object.fromEntries(
-        rows.map((r) => [
-          r.user_id,
-          { grade: finalGrade(r), reason: null },
-        ]),
+        rows.map((r) => [r.user_id, { grade: finalGrade(r), reason: null }]),
       );
       await gradesService.publish({
         evaluation_id: evalIdNum,
@@ -287,7 +284,7 @@ export default function GradesPageInner() {
             ))}
           </select>
         </div>
-        
+
         {/* Autosave status on the right */}
         {autoSaveLabel && (
           <div className="text-xs text-gray-500 min-h-[1.2rem]">
@@ -296,216 +293,217 @@ export default function GradesPageInner() {
         )}
       </div>
 
-        {loading && <p className="text-sm text-gray-500">Laden…</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {!loading && rows.length === 0 && !error && (
-          <p className="text-sm text-gray-500">Geen data gevonden.</p>
-        )}
+      {loading && <p className="text-sm text-gray-500">Laden…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {!loading && rows.length === 0 && !error && (
+        <p className="text-sm text-gray-500">Geen data gevonden.</p>
+      )}
 
-        {/* Tabel / grid met cijfers */}
-        {!loading && filteredSorted.length > 0 && (
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-20 cursor-pointer hover:bg-gray-100"
-                      onClick={() => toggleSort("team")}
-                    >
-                      <div className="flex items-center gap-1">
-                        Team
-                        {sortBy === "team" && (
-                          <span>{sortDir === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
-                      onClick={() => toggleSort("name")}
-                    >
-                      <div className="flex items-center gap-1">
-                        Leerling
-                        {sortBy === "name" && (
-                          <span>{sortDir === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
-                      onClick={() => toggleSort("class")}
-                    >
-                      <div className="flex items-center gap-1">
-                        Klas
-                        {sortBy === "class" && (
-                          <span>{sortDir === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
-                      Voorstel
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
-                      Groepscijfer
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
-                      GCF
-                    </th>
-                    <th
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
-                      onClick={() => toggleSort("final")}
-                    >
-                      <div className="flex items-center justify-end gap-1">
-                        Eindcijfer
-                        {sortBy === "final" && (
-                          <span>{sortDir === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
+      {/* Tabel / grid met cijfers */}
+      {!loading && filteredSorted.length > 0 && (
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-20 cursor-pointer hover:bg-gray-100"
+                    onClick={() => toggleSort("team")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Team
+                      {sortBy === "team" && (
+                        <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                    onClick={() => toggleSort("name")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Leerling
+                      {sortBy === "name" && (
+                        <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                    onClick={() => toggleSort("class")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Klas
+                      {sortBy === "class" && (
+                        <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
+                    Voorstel
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
+                    Groepscijfer
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
+                    GCF
+                  </th>
+                  <th
+                    className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                    onClick={() => toggleSort("final")}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Eindcijfer
+                      {sortBy === "final" && (
+                        <span>{sortDir === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
+                  </th>
+                </tr>
+              </thead>
 
-                <tbody className="divide-y divide-gray-100">
-                  {filteredSorted.map((r) => (
-                    <tr
-                      key={r.user_id}
-                      className="bg-white hover:bg-gray-50"
-                    >
-                      <td className="px-5 py-3 align-top text-xs text-gray-500">
-                        {r.teamNumber != null && (
-                          <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
-                            {r.teamNumber}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 align-top">
-                        <Link
-                          href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
-                          className="text-sm font-medium text-indigo-700 hover:underline"
-                        >
-                          {r.name}
-                        </Link>
-                      </td>
-                      <td className="px-3 py-3 align-top text-xs text-gray-500">
-                        {r.className ?? "–"}
-                      </td>
-                      <td className="px-4 py-3 align-top text-right">
-                        <span className="text-sm text-gray-800">
-                          {r.serverSuggested != null
-                            ? r.serverSuggested.toFixed(1)
-                            : "–"}
+              <tbody className="divide-y divide-gray-100">
+                {filteredSorted.map((r) => (
+                  <tr key={r.user_id} className="bg-white hover:bg-gray-50">
+                    <td className="px-5 py-3 align-top text-xs text-gray-500">
+                      {r.teamNumber != null && (
+                        <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                          {r.teamNumber}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-right">
+                      )}
+                    </td>
+                    <td className="px-5 py-3 align-top">
+                      <Link
+                        href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
+                        className="text-sm font-medium text-indigo-700 hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-3 align-top text-xs text-gray-500">
+                      {r.className ?? "–"}
+                    </td>
+                    <td className="px-4 py-3 align-top text-right">
+                      <span className="text-sm text-gray-800">
+                        {r.serverSuggested != null
+                          ? r.serverSuggested.toFixed(1)
+                          : "–"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top text-right">
+                      <input
+                        type="text"
+                        className="w-20 text-right rounded-lg border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border-gray-300 bg-white shadow-sm"
+                        value={
+                          r.rowGroupGrade != null &&
+                          !Number.isNaN(r.rowGroupGrade)
+                            ? r.rowGroupGrade.toFixed(1)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          handleUpdateTeamGroupGrade(
+                            r.teamNumber,
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-3 align-top text-right">
+                      <span
+                        className={`text-sm ${
+                          r.gcf < 0.9
+                            ? "text-red-600"
+                            : r.gcf !== 1
+                              ? "text-amber-600"
+                              : "text-gray-800"
+                        }`}
+                      >
+                        {r.gcf.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <input
                           type="text"
-                          className="w-20 text-right rounded-lg border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border-gray-300 bg-white shadow-sm"
+                          className={`w-16 text-right rounded-lg border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm ${
+                            r.override != null
+                              ? "border-blue-300 bg-blue-50"
+                              : finalGrade(r) === 0
+                                ? "border-amber-300 bg-amber-50"
+                                : "border-gray-300 bg-white"
+                          }`}
                           value={
-                            r.rowGroupGrade != null &&
-                            !Number.isNaN(r.rowGroupGrade)
-                              ? r.rowGroupGrade.toFixed(1)
-                              : ""
+                            r.override != null && !Number.isNaN(r.override)
+                              ? r.override.toFixed(1)
+                              : finalGrade(r).toFixed(1)
                           }
                           onChange={(e) =>
-                            handleUpdateTeamGroupGrade(r.teamNumber, e.target.value)
+                            handleUpdateOverride(r.user_id, e.target.value)
                           }
                         />
-                      </td>
-                      <td className="px-4 py-3 align-top text-right">
-                        <span
-                          className={`text-sm ${
-                            r.gcf < 0.9
-                              ? "text-red-600"
-                              : r.gcf !== 1
-                                ? "text-amber-600"
-                                : "text-gray-800"
-                          }`}
-                        >
-                          {r.gcf.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <input
-                            type="text"
-                            className={`w-16 text-right rounded-lg border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm ${
-                              r.override != null
-                                ? "border-blue-300 bg-blue-50"
-                                : finalGrade(r) === 0
-                                  ? "border-amber-300 bg-amber-50"
-                                  : "border-gray-300 bg-white"
-                            }`}
-                            value={
-                              r.override != null && !Number.isNaN(r.override)
-                                ? r.override.toFixed(1)
-                                : finalGrade(r).toFixed(1)
-                            }
-                            onChange={(e) =>
-                              handleUpdateOverride(r.user_id, e.target.value)
-                            }
-                          />
-                          {r.override != null && (
-                            <button
-                              type="button"
-                              className="text-xs text-gray-400 hover:text-red-600"
-                              onClick={() => handleClearOverride(r.user_id)}
-                              title="Verwijder individuele override"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                        {r.override != null && (
+                          <button
+                            type="button"
+                            className="text-xs text-gray-400 hover:text-red-600"
+                            onClick={() => handleClearOverride(r.user_id)}
+                            title="Verwijder individuele override"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-              </table>
-            </div>
-
-            {/* Footer with averages */}
-            {stats.hasData && (
-              <div className="border-t border-gray-200 bg-gray-50 px-5 py-3">
-                <div className="grid grid-cols-[80px_1fr_auto_auto_auto_auto_auto] gap-0 text-sm items-center">
-                  <div></div>
-                  <div className="px-5 font-medium text-gray-900">
-                    Gemiddelde (op basis van filter)
-                  </div>
-                  <div className="px-3 w-16"></div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-32">
-                    {stats.avgProposal.toFixed(1)}
-                  </div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-32">
-                    {stats.avgGroupGrade.toFixed(1)}
-                  </div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-28">
-                    {stats.avgGcf.toFixed(2)}
-                  </div>
-                  <div className="px-4 text-right font-semibold text-gray-900 w-32">
-                    {stats.avgFinal.toFixed(1)}
-                  </div>
+          {/* Footer with averages */}
+          {stats.hasData && (
+            <div className="border-t border-gray-200 bg-gray-50 px-5 py-3">
+              <div className="grid grid-cols-[80px_1fr_auto_auto_auto_auto_auto] gap-0 text-sm items-center">
+                <div></div>
+                <div className="px-5 font-medium text-gray-900">
+                  Gemiddelde (op basis van filter)
+                </div>
+                <div className="px-3 w-16"></div>
+                <div className="px-4 text-right font-medium text-gray-800 w-32">
+                  {stats.avgProposal.toFixed(1)}
+                </div>
+                <div className="px-4 text-right font-medium text-gray-800 w-32">
+                  {stats.avgGroupGrade.toFixed(1)}
+                </div>
+                <div className="px-4 text-right font-medium text-gray-800 w-28">
+                  {stats.avgGcf.toFixed(2)}
+                </div>
+                <div className="px-4 text-right font-semibold text-gray-900 w-32">
+                  {stats.avgFinal.toFixed(1)}
                 </div>
               </div>
-            )}
-
-            {/* Legend footer */}
-            <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
-              <p className="mb-2 font-medium">Leeswijzer</p>
-              <p>
-                Het <span className="font-medium">voorstelcijfer</span> komt uit de beoordeling van de docent en/of berekening in de app.
-                Het <span className="font-medium">groepscijfer</span> vul je per
-                team in en geldt voor alle leerlingen in dat team. De{" "}
-                <span className="font-medium">GCF</span> (Group Correction Factor)
-                is gebaseerd op peer- en self-evaluaties. Het voorgestelde
-                eindcijfer is in de praktijk: groepscijfer × GCF (afgerond op één
-                decimaal). Je kunt het{" "}
-                <span className="font-medium">eindcijfer</span> altijd handmatig
-                corrigeren in de tabel; jouw aanpassing overschrijft dan het
-                voorstel. Klik op het ✕ symbool om een individuele override te verwijderen.
-              </p>
             </div>
-          </section>
-        )}
+          )}
+
+          {/* Legend footer */}
+          <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
+            <p className="mb-2 font-medium">Leeswijzer</p>
+            <p>
+              Het <span className="font-medium">voorstelcijfer</span> komt uit
+              de beoordeling van de docent en/of berekening in de app. Het{" "}
+              <span className="font-medium">groepscijfer</span> vul je per team
+              in en geldt voor alle leerlingen in dat team. De{" "}
+              <span className="font-medium">GCF</span> (Group Correction Factor)
+              is gebaseerd op peer- en self-evaluaties. Het voorgestelde
+              eindcijfer is in de praktijk: groepscijfer × GCF (afgerond op één
+              decimaal). Je kunt het{" "}
+              <span className="font-medium">eindcijfer</span> altijd handmatig
+              corrigeren in de tabel; jouw aanpassing overschrijft dan het
+              voorstel. Klik op het ✕ symbool om een individuele override te
+              verwijderen.
+            </p>
+          </div>
+        </section>
+      )}
     </>
   );
 

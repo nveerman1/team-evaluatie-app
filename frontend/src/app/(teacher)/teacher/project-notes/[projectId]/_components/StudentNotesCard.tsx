@@ -13,10 +13,26 @@ interface StudentNotesCardProps {
 
 // Quick notes with pre-linked OMZA category and tags
 const STUDENT_QUICK_NOTES = [
-  { label: "Neemt weinig initiatief", omza: "Meedoen", tags: ["initiatief", "aandachtspunt"] },
-  { label: "Trekt de kar voor het team", omza: "Organiseren", tags: ["leiderschap", "organisatie"] },
-  { label: "Laat weinig van zich horen", omza: "Zelfvertrouwen", tags: ["communicatie", "aandachtspunt"] },
-  { label: "Probeert een nieuwe aanpak uit", omza: "Autonomie", tags: ["innovatie", "experimenteren"] },
+  {
+    label: "Neemt weinig initiatief",
+    omza: "Meedoen",
+    tags: ["initiatief", "aandachtspunt"],
+  },
+  {
+    label: "Trekt de kar voor het team",
+    omza: "Organiseren",
+    tags: ["leiderschap", "organisatie"],
+  },
+  {
+    label: "Laat weinig van zich horen",
+    omza: "Zelfvertrouwen",
+    tags: ["communicatie", "aandachtspunt"],
+  },
+  {
+    label: "Probeert een nieuwe aanpak uit",
+    omza: "Autonomie",
+    tags: ["innovatie", "experimenteren"],
+  },
 ];
 
 export function StudentNotesCard({
@@ -31,7 +47,7 @@ export function StudentNotesCard({
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Form state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [learningObjectiveId, setLearningObjectiveId] = useState<string>("");
@@ -56,15 +72,17 @@ export function StudentNotesCard({
     }
   };
 
-  const handleStudentQuickNoteClick = (note: typeof STUDENT_QUICK_NOTES[0]) => {
+  const handleStudentQuickNoteClick = (
+    note: (typeof STUDENT_QUICK_NOTES)[0],
+  ) => {
     setStudentNoteText(note.label);
     setStudentOmza(note.omza);
     setSelectedTags(note.tags);
   };
 
   const handleToggleTag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -82,19 +100,21 @@ export function StudentNotesCard({
         text: studentNoteText,
         tags: selectedTags,
         omza_category: studentOmza || null,
-        learning_objective_id: learningObjectiveId ? Number(learningObjectiveId) : null,
+        learning_objective_id: learningObjectiveId
+          ? Number(learningObjectiveId)
+          : null,
         is_competency_evidence: false,
         is_portfolio_evidence: isPortfolioEvidence,
         metadata: {},
       });
-      
+
       // Reset form
       setStudentNoteText("");
       setSelectedTags([]);
       setStudentOmza("");
       setLearningObjectiveId("");
       setIsPortfolioEvidence(false);
-      
+
       loadNotes(); // Reload notes
     } catch (error) {
       console.error("Failed to save note:", error);
@@ -105,8 +125,11 @@ export function StudentNotesCard({
   };
 
   // Filter notes
-  const filteredNotes = notes.filter(note => {
-    if (searchText && !note.text.toLowerCase().includes(searchText.toLowerCase())) {
+  const filteredNotes = notes.filter((note) => {
+    if (
+      searchText &&
+      !note.text.toLowerCase().includes(searchText.toLowerCase())
+    ) {
       return false;
     }
     if (filterCategory && note.omza_category !== filterCategory) {
@@ -121,13 +144,17 @@ export function StudentNotesCard({
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-2">
         <div className="flex flex-wrap justify-between gap-2">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Leerlingdossier</p>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+              Leerlingdossier
+            </p>
             <h2 className="text-sm font-semibold text-slate-900">{name}</h2>
-            <p className="text-xs text-slate-500">{selectedStudent.team_name || 'Geen team'}</p>
+            <p className="text-xs text-slate-500">
+              {selectedStudent.team_name || "Geen team"}
+            </p>
           </div>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700 border border-indigo-100">
-              {notes.length} {notes.length === 1 ? 'observatie' : 'observaties'}
+              {notes.length} {notes.length === 1 ? "observatie" : "observaties"}
             </span>
           </div>
         </div>
@@ -141,7 +168,9 @@ export function StudentNotesCard({
 
         {/* Snelnotities gekoppeld aan OMZA */}
         <div className="mt-1">
-          <p className="text-[11px] text-slate-500 mb-1">Snelnotities (direct gekoppeld aan OMZA):</p>
+          <p className="text-[11px] text-slate-500 mb-1">
+            Snelnotities (direct gekoppeld aan OMZA):
+          </p>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             {STUDENT_QUICK_NOTES.map((note) => (
               <button
@@ -149,7 +178,7 @@ export function StudentNotesCard({
                 type="button"
                 onClick={() => handleStudentQuickNoteClick(note)}
                 className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
-                title={`OMZA: ${note.omza} | Tags: ${note.tags.join(', ')}`}
+                title={`OMZA: ${note.omza} | Tags: ${note.tags.join(", ")}`}
               >
                 <span>{note.label}</span>
               </button>
@@ -168,24 +197,26 @@ export function StudentNotesCard({
         <div className="flex flex-wrap items-center gap-2 text-[11px] mt-2">
           <div className="flex flex-wrap gap-1.5">
             <span className="text-slate-500 mr-1">Tags:</span>
-            {["samenwerking", "proces", "reflectie", "communicatie"].map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleToggleTag(tag)}
-                className={`rounded-full border px-2.5 py-1 ${
-                  selectedTags.includes(tag)
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
-                    : 'border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800'
-                }`}
-              >
-                #{tag}
-              </button>
-            ))}
+            {["samenwerking", "proces", "reflectie", "communicatie"].map(
+              (tag) => (
+                <button
+                  key={tag}
+                  onClick={() => handleToggleTag(tag)}
+                  className={`rounded-full border px-2.5 py-1 ${
+                    selectedTags.includes(tag)
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-800"
+                      : "border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ),
+            )}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <label className="inline-flex items-center gap-1 text-slate-600">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="h-3 w-3 rounded border-slate-300"
                 checked={isPortfolioEvidence}
                 onChange={(e) => setIsPortfolioEvidence(e.target.checked)}
@@ -204,7 +235,7 @@ export function StudentNotesCard({
               <option value="Autonomie">Autonomie</option>
               <option value="Communicatie">Communicatie</option>
             </select>
-            <select 
+            <select
               className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700"
               value={learningObjectiveId}
               onChange={(e) => setLearningObjectiveId(e.target.value)}
@@ -220,7 +251,7 @@ export function StudentNotesCard({
           <p className="text-[11px] text-slate-500">
             Alleen zichtbaar voor docenten; niet gedeeld met leerlingen.
           </p>
-          <button 
+          <button
             onClick={handleSave}
             disabled={saving}
             className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -252,17 +283,19 @@ export function StudentNotesCard({
                 <div className="flex justify-between gap-2">
                   <div>
                     <p className="text-[11px] text-slate-500">
-                      {new Date(note.created_at).toLocaleDateString('nl-NL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                      {new Date(note.created_at).toLocaleDateString("nl-NL", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                       {note.created_by_name && ` • ${note.created_by_name}`}
                     </p>
                     {note.omza_category && (
-                      <p className="text-[11px] text-slate-500 mt-0.5">{note.omza_category}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {note.omza_category}
+                      </p>
                     )}
                     <p className="text-sm text-slate-800 mt-0.5">{note.text}</p>
                     {note.tags.length > 0 && (

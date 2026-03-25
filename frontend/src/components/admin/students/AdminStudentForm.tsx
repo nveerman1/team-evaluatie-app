@@ -47,7 +47,10 @@ export default function AdminStudentForm({
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
-    return (form.first_name.trim() !== "" || form.last_name.trim() !== "") && /\S+@\S+\.\S+/.test(form.email);
+    return (
+      (form.first_name.trim() !== "" || form.last_name.trim() !== "") &&
+      /\S+@\S+\.\S+/.test(form.email)
+    );
   }, [form.first_name, form.last_name, form.email]);
 
   const handleSubmit = useCallback(
@@ -106,7 +109,9 @@ export default function AdminStudentForm({
           label="Voornaam"
           name="first_name"
           value={form.first_name}
-          onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, first_name: e.target.value }))
+          }
         />
         <TextInput
           label="Tussenvoegsel"
@@ -119,7 +124,9 @@ export default function AdminStudentForm({
           label="Achternaam"
           name="last_name"
           value={form.last_name}
-          onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, last_name: e.target.value }))
+          }
           required
         />
         <TextInput

@@ -1,6 +1,6 @@
 /**
  * Subject DTOs
- * 
+ *
  * Subject (NL: sectie) is an organizational level between School and Course.
  * Examples: "Onderzoek & Ontwerpen", "Biologie", "Nederlands"
  */

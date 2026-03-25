@@ -1,10 +1,4 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Clock, ChevronRight } from "lucide-react";
-import { ActionChip } from "./helpers";
 import { StudentEvaluation } from "@/dtos";
 import Link from "next/link";
 
@@ -12,89 +6,110 @@ type EvaluationDashboardCardProps = {
   evaluation: StudentEvaluation;
 };
 
-export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardProps) {
-  // Check actual status from the evaluation
+export function EvaluationDashboardCard({
+  evaluation,
+}: EvaluationDashboardCardProps) {
   const isOpen = evaluation.status === "open";
   const isClosed = evaluation.status === "closed";
   const isCompleted = evaluation.progress === 100;
-  
-  // Get deadlines from evaluation settings
-  const reviewDeadline = evaluation.settings?.deadlines?.review || evaluation.deadlines?.review;
-  const reflectionDeadline = evaluation.settings?.deadlines?.reflection || evaluation.deadlines?.reflection;
-  
+
+  // Get deadline from evaluation settings
+  const reviewDeadline =
+    evaluation.settings?.deadlines?.review || evaluation.deadlines?.review;
+  const reflectionDeadline =
+    evaluation.settings?.deadlines?.reflection ||
+    evaluation.deadlines?.reflection;
+  const deadlineLabel = reviewDeadline || reflectionDeadline || "Geen deadline";
+
   const peerLabel = `Peer-evaluaties (${evaluation.peersCompleted}/${evaluation.peersTotal})`;
-  
+
+  const actionLabel = isClosed ? "Resultaat" : "Verder";
+  const actionHref = isClosed
+    ? `/student/evaluation/${evaluation.id}/overzicht`
+    : `/student/${evaluation.id}?step=${evaluation.nextStep || 1}`;
+
+  const statusLabel = isCompleted ? "Afgerond" : isOpen ? "Open" : "Gesloten";
+  const statusClass = isCompleted
+    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+    : isOpen
+      ? "bg-sky-50 text-sky-700 ring-sky-200"
+      : "bg-slate-100 text-slate-700 ring-slate-200";
+  const barClass = isCompleted
+    ? "bg-emerald-500"
+    : isOpen
+      ? "bg-sky-500"
+      : "bg-slate-300";
+
+  const parts = [
+    { label: "Zelfbeoordeling", done: evaluation.selfCompleted },
+    {
+      label: peerLabel,
+      done:
+        evaluation.peersCompleted === evaluation.peersTotal &&
+        evaluation.peersTotal > 0,
+    },
+    { label: "Reflectie", done: evaluation.reflectionCompleted },
+  ];
+
   return (
-    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1 space-y-2">
+    <Link
+      href={actionHref}
+      className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+    >
+      <div className="flex items-stretch">
+        {/* Coloured status bar */}
+        <div className={`w-1.5 flex-shrink-0 ${barClass}`} />
+
+        <div className="flex w-full flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+          {/* Left: title, badge, type, meta tags, parts */}
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-slate-900">
                 {evaluation.title}
               </h3>
-              <Badge
-                className={
-                  isOpen
-                    ? "rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
-                    : "rounded-full bg-slate-100 text-slate-700 ring-1 ring-slate-200"
-                }
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}
               >
-                {isOpen ? "Open" : "Gesloten"}
-              </Badge>
-              {isCompleted && isOpen && (
-                <Badge className="rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">
-                  Afgerond
-                </Badge>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-              <span className="inline-flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {reviewDeadline ? `Deadline: ${reviewDeadline}` : reflectionDeadline ? `Deadline: ${reflectionDeadline}` : "Geen deadline"}
+                {statusLabel}
               </span>
             </div>
 
-            <div className="mt-3 flex flex-col gap-0.5 sm:flex-row sm:gap-2">
-              <ActionChip done={evaluation.selfCompleted} label="Zelfbeoordeling" />
-              <ActionChip
-                done={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0}
-                label={peerLabel}
-              />
-              <ActionChip done={evaluation.reflectionCompleted} label="Reflectie" />
+            <div className="mt-1 text-sm text-slate-500">
+              {evaluation.evaluation_type === "peer"
+                ? "Peerevaluatie"
+                : "360° feedback"}
             </div>
 
-            {/* Progress bar */}
-            <div className="mt-3 max-w-md">
-              <Progress 
-                className="h-3 [&>div]:bg-indigo-500"
-                value={evaluation.progress}
-              />
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              {parts.map((part) => (
+                <span
+                  key={part.label}
+                  className={part.done ? "text-emerald-700" : "text-slate-500"}
+                >
+                  {part.done ? "✓" : "○"} {part.label}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
-            {/* Show "Verder" button only when evaluation is open and not completed */}
-            {isOpen && !isCompleted && (
-              <Button asChild className="rounded-xl bg-slate-900 hover:bg-slate-800" size="sm">
-                <Link href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}>
-                  Verder
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-            {/* Show "Resultaat" button only when evaluation is closed */}
-            {isClosed && (
-              <Button asChild variant="secondary" size="sm" className="rounded-xl">
-                <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
-                  Resultaat
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            )}
+          {/* Right: deadline block + action button */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+            <div className="min-w-[120px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
+              <div className="text-xs uppercase tracking-wide text-slate-500">
+                Deadline
+              </div>
+              <div className="mt-1 text-base font-semibold text-slate-900">
+                {deadlineLabel}
+              </div>
+            </div>
+
+            <div className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-slate-800">
+              {actionLabel}
+              <span className="ml-2">→</span>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Link>
   );
 }

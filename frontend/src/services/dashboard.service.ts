@@ -29,7 +29,10 @@ export const dashboardService = {
   /**
    * Get flags for an evaluation
    */
-  async getFlags(evaluationId: number, signal?: AbortSignal): Promise<FlagsResponse> {
+  async getFlags(
+    evaluationId: number,
+    signal?: AbortSignal,
+  ): Promise<FlagsResponse> {
     const response = await api.get<FlagsResponse>(
       `/flags/evaluation/${evaluationId}`,
       { signal },
@@ -40,7 +43,10 @@ export const dashboardService = {
   /**
    * Get grade preview (POST is primair; bij 405 fallback naar GET)
    */
-  async getGradePreview(evaluationId: number, signal?: AbortSignal): Promise<GradePreviewResponse> {
+  async getGradePreview(
+    evaluationId: number,
+    signal?: AbortSignal,
+  ): Promise<GradePreviewResponse> {
     try {
       // ✅ Jouw backend: GET met ?evaluation_id=...
       const res = await api.get<GradePreviewResponse>("/grades/preview", {
@@ -51,9 +57,13 @@ export const dashboardService = {
     } catch (e: any) {
       // Sommige branches hadden POST; alleen bij 405 proberen we POST
       if (e?.response?.status === 405) {
-        const res = await api.post<GradePreviewResponse>("/grades/preview", {
-          evaluation_id: evaluationId,
-        }, { signal });
+        const res = await api.post<GradePreviewResponse>(
+          "/grades/preview",
+          {
+            evaluation_id: evaluationId,
+          },
+          { signal },
+        );
         return res.data;
       }
       throw e;
@@ -77,7 +87,10 @@ export const dashboardService = {
   /**
    * Get KPIs for an evaluation
    */
-  async getKPIs(evaluationId: number, signal?: AbortSignal): Promise<StudentProgressKPIs> {
+  async getKPIs(
+    evaluationId: number,
+    signal?: AbortSignal,
+  ): Promise<StudentProgressKPIs> {
     const response = await api.get<StudentProgressKPIs>(
       `/dashboard/evaluation/${evaluationId}/kpis`,
       { signal },
@@ -101,9 +114,7 @@ export const dashboardService = {
   /**
    * Send reminder emails to students with incomplete tasks
    */
-  async sendReminders(
-    evaluationId: number,
-  ): Promise<{
+  async sendReminders(evaluationId: number): Promise<{
     evaluation_id: number;
     reminders_sent: number;
     students: Array<{

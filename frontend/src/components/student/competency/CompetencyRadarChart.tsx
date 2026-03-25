@@ -73,11 +73,7 @@ export function CompetencyRadarChart({
       className="relative flex items-center justify-center"
       style={{ width: totalWidth, height: totalHeight }}
     >
-      <svg
-        width={totalWidth}
-        height={totalHeight}
-        className="overflow-visible"
-      >
+      <svg width={totalWidth} height={totalHeight} className="overflow-visible">
         {/* Concentric circles */}
         {circles.map((radius, idx) => (
           <circle
@@ -146,24 +142,19 @@ export function CompetencyRadarChart({
         ))}
 
         {/* Center point */}
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={3}
-          fill="#3b82f6"
-        />
+        <circle cx={centerX} cy={centerY} r={3} fill="#3b82f6" />
 
         {/* Category labels at axis endpoints */}
         {items.map((item, index) => {
           const angle = (index / items.length) * Math.PI * 2 - Math.PI / 2;
           const labelX = centerX + labelRadius * Math.cos(angle);
           const labelY = centerY + labelRadius * Math.sin(angle);
-          
+
           // Determine text anchor based on angle for better positioning
           let textAnchor: "start" | "middle" | "end" = "middle";
           if (Math.cos(angle) > 0.3) textAnchor = "start";
           else if (Math.cos(angle) < -0.3) textAnchor = "end";
-          
+
           // Shorten long labels based on specific mappings
           let displayName = item.name;
           if (item.name.includes("Reflectie & Professionele houding")) {
@@ -173,7 +164,7 @@ export function CompetencyRadarChart({
           } else if (item.name.includes("Creatief denken & probleemoplossen")) {
             displayName = "Creatief denken";
           }
-          
+
           // Split label into multiple lines if it's still too long
           const words = displayName.split(" ");
           const lines: string[] = [];
@@ -185,19 +176,20 @@ export function CompetencyRadarChart({
           } else {
             lines.push(displayName);
           }
-          
+
           // Adjust vertical alignment based on position
           const baseY = labelY;
           const lineHeight = 12;
           const startOffset = lines.length > 1 ? -lineHeight / 2 : 0;
-          
+
           return (
             <g key={`label-${index}`}>
               {lines.map((line, lineIndex) => {
                 let dy = startOffset + lineIndex * lineHeight;
-                if (Math.sin(angle) < -0.5) dy += lineHeight; // Top labels
+                if (Math.sin(angle) < -0.5)
+                  dy += lineHeight; // Top labels
                 else if (Math.sin(angle) > 0.5) dy -= lineHeight / 2; // Bottom labels
-                
+
                 return (
                   <text
                     key={`label-${index}-${lineIndex}`}

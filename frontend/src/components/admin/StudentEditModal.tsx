@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AdminStudent, adminStudentService } from "@/services/admin-students.service";
+import {
+  AdminStudent,
+  adminStudentService,
+} from "@/services/admin-students.service";
 import { Course } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 
@@ -113,7 +116,9 @@ export default function StudentEditModal({
       await onSubmit(data);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Er is een fout opgetreden");
+      setError(
+        err instanceof Error ? err.message : "Er is een fout opgetreden",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -278,7 +283,9 @@ export default function StudentEditModal({
               <select
                 id="status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as "active" | "inactive")}
+                onChange={(e) =>
+                  setStatus(e.target.value as "active" | "inactive")
+                }
                 className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="active">Actief</option>
@@ -303,8 +310,8 @@ export default function StudentEditModal({
                 {isSubmitting
                   ? "Bezig..."
                   : mode === "create"
-                  ? "Aanmaken"
-                  : "Opslaan"}
+                    ? "Aanmaken"
+                    : "Opslaan"}
               </button>
             </div>
           </form>

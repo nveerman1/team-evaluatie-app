@@ -9,9 +9,18 @@ import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  draft: { label: "Concept", className: "bg-gray-100 text-gray-700 border-gray-200" },
-  open: { label: "Open", className: "bg-green-100 text-green-700 border-green-200" },
-  closed: { label: "Gesloten", className: "bg-slate-100 text-slate-600 border-slate-200" },
+  draft: {
+    label: "Concept",
+    className: "bg-gray-100 text-gray-700 border-gray-200",
+  },
+  open: {
+    label: "Open",
+    className: "bg-green-100 text-green-700 border-green-200",
+  },
+  closed: {
+    label: "Gesloten",
+    className: "bg-slate-100 text-slate-600 border-slate-200",
+  },
 };
 
 // Category definitions matching the default question order
@@ -25,7 +34,8 @@ const CATEGORIES = [
 
 function getCategory(order: number) {
   for (const cat of CATEGORIES) {
-    if (order >= cat.orderRange[0] && order <= cat.orderRange[1]) return cat.key;
+    if (order >= cat.orderRange[0] && order <= cat.orderRange[1])
+      return cat.key;
   }
   return "overig";
 }
@@ -69,18 +79,38 @@ function StarRating({ value, max = 5 }: { value: number; max?: number }) {
     <span className="inline-flex gap-0.5 text-amber-400 text-lg leading-none">
       {stars.map((_, i) => {
         if (i < full) return <span key={i}>★</span>;
-        if (i === full && half) return <span key={i} className="text-amber-200">★</span>;
-        return <span key={i} className="text-gray-200">★</span>;
+        if (i === full && half)
+          return (
+            <span key={i} className="text-amber-200">
+              ★
+            </span>
+          );
+        return (
+          <span key={i} className="text-gray-200">
+            ★
+          </span>
+        );
       })}
     </span>
   );
 }
 
-function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max: number; color?: string }) {
+function ProgressBar({
+  value,
+  max,
+  color = "bg-blue-500",
+}: {
+  value: number;
+  max: number;
+  color?: string;
+}) {
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-      <div className={`h-2 rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      <div
+        className={`h-2 rounded-full ${color} transition-all`}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
@@ -149,8 +179,13 @@ function LikertLegend() {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 pt-3 border-t border-gray-100">
       {items.map(({ score, label }) => (
-        <span key={score} className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-          <span className={`inline-block w-3 h-3 rounded-sm shrink-0 ${LIKERT_COLORS[score]}`} />
+        <span
+          key={score}
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500"
+        >
+          <span
+            className={`inline-block w-3 h-3 rounded-sm shrink-0 ${LIKERT_COLORS[score]}`}
+          />
           <span className="font-medium text-gray-600">{score}</span>
           <span>– {label}</span>
         </span>
@@ -175,7 +210,9 @@ function CategorySummaryCard({
             <span className="text-3xl font-bold text-gray-900 tabular-nums leading-none">
               {avg.toFixed(1)}
             </span>
-            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">gemiddelde score</p>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+              gemiddelde score
+            </p>
           </>
         ) : (
           <span className="text-lg text-gray-400">—</span>
@@ -197,7 +234,6 @@ function CategorySummaryCard({
   );
 }
 
-
 export default function ProjectFeedbackDashboardPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -207,7 +243,9 @@ export default function ProjectFeedbackDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [activeCategoryKey, setActiveCategoryKey] = useState<string | null>(null);
+  const [activeCategoryKey, setActiveCategoryKey] = useState<string | null>(
+    null,
+  );
 
   async function loadResults() {
     setLoading(true);
@@ -257,7 +295,8 @@ export default function ProjectFeedbackDashboardPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Weet je zeker dat je deze feedbackronde wilt verwijderen?")) return;
+    if (!confirm("Weet je zeker dat je deze feedbackronde wilt verwijderen?"))
+      return;
     try {
       await projectFeedbackService.deleteRound(roundId);
       router.push("/teacher/projects");
@@ -277,7 +316,7 @@ export default function ProjectFeedbackDashboardPage() {
   // Derive overview metrics
   const gradeQuestion = questions.find((q) => q.question_type === "scale10");
   const recommendQuestion = questions.find(
-    (q) => q.question_type === "rating" && q.order === 16
+    (q) => q.question_type === "rating" && q.order === 16,
   );
 
   // Group questions by category
@@ -300,7 +339,7 @@ export default function ProjectFeedbackDashboardPage() {
     .filter((cat) => cat.key !== "eindvragen")
     .map((cat) => {
       const qs = (byCategory[cat.key] ?? []).filter(
-        (q) => q.question_type !== "open" && q.avg_rating != null
+        (q) => q.question_type !== "open" && q.avg_rating != null,
       );
       if (qs.length === 0) return null;
       const avg = qs.reduce((s, q) => s + (q.avg_rating ?? 0), 0) / qs.length;
@@ -311,18 +350,24 @@ export default function ProjectFeedbackDashboardPage() {
   // Active category for pill tabs — default to first available
   const firstCategoryKey = categoriesToShow[0]?.key ?? null;
   const currentKey = activeCategoryKey ?? firstCategoryKey;
-  const activeCategory = categoriesToShow.find((c) => c.key === currentKey) ?? categoriesToShow[0];
-  const activeCatQuestions = activeCategory ? (byCategory[activeCategory.key] ?? []) : [];
+  const activeCategory =
+    categoriesToShow.find((c) => c.key === currentKey) ?? categoriesToShow[0];
+  const activeCatQuestions = activeCategory
+    ? (byCategory[activeCategory.key] ?? [])
+    : [];
   const activeCatRatingQs = activeCatQuestions.filter(
-    (q) => q.question_type !== "open" && q.question_type !== "scale10"
+    (q) => q.question_type !== "open" && q.question_type !== "scale10",
   );
   const activeCatScale10Qs = activeCatQuestions.filter(
-    (q) => q.question_type === "scale10"
+    (q) => q.question_type === "scale10",
   );
-  const activeCatOpenQs = activeCatQuestions.filter((q) => q.question_type === "open");
+  const activeCatOpenQs = activeCatQuestions.filter(
+    (q) => q.question_type === "open",
+  );
   const activeCatAvg =
     activeCatRatingQs.length > 0
-      ? activeCatRatingQs.reduce((s, q) => s + (q.avg_rating ?? 0), 0) / activeCatRatingQs.length
+      ? activeCatRatingQs.reduce((s, q) => s + (q.avg_rating ?? 0), 0) /
+        activeCatRatingQs.length
       : null;
 
   return (
@@ -332,7 +377,10 @@ export default function ProjectFeedbackDashboardPage() {
         <header className="px-6 py-5 max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Link href="/teacher/projects" className="text-xs text-gray-400 hover:text-gray-600">
+              <Link
+                href="/teacher/projects"
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
                 ← Projecten
               </Link>
             </div>
@@ -361,28 +409,36 @@ export default function ProjectFeedbackDashboardPage() {
               </button>
               <button
                 type="button"
-                disabled={actionLoading || round.status === "open" || round.status === "closed"}
+                disabled={
+                  actionLoading ||
+                  round.status === "open" ||
+                  round.status === "closed"
+                }
                 onClick={round.status === "draft" ? handleOpen : undefined}
                 className={`px-3 py-1.5 font-medium border-x border-gray-200 transition-colors ${
                   round.status === "open"
                     ? "bg-green-600 text-white"
                     : round.status === "closed"
-                    ? "bg-white text-gray-400 cursor-default"
-                    : "bg-white text-gray-600 hover:bg-green-50 hover:text-green-700"
+                      ? "bg-white text-gray-400 cursor-default"
+                      : "bg-white text-gray-600 hover:bg-green-50 hover:text-green-700"
                 }`}
               >
                 {actionLoading && round.status === "draft" ? "…" : "Open"}
               </button>
               <button
                 type="button"
-                disabled={actionLoading || round.status === "closed" || round.status === "draft"}
+                disabled={
+                  actionLoading ||
+                  round.status === "closed" ||
+                  round.status === "draft"
+                }
                 onClick={round.status === "open" ? handleClose : undefined}
                 className={`px-3 py-1.5 font-medium transition-colors ${
                   round.status === "closed"
                     ? "bg-slate-600 text-white"
                     : round.status === "draft"
-                    ? "bg-white text-gray-300 cursor-default"
-                    : "bg-white text-gray-600 hover:bg-slate-100"
+                      ? "bg-white text-gray-300 cursor-default"
+                      : "bg-white text-gray-600 hover:bg-slate-100"
                 }`}
               >
                 {actionLoading && round.status === "open" ? "…" : "Gesloten"}
@@ -474,7 +530,11 @@ export default function ProjectFeedbackDashboardPage() {
                   <span className="w-28 shrink-0 text-sm font-medium text-gray-700">
                     {label}
                   </span>
-                  <ProgressBar value={avg} max={5} color={likertColorForAvg(avg)} />
+                  <ProgressBar
+                    value={avg}
+                    max={5}
+                    color={likertColorForAvg(avg)}
+                  />
                   <span className="w-8 text-sm font-semibold text-gray-700 text-right tabular-nums">
                     {avg.toFixed(1)}
                   </span>
@@ -493,7 +553,8 @@ export default function ProjectFeedbackDashboardPage() {
             {/* Category pill tabs */}
             <div className="px-4 pt-4 pb-0 flex flex-wrap gap-2 border-b border-gray-100">
               {categoriesToShow.map((cat) => {
-                const isActive = cat.key === (activeCategoryKey ?? firstCategoryKey);
+                const isActive =
+                  cat.key === (activeCategoryKey ?? firstCategoryKey);
                 return (
                   <button
                     key={cat.key}
@@ -515,7 +576,10 @@ export default function ProjectFeedbackDashboardPage() {
               <div className="p-4 space-y-4">
                 {/* Category summary card (only for scale-5 categories with a meaningful avg) */}
                 {activeCatAvg != null && (
-                  <CategorySummaryCard label={activeCategory.label} avg={activeCatAvg} />
+                  <CategorySummaryCard
+                    label={activeCategory.label}
+                    avg={activeCatAvg}
+                  />
                 )}
 
                 {/* Scale-5 Likert questions */}
@@ -524,7 +588,9 @@ export default function ProjectFeedbackDashboardPage() {
                     {activeCatRatingQs.map((q, i) => (
                       <div key={q.id}>
                         <p className="text-sm font-medium text-gray-800">
-                          <span className="text-gray-400 mr-1 text-xs">{i + 1}.</span>
+                          <span className="text-gray-400 mr-1 text-xs">
+                            {i + 1}.
+                          </span>
                           {q.question_text}
                         </p>
                         {q.avg_rating != null ? (
@@ -534,7 +600,9 @@ export default function ProjectFeedbackDashboardPage() {
                             avg={q.avg_rating}
                           />
                         ) : (
-                          <p className="text-xs text-gray-400 mt-1">Nog geen antwoorden</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Nog geen antwoorden
+                          </p>
                         )}
                       </div>
                     ))}
@@ -561,7 +629,9 @@ export default function ProjectFeedbackDashboardPage() {
                             avg={q.avg_rating}
                           />
                         ) : (
-                          <p className="text-xs text-gray-400 mt-1">Nog geen antwoorden</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Nog geen antwoorden
+                          </p>
                         )}
                       </div>
                     ))}
@@ -569,9 +639,12 @@ export default function ProjectFeedbackDashboardPage() {
                 )}
 
                 {/* No scored questions empty state */}
-                {activeCatRatingQs.length === 0 && activeCatScale10Qs.length === 0 && (
-                  <p className="text-sm text-gray-400">Geen scorevragen in deze categorie.</p>
-                )}
+                {activeCatRatingQs.length === 0 &&
+                  activeCatScale10Qs.length === 0 && (
+                    <p className="text-sm text-gray-400">
+                      Geen scorevragen in deze categorie.
+                    </p>
+                  )}
 
                 {/* Open answers */}
                 {activeCatOpenQs.length > 0 && (
@@ -581,7 +654,9 @@ export default function ProjectFeedbackDashboardPage() {
                     </p>
                     {activeCatOpenQs.map((q) => (
                       <div key={q.id}>
-                        <p className="text-sm font-medium text-gray-700 mb-1">{q.question_text}</p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">
+                          {q.question_text}
+                        </p>
                         {q.open_answers && q.open_answers.length > 0 ? (
                           <ul className="space-y-1">
                             {q.open_answers.map((ans, j) => (
@@ -594,7 +669,9 @@ export default function ProjectFeedbackDashboardPage() {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-gray-400">Nog geen antwoorden</p>
+                          <p className="text-xs text-gray-400">
+                            Nog geen antwoorden
+                          </p>
                         )}
                       </div>
                     ))}
@@ -608,4 +685,3 @@ export default function ProjectFeedbackDashboardPage() {
     </>
   );
 }
-

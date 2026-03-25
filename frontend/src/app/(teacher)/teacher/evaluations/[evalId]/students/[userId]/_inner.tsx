@@ -192,7 +192,9 @@ function PeerGroupBlock({
 export default function StudentOverviewPageInner() {
   const { evalId, userId } = useParams<{ evalId: string; userId: string }>();
   const [data, setData] = useState<Overview | null>(null);
-  const [categoryAverages, setCategoryAverages] = useState<CategoryAverage[]>([]);
+  const [categoryAverages, setCategoryAverages] = useState<CategoryAverage[]>(
+    [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -204,7 +206,7 @@ export default function StudentOverviewPageInner() {
       try {
         const evalIdNum = parseInt(evalId, 10);
         const userIdNum = parseInt(userId, 10);
-        
+
         const [overviewRes, dashboardData] = await Promise.all([
           api.get<Overview>(
             `/evaluations/${encodeURIComponent(evalId)}/students/${encodeURIComponent(
@@ -213,13 +215,15 @@ export default function StudentOverviewPageInner() {
           ),
           dashboardService.getDashboard(evalIdNum).catch(() => null),
         ]);
-        
+
         if (!mounted) return;
         setData(overviewRes.data);
-        
+
         // Extract category averages for this student
         if (dashboardData) {
-          const studentItem = dashboardData.items.find((item) => item.user_id === userIdNum);
+          const studentItem = dashboardData.items.find(
+            (item) => item.user_id === userIdNum,
+          );
           if (studentItem?.category_averages) {
             setCategoryAverages(studentItem.category_averages);
           }
@@ -321,17 +325,26 @@ export default function StudentOverviewPageInner() {
               <h2 className="font-semibold">OMZA Scores</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {categoryAverages.map((cat) => (
-                  <div key={cat.category} className="p-3 rounded-xl border border-gray-200 bg-white">
-                    <div className="text-xs text-gray-500 mb-1">{cat.category}</div>
+                  <div
+                    key={cat.category}
+                    className="p-3 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <div className="text-xs text-gray-500 mb-1">
+                      {cat.category}
+                    </div>
                     <div className="space-y-1">
                       <div className="text-sm">
                         <span className="text-gray-500">Peer:</span>{" "}
-                        <span className="font-medium">{cat.peer_avg.toFixed(2)}</span>
+                        <span className="font-medium">
+                          {cat.peer_avg.toFixed(2)}
+                        </span>
                       </div>
                       {cat.self_avg !== null && cat.self_avg !== undefined && (
                         <div className="text-sm">
                           <span className="text-gray-500">Zelf:</span>{" "}
-                          <span className="font-medium text-blue-600">{cat.self_avg.toFixed(2)}</span>
+                          <span className="font-medium text-blue-600">
+                            {cat.self_avg.toFixed(2)}
+                          </span>
                         </div>
                       )}
                     </div>

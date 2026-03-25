@@ -21,7 +21,7 @@ export function ReflectionStep({
 }: ReflectionStepProps) {
   const [text, setText] = useState(initialText);
   const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle"
+    "idle",
   );
 
   useEffect(() => {
@@ -54,8 +54,8 @@ export function ReflectionStep({
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg">
         <p className="text-sm text-blue-800">
-          Reflecteer op je samenwerking en wat je hebt geleerd. Wat ging goed? Wat
-          zou je volgende keer anders doen?
+          Reflecteer op je samenwerking en wat je hebt geleerd. Wat ging goed?
+          Wat zou je volgende keer anders doen?
         </p>
       </div>
 

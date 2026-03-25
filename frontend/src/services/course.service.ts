@@ -71,7 +71,7 @@ export const courseService = {
    */
   async getCourseTeachers(courseId: number): Promise<TeacherCourse[]> {
     const response = await api.get<TeacherCourse[]>(
-      `/courses/${courseId}/teachers`
+      `/courses/${courseId}/teachers`,
     );
     return response.data;
   },
@@ -81,11 +81,11 @@ export const courseService = {
    */
   async assignTeacher(
     courseId: number,
-    data: TeacherCourseCreate
+    data: TeacherCourseCreate,
   ): Promise<TeacherCourse> {
     const response = await api.post<TeacherCourse>(
       `/courses/${courseId}/teachers`,
-      data
+      data,
     );
     return response.data;
   },
@@ -102,7 +102,7 @@ export const courseService = {
    */
   async getCourseStudents(courseId: number): Promise<CourseStudent[]> {
     const response = await api.get<CourseStudent[]>(
-      `/courses/${courseId}/students`
+      `/courses/${courseId}/students`,
     );
     return response.data;
   },
@@ -117,11 +117,11 @@ export const courseService = {
       email: string;
       class_name?: string;
       team_number?: number | null;
-    }
+    },
   ): Promise<CourseStudent> {
     const response = await api.post<CourseStudent>(
       `/courses/${courseId}/students`,
-      student
+      student,
     );
     return response.data;
   },
@@ -131,7 +131,7 @@ export const courseService = {
    */
   async bulkUpdateStudentTeams(
     courseId: number,
-    updates: StudentTeamUpdate[]
+    updates: StudentTeamUpdate[],
   ): Promise<void> {
     await api.patch(`/courses/${courseId}/students/bulk-update`, { updates });
   },

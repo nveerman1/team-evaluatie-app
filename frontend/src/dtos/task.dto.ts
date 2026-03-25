@@ -24,7 +24,7 @@ export type Task = {
   completed_at?: string; // ISO datetime string
   created_at: string;
   updated_at: string;
-  
+
   // Enriched context from joins
   project_name?: string;
   class_name?: string;
