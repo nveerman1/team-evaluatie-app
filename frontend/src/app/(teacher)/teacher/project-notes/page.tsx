@@ -189,6 +189,16 @@ export default function ProjectNotesOverviewPage() {
     return matchesSearch && matchesCourse;
   });
 
+  // Group filtered projects by course name
+  const groupedByCourse: Record<string, ProjectNotesContext[]> = {};
+  filteredProjects.forEach((project) => {
+    const courseKey = project.course_name || "Geen vak";
+    if (!groupedByCourse[courseKey]) {
+      groupedByCourse[courseKey] = [];
+    }
+    groupedByCourse[courseKey].push(project);
+  });
+
   return (
     <>
       {/* Page Header */}
@@ -432,92 +442,92 @@ export default function ProjectNotesOverviewPage() {
           </div>
         )}
 
-        {/* Projects List */}
-        {!loading && !error && filteredProjects.length > 0 && (
-          <div className="space-y-3">
-            {filteredProjects.map((project) => (
-              <div
-                key={project.id}
-                className={`group flex items-stretch justify-between gap-4 rounded-xl border bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                  selectedProjects.has(project.id)
-                    ? "border-blue-400 ring-2 ring-blue-100"
-                    : "border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                {/* Checkbox */}
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedProjects.has(project.id)}
-                    onChange={() => handleToggleProject(project.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Left side: content */}
-                <div className="flex flex-1 flex-col gap-1">
-                  {/* Title + course badge */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base font-semibold text-slate-900">
-                      {project.title}
-                    </h3>
-                    {project.course_name && (
-                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs text-blue-700 border border-blue-100">
-                        {project.course_name}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Description */}
-                  {project.description && (
-                    <p className="text-sm text-slate-500 line-clamp-1">
-                      {project.description}
-                    </p>
-                  )}
-
-                  {/* Note count */}
-                  {project.note_count !== undefined && (
-                    <div className="text-xs text-slate-500">
-                      {project.note_count}{" "}
-                      {project.note_count === 1 ? "notitie" : "notities"}
-                    </div>
-                  )}
-                </div>
-
-                {/* Right side: buttons */}
-                <div className="flex shrink-0 items-center gap-2">
-                  <Link
-                    href={`/teacher/project-notes/${project.id}`}
-                    className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+        {/* Projects List grouped by course */}
+        {!loading && !error && filteredProjects.length > 0 &&
+          Object.keys(groupedByCourse).map((courseName) => (
+            <section key={courseName} className="space-y-3">
+              <h3 className="text-lg font-semibold text-slate-800 px-2">
+                {courseName}
+              </h3>
+              <div className="space-y-3">
+                {groupedByCourse[courseName].map((project) => (
+                  <div
+                    key={project.id}
+                    className={`group flex items-stretch justify-between gap-4 rounded-xl border bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                      selectedProjects.has(project.id)
+                        ? "border-blue-400 ring-2 ring-blue-100"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
                   >
-                    Bekijk aantekeningen
-                  </Link>
-
-                  {/* Delete button */}
-                  <button
-                    onClick={() => handleDeleteSingle(project.id)}
-                    aria-label="Verwijder project"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition hover:border-red-200 hover:bg-red-100"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    {/* Checkbox */}
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjects.has(project.id)}
+                        onChange={() => handleToggleProject(project.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                    </svg>
-                  </button>
-                </div>
+                    </div>
+
+                    {/* Left side: content */}
+                    <div className="flex flex-1 flex-col gap-1">
+                      {/* Title */}
+                      <p className="text-base font-semibold text-slate-900">
+                        {project.title}
+                      </p>
+
+                      {/* Description */}
+                      {project.description && (
+                        <p className="text-sm text-slate-500 line-clamp-1">
+                          {project.description}
+                        </p>
+                      )}
+
+                      {/* Note count */}
+                      {project.note_count !== undefined && (
+                        <div className="text-xs text-slate-500">
+                          {project.note_count}{" "}
+                          {project.note_count === 1 ? "notitie" : "notities"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right side: buttons */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={`/teacher/project-notes/${project.id}`}
+                        className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                      >
+                        Bekijk aantekeningen
+                      </Link>
+
+                      {/* Delete button */}
+                      <button
+                        onClick={() => handleDeleteSingle(project.id)}
+                        aria-label="Verwijder project"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition hover:border-red-200 hover:bg-red-100"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            </section>
+          ))
+        }
 
         {/* Empty state */}
         {!loading && !error && projects.length === 0 && (
