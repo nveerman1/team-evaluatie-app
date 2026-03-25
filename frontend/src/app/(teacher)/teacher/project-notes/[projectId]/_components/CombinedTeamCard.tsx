@@ -211,7 +211,7 @@ export function CombinedTeamCard({
       className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
     >
       {/* ── Header: team label + editable project title + teacher dropdown ── */}
-      <div className="border-b border-slate-200 px-5 py-3 bg-slate-100">
+      <div className="border-b border-slate-200 px-5 py-2 bg-slate-100">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-slate-900 whitespace-nowrap shrink-0">
@@ -262,7 +262,7 @@ export function CombinedTeamCard({
       <div className="grid xl:grid-cols-[1fr_420px] divide-y xl:divide-y-0 xl:divide-x divide-slate-200">
 
         {/* LEFT: note entry UI */}
-        <div className="p-5 space-y-4">
+        <div className="p-4 space-y-3">
 
           {/* 1. Student selection */}
           <div>
@@ -307,7 +307,7 @@ export function CombinedTeamCard({
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder={filter ? `Observatie voor ${filter}...` : "Korte observatie voor het team..."}
-            className="w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 resize-none"
+            className="w-full min-h-[80px] rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 resize-none"
           />
 
           {/* 4. OMZA tags + Save button row */}
@@ -346,7 +346,7 @@ export function CombinedTeamCard({
         </div>
 
         {/* RIGHT: notes timeline */}
-        <div className="p-5">
+        <div className="p-4">
           <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
             Tijdlijn
             {timelineNotes.length > 0 && (
@@ -356,7 +356,7 @@ export function CombinedTeamCard({
             )}
           </div>
 
-          <div className="space-y-2.5 max-h-[650px] overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
             {timelineNotes.length === 0 ? (
               <p className="text-sm text-slate-500 py-4 text-center">
                 Nog geen aantekeningen{filter ? ` voor ${filter}` : ""}.
