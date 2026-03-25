@@ -52,6 +52,9 @@ export default function ProjectPlanDetailPage() {
   // Refs for section feedback textareas
   const feedbackRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
+  // Ref to track currently selected team so loadDetail can preserve it
+  const currentTeamIdRef = useRef<number | null>(null);
+
   // Section metadata
   const sectionMetadata: Record<
     SectionKey,
@@ -97,6 +100,17 @@ export default function ProjectPlanDetailPage() {
     try {
       const result = await projectPlanService.getProjectPlan(projectPlanId);
       setDetail(result);
+
+      // Preserve the currently selected team if it still exists in the new data
+      const keepId = currentTeamIdRef.current;
+      if (keepId && result.teams.length > 0) {
+        const existingTeam = result.teams.find((t) => t.id === keepId);
+        if (existingTeam) {
+          setSelectedTeamId(existingTeam.id);
+          setSelectedTeam(existingTeam);
+          return;
+        }
+      }
 
       // Auto-select first team if teamParam is provided
       if (teamParam && result.teams.length > 0) {
@@ -159,6 +173,7 @@ export default function ProjectPlanDetailPage() {
   // When team selection changes, load that team's data
   useEffect(() => {
     if (selectedTeamId && detail) {
+      currentTeamIdRef.current = selectedTeamId;
       const team = detail.teams.find((t) => t.id === selectedTeamId);
       setSelectedTeam(team || null);
     }
@@ -290,6 +305,22 @@ export default function ProjectPlanDetailPage() {
   if (error && !detail) return <ErrorMessage message={error} />;
   if (!detail) return <ErrorMessage message="Geen data gevonden" />;
 
+  const currentTeamIndex = detail.teams.findIndex(
+    (t) => t.id === selectedTeamId,
+  );
+
+  const handlePreviousTeam = () => {
+    if (currentTeamIndex > 0) {
+      setSelectedTeamId(detail.teams[currentTeamIndex - 1].id);
+    }
+  };
+
+  const handleNextTeam = () => {
+    if (currentTeamIndex < detail.teams.length - 1) {
+      setSelectedTeamId(detail.teams[currentTeamIndex + 1].id);
+    }
+  };
+
   const getStatusBadge = (status: PlanStatus) => {
     const badges: Record<PlanStatus, { className: string; label: string }> = {
       [PlanStatus.CONCEPT]: {
@@ -385,35 +416,35 @@ export default function ProjectPlanDetailPage() {
               </div>
             </div>
           </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2 mt-6 border-b border-slate-200">
-            <button
-              onClick={() => handleTabChange("overzicht")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                tab === "overzicht"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Overzicht
-            </button>
-            <button
-              onClick={() => handleTabChange("projectplannen")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                tab === "projectplannen"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Projectplannen
-            </button>
-          </div>
         </header>
       </div>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-slate-200">
+          <button
+            onClick={() => handleTabChange("overzicht")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+              tab === "overzicht"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Overzicht
+          </button>
+          <button
+            onClick={() => handleTabChange("projectplannen")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+              tab === "projectplannen"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Projectplannen
+          </button>
+        </div>
+
         {/* Tab 1: Overzicht */}
         {tab === "overzicht" && (
           <div className="space-y-4">
@@ -538,19 +569,37 @@ export default function ProjectPlanDetailPage() {
               <label className="block text-sm font-medium mb-2">
                 Selecteer team:
               </label>
-              <select
-                className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
-                value={selectedTeamId || ""}
-                onChange={(e) => setSelectedTeamId(Number(e.target.value))}
-              >
-                {detail.teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    Team {team.team_number || team.project_team_id} -{" "}
-                    {team.team_members.join(", ")}{" "}
-                    {team.title ? `- ${team.title}` : ""}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePreviousTeam}
+                  disabled={currentTeamIndex <= 0}
+                  className="p-2 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Vorig team"
+                >
+                  ←
+                </button>
+                <select
+                  className="flex-1 max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
+                  value={selectedTeamId || ""}
+                  onChange={(e) => setSelectedTeamId(Number(e.target.value))}
+                >
+                  {detail.teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      Team {team.team_number || team.project_team_id} -{" "}
+                      {team.team_members.join(", ")}{" "}
+                      {team.title ? `- ${team.title}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleNextTeam}
+                  disabled={currentTeamIndex >= detail.teams.length - 1}
+                  className="p-2 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Volgend team"
+                >
+                  →
+                </button>
+              </div>
             </div>
 
             {selectedTeam && (
@@ -676,10 +725,17 @@ export default function ProjectPlanDetailPage() {
                                       onClick={() => {
                                         const textarea =
                                           feedbackRefs.current[section.key];
+                                        const note = textarea?.value || "";
+                                        if (!note.trim()) {
+                                          alert(
+                                            "Vul een opmerking in voordat je op 'Aanpassen' klikt.",
+                                          );
+                                          return;
+                                        }
                                         handleSectionFeedback(
                                           section.key,
                                           SectionStatus.REVISION,
-                                          textarea?.value || "",
+                                          note,
                                         );
                                       }}
                                       disabled={isSaving}
