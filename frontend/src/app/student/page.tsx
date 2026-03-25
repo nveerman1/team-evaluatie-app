@@ -13,13 +13,13 @@ import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, Fil
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { ProjectPlanDashboardCard } from "@/components/student/dashboard/ProjectPlanDashboardCard";
-import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
 import { SkillTrainingTab } from "@/components/student/dashboard/SkillTrainingTab";
 import { ProjectFeedbackDashboardTab } from "@/components/student/dashboard/ProjectFeedbackDashboardTab";
 import { VoortgangTab } from "@/components/student/dashboard/VoortgangTab";
+import { InleverenTab } from "@/components/student/dashboard/InleverenTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -303,36 +303,12 @@ function StudentDashboardContent() {
             </TabsContent>
 
             {/* INLEVEREN */}
-            <TabsContent value="inleveren" className="space-y-4">
-              <Card className="rounded-2xl border-slate-200 bg-slate-50">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2">
-                    <Upload className="h-4 w-4 text-slate-600" />
-                    <p className="text-sm font-semibold text-slate-900">Inleveringen</p>
-                  </div>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Lever hier je documenten in voor projectbeoordelingen. Upload bestanden naar SharePoint en deel de links.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-4">
-                {projectLoading ? (
-                  <Loading />
-                ) : projectError ? (
-                  <ErrorMessage message={projectError} />
-                ) : (projectAssessments || []).filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
-                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
-                    <p className="text-slate-500">Nog geen projecten beschikbaar om in te leveren.</p>
-                  </div>
-                ) : (
-                  (projectAssessments || [])
-                    .filter(assessment => assessment.project_id !== null && assessment.project_id !== undefined)
-                    .map((assessment) => (
-                      <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
-                    ))
-                )}
-              </div>
+            <TabsContent value="inleveren">
+              <InleverenTab
+                projectAssessments={projectAssessments}
+                projectLoading={projectLoading}
+                projectError={projectError}
+              />
             </TabsContent>
 
             {/* 360° FEEDBACK (was: Evaluaties) */}
