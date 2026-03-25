@@ -7,12 +7,15 @@ import {
   clientService,
   rubricService,
   competencyService,
+  projectFeedbackService,
 } from "@/services";
+import { projectPlanService } from "@/services/projectplan.service";
 import { useCourses } from "@/hooks";
 import type { WizardProjectCreate, EvaluationConfig } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
 import type { RubricListItem } from "@/dtos/rubric.dto";
 import type { Competency } from "@/dtos";
+import { ProjectPlanCreate, ProjectPlanStatus } from "@/dtos/projectplan.dto";
 import { Loading } from "@/components";
 import { MultiSelect } from "@/components/form/MultiSelect";
 import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
@@ -82,7 +85,18 @@ export default function NewProjectWizardPage() {
     useState<number[]>([]);
   const [competencyScanTitle, setCompetencyScanTitle] = useState("");
 
-  // Step 3: Clients and notes
+  // Step 3: Bovenbouw options (conditioneel, alleen bij niveau === "bovenbouw")
+  const [projectPlanEnabled, setProjectPlanEnabled] = useState(false);
+  const [projectPlanTitle, setProjectPlanTitle] = useState("");
+  const [projectPlanStatus, setProjectPlanStatus] = useState<ProjectPlanStatus>(
+    ProjectPlanStatus.DRAFT,
+  );
+
+  // Step 4: Extras & clients
+  const [projectFeedbackEnabled, setProjectFeedbackEnabled] = useState(false);
+  const [projectFeedbackTitle, setProjectFeedbackTitle] = useState("");
+
+  // Step 4: Clients and notes
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   const [createDefaultNote, setCreateDefaultNote] = useState(true);
@@ -98,6 +112,33 @@ export default function NewProjectWizardPage() {
   const [rubricsLoaded, setRubricsLoaded] = useState(false);
   const [competenciesLoaded, setCompetenciesLoaded] = useState(false);
 
+  // Success tracking for post-creation entities
+  const [createdProjectPlanId, setCreatedProjectPlanId] = useState<
+    number | null
+  >(null);
+  const [createdFeedbackRoundId, setCreatedFeedbackRoundId] = useState<
+    number | null
+  >(null);
+
+  // Computed: whether bovenbouw is selected
+  const isBovenbouw = niveau === "bovenbouw";
+
+  // Wizard steps (dynamic based on niveau)
+  const wizardSteps = isBovenbouw
+    ? [
+        "Projectbasis",
+        "Evaluaties",
+        "Bovenbouw",
+        "Extra's & opdrachtgevers",
+        "Bevestigen",
+      ]
+    : ["Projectbasis", "Evaluaties", "Extra's & opdrachtgevers", "Bevestigen"];
+
+  // Helper: map wizardSteps display index (0-based) to internal step number
+  function displayIndexToInternalStep(idx: number): number {
+    return isBovenbouw ? idx + 1 : idx < 2 ? idx + 1 : idx + 2;
+  }
+
   // Load rubrics when reaching step 2
   useEffect(() => {
     if (step === 2 && !rubricsLoaded) {
@@ -105,16 +146,16 @@ export default function NewProjectWizardPage() {
     }
   }, [step, rubricsLoaded]);
 
-  // Load competencies when reaching step 2
+  // Load competencies when reaching step 4 (competency scan)
   useEffect(() => {
-    if (step === 2 && !competenciesLoaded) {
+    if (step === 4 && !competenciesLoaded) {
       loadCompetencies();
     }
   }, [step, competenciesLoaded]);
 
-  // Load clients when reaching step 3
+  // Load clients when reaching step 4
   useEffect(() => {
-    if (step === 3 && !clientsLoaded) {
+    if (step === 4 && !clientsLoaded) {
       loadClients();
     }
   }, [step, clientsLoaded]);
@@ -196,6 +237,12 @@ export default function NewProjectWizardPage() {
     }
     if (step === 2) {
       if (!validateStep2()) return;
+      // Skip step 3 (bovenbouw-opties) when not bovenbouw
+      if (!isBovenbouw) {
+        setError(null);
+        setStep(4);
+        return;
+      }
     }
     setError(null);
     setStep(step + 1);
@@ -203,6 +250,11 @@ export default function NewProjectWizardPage() {
 
   function handleBack() {
     setError(null);
+    // Skip step 3 when going back if not bovenbouw
+    if (step === 4 && !isBovenbouw) {
+      setStep(2);
+      return;
+    }
     setStep(step - 1);
   }
 
@@ -285,9 +337,45 @@ export default function NewProjectWizardPage() {
 
       // Store created entities and warnings
       setCreatedEntities(result.entities || []);
-      setWizardWarnings(result.warnings || []);
+      const newWarnings: string[] = [...(result.warnings || [])];
 
       setCreatedProjectId(result.project.id);
+
+      // Create project plan if enabled (bovenbouw only)
+      if (isBovenbouw && projectPlanEnabled) {
+        try {
+          const planPayload: ProjectPlanCreate = {
+            project_id: result.project.id,
+            title: projectPlanTitle || undefined,
+            status: projectPlanStatus,
+          };
+          const planResult =
+            await projectPlanService.createProjectPlan(planPayload);
+          setCreatedProjectPlanId(planResult.id);
+        } catch (e: any) {
+          newWarnings.push(
+            `Projectplan kon niet worden aangemaakt: ${e?.response?.data?.detail || e?.message || "Onbekende fout"}`,
+          );
+        }
+      }
+
+      // Create project feedback if enabled
+      if (projectFeedbackEnabled) {
+        try {
+          const feedbackResult = await projectFeedbackService.createRound({
+            project_id: result.project.id,
+            title:
+              projectFeedbackTitle || `Projectfeedback ${title.trim()}`,
+          });
+          setCreatedFeedbackRoundId(feedbackResult.id);
+        } catch (e: any) {
+          newWarnings.push(
+            `Projectfeedback kon niet worden aangemaakt: ${e?.response?.data?.detail || e?.message || "Onbekende fout"}`,
+          );
+        }
+      }
+
+      setWizardWarnings(newWarnings);
       setSuccess(true);
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
@@ -340,7 +428,7 @@ export default function NewProjectWizardPage() {
           )}
 
           {/* Summary of created entities */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="mb-6 p-4 bg-gray-50/80 rounded-xl border border-gray-100">
             <h3 className="font-semibold mb-3">Aangemaakt:</h3>
             <ul className="space-y-2 text-sm">
               {peerCount > 0 && (
@@ -369,6 +457,18 @@ export default function NewProjectWizardPage() {
                   </span>
                 </li>
               )}
+              {createdProjectPlanId && (
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Projectplan aangemaakt</span>
+                </li>
+              )}
+              {createdFeedbackRoundId && (
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>Projectfeedback aangemaakt</span>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -385,16 +485,40 @@ export default function NewProjectWizardPage() {
                   if (courseId) params.set("course_id", courseId.toString());
                   router.push(`/teacher/class-teams?${params.toString()}`);
                 }}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold"
               >
                 👥 Teams aanmaken
               </button>
             )}
 
+            {createdProjectPlanId && (
+              <button
+                onClick={() =>
+                  router.push(
+                    `/teacher/projectplans/${createdProjectPlanId}?tab=overzicht`,
+                  )
+                }
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              >
+                📋 Ga naar Projectplan
+              </button>
+            )}
+            {createdFeedbackRoundId && (
+              <button
+                onClick={() =>
+                  router.push(
+                    `/teacher/project-feedback/${createdFeedbackRoundId}`,
+                  )
+                }
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              >
+                📝 Ga naar Projectfeedback
+              </button>
+            )}
             {projectAssessmentCount > 0 && (
               <button
                 onClick={() => router.push("/teacher/project-assessments")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 Ga naar Projectbeoordelingen
               </button>
@@ -402,7 +526,7 @@ export default function NewProjectWizardPage() {
             {peerCount > 0 && (
               <button
                 onClick={() => router.push("/teacher/evaluations")}
-                className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 Ga naar Peerevaluaties
               </button>
@@ -410,14 +534,14 @@ export default function NewProjectWizardPage() {
             {competencyScanCount > 0 && (
               <button
                 onClick={() => router.push("/teacher/competencies")}
-                className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 Ga naar Competentiescans
               </button>
             )}
             <button
               onClick={() => router.push("/teacher")}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
             >
               Terug naar Dashboard
             </button>
@@ -441,45 +565,52 @@ export default function NewProjectWizardPage() {
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {[1, 2, 3, 4].map((s) => (
-            <div
-              key={s}
-              className={`flex items-center ${s < 4 ? "flex-1" : ""}`}
-            >
+          {wizardSteps.map((label, idx) => {
+            const internalStep = displayIndexToInternalStep(idx);
+            const isCompleted = internalStep < step;
+            const isCurrent = internalStep === step;
+            const displayNum = idx + 1;
+            return (
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  s < step
-                    ? "bg-green-500 text-white"
-                    : s === step
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-600"
-                }`}
+                key={idx}
+                className={`flex items-center ${idx < wizardSteps.length - 1 ? "flex-1" : ""}`}
               >
-                {s < step ? "✓" : s}
-              </div>
-              {s < 4 && (
                 <div
-                  className={`flex-1 h-1 mx-2 ${
-                    s < step ? "bg-green-500" : "bg-gray-200"
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                    isCompleted
+                      ? "bg-green-500 text-white"
+                      : isCurrent
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-600"
                   }`}
-                />
-              )}
-            </div>
-          ))}
+                >
+                  {isCompleted ? "✓" : displayNum}
+                </div>
+                {idx < wizardSteps.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-2 rounded-full ${
+                      isCompleted ? "bg-green-500" : "bg-gray-200"
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
         <div className="flex justify-between mt-2 text-sm">
-          <span className={step === 1 ? "font-semibold" : "text-gray-600"}>
-            Projectbasis
-          </span>
-          <span className={step === 2 ? "font-semibold" : "text-gray-600"}>
-            Evaluaties
-          </span>
-          <span className={step === 3 ? "font-semibold" : "text-gray-600"}>
-            Opdrachtgevers
-          </span>
-          <span className={step === 4 ? "font-semibold" : "text-gray-600"}>
-            Bevestigen
-          </span>
+          {wizardSteps.map((label, idx) => {
+            const internalStep = displayIndexToInternalStep(idx);
+            return (
+              <span
+                key={idx}
+                className={
+                  internalStep === step ? "font-semibold" : "text-gray-600"
+                }
+              >
+                {label}
+              </span>
+            );
+          })}
         </div>
       </div>
 
@@ -604,7 +735,7 @@ export default function NewProjectWizardPage() {
           </div>
         )}
 
-        {/* Step 2: Evaluations (Enhanced with deadlines, rubrics, competencies) */}
+        {/* Step 2: Evaluations */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
@@ -617,12 +748,12 @@ export default function NewProjectWizardPage() {
               </p>
             </div>
 
-            {loadingRubrics || loadingCompetencies ? (
+            {loadingRubrics ? (
               <Loading />
             ) : (
               <div className="space-y-4">
                 {/* Peer Evaluatie Tussentijds */}
-                <div className="border rounded-lg p-4">
+                <div className="border border-gray-200/70 rounded-xl p-5">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -639,7 +770,7 @@ export default function NewProjectWizardPage() {
                       </div>
 
                       {peerTussenEnabled && (
-                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-blue-200">
+                        <div className="space-y-3 mt-3 pl-4 border-l-2 border-blue-200 bg-gray-50/50 rounded-lg py-3 pr-3">
                           <div>
                             <label className="block text-xs font-medium mb-1">
                               Deadline
@@ -650,7 +781,7 @@ export default function NewProjectWizardPage() {
                               onChange={(e) =>
                                 setPeerTussenDeadline(e.target.value)
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             />
                           </div>
                           <div>
@@ -664,7 +795,7 @@ export default function NewProjectWizardPage() {
                                   e.target.value ? Number(e.target.value) : "",
                                 )
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             >
                               <option value="">
                                 Gebruik standaard peer rubric
@@ -685,7 +816,7 @@ export default function NewProjectWizardPage() {
                 </div>
 
                 {/* Peer Evaluatie Eind */}
-                <div className="border rounded-lg p-4">
+                <div className="border border-gray-200/70 rounded-xl p-5">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -701,7 +832,7 @@ export default function NewProjectWizardPage() {
                       </div>
 
                       {peerEindEnabled && (
-                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-blue-200">
+                        <div className="space-y-3 mt-3 pl-4 border-l-2 border-blue-200 bg-gray-50/50 rounded-lg py-3 pr-3">
                           <div>
                             <label className="block text-xs font-medium mb-1">
                               Deadline
@@ -712,7 +843,7 @@ export default function NewProjectWizardPage() {
                               onChange={(e) =>
                                 setPeerEindDeadline(e.target.value)
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             />
                           </div>
                           <div>
@@ -726,7 +857,7 @@ export default function NewProjectWizardPage() {
                                   e.target.value ? Number(e.target.value) : "",
                                 )
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             >
                               <option value="">
                                 Gebruik standaard peer rubric
@@ -747,7 +878,7 @@ export default function NewProjectWizardPage() {
                 </div>
 
                 {/* Project Assessment Tussentijds (Interim) */}
-                <div className="border rounded-lg p-4">
+                <div className="border border-gray-200/70 rounded-xl p-5">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -767,7 +898,7 @@ export default function NewProjectWizardPage() {
                       </div>
 
                       {projectAssessmentTussenEnabled && (
-                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-orange-200">
+                        <div className="space-y-3 mt-3 pl-4 border-l-2 border-orange-200 bg-gray-50/50 rounded-lg py-3 pr-3">
                           <div>
                             <label className="block text-xs font-medium mb-1">
                               Rubric <span className="text-red-500">*</span>
@@ -779,7 +910,7 @@ export default function NewProjectWizardPage() {
                                   e.target.value ? Number(e.target.value) : "",
                                 )
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                               required
                             >
                               <option value="">
@@ -810,7 +941,7 @@ export default function NewProjectWizardPage() {
                                   e.target.value,
                                 )
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             />
                           </div>
                         </div>
@@ -820,7 +951,7 @@ export default function NewProjectWizardPage() {
                 </div>
 
                 {/* Project Assessment */}
-                <div className="border rounded-lg p-4">
+                <div className="border border-gray-200/70 rounded-xl p-5">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -839,7 +970,7 @@ export default function NewProjectWizardPage() {
                       </div>
 
                       {projectAssessmentEnabled && (
-                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-green-200">
+                        <div className="space-y-3 mt-3 pl-4 border-l-2 border-green-200 bg-gray-50/50 rounded-lg py-3 pr-3">
                           <div>
                             <label className="block text-xs font-medium mb-1">
                               Rubric <span className="text-red-500">*</span>
@@ -851,7 +982,7 @@ export default function NewProjectWizardPage() {
                                   e.target.value ? Number(e.target.value) : "",
                                 )
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                               required
                             >
                               <option value="">
@@ -879,7 +1010,7 @@ export default function NewProjectWizardPage() {
                               onChange={(e) =>
                                 setProjectAssessmentDeadline(e.target.value)
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             />
                           </div>
                           <div>
@@ -893,7 +1024,7 @@ export default function NewProjectWizardPage() {
                                 setProjectAssessmentVersion(e.target.value)
                               }
                               placeholder="bijv. tussentijds, eind"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             />
                           </div>
                         </div>
@@ -901,9 +1032,116 @@ export default function NewProjectWizardPage() {
                     </div>
                   </label>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
 
+        {/* Step 3: Bovenbouw-opties (conditioneel, alleen bij niveau === "bovenbouw") */}
+        {step === 3 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Bovenbouw-opties</h2>
+              <p className="text-sm text-gray-600">
+                Extra opties voor bovenbouwprojecten.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Projectplan */}
+              <div className="border border-gray-200/70 rounded-xl p-5">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={projectPlanEnabled}
+                    onChange={(e) => setProjectPlanEnabled(e.target.checked)}
+                    className="mt-1"
+                    id="project-plan-checkbox"
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="project-plan-checkbox"
+                      className="font-medium cursor-pointer"
+                    >
+                      Projectplan aanmaken
+                    </label>
+                    <div className="text-sm text-gray-600 mb-3">
+                      Teams vullen een projectplan in met 8 secties (GO/NO-GO)
+                    </div>
+
+                    {projectPlanEnabled && (
+                      <div className="space-y-3 mt-3 pl-4 border-l-2 border-indigo-200 bg-gray-50/50 rounded-lg py-3 pr-3">
+                        <div>
+                          <label className="block text-xs font-medium mb-1">
+                            Titel (optioneel)
+                          </label>
+                          <input
+                            type="text"
+                            value={projectPlanTitle}
+                            onChange={(e) =>
+                              setProjectPlanTitle(e.target.value)
+                            }
+                            placeholder="Bijv. Projectplan periode 1"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Laat leeg voor standaard titel
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">
+                            Status
+                          </label>
+                          <select
+                            value={projectPlanStatus}
+                            onChange={(e) =>
+                              setProjectPlanStatus(
+                                e.target.value as ProjectPlanStatus,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                          >
+                            <option value={ProjectPlanStatus.DRAFT}>
+                              Concept (niet zichtbaar voor studenten)
+                            </option>
+                            <option value={ProjectPlanStatus.OPEN}>
+                              Open (zichtbaar voor studenten)
+                            </option>
+                            <option value={ProjectPlanStatus.PUBLISHED}>
+                              Gepubliceerd (zichtbaar voor studenten)
+                            </option>
+                            <option value={ProjectPlanStatus.CLOSED}>
+                              Gesloten (alleen lezen voor studenten)
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Extra's & opdrachtgevers */}
+        {step === 4 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">
+                Extra&apos;s & opdrachtgevers
+              </h2>
+              <p className="text-sm text-gray-600">
+                Voeg optionele componenten en opdrachtgevers toe.
+              </p>
+            </div>
+
+            {loadingCompetencies ? (
+              <Loading />
+            ) : (
+              <div className="space-y-4">
                 {/* Competency Scan */}
-                <div className="border rounded-lg p-4">
+                <div className="border border-gray-200/70 rounded-xl p-5">
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
@@ -926,7 +1164,7 @@ export default function NewProjectWizardPage() {
                       </div>
 
                       {competencyScanEnabled && (
-                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-purple-200">
+                        <div className="space-y-3 mt-3 pl-4 border-l-2 border-purple-200 bg-gray-50/50 rounded-lg py-3 pr-3">
                           <div>
                             <label className="block text-xs font-medium mb-1">
                               Titel (optioneel)
@@ -938,7 +1176,7 @@ export default function NewProjectWizardPage() {
                                 setCompetencyScanTitle(e.target.value)
                               }
                               placeholder="bijv. Q1 Competentiescan"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -952,7 +1190,7 @@ export default function NewProjectWizardPage() {
                                 onChange={(e) =>
                                   setCompetencyScanStartDate(e.target.value)
                                 }
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                               />
                             </div>
                             <div>
@@ -965,7 +1203,7 @@ export default function NewProjectWizardPage() {
                                 onChange={(e) =>
                                   setCompetencyScanEndDate(e.target.value)
                                 }
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                               />
                             </div>
                           </div>
@@ -979,7 +1217,7 @@ export default function NewProjectWizardPage() {
                               onChange={(e) =>
                                 setCompetencyScanDeadline(e.target.value)
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
                               placeholder="Anders wordt einddatum gebruikt"
                             />
                           </div>
@@ -1008,83 +1246,131 @@ export default function NewProjectWizardPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Projectfeedback */}
+                <div className="border border-gray-200/70 rounded-xl p-5">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={projectFeedbackEnabled}
+                      onChange={(e) =>
+                        setProjectFeedbackEnabled(e.target.checked)
+                      }
+                      className="mt-1"
+                      id="project-feedback-checkbox"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="project-feedback-checkbox"
+                        className="font-medium cursor-pointer"
+                      >
+                        Projectfeedback aanmaken
+                      </label>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Leerlingen vullen een feedbackvragenlijst in over het
+                        project (standaard vragen worden automatisch toegevoegd)
+                      </div>
+
+                      {projectFeedbackEnabled && (
+                        <div className="space-y-3 mt-3 pl-4 border-l-2 border-teal-200 bg-gray-50/50 rounded-lg py-3 pr-3">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Titel
+                            </label>
+                            <input
+                              type="text"
+                              value={projectFeedbackTitle}
+                              onChange={(e) =>
+                                setProjectFeedbackTitle(e.target.value)
+                              }
+                              placeholder={`Projectfeedback ${title || "..."}`}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Laat leeg voor standaard titel op basis van de
+                              projectnaam
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opdrachtgevers */}
+                <div className="border border-gray-200/70 rounded-xl p-5">
+                  <h3 className="font-medium mb-2">Opdrachtgevers</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Selecteer welke opdrachtgevers betrokken zijn bij dit
+                    project.
+                  </p>
+
+                  {clientsLoadError && (
+                    <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        {clientsLoadError}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setClientsLoaded(false);
+                          loadClients();
+                        }}
+                        className="mt-2 text-sm text-blue-600 hover:underline"
+                      >
+                        Opnieuw proberen
+                      </button>
+                    </div>
+                  )}
+
+                  <SearchableMultiSelect
+                    options={clients.map((client) => ({
+                      id: client.id,
+                      label: client.organization,
+                      subtitle: client.contact_name,
+                    }))}
+                    value={selectedClientIds}
+                    onChange={setSelectedClientIds}
+                    placeholder="Zoek en selecteer opdrachtgevers..."
+                    loading={loadingClients}
+                    className="w-full"
+                  />
+                  {clients.length === 0 &&
+                    !loadingClients &&
+                    !clientsLoadError && (
+                      <p className="text-sm text-gray-500 italic mt-2">
+                        Geen opdrachtgevers beschikbaar.
+                      </p>
+                    )}
+                </div>
+
+                {/* Aantekeningenpagina */}
+                <div className="border border-gray-200/70 rounded-xl p-5">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createDefaultNote}
+                      onChange={(e) => setCreateDefaultNote(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="font-medium">
+                        Maak een standaard projectaantekeningen-pagina aan
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Projectaantekeningen zijn alleen zichtbaar voor
+                        docenten en kunnen gebruikt worden voor planning,
+                        materialen, contact met opdrachtgever etc.
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Step 3: Clients and notes */}
-        {step === 3 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold mb-4">
-              Opdrachtgevers & aantekeningen
-            </h2>
-
-            <div>
-              <h3 className="font-medium mb-2">Opdrachtgevers</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Selecteer welke opdrachtgevers betrokken zijn bij dit project.
-              </p>
-
-              {clientsLoadError && (
-                <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">{clientsLoadError}</p>
-                  <button
-                    onClick={() => {
-                      setClientsLoaded(false);
-                      loadClients();
-                    }}
-                    className="mt-2 text-sm text-blue-600 hover:underline"
-                  >
-                    Opnieuw proberen
-                  </button>
-                </div>
-              )}
-
-              <SearchableMultiSelect
-                options={clients.map((client) => ({
-                  id: client.id,
-                  label: client.organization,
-                  subtitle: client.contact_name,
-                }))}
-                value={selectedClientIds}
-                onChange={setSelectedClientIds}
-                placeholder="Zoek en selecteer opdrachtgevers..."
-                loading={loadingClients}
-                className="w-full"
-              />
-              {clients.length === 0 && !loadingClients && !clientsLoadError && (
-                <p className="text-sm text-gray-500 italic mt-2">
-                  Geen opdrachtgevers beschikbaar.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-4 border-t">
-              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={createDefaultNote}
-                  onChange={(e) => setCreateDefaultNote(e.target.checked)}
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">
-                    Maak een standaard projectaantekeningen-pagina aan
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Projectaantekeningen zijn alleen zichtbaar voor docenten en
-                    kunnen gebruikt worden voor planning, materialen, contact
-                    met opdrachtgever etc.
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Summary */}
-        {step === 4 && (
+        {/* Step 5: Summary */}
+        {step === 5 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Bevestigen</h2>
             <p className="text-sm text-gray-600 mb-4">
@@ -1093,7 +1379,7 @@ export default function NewProjectWizardPage() {
             </p>
 
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50/80 rounded-xl border border-gray-100 p-4">
                 <h3 className="font-semibold mb-2">Projectgegevens</h3>
                 <dl className="space-y-1 text-sm">
                   <div className="flex">
@@ -1133,7 +1419,7 @@ export default function NewProjectWizardPage() {
                 </dl>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50/80 rounded-xl border border-gray-100 p-4">
                 <h3 className="font-semibold mb-2">Evaluaties</h3>
                 <ul className="space-y-2 text-sm">
                   {peerTussenEnabled && (
@@ -1201,37 +1487,10 @@ export default function NewProjectWizardPage() {
                       )}
                     </li>
                   )}
-                  {competencyScanEnabled && (
-                    <li>
-                      <div className="font-medium">✓ Competentiescan</div>
-                      {competencyScanCompetencyIds.length > 0 && (
-                        <div className="text-xs text-gray-600 ml-4">
-                          {competencyScanCompetencyIds.length} competentie
-                          {competencyScanCompetencyIds.length > 1
-                            ? "s"
-                            : ""}{" "}
-                          geselecteerd
-                        </div>
-                      )}
-                      {competencyScanStartDate && competencyScanEndDate && (
-                        <div className="text-xs text-gray-600 ml-4">
-                          Periode:{" "}
-                          {new Date(competencyScanStartDate).toLocaleDateString(
-                            "nl-NL",
-                          )}{" "}
-                          -{" "}
-                          {new Date(competencyScanEndDate).toLocaleDateString(
-                            "nl-NL",
-                          )}
-                        </div>
-                      )}
-                    </li>
-                  )}
                   {!peerTussenEnabled &&
                     !peerEindEnabled &&
                     !projectAssessmentEnabled &&
-                    !projectAssessmentTussenEnabled &&
-                    !competencyScanEnabled && (
+                    !projectAssessmentTussenEnabled && (
                       <li className="text-gray-500 italic">
                         Geen evaluaties geselecteerd
                       </li>
@@ -1239,7 +1498,71 @@ export default function NewProjectWizardPage() {
                 </ul>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
+              {isBovenbouw && (
+                <div className="bg-gray-50/80 rounded-xl border border-gray-100 p-4">
+                  <h3 className="font-semibold mb-2">Bovenbouw-opties</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex">
+                      <span className="w-32 text-gray-600">Projectplan:</span>
+                      <span className="font-medium">
+                        {projectPlanEnabled ? "Ja" : "Nee"}
+                      </span>
+                    </div>
+                    {projectPlanEnabled && projectPlanTitle && (
+                      <div className="flex">
+                        <span className="w-32 text-gray-600">Titel:</span>
+                        <span>{projectPlanTitle}</span>
+                      </div>
+                    )}
+                    {projectPlanEnabled && (
+                      <div className="flex">
+                        <span className="w-32 text-gray-600">Status:</span>
+                        <span className="capitalize">{projectPlanStatus}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-50/80 rounded-xl border border-gray-100 p-4">
+                <h3 className="font-semibold mb-2">Extra&apos;s</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex">
+                    <span className="w-36 text-gray-600">Competentiescan:</span>
+                    <span className="font-medium">
+                      {competencyScanEnabled ? "Ja" : "Nee"}
+                    </span>
+                  </div>
+                  {competencyScanEnabled &&
+                    competencyScanCompetencyIds.length > 0 && (
+                      <div className="flex">
+                        <span className="w-36 text-gray-600">
+                          Competenties:
+                        </span>
+                        <span>
+                          {competencyScanCompetencyIds.length} geselecteerd
+                        </span>
+                      </div>
+                    )}
+                  <div className="flex">
+                    <span className="w-36 text-gray-600">Projectfeedback:</span>
+                    <span className="font-medium">
+                      {projectFeedbackEnabled ? "Ja" : "Nee"}
+                    </span>
+                  </div>
+                  {projectFeedbackEnabled && (
+                    <div className="flex">
+                      <span className="w-36 text-gray-600">Titel:</span>
+                      <span>
+                        {projectFeedbackTitle ||
+                          `Projectfeedback ${title}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50/80 rounded-xl border border-gray-100 p-4">
                 <h3 className="font-semibold mb-2">
                   Opdrachtgevers & aantekeningen
                 </h3>
@@ -1272,16 +1595,16 @@ export default function NewProjectWizardPage() {
         <div className="flex justify-between mt-6 pt-6 border-t">
           <button
             onClick={step > 1 ? handleBack : () => router.push("/teacher")}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50"
             disabled={submitting}
           >
             {step > 1 ? "Vorige" : "Annuleren"}
           </button>
 
-          {step < 4 ? (
+          {step < 5 ? (
             <button
               onClick={handleNext}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
             >
               Volgende
             </button>
@@ -1289,7 +1612,7 @@ export default function NewProjectWizardPage() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Bezig..." : "Project aanmaken"}
             </button>
