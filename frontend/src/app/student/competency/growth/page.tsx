@@ -250,7 +250,7 @@ function CompetencyProfileSection({
           <select
             value={selectedScanId}
             onChange={(e) => setSelectedScanId(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-900 flex-1 max-w-md"
           >
             <option value="">Alle scans (gemiddeld)</option>
             {scans.map((scan) => (
@@ -391,7 +391,7 @@ function CompetencyScoresSection({
             <select
               value={selectedScanId}
               onChange={(e) => setSelectedScanId(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-900 flex-1 max-w-md"
             >
               <option value="">Alle scans (meest recent)</option>
               {scans.map((scan) => (

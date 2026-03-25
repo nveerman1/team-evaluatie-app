@@ -373,7 +373,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
               Filter op project:
             </label>
             <select
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
               value={projectFilter}
               onChange={(e) => handleProjectFilterChange(e.target.value)}
             >
