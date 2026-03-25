@@ -22,6 +22,8 @@ _SIG_FILL              = "F1F5F9"  # slate-100 – signature header background
 _SIG_BORDER            = "E2E8F0"  # slate-200 – info / signature borders
 _SIGNATURE_LINE_LENGTH = 32        # number of underscores in a signature line
 
+FONT_NAME = "Aptos"  # document-wide typeface
+
 # ── Section ordering & titles ──────────────────────────────────────────────────
 SECTION_ORDER = [
     "client",
@@ -103,6 +105,32 @@ def _spacing(para, before: float = 0, after: float = 0) -> None:
     fmt.space_after = Pt(after)
 
 
+def _set_default_font(doc: Document) -> None:
+    """Set the document-wide default font to FONT_NAME via the Normal style."""
+    # 1. Modify the Normal paragraph style (affects all unstyled text)
+    doc.styles["Normal"].font.name = FONT_NAME
+
+    # 2. Patch rPrDefault in docDefaults so the low-level default also uses Aptos.
+    #    XML path: w:docDefaults → w:rPrDefault → w:rPr → w:rFonts
+    styles_el = doc.styles.element
+    doc_defaults = styles_el.find(qn("w:docDefaults"))
+    if doc_defaults is None:
+        return
+    rpr_default = doc_defaults.find(qn("w:rPrDefault"))
+    if rpr_default is None:
+        return
+    rpr = rpr_default.find(qn("w:rPr"))
+    if rpr is None:
+        rpr = OxmlElement("w:rPr")
+        rpr_default.append(rpr)
+    rFonts = rpr.find(qn("w:rFonts"))
+    if rFonts is None:
+        rFonts = OxmlElement("w:rFonts")
+        rpr.insert(0, rFonts)
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        rFonts.set(qn(attr), FONT_NAME)
+
+
 # ── Layout helper functions ────────────────────────────────────────────────────
 
 def add_document_header(
@@ -119,6 +147,7 @@ def add_document_header(
     school.alignment = WD_ALIGN_PARAGRAPH.LEFT
     _spacing(school, before=0, after=2)
     run = school.runs[0]
+    run.font.name = FONT_NAME
     run.font.size = Pt(8)
     run.font.color.rgb = COLOR_MUTED
     run.font.all_caps = True
@@ -127,6 +156,7 @@ def add_document_header(
     doc_type = doc.add_paragraph("Projectplan")
     _spacing(doc_type, before=4, after=0)
     run = doc_type.runs[0]
+    run.font.name = FONT_NAME
     run.font.size = Pt(26)
     run.font.bold = True
     run.font.color.rgb = COLOR_DARK
@@ -136,6 +166,7 @@ def add_document_header(
         proj = doc.add_paragraph(project_title)
         _spacing(proj, before=2, after=6)
         run = proj.runs[0]
+        run.font.name = FONT_NAME
         run.font.size = Pt(14)
         run.font.color.rgb = COLOR_DARK
 
@@ -149,6 +180,7 @@ def add_document_header(
     meta = doc.add_paragraph("   ·   ".join(parts))
     _spacing(meta, before=0, after=2)
     run = meta.runs[0]
+    run.font.name = FONT_NAME
     run.font.size = Pt(10)
     run.font.color.rgb = COLOR_MUTED
 
@@ -157,6 +189,7 @@ def add_document_header(
         org_para = doc.add_paragraph(f"Opdrachtgever: {client_org}")
         _spacing(org_para, before=0, after=4)
         run = org_para.runs[0]
+        run.font.name = FONT_NAME
         run.font.size = Pt(10)
         run.font.color.rgb = COLOR_MUTED
         run.font.italic = True
@@ -180,6 +213,7 @@ def add_section_heading(doc: Document, text: str) -> None:
     para = doc.add_paragraph(text)
     _spacing(para, before=14, after=4)
     run = para.runs[0]
+    run.font.name = FONT_NAME
     run.font.size = Pt(13)
     run.font.bold = True
     run.font.color.rgb = COLOR_ACCENT
@@ -203,12 +237,14 @@ def add_info_pairs(doc: Document, pairs: list) -> None:
         # Muted bold label
         if lc.paragraphs[0].runs:
             r = lc.paragraphs[0].runs[0]
+            r.font.name = FONT_NAME
             r.font.size = Pt(10)
             r.font.bold = True
             r.font.color.rgb = COLOR_LABEL
         # Dark value
         if vc.paragraphs[0].runs:
             r = vc.paragraphs[0].runs[0]
+            r.font.name = FONT_NAME
             r.font.size = Pt(10)
             r.font.color.rgb = COLOR_DARK
     spacer = doc.add_paragraph()
@@ -221,6 +257,7 @@ def add_body_paragraph(doc: Document, text: str) -> None:
     _spacing(para, before=0, after=8)
     para.paragraph_format.line_spacing = Pt(14)
     for run in para.runs:
+        run.font.name = FONT_NAME
         run.font.size = Pt(11)
         run.font.color.rgb = COLOR_DARK
 
@@ -233,6 +270,7 @@ def add_bullet_list(doc: Document, items: list) -> None:
         para = doc.add_paragraph(item.strip(), style="List Bullet")
         _spacing(para, before=1, after=1)
         for run in para.runs:
+            run.font.name = FONT_NAME
             run.font.size = Pt(11)
             run.font.color.rgb = COLOR_DARK
 
@@ -257,6 +295,7 @@ def add_styled_table(doc: Document, header_labels: list, rows: list) -> None:
             _set_cell_margins(cell, top=80, bottom=80, left=120, right=120)
             if cell.paragraphs[0].runs:
                 r = cell.paragraphs[0].runs[0]
+                r.font.name = FONT_NAME
                 r.font.bold = True
                 r.font.size = Pt(10)
                 r.font.color.rgb = COLOR_DARK
@@ -272,6 +311,7 @@ def add_styled_table(doc: Document, header_labels: list, rows: list) -> None:
             _set_cell_margins(cell, top=80, bottom=80, left=120, right=120)
             if cell.paragraphs[0].runs:
                 r = cell.paragraphs[0].runs[0]
+                r.font.name = FONT_NAME
                 r.font.size = Pt(10)
                 r.font.color.rgb = COLOR_DARK
 
@@ -287,6 +327,7 @@ def add_signature_section(doc: Document) -> None:
     )
     _spacing(intro, before=0, after=12)
     for run in intro.runs:
+        run.font.name = FONT_NAME
         run.font.size = Pt(11)
         run.font.color.rgb = COLOR_DARK
 
@@ -303,6 +344,7 @@ def add_signature_section(doc: Document) -> None:
         _set_cell_margins(cell, top=80, bottom=80, left=160, right=160)
         if cell.paragraphs[0].runs:
             r = cell.paragraphs[0].runs[0]
+            r.font.name = FONT_NAME
             r.font.bold = True
             r.font.size = Pt(11)
             r.font.color.rgb = COLOR_DARK
@@ -314,6 +356,7 @@ def add_signature_section(doc: Document) -> None:
             para = cell.paragraphs[0]
             para.clear()
             r = para.add_run(field_label)
+            r.font.name = FONT_NAME
             r.font.size = Pt(10)
             r.font.bold = True
             r.font.color.rgb = COLOR_LABEL
@@ -321,6 +364,7 @@ def add_signature_section(doc: Document) -> None:
             space_para = cell.add_paragraph()
             _spacing(space_para, before=14, after=4)
             sig_run = space_para.add_run("_" * _SIGNATURE_LINE_LENGTH)
+            sig_run.font.name = FONT_NAME
             sig_run.font.size = Pt(10)
             sig_run.font.color.rgb = COLOR_MUTED
             _set_cell_borders(cell, _SIG_BORDER)
@@ -347,6 +391,9 @@ def generate_projectplan_docx(team_data: dict) -> BytesIO:
         BytesIO buffer containing the .docx file
     """
     doc = Document()
+
+    # Set document-wide default font
+    _set_default_font(doc)
 
     # Slightly tighter margins for a cleaner print layout
     for section in doc.sections:
@@ -434,6 +481,7 @@ def generate_projectplan_docx(team_data: dict) -> BytesIO:
                         subhead = doc.add_paragraph(sub_lines[0])
                         _spacing(subhead, before=8, after=2)
                         for run in subhead.runs:
+                            run.font.name = FONT_NAME
                             run.font.bold = True
                             run.font.size = Pt(11)
                             run.font.color.rgb = COLOR_DARK
