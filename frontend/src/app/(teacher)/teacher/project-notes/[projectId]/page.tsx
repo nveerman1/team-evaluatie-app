@@ -10,6 +10,7 @@ import {
   TeamInfo,
 } from "@/dtos/project-notes.dto";
 import { TeacherCourse } from "@/dtos/course.dto";
+import { useTeacherLayout } from "@/app/(teacher)/layout";
 
 // OMZA categories
 const OMZA_CATEGORIES = [
@@ -37,6 +38,15 @@ export default function ProjectNotesDetailPage({
   const [loading, setLoading] = useState(true);
   const [allNotes, setAllNotes] = useState<ProjectNote[]>([]);
   const [courseTeachers, setCourseTeachers] = useState<TeacherCourse[]>([]);
+
+  // Active team selection
+  const [activeTeamId, setActiveTeamId] = useState<number | null>(null);
+  // Live title overrides – updated on every keystroke so tiles stay in sync while typing
+  const [liveTeamTitles, setLiveTeamTitles] = useState<Record<string, string>>({});
+
+  // Teams panel open/close – mirrors the focus-mode pattern used on the assessment page
+  const [teamsOpen, setTeamsOpen] = useState(false);
+  const { setSidebarCollapsed } = useTeacherLayout();
 
   // Filter states
   const [search, setSearch] = useState<string>("");
@@ -81,6 +91,22 @@ export default function ProjectNotesDetailPage({
     loadAllNotes();
   }, [loadContext, loadAllNotes]);
 
+  // Select the first team once context has loaded
+  useEffect(() => {
+    if (context?.teams.length && activeTeamId === null) {
+      setActiveTeamId(context.teams[0].id);
+    }
+  }, [context, activeTeamId]);
+
+  // Collapse / restore the left navigation sidebar when the teams panel is open,
+  // using the same pattern as the assessment page (useTeacherLayout + setSidebarCollapsed).
+  useEffect(() => {
+    setSidebarCollapsed(teamsOpen);
+    return () => {
+      setSidebarCollapsed(false);
+    };
+  }, [teamsOpen, setSidebarCollapsed]);
+
   const handleNoteSaved = useCallback(() => {
     loadAllNotes();
   }, [loadAllNotes]);
@@ -113,17 +139,26 @@ export default function ProjectNotesDetailPage({
           },
         },
       };
-      try {
-        await projectNotesService.updateContext(Number(projectId), {
-          settings: updated,
+    try {
+      await projectNotesService.updateContext(Number(projectId), { settings: updated });
+      setContext(prev => prev ? { ...prev, settings: updated } : prev);
+      // Clear the live override now that the saved value is in sync
+      if (patch.title !== undefined) {
+        setLiveTeamTitles(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
         });
-        setContext((prev) => (prev ? { ...prev, settings: updated } : prev));
-      } catch (error) {
-        console.error("Failed to save team metadata:", error);
       }
-    },
-    [context, projectId],
-  );
+    } catch (error) {
+      console.error("Failed to save team metadata:", error);
+    }
+  }, [context, projectId]);
+
+  /** Called on every keystroke in the title field so tiles stay in sync while typing */
+  const handleTitleLiveChange = useCallback((teamId: number, title: string) => {
+    setLiveTeamTitles(prev => ({ ...prev, [String(teamId)]: title }));
+  }, []);
 
   async function handleExport() {
     try {
@@ -266,6 +301,25 @@ export default function ProjectNotesDetailPage({
     TeamMeta
   >;
 
+  // Apply filters to determine which teams are visible
+  const filteredTeams = context.teams.filter(team =>
+    teamMatchesTeacherFilter(team) &&
+    ((!search && !searchOmza) || teamHasSearchMatches(team))
+  );
+
+  // Derive active team – fall back to first visible team if the selected one is filtered out
+  const activeTeam =
+    filteredTeams.find(t => t.id === activeTeamId) ??
+    filteredTeams[0] ??
+    null;
+
+  /** Get the tile-display title: use the live (unsaved) value while typing, otherwise the saved one */
+  const getTileTitle = (teamId: number): string => {
+    const live = liveTeamTitles[String(teamId)];
+    if (live !== undefined) return live;
+    return teamMetadata[String(teamId)]?.title ?? "";
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* PAGE HEADER */}
@@ -291,10 +345,20 @@ export default function ProjectNotesDetailPage({
       </div>
 
       {/* PAGE CONTENT */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* FILTERS */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={() => setTeamsOpen(v => !v)}
+              className={`rounded-xl border px-3 py-2 text-xs font-medium transition ${
+                teamsOpen
+                  ? "border-sky-300 bg-sky-50 text-sky-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Teams {teamsOpen ? "▴" : "▾"}
+            </button>
             <input
               type="text"
               placeholder="Zoek op projecttitel, naam of in aantekeningen..."
@@ -330,39 +394,97 @@ export default function ProjectNotesDetailPage({
           </div>
         </div>
 
-        {/* TEAMS OVERVIEW */}
-        <section className="space-y-6">
-          {context.teams
-            .filter(
-              (team) =>
-                teamMatchesTeacherFilter(team) &&
-                ((!search && !searchOmza) || teamHasSearchMatches(team)),
-            )
-            .map((team) => {
-              const meta = teamMetadata[String(team.id)];
-              return (
-                <CombinedTeamCard
-                  key={team.id}
-                  contextId={Number(projectId)}
-                  team={team}
-                  students={context.students.filter(
-                    (s) => s.team_id === team.id,
-                  )}
-                  notes={getNotesForTeam(team)}
-                  search={search}
-                  searchOmza={searchOmza}
-                  courseTeachers={courseTeachers}
-                  teamTitle={meta?.title ?? ""}
-                  teamResponsibleTeacherId={
-                    meta?.responsible_teacher_id ?? null
-                  }
-                  onTeamMetaChange={handleTeamMetaChange}
-                  initialOpen={teamHasSearchMatches(team)}
-                  onNoteSaved={handleNoteSaved}
-                />
-              );
-            })}
-        </section>
+        {/* SPLIT LAYOUT – only visible when Teams panel is open */}
+        {teamsOpen ? (
+          <div className="grid gap-5 xl:grid-cols-[280px_minmax(720px,1fr)]">
+
+            {/* LEFT COLUMN: compact team selection panel */}
+            <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm self-start">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Teams</h2>
+                <span className="text-xs text-slate-400">{filteredTeams.length}</span>
+              </div>
+              {filteredTeams.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">Geen teams gevonden</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {filteredTeams.map(team => {
+                    const teamLabel = team.team_number ? `Team ${team.team_number}` : team.name;
+                    const tileTitle = getTileTitle(team.id);
+                    const firstNames = team.members.map(m => m.split(" ")[0]).join(" · ");
+                    const isActive = activeTeam?.id === team.id;
+                    return (
+                      <button
+                        key={team.id}
+                        onClick={() => setActiveTeamId(team.id)}
+                        className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                          isActive
+                            ? "border-sky-300 bg-sky-50 shadow-sm"
+                            : "border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className={`text-sm font-semibold truncate ${isActive ? "text-sky-800" : "text-slate-800"}`}>
+                          {teamLabel}
+                        </div>
+                        {tileTitle && (
+                          <div className="text-[11px] text-slate-500 truncate mt-0.5">{tileTitle}</div>
+                        )}
+                        <div className="mt-1 text-[10px] text-slate-400 truncate">{firstNames}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </aside>
+
+            {/* RIGHT COLUMN: active team card */}
+            {activeTeam ? (
+              <CombinedTeamCard
+                key={activeTeam.id}
+                contextId={Number(projectId)}
+                team={activeTeam}
+                students={context.students.filter(s => s.team_id === activeTeam.id)}
+                notes={getNotesForTeam(activeTeam)}
+                search={search}
+                searchOmza={searchOmza}
+                courseTeachers={courseTeachers}
+                teamTitle={teamMetadata[String(activeTeam.id)]?.title ?? ""}
+                teamResponsibleTeacherId={teamMetadata[String(activeTeam.id)]?.responsible_teacher_id ?? null}
+                onTeamMetaChange={handleTeamMetaChange}
+                onTitleLiveChange={handleTitleLiveChange}
+                onNoteSaved={handleNoteSaved}
+              />
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex items-center justify-center py-16">
+                <p className="text-slate-500 text-sm">Geen teams beschikbaar</p>
+              </div>
+            )}
+
+          </div>
+        ) : (
+          /* Single-column view: active team card full-width */
+          activeTeam ? (
+            <CombinedTeamCard
+              key={activeTeam.id}
+              contextId={Number(projectId)}
+              team={activeTeam}
+              students={context.students.filter(s => s.team_id === activeTeam.id)}
+              notes={getNotesForTeam(activeTeam)}
+              search={search}
+              searchOmza={searchOmza}
+              courseTeachers={courseTeachers}
+              teamTitle={teamMetadata[String(activeTeam.id)]?.title ?? ""}
+              teamResponsibleTeacherId={teamMetadata[String(activeTeam.id)]?.responsible_teacher_id ?? null}
+              onTeamMetaChange={handleTeamMetaChange}
+              onTitleLiveChange={handleTitleLiveChange}
+              onNoteSaved={handleNoteSaved}
+            />
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex items-center justify-center py-16">
+              <p className="text-slate-500 text-sm">Geen teams beschikbaar</p>
+            </div>
+          )
+        )}
       </main>
     </div>
   );
