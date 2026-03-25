@@ -3,11 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiAuthError } from "@/lib/api";
 import { projectPlanService } from "@/services/projectplan.service";
-import {
-  ProjectPlanListItem,
-  PlanStatus,
-  ProjectPlanStatus,
-} from "@/dtos/projectplan.dto";
+import { ProjectPlanListItem } from "@/dtos/projectplan.dto";
 import { Loading, ErrorMessage } from "@/components";
 
 type Course = {
@@ -22,6 +18,7 @@ export default function ProjectPlansListInner() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Build courses list from actual projectplans data
   useEffect(() => {
@@ -97,7 +94,7 @@ export default function ProjectPlansListInner() {
     }
   };
 
-  // Filter data by search query
+  // Filter data by search query and status
   const filteredData = data.filter((item) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -106,7 +103,9 @@ export default function ProjectPlansListInner() {
       (item.course_name &&
         item.course_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       item.project_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    const matchesStatus =
+      statusFilter === "all" || item.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   // Group projectplans by course
@@ -119,64 +118,27 @@ export default function ProjectPlansListInner() {
     groupedByCourse[courseKey].push(item);
   });
 
-  // Helper to get status badge props
-  const getStatusBadge = (status: PlanStatus, count: number) => {
-    const badges: Record<
-      PlanStatus,
-      { bg: string; text: string; label: string }
-    > = {
-      [PlanStatus.CONCEPT]: {
-        bg: "bg-gray-100",
-        text: "text-gray-700",
+  // Helper to get projectplan status info for the dropdown button pill
+  const getStatusInfo = (status: string): { label: string; className: string } => {
+    const info: Record<string, { label: string; className: string }> = {
+      draft: {
         label: "Concept",
+        className: "bg-amber-50 text-amber-700 ring-amber-200",
       },
-      [PlanStatus.INGEDIEND]: {
-        bg: "bg-blue-100",
-        text: "text-blue-700",
-        label: "Ingediend",
+      open: {
+        label: "Open",
+        className: "bg-sky-50 text-sky-700 ring-sky-200",
       },
-      [PlanStatus.GO]: {
-        bg: "bg-green-100",
-        text: "text-green-700",
-        label: "GO",
+      published: {
+        label: "Gepubliceerd",
+        className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
       },
-      [PlanStatus.NO_GO]: {
-        bg: "bg-red-100",
-        text: "text-red-700",
-        label: "NO-GO",
+      closed: {
+        label: "Gesloten",
+        className: "bg-red-50 text-red-700 ring-red-200",
       },
     };
-    const badge = badges[status];
-    return (
-      <span
-        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.bg} ${badge.text}`}
-      >
-        {count} {badge.label}
-      </span>
-    );
-  };
-
-  // Helper to get projectplan status badge
-  const getProjectPlanStatusBadge = (status: string) => {
-    const badges: Record<string, { bg: string; text: string; label: string }> =
-      {
-        draft: { bg: "bg-gray-100", text: "text-gray-700", label: "Concept" },
-        open: { bg: "bg-blue-100", text: "text-blue-700", label: "Open" },
-        published: {
-          bg: "bg-green-100",
-          text: "text-green-700",
-          label: "Gepubliceerd",
-        },
-        closed: { bg: "bg-red-100", text: "text-red-700", label: "Gesloten" },
-      };
-    const badge = badges[status] || badges["draft"];
-    return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${badge.bg} ${badge.text}`}
-      >
-        {badge.label}
-      </span>
-    );
+    return info[status] || info["draft"];
   };
 
   // Handle status change
@@ -297,6 +259,19 @@ export default function ProjectPlansListInner() {
                   </option>
                 ))}
               </select>
+
+              {/* Status dropdown */}
+              <select
+                className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">Alle statussen</option>
+                <option value="draft">Concept</option>
+                <option value="open">Open</option>
+                <option value="published">Gepubliceerd</option>
+                <option value="closed">Gesloten</option>
+              </select>
             </div>
           </div>
         </div>
@@ -329,134 +304,138 @@ export default function ProjectPlansListInner() {
                   return (
                     <div
                       key={item.id}
-                      className="group flex items-stretch justify-between gap-4 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
                     >
-                      {/* Left side: content */}
-                      <div className="flex flex-1 flex-col gap-1">
-                        {/* Title and Status */}
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-semibold text-slate-900">
-                            {item.title || `Projectplan: ${item.project_name}`}
-                          </h3>
-                          {getProjectPlanStatusBadge(item.status)}
-                        </div>
-
-                        {/* Status selector */}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-slate-500">
-                            Zichtbaarheid:
-                          </span>
-                          <select
-                            value={item.status}
-                            onChange={(e) =>
-                              handleStatusChange(item.id, e.target.value)
-                            }
-                            className="text-xs rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-100"
-                          >
-                            <option value="draft">
-                              Concept (niet zichtbaar voor studenten)
-                            </option>
-                            <option value="open">
-                              Open (zichtbaar voor studenten)
-                            </option>
-                            <option value="published">
-                              Gepubliceerd (zichtbaar voor studenten)
-                            </option>
-                            <option value="closed">
-                              Gesloten (zichtbaar maar niet te bewerken)
-                            </option>
-                          </select>
-                        </div>
-
-                        {/* Project name */}
-                        <div className="text-sm text-slate-600">
-                          Project: {item.project_name}
-                        </div>
-
-                        {/* Version */}
-                        {item.version && (
-                          <div className="text-sm text-slate-600">
-                            Versie: {item.version}
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        {/* Left side: content */}
+                        <div className="min-w-0 flex-1">
+                          {/* Title + Status dropdown button */}
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="text-lg font-semibold text-slate-900">
+                              {item.title || `Projectplan: ${item.project_name}`}
+                            </h3>
+                            {/* Status dropdown: visual button with transparent select overlay */}
+                            <div className="relative inline-flex items-center">
+                              <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${getStatusInfo(item.status).className}`}
+                                >
+                                  {getStatusInfo(item.status).label}
+                                </span>
+                                <svg
+                                  className="h-3 w-3 text-slate-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              </div>
+                              <select
+                                value={item.status}
+                                onChange={(e) =>
+                                  handleStatusChange(item.id, e.target.value)
+                                }
+                                className="absolute inset-0 w-full cursor-pointer opacity-0"
+                              >
+                                <option value="draft">
+                                  Concept (niet zichtbaar voor studenten)
+                                </option>
+                                <option value="open">
+                                  Open (zichtbaar voor studenten)
+                                </option>
+                                <option value="published">
+                                  Gepubliceerd (zichtbaar voor studenten)
+                                </option>
+                                <option value="closed">
+                                  Gesloten (zichtbaar maar niet te bewerken)
+                                </option>
+                              </select>
+                            </div>
                           </div>
-                        )}
 
-                        {/* Team count */}
-                        <div className="text-sm text-slate-500">
-                          {item.team_count}{" "}
-                          {item.team_count === 1 ? "team" : "teams"}
+                          {/* Project subtitle */}
+                          <div className="mt-1 text-sm text-slate-500">
+                            Project: {item.project_name}
+                          </div>
+
+                          {/* Meta badges */}
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                            <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                              {item.team_count}{" "}
+                              {item.team_count === 1 ? "team" : "teams"}
+                            </span>
+                            <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700 ring-1 ring-emerald-200">
+                              {item.teams_summary.go} GO
+                            </span>
+                            <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-200">
+                              {item.teams_summary.concept} Concept
+                            </span>
+                            {item.teams_summary.ingediend > 0 && (
+                              <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-blue-700 ring-1 ring-blue-200">
+                                {item.teams_summary.ingediend} Ingediend
+                              </span>
+                            )}
+                            {item.teams_summary["no-go"] > 0 && (
+                              <span className="rounded-lg bg-red-50 px-2.5 py-1 text-red-700 ring-1 ring-red-200">
+                                {item.teams_summary["no-go"]} NO-GO
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Last updated */}
+                          <div className="mt-4 text-sm text-slate-500">
+                            Laatst bijgewerkt:{" "}
+                            {new Date(item.updated_at).toLocaleDateString(
+                              "nl-NL",
+                            )}
+                          </div>
                         </div>
 
-                        {/* Status summary badges */}
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {item.teams_summary.concept > 0 &&
-                            getStatusBadge(
-                              PlanStatus.CONCEPT,
-                              item.teams_summary.concept,
-                            )}
-                          {item.teams_summary.ingediend > 0 &&
-                            getStatusBadge(
-                              PlanStatus.INGEDIEND,
-                              item.teams_summary.ingediend,
-                            )}
-                          {item.teams_summary.go > 0 &&
-                            getStatusBadge(
-                              PlanStatus.GO,
-                              item.teams_summary.go,
-                            )}
-                          {item.teams_summary["no-go"] > 0 &&
-                            getStatusBadge(
-                              PlanStatus.NO_GO,
-                              item.teams_summary["no-go"],
-                            )}
-                        </div>
-
-                        {/* Last updated */}
-                        <div className="text-xs text-slate-500">
-                          Laatst bijgewerkt:{" "}
-                          {new Date(item.updated_at).toLocaleDateString(
-                            "nl-NL",
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right side: buttons */}
-                      <div className="flex shrink-0 items-center gap-2">
-                        {/* Overview button */}
-                        <Link
-                          href={`/teacher/projectplans/${item.id}?tab=overzicht`}
-                          className="hidden rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 sm:inline-flex"
-                        >
-                          Overzicht
-                        </Link>
-
-                        {/* Projectplannen button */}
-                        <Link
-                          href={`/teacher/projectplans/${item.id}?tab=projectplannen`}
-                          className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                        >
-                          Projectplannen
-                        </Link>
-
-                        {/* Delete button - icon only */}
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          aria-label="Verwijder projectplan"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition hover:border-red-200 hover:bg-red-100"
-                        >
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                        {/* Right side: buttons */}
+                        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                          {/* Overview button */}
+                          <Link
+                            href={`/teacher/projectplans/${item.id}?tab=overzicht`}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
+                            Overzicht
+                          </Link>
+
+                          {/* Projectplannen button */}
+                          <Link
+                            href={`/teacher/projectplans/${item.id}?tab=projectplannen`}
+                            className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                          >
+                            Projectplannen
+                          </Link>
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            aria-label="Verwijder projectplan"
+                            className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-3 py-3 text-rose-600 transition hover:bg-rose-100"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
