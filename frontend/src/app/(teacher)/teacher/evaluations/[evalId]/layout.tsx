@@ -142,7 +142,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
     },
     {
       id: "assessment",
-      label: "Projectbeoordeling",
+      label: "Teambeoordeling",
       href: `/teacher/evaluations/${evalId}/assessment`,
     },
     {
