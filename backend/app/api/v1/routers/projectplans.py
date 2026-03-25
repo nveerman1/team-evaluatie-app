@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import List, Optional
 import logging
+import re
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -43,6 +45,7 @@ from app.api.v1.schemas.projectplans import (
     SuggestClientItem,
     LinkedClientResponse,
 )
+from app.services.projectplan_export import generate_projectplan_docx
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
 student_router = APIRouter(
@@ -1641,22 +1644,14 @@ def export_projectplan_docx(
         "sections": sections,
     }
 
-    try:
-        from app.services.projectplan_export import generate_projectplan_docx
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="Word export is momenteel niet beschikbaar (python-docx niet geïnstalleerd)",
-        )
-
     buffer = generate_projectplan_docx(team_data)
 
-    title = (team.title or "document").replace(" ", "-")
-    filename = f"Projectplan-{title}.docx"
+    safe_title = re.sub(r'[^\w\-]', '', (team.title or "document").replace(" ", "-"))
+    filename = f"Projectplan-{safe_title or 'document'}.docx"
 
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
     )
 

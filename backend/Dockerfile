@@ -43,6 +43,8 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    libxml2 \
+    libxslt1.1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
