@@ -16,6 +16,7 @@ import {
   SuggestClientItem,
 } from "@/dtos/projectplan.dto";
 import { Loading, ErrorMessage } from "@/components";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ProjectPlanDetailPage() {
   const params = useParams();
@@ -564,42 +565,39 @@ export default function ProjectPlanDetailPage() {
         {/* Tab 2: Projectplannen */}
         {tab === "projectplannen" && (
           <div className="space-y-4">
-            {/* Team Selector - Sticky */}
-            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200 p-4 shadow-sm">
-              <label className="block text-sm font-medium mb-2">
-                Selecteer team:
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePreviousTeam}
-                  disabled={currentTeamIndex <= 0}
-                  className="p-2 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Vorig team"
-                >
-                  ←
-                </button>
-                <select
-                  className="flex-1 max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
-                  value={selectedTeamId || ""}
-                  onChange={(e) => setSelectedTeamId(Number(e.target.value))}
-                >
-                  {detail.teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      Team {team.team_number || team.project_team_id} -{" "}
-                      {team.team_members.join(", ")}{" "}
-                      {team.title ? `- ${team.title}` : ""}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleNextTeam}
-                  disabled={currentTeamIndex >= detail.teams.length - 1}
-                  className="p-2 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Volgend team"
-                >
-                  →
-                </button>
-              </div>
+            {/* Team Selector */}
+            <div className="sticky top-0 z-10 flex flex-wrap gap-2 items-center py-2 bg-transparent">
+              <button
+                onClick={handlePreviousTeam}
+                disabled={currentTeamIndex <= 0}
+                aria-label="Vorig team"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Vorig team"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
+                value={selectedTeamId || ""}
+                onChange={(e) => setSelectedTeamId(Number(e.target.value))}
+              >
+                {detail.teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    Team {team.team_number || team.project_team_id} -{" "}
+                    {team.team_members.join(", ")}{" "}
+                    {team.title ? `- ${team.title}` : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleNextTeam}
+                disabled={currentTeamIndex >= detail.teams.length - 1}
+                aria-label="Volgend team"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Volgend team"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
             {selectedTeam && (
