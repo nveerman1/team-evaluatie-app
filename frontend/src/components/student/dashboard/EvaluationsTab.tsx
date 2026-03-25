@@ -5,11 +5,12 @@ import { StudentEvaluation } from "@/dtos";
 import { EvaluationDashboardCard } from "./EvaluationDashboardCard";
 import { cn } from "@/lib/utils";
 
-type FilterType = "open" | "alles" | "afgerond";
+type FilterType = "alles" | "open" | "afgerond" | "gesloten";
 
 const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
-  { value: "open", label: "Open" },
   { value: "alles", label: "Alles" },
+  { value: "open", label: "Open" },
+  { value: "gesloten", label: "Gesloten" },
   { value: "afgerond", label: "Afgerond" },
 ];
 
@@ -18,7 +19,7 @@ type EvaluationsTabProps = {
 };
 
 export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
-  const [filter, setFilter] = useState<FilterType>("open");
+  const [filter, setFilter] = useState<FilterType>("alles");
 
   const openCount = evaluations.filter(
     (e) => e.status === "open" && e.progress < 100,
@@ -27,7 +28,8 @@ export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
   const filtered = evaluations.filter((e) => {
     const isDone = e.status === "closed" || e.progress === 100;
     if (filter === "open") return !isDone;
-    if (filter === "afgerond") return isDone;
+    if (filter === "afgerond") return e.progress === 100;
+    if (filter === "gesloten") return e.status === "closed";
     return true;
   });
 
@@ -71,7 +73,11 @@ export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
             <p className="text-slate-500">
               {filter === "afgerond"
                 ? "Geen afgeronde evaluaties."
-                : "Geen open evaluaties op dit moment."}
+                : filter === "gesloten"
+                  ? "Geen gesloten evaluaties."
+                  : filter === "open"
+                    ? "Geen open evaluaties op dit moment."
+                    : "Geen evaluaties gevonden."}
             </p>
           </div>
         ) : (
