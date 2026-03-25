@@ -4,10 +4,6 @@ import { useState, useEffect } from "react";
 import { projectFeedbackService } from "@/services";
 import type { ProjectFeedbackRound } from "@/dtos/project-feedback.dto";
 import { Loading, ErrorMessage } from "@/components";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MessageSquare, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 export function ProjectFeedbackDashboardTab() {
@@ -45,24 +41,23 @@ export function ProjectFeedbackDashboardTab() {
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
-  return (
-    <div className="space-y-4">
-      {/* Intro card — matches projecten tab style */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-slate-600" />
-            <p className="text-sm font-semibold text-slate-900">Mijn projectfeedback</p>
-          </div>
-          <p className="text-sm text-slate-600 mt-1">
-            Geef feedback over de projecten waarbij jij betrokken was.
-          </p>
-        </CardContent>
-      </Card>
+  const openCount = rounds.filter((r) => !submittedIds.has(r.id)).length;
 
-      <div className="grid gap-4">
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Card header */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Projectevaluatie</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {openCount} open {openCount === 1 ? "evaluatie" : "evaluaties"} — geef feedback over de projecten waarbij jij betrokken was.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
         {rounds.length === 0 ? (
-          <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+          <div className="rounded-xl bg-slate-50 p-8 text-center">
             <p className="text-slate-500">
               Er zijn momenteel geen openstaande feedbackvragenlijsten voor jou.
             </p>
@@ -70,58 +65,50 @@ export function ProjectFeedbackDashboardTab() {
         ) : (
           rounds.map((round) => {
             const done = submittedIds.has(round.id);
+            const statusLabel = done ? "Ingevuld" : "Open";
+            const statusClass = done
+              ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+              : "bg-sky-50 text-sky-700 ring-sky-200";
+            const barClass = done ? "bg-emerald-500" : "bg-sky-500";
+
             return (
-              <Card
+              <Link
                 key={round.id}
-                className="rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow"
+                href={`/student/project-feedback/${round.id}`}
+                className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
               >
-                <CardContent className="p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1 space-y-1">
+                <div className="flex items-stretch">
+                  <div className={`w-1.5 flex-shrink-0 ${barClass}`} />
+
+                  <div className="flex w-full flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-slate-900">
-                          {round.title}
-                        </h3>
-                        {done ? (
-                          <Badge className="rounded-full bg-green-100 text-green-700 border-green-200 border hover:bg-green-100">
-                            ✓ Ingevuld
-                          </Badge>
-                        ) : (
-                          <Badge className="rounded-full bg-blue-100 text-blue-700 border-blue-200 border hover:bg-blue-100">
-                            Open
-                          </Badge>
-                        )}
+                        <h3 className="text-base font-semibold text-slate-900">{round.title}</h3>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}>
+                          {statusLabel}
+                        </span>
                       </div>
+
                       {round.course_name && (
-                        <div className="text-sm text-slate-600">
-                          Vak: {round.course_name}
-                        </div>
+                        <div className="mt-1 text-sm text-slate-500">{round.course_name}</div>
                       )}
-                      <div className="text-sm text-slate-600">
-                        {round.question_count} vragen
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
+                        <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                          {round.question_count} vragen
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-start gap-2 sm:justify-end">
-                      {done ? (
-                        <Button asChild className="rounded-xl" size="sm" variant="outline">
-                          <Link href={`/student/project-feedback/${round.id}`}>
-                            Bekijken
-                            <ChevronRight className="ml-1 h-4 w-4" />
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button asChild className="rounded-xl" size="sm">
-                          <Link href={`/student/project-feedback/${round.id}`}>
-                            Invullen
-                            <ChevronRight className="ml-1 h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+                      <div className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-slate-800">
+                        {done ? "Bekijken" : "Invullen"}
+                        <span className="ml-2">→</span>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </Link>
             );
           })
         )}

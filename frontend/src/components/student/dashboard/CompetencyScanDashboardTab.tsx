@@ -4,9 +4,6 @@ import { useState, useEffect } from "react";
 import { competencyService } from "@/services";
 import type { CompetencyWindow } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
 import { ScanDashboardCard } from "./ScanDashboardCard";
 import {
   ExternalInviteModal,
@@ -92,31 +89,19 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
   const openScansCount = windows.filter((w) => w.status === "open").length;
 
   return (
-    <div className="space-y-4">
-      {/* Mijn ontwikkeling Card */}
-      <Card className="rounded-2xl border-slate-200 bg-slate-50">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-slate-600" />
-                <p className="text-sm font-semibold text-slate-900">Mijn ontwikkeling</p>
-              </div>
-              <p className="text-sm text-slate-600">
-                Hier vind je je competentiescans, leerdoelen en reflecties.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700">
-                Open scans: {openScansCount}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Card header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Competentiescans</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {openScansCount} open {openScansCount === 1 ? "scan" : "scans"} beschikbaar.
+          </p>
+        </div>
+      </div>
 
       {/* Scan Cards */}
-      <div className="grid gap-4">
+      <div className="mt-5 space-y-3">
         {filteredWindows.length > 0 ? (
           filteredWindows.map((window) => (
             <div key={window.id} className="space-y-2">
@@ -164,7 +149,7 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
             </div>
           ))
         ) : (
-          <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+          <div className="rounded-xl bg-slate-50 p-8 text-center">
             <p className="text-slate-500">
               {searchQuery ? "Geen competentiescans gevonden met deze zoekopdracht." : "Geen open competentiescans op dit moment."}
             </p>
