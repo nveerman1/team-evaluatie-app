@@ -88,11 +88,9 @@ export default function ProjectNotesDetailPage({
   // Collapse / restore the left navigation sidebar when the teams panel is open,
   // using the same pattern as the assessment page (useTeacherLayout + setSidebarCollapsed).
   useEffect(() => {
-    if (teamsOpen) {
-      setSidebarCollapsed(true);
-    }
+    setSidebarCollapsed(teamsOpen);
     return () => {
-      if (teamsOpen) setSidebarCollapsed(false);
+      setSidebarCollapsed(false);
     };
   }, [teamsOpen, setSidebarCollapsed]);
 
@@ -305,6 +303,16 @@ export default function ProjectNotesDetailPage({
         {/* FILTERS */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={() => setTeamsOpen(v => !v)}
+              className={`rounded-xl border px-3 py-2 text-xs font-medium transition ${
+                teamsOpen
+                  ? "border-sky-300 bg-sky-50 text-sky-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Teams {teamsOpen ? "▴" : "▾"}
+            </button>
             <input
               type="text"
               placeholder="Zoek op projecttitel, naam of in aantekeningen..."
@@ -340,50 +348,76 @@ export default function ProjectNotesDetailPage({
           </div>
         </div>
 
-        {/* SPLIT LAYOUT */}
-        <div className="grid gap-5 xl:grid-cols-[280px_minmax(720px,1fr)]">
+        {/* SPLIT LAYOUT – only visible when Teams panel is open */}
+        {teamsOpen ? (
+          <div className="grid gap-5 xl:grid-cols-[280px_minmax(720px,1fr)]">
 
-          {/* LEFT COLUMN: compact team selection panel */}
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm self-start">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Teams</h2>
-              <span className="text-xs text-slate-400">{filteredTeams.length}</span>
-            </div>
-            {filteredTeams.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-4">Geen teams gevonden</p>
+            {/* LEFT COLUMN: compact team selection panel */}
+            <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm self-start">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Teams</h2>
+                <span className="text-xs text-slate-400">{filteredTeams.length}</span>
+              </div>
+              {filteredTeams.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">Geen teams gevonden</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {filteredTeams.map(team => {
+                    const teamLabel = team.team_number ? `Team ${team.team_number}` : team.name;
+                    const tileTitle = getTileTitle(team.id);
+                    const firstNames = team.members.map(m => m.split(" ")[0]).join(" · ");
+                    const isActive = activeTeam?.id === team.id;
+                    return (
+                      <button
+                        key={team.id}
+                        onClick={() => setActiveTeamId(team.id)}
+                        className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                          isActive
+                            ? "border-sky-300 bg-sky-50 shadow-sm"
+                            : "border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className={`text-sm font-semibold truncate ${isActive ? "text-sky-800" : "text-slate-800"}`}>
+                          {teamLabel}
+                        </div>
+                        {tileTitle && (
+                          <div className="text-[11px] text-slate-500 truncate mt-0.5">{tileTitle}</div>
+                        )}
+                        <div className="mt-1 text-[10px] text-slate-400 truncate">{firstNames}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </aside>
+
+            {/* RIGHT COLUMN: active team card */}
+            {activeTeam ? (
+              <CombinedTeamCard
+                key={activeTeam.id}
+                contextId={Number(projectId)}
+                team={activeTeam}
+                students={context.students.filter(s => s.team_id === activeTeam.id)}
+                notes={getNotesForTeam(activeTeam)}
+                search={search}
+                searchOmza={searchOmza}
+                courseTeachers={courseTeachers}
+                teamTitle={teamMetadata[String(activeTeam.id)]?.title ?? ""}
+                teamResponsibleTeacherId={teamMetadata[String(activeTeam.id)]?.responsible_teacher_id ?? null}
+                onTeamMetaChange={handleTeamMetaChange}
+                onTitleLiveChange={handleTitleLiveChange}
+                onNoteSaved={handleNoteSaved}
+              />
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {filteredTeams.map(team => {
-                  const teamLabel = team.team_number ? `Team ${team.team_number}` : team.name;
-                  const tileTitle = getTileTitle(team.id);
-                  const firstNames = team.members.map(m => m.split(" ")[0]).join(" · ");
-                  const isActive = activeTeam?.id === team.id;
-                  return (
-                    <button
-                      key={team.id}
-                      onClick={() => setActiveTeamId(team.id)}
-                      className={`rounded-xl border px-3 py-2.5 text-left transition ${
-                        isActive
-                          ? "border-sky-300 bg-sky-50 shadow-sm"
-                          : "border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div className={`text-sm font-semibold truncate ${isActive ? "text-sky-800" : "text-slate-800"}`}>
-                        {teamLabel}
-                      </div>
-                      {tileTitle && (
-                        <div className="text-[11px] text-slate-500 truncate mt-0.5">{tileTitle}</div>
-                      )}
-                      <div className="mt-1 text-[10px] text-slate-400 truncate">{firstNames}</div>
-                    </button>
-                  );
-                })}
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex items-center justify-center py-16">
+                <p className="text-slate-500 text-sm">Geen teams beschikbaar</p>
               </div>
             )}
-          </aside>
 
-          {/* RIGHT COLUMN: active team card */}
-          {activeTeam ? (
+          </div>
+        ) : (
+          /* Single-column view: active team card full-width */
+          activeTeam ? (
             <CombinedTeamCard
               key={activeTeam.id}
               contextId={Number(projectId)}
@@ -403,9 +437,8 @@ export default function ProjectNotesDetailPage({
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex items-center justify-center py-16">
               <p className="text-slate-500 text-sm">Geen teams beschikbaar</p>
             </div>
-          )}
-
-        </div>
+          )
+        )}
       </main>
     </div>
   );
