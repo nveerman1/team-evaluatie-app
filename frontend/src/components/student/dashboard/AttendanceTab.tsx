@@ -294,8 +294,9 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
 
   return (
     <>
-      {/* Info card */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Top card — contains all sub-sections */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+        {/* Header row */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl bg-slate-100 text-slate-700">
@@ -326,88 +327,69 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Project filter */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <label className="text-sm font-medium text-slate-900 shrink-0">
-            Filter op project:
-          </label>
-          <select
-            className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-            value={projectFilter}
-            onChange={(e) => handleProjectFilterChange(e.target.value)}
-          >
-            <option value="">Alle projecten</option>
-            {projects.map((project) => {
-              let dateRange = '';
-              try {
-                if (project.start_date && project.end_date) {
-                  const startDate = new Date(project.start_date);
-                  const endDate = new Date(project.end_date);
-                  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                    dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
+        {/* Project filter */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <label className="text-sm font-medium text-slate-900 shrink-0">
+              Filter op project:
+            </label>
+            <select
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              value={projectFilter}
+              onChange={(e) => handleProjectFilterChange(e.target.value)}
+            >
+              <option value="">Alle projecten</option>
+              {projects.map((project) => {
+                let dateRange = '';
+                try {
+                  if (project.start_date && project.end_date) {
+                    const startDate = new Date(project.start_date);
+                    const endDate = new Date(project.end_date);
+                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                      dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
+                    }
+                  } else if (project.start_date) {
+                    const startDate = new Date(project.start_date);
+                    if (!isNaN(startDate.getTime())) {
+                      dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
+                    }
                   }
-                } else if (project.start_date) {
-                  const startDate = new Date(project.start_date);
-                  if (!isNaN(startDate.getTime())) {
-                    dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
-                  }
+                } catch (error) {
+                  // Date parsing errors are non-critical
                 }
-              } catch (error) {
-                // Date parsing errors are non-critical - the project title will still display
-                // without the date range, which is acceptable fallback behavior
-              }
-              return (
-                <option key={project.id} value={project.id}>
-                  {project.title}{dateRange}
-                </option>
-              );
-            })}
-          </select>
-          {projectFilter && (
-            <SmallHelp>
-              Totalen en blokken tonen alleen gegevens binnen de projectperiode.
-            </SmallHelp>
-          )}
+                return (
+                  <option key={project.id} value={project.id}>
+                    {project.title}{dateRange}
+                  </option>
+                );
+              })}
+            </select>
+            {projectFilter && (
+              <SmallHelp>
+                Totalen en blokken tonen alleen gegevens binnen de projectperiode.
+              </SmallHelp>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* KPI grid */}
-      {totals && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Kpi 
-            label="Schooltijd" 
-            value={formatDuration(totals.total_school_seconds)} 
-            tone="neutral" 
-          />
-          <Kpi 
-            label="Externe tijd (goedgekeurd)" 
-            value={formatDuration(totals.total_external_approved_seconds)} 
-            tone="success" 
-          />
-          <Kpi 
-            label="Totaal" 
-            value={formatDuration(totals.total_school_seconds + totals.total_external_approved_seconds)} 
-            tone="accent" 
-          />
-          <Kpi 
-            label="Lesblokken (75 min)" 
-            value={totals.lesson_blocks.toFixed(1)} 
-            tone="warn" 
-          />
-        </div>
-      )}
+        {/* KPI grid */}
+        {totals && (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi label="Schooltijd" value={formatDuration(totals.total_school_seconds)} tone="neutral" />
+            <Kpi label="Externe tijd (goedgekeurd)" value={formatDuration(totals.total_external_approved_seconds)} tone="success" />
+            <Kpi label="Totaal" value={formatDuration(totals.total_school_seconds + totals.total_external_approved_seconds)} tone="accent" />
+            <Kpi label="Lesblokken (75 min)" value={totals.lesson_blocks.toFixed(1)} tone="warn" />
+          </div>
+        )}
 
-      {/* Sessions */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-        <TableShell 
-          title="Aanwezigheidssessies" 
-          icon={<Clock className="h-4 w-4" />} 
-          right={<SmallHelp>Nieuwste bovenaan</SmallHelp>} 
-        />
-
+        {/* Sessions */}
+        <div className="space-y-4">
+          <TableShell
+            title="Aanwezigheidssessies"
+            icon={<Clock className="h-4 w-4" />}
+            right={<SmallHelp>Nieuwste bovenaan</SmallHelp>}
+          />
           <div className="overflow-hidden rounded-2xl border border-slate-200">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
@@ -439,22 +421,21 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
           </div>
         </div>
 
-      {/* External work */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-        <TableShell
-          title="Externe werkregistraties"
-          icon={<Briefcase className="h-4 w-4" />}
-          right={
-            <Button
-              className="rounded-xl bg-slate-900 hover:bg-slate-800"
-              size="sm"
-              onClick={() => setShowNewExternal(true)}
-            >
+        {/* External work */}
+        <div className="space-y-4">
+          <TableShell
+            title="Externe werkregistraties"
+            icon={<Briefcase className="h-4 w-4" />}
+            right={
+              <Button
+                className="rounded-xl bg-slate-900 hover:bg-slate-800"
+                size="sm"
+                onClick={() => setShowNewExternal(true)}
+              >
                 <Plus className="mr-1 h-4 w-4" /> Nieuwe registratie
               </Button>
             }
           />
-
           <div className="overflow-hidden rounded-2xl border border-slate-200">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
@@ -519,11 +500,11 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
               </tbody>
             </table>
           </div>
-
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <SmallHelp>Klik op een afgekeurde registratie om de reden te bekijken.</SmallHelp>
           </div>
         </div>
+      </div>
 
       {/* Modal: nieuwe registratie */}
       <Dialog open={showNewExternal} onOpenChange={setShowNewExternal}>

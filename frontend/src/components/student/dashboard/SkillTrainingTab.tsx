@@ -173,8 +173,9 @@ export function SkillTrainingTab() {
 
   return (
     <div className="space-y-4">
-      {/* Search and filters */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Top card: header + filters + voortgang + table */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+        {/* Header row */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Trainingen</h2>
@@ -207,104 +208,104 @@ export function SkillTrainingTab() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Progress per competency */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-semibold text-slate-900">Voortgang per competentie</div>
-          <div className="text-xs text-slate-500">Afgerond/beheerst ÷ totaal</div>
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          {competencyProgress.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCompetency(selectedCompetency === cat.id ? null : cat.id)}
-              className={cn(
-                "rounded-2xl border border-slate-200 p-4 text-left shadow-sm transition hover:bg-slate-50",
-                selectedCompetency === cat.id && "border-slate-300 ring-4 ring-slate-100"
-              )}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold text-slate-900">{cat.name}</div>
-                <div className="text-xs font-semibold text-slate-700">
-                  {cat.done}/{cat.total}
+        {/* Progress per competency */}
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold text-slate-900">Voortgang per competentie</div>
+            <div className="text-xs text-slate-500">Afgerond/beheerst ÷ totaal</div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {competencyProgress.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCompetency(selectedCompetency === cat.id ? null : cat.id)}
+                className={cn(
+                  "rounded-2xl border border-slate-200 p-4 text-left shadow-sm transition hover:bg-slate-50",
+                  selectedCompetency === cat.id && "border-slate-300 ring-4 ring-slate-100"
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-slate-900">{cat.name}</div>
+                  <div className="text-xs font-semibold text-slate-700">
+                    {cat.done}/{cat.total}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3">
-                <div className="h-2 w-full rounded-full bg-slate-100">
-                  <div className="h-2 rounded-full bg-slate-900" style={{ width: `${cat.percentage}%` }} />
+                <div className="mt-3">
+                  <div className="h-2 w-full rounded-full bg-slate-100">
+                    <div className="h-2 rounded-full bg-slate-900" style={{ width: `${cat.percentage}%` }} />
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Trainings table */}
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-[900px] w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Training</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Competentie</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Leerdoel</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Niveau</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tijd</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTrainings.map((item) => {
-                const canChangeStatus = STUDENT_ALLOWED_STATUSES.includes(item.status);
-                return (
-                  <tr key={item.training.id} className="border-t hover:bg-slate-50">
-                    <td className="px-5 py-3">
-                      <span className="text-sm font-semibold text-slate-900 truncate">{item.training.title}</span>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.competency_category_name}</td>
-                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.learning_objective_title || "–"}</td>
-                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.level || "–"}</td>
-                    <td className="px-5 py-3 text-sm text-slate-700">{item.training.est_minutes || "–"}</td>
-                    <td className="px-5 py-3">
-                      <button
-                        onClick={() => canChangeStatus && cycleStatus(item)}
-                        disabled={!canChangeStatus}
-                        className={cn(
-                          "transition-opacity",
-                          canChangeStatus ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
-                        )}
-                        title={canChangeStatus ? "Klik om status te wijzigen" : "Status is door docent gezet"}
-                      >
-                        <StatusPill status={item.status} />
-                      </button>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="inline-flex items-center gap-2">
+        {/* Trainings table */}
+        <div className="rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-[900px] w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Training</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Competentie</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Leerdoel</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Niveau</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tijd</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTrainings.map((item) => {
+                  const canChangeStatus = STUDENT_ALLOWED_STATUSES.includes(item.status);
+                  return (
+                    <tr key={item.training.id} className="border-t hover:bg-slate-50">
+                      <td className="px-5 py-3">
+                        <span className="text-sm font-semibold text-slate-900 truncate">{item.training.title}</span>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-slate-700">{item.training.competency_category_name}</td>
+                      <td className="px-5 py-3 text-sm text-slate-700">{item.training.learning_objective_title || "–"}</td>
+                      <td className="px-5 py-3 text-sm text-slate-700">{item.training.level || "–"}</td>
+                      <td className="px-5 py-3 text-sm text-slate-700">{item.training.est_minutes || "–"}</td>
+                      <td className="px-5 py-3">
                         <button
-                          onClick={() => setDetailsTraining(item)}
-                          className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          onClick={() => canChangeStatus && cycleStatus(item)}
+                          disabled={!canChangeStatus}
+                          className={cn(
+                            "transition-opacity",
+                            canChangeStatus ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
+                          )}
+                          title={canChangeStatus ? "Klik om status te wijzigen" : "Status is door docent gezet"}
                         >
-                          Details
+                          <StatusPill status={item.status} />
                         </button>
-                        <a
-                          href={item.training.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Open
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => setDetailsTraining(item)}
+                            className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            Details
+                          </button>
+                          <a
+                            href={item.training.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Open
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
