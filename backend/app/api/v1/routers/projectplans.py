@@ -1647,12 +1647,15 @@ def export_projectplan_docx(
     buffer = generate_projectplan_docx(team_data)
 
     raw_title = (team.title or "document").strip()
-    safe_title = re.sub(r"-{2,}", "-", re.sub(r"[^\w\s-]", "", raw_title).strip().replace(" ", "-")).strip("-")
+    safe_title = re.sub(
+        r"-{2,}", "-", re.sub(r"[^\w\s-]", "", raw_title).strip().replace(" ", "-")
+    ).strip("-")
     filename = f"Projectplan-{safe_title or 'document'}.docx"
 
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
     )
-
