@@ -38,7 +38,7 @@ export function BeoordelingTab({
     const s = normalizeProjectAssessmentStatus(a.status);
     if (filter === "open") return s === "open";
     if (filter === "gepubliceerd") return s === "published";
-    if (filter === "gesloten") return s === "closed";
+    if (filter === "gesloten") return s === "published";
     return true;
   });
 

@@ -13,7 +13,6 @@ export function ProjectAssessmentDashboardCard({
   const status = normalizeProjectAssessmentStatus(assessment.status);
   const isPublished = status === "published";
   const isOpen = status === "open";
-  const isClosed = status === "closed";
 
   const grade =
     (assessment.metadata_json as any)?.final_grade ||
@@ -38,7 +37,7 @@ export function ProjectAssessmentDashboardCard({
       ? "bg-sky-500"
       : "bg-slate-300";
 
-  const showProjectAssessmentButton = isPublished || isClosed;
+  const showProjectAssessmentButton = isPublished;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
@@ -90,7 +89,7 @@ export function ProjectAssessmentDashboardCard({
               <span className="ml-2">→</span>
             </Link>
 
-            {/* Projectbeoordeling – only when published or closed */}
+            {/* Projectbeoordeling – only when published */}
             {showProjectAssessmentButton && (
               <Link
                 href={`/student/project-assessments/${assessment.id}`}
