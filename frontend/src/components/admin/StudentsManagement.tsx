@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   adminStudentService,
@@ -16,7 +21,9 @@ import { Edit } from "lucide-react";
 const StudentsManagement = forwardRef((props, ref) => {
   // State
   const [students, setStudents] = useState<AdminStudent[]>([]);
-  const [allStudentsForKPIs, setAllStudentsForKPIs] = useState<AdminStudent[]>([]);
+  const [allStudentsForKPIs, setAllStudentsForKPIs] = useState<AdminStudent[]>(
+    [],
+  );
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
@@ -31,10 +38,14 @@ const StudentsManagement = forwardRef((props, ref) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-  
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
+    null,
+  );
+
   // Bulk selection states
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [showBulkLinkModal, setShowBulkLinkModal] = useState(false);
 
   // Debounce search to avoid too many API calls
@@ -89,33 +100,35 @@ const StudentsManagement = forwardRef((props, ref) => {
         sort: "name",
         dir: "asc",
       };
-      
+
       // Only add optional filters if they have values
       if (debouncedSearch) {
         params.q = debouncedSearch;
       }
-      
+
       if (statusFilter && statusFilter !== "all") {
         params.status_filter = statusFilter;
       }
-      
+
       // If "only unlinked" is checked, we filter on frontend
       // Otherwise, add course filter if specified
       if (!onlyUnlinked && courseFilter) {
         params.course = courseFilter;
       }
-      
+
       const response = await adminStudentService.listStudents(params);
-      
+
       let filteredStudents = response.students;
-      
+
       // Apply "only unlinked" filter on frontend if needed
       if (onlyUnlinked) {
-        filteredStudents = filteredStudents.filter(s => 
-          !s.course_name && (!s.course_enrollments || s.course_enrollments.length === 0)
+        filteredStudents = filteredStudents.filter(
+          (s) =>
+            !s.course_name &&
+            (!s.course_enrollments || s.course_enrollments.length === 0),
         );
       }
-      
+
       // Force new array reference to ensure React detects the change
       setStudents([...filteredStudents]);
       setTotalStudents(response.total);
@@ -144,7 +157,7 @@ const StudentsManagement = forwardRef((props, ref) => {
 
   const handleUpdateStudent = async (data: any) => {
     if (!selectedStudentId) return;
-    
+
     try {
       await adminStudentService.updateStudent(selectedStudentId, data);
       await Promise.all([loadStudents(), loadKPIData()]);
@@ -157,19 +170,19 @@ const StudentsManagement = forwardRef((props, ref) => {
   const handleExportCSV = async () => {
     try {
       const params: any = {};
-      
+
       if (debouncedSearch) {
         params.q = debouncedSearch;
       }
-      
+
       if (statusFilter && statusFilter !== "all") {
         params.status_filter = statusFilter;
       }
-      
+
       if (courseFilter) {
         params.course = courseFilter;
       }
-      
+
       const blob = await adminStudentService.exportCSV(params);
       adminStudentService.downloadCSV(blob);
     } catch (err) {
@@ -193,7 +206,7 @@ const StudentsManagement = forwardRef((props, ref) => {
       setSelectedStudentIds(new Set());
     } else {
       // Select all on current page
-      setSelectedStudentIds(new Set(students.map(s => s.id)));
+      setSelectedStudentIds(new Set(students.map((s) => s.id)));
     }
   };
 
@@ -212,9 +225,12 @@ const StudentsManagement = forwardRef((props, ref) => {
     setShowBulkLinkModal(true);
   };
 
-  const handleBulkLinkToCourse = async (courseName: string, className?: string) => {
+  const handleBulkLinkToCourse = async (
+    courseName: string,
+    className?: string,
+  ) => {
     const idsToLink = Array.from(selectedStudentIds);
-    
+
     // Prepare update data - only include fields that have values
     const updateData: any = {};
     if (courseName) {
@@ -223,23 +239,23 @@ const StudentsManagement = forwardRef((props, ref) => {
     if (className) {
       updateData.class_name = className;
     }
-    
+
     // Link all students concurrently for better performance
     const results = await Promise.allSettled(
-      idsToLink.map(id =>
-        adminStudentService.updateStudent(id, updateData)
-      )
+      idsToLink.map((id) => adminStudentService.updateStudent(id, updateData)),
     );
-    
+
     // Count successes and failures
-    const failures = results.filter(r => r.status === 'rejected');
-    
+    const failures = results.filter((r) => r.status === "rejected");
+
     // Clear selection and reload
     setSelectedStudentIds(new Set());
     await Promise.all([loadStudents(), loadKPIData()]);
-    
+
     if (failures.length > 0) {
-      throw new Error(`Kon ${failures.length} van ${idsToLink.length} student(en) niet koppelen`);
+      throw new Error(
+        `Kon ${failures.length} van ${idsToLink.length} student(en) niet koppelen`,
+      );
     }
   };
 
@@ -257,10 +273,15 @@ const StudentsManagement = forwardRef((props, ref) => {
 
   // Calculate KPIs from all students data
   const totalCount = totalStudents;
-  const unlinkedCount = allStudentsForKPIs.filter(s => 
-    s.has_logged_in && !s.course_name && (!s.course_enrollments || s.course_enrollments.length === 0)
+  const unlinkedCount = allStudentsForKPIs.filter(
+    (s) =>
+      s.has_logged_in &&
+      !s.course_name &&
+      (!s.course_enrollments || s.course_enrollments.length === 0),
   ).length;
-  const notLoggedInCount = allStudentsForKPIs.filter(s => !s.has_logged_in).length;
+  const notLoggedInCount = allStudentsForKPIs.filter(
+    (s) => !s.has_logged_in,
+  ).length;
 
   const totalPages = Math.ceil(totalStudents / 25);
 
@@ -274,7 +295,7 @@ const StudentsManagement = forwardRef((props, ref) => {
         </span>
       );
     }
-    
+
     // ⚪ Nog niet ingelogd - imported but not logged in yet
     if (!student.has_logged_in) {
       return (
@@ -283,16 +304,19 @@ const StudentsManagement = forwardRef((props, ref) => {
         </span>
       );
     }
-    
+
     // 🟠 Ongekoppeld - logged in but no course
-    if (!student.course_name && (!student.course_enrollments || student.course_enrollments.length === 0)) {
+    if (
+      !student.course_name &&
+      (!student.course_enrollments || student.course_enrollments.length === 0)
+    ) {
       return (
         <span className="inline-flex rounded-full border border-yellow-200 bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
           Ongekoppeld
         </span>
       );
     }
-    
+
     // 🟢 Actief - logged in and has course
     return (
       <span className="inline-flex rounded-full border border-green-100 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
@@ -321,7 +345,9 @@ const StudentsManagement = forwardRef((props, ref) => {
             </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-            <p className="text-sm font-medium text-gray-600">Nog niet ingelogd</p>
+            <p className="text-sm font-medium text-gray-600">
+              Nog niet ingelogd
+            </p>
             <p className="mt-1 text-2xl font-bold text-blue-600">
               {notLoggedInCount}
             </p>
@@ -336,7 +362,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                 <span className="text-2xl">⚠️</span>
                 <div>
                   <p className="text-sm font-medium text-yellow-900">
-                    {unlinkedCount} {unlinkedCount === 1 ? "leerling is" : "leerlingen zijn"} ingelogd maar nog niet gekoppeld aan een vak/klas.
+                    {unlinkedCount}{" "}
+                    {unlinkedCount === 1 ? "leerling is" : "leerlingen zijn"}{" "}
+                    ingelogd maar nog niet gekoppeld aan een vak/klas.
                   </p>
                 </div>
               </div>
@@ -354,7 +382,10 @@ const StudentsManagement = forwardRef((props, ref) => {
         <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="search"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Zoeken
               </label>
               <input
@@ -368,7 +399,10 @@ const StudentsManagement = forwardRef((props, ref) => {
             </div>
 
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="status"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Status
               </label>
               <select
@@ -387,7 +421,10 @@ const StudentsManagement = forwardRef((props, ref) => {
             </div>
 
             <div>
-              <label htmlFor="course" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="course"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Vak
               </label>
               <select
@@ -474,7 +511,11 @@ const StudentsManagement = forwardRef((props, ref) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-blue-900">
-                      {selectedStudentIds.size} {selectedStudentIds.size === 1 ? "leerling" : "leerlingen"} geselecteerd
+                      {selectedStudentIds.size}{" "}
+                      {selectedStudentIds.size === 1
+                        ? "leerling"
+                        : "leerlingen"}{" "}
+                      geselecteerd
                     </span>
                     <button
                       onClick={() => setSelectedStudentIds(new Set())}
@@ -494,7 +535,8 @@ const StudentsManagement = forwardRef((props, ref) => {
             )}
 
             <div className="text-sm text-gray-600">
-              {totalStudents} {totalStudents === 1 ? "leerling" : "leerlingen"} gevonden
+              {totalStudents} {totalStudents === 1 ? "leerling" : "leerlingen"}{" "}
+              gevonden
             </div>
 
             {students.length === 0 ? (
@@ -503,9 +545,7 @@ const StudentsManagement = forwardRef((props, ref) => {
                   <p className="text-lg font-medium text-yellow-900">
                     Geen leerlingen gevonden
                   </p>
-                  <p className="mt-1 text-yellow-700">
-                    Probeer andere filters
-                  </p>
+                  <p className="mt-1 text-yellow-700">Probeer andere filters</p>
                 </div>
               </div>
             ) : (
@@ -517,10 +557,15 @@ const StudentsManagement = forwardRef((props, ref) => {
                         <th className="w-10 px-3 py-3 text-left">
                           <input
                             type="checkbox"
-                            checked={selectedStudentIds.size === students.length && students.length > 0}
+                            checked={
+                              selectedStudentIds.size === students.length &&
+                              students.length > 0
+                            }
                             ref={(el) => {
                               if (el) {
-                                el.indeterminate = selectedStudentIds.size > 0 && selectedStudentIds.size < students.length;
+                                el.indeterminate =
+                                  selectedStudentIds.size > 0 &&
+                                  selectedStudentIds.size < students.length;
                               }
                             }}
                             onChange={handleToggleSelectAll}
@@ -557,7 +602,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                             <input
                               type="checkbox"
                               checked={selectedStudentIds.has(student.id)}
-                              onChange={() => handleToggleSelectStudent(student.id)}
+                              onChange={() =>
+                                handleToggleSelectStudent(student.id)
+                              }
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                           </td>
@@ -567,12 +614,18 @@ const StudentsManagement = forwardRef((props, ref) => {
                             </div>
                           </td>
                           <td className="px-3 py-3">
-                            <div className="text-sm font-medium text-gray-900 truncate max-w-[150px]" title={student.name}>
+                            <div
+                              className="text-sm font-medium text-gray-900 truncate max-w-[150px]"
+                              title={student.name}
+                            >
                               {student.name}
                             </div>
                           </td>
                           <td className="px-3 py-3">
-                            <div className="text-sm text-gray-900 truncate max-w-[180px]" title={student.email}>
+                            <div
+                              className="text-sm text-gray-900 truncate max-w-[180px]"
+                              title={student.email}
+                            >
                               {student.email}
                             </div>
                           </td>
@@ -588,16 +641,22 @@ const StudentsManagement = forwardRef((props, ref) => {
                                   {student.course_name}
                                 </span>
                               </div>
-                            ) : student.course_enrollments && student.course_enrollments.length > 0 ? (
+                            ) : student.course_enrollments &&
+                              student.course_enrollments.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
-                                {student.course_enrollments.map((enrollment: any, idx: number) => (
-                                  <span 
-                                    key={idx}
-                                    className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700"
-                                  >
-                                    {enrollment.subject_code ? `${enrollment.subject_code} · ` : ''}{enrollment.course_name}
-                                  </span>
-                                ))}
+                                {student.course_enrollments.map(
+                                  (enrollment: any, idx: number) => (
+                                    <span
+                                      key={idx}
+                                      className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700"
+                                    >
+                                      {enrollment.subject_code
+                                        ? `${enrollment.subject_code} · `
+                                        : ""}
+                                      {enrollment.course_name}
+                                    </span>
+                                  ),
+                                )}
                               </div>
                             ) : (
                               <span className="text-sm text-gray-400">—</span>
@@ -641,7 +700,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                 </span>
 
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                   disabled={currentPage === totalPages}
                   className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >

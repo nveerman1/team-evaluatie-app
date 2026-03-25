@@ -2,7 +2,15 @@
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { rubricService, competencyService } from "@/services";
-import { RubricListItem, Competency, CompetencyListResponse, CompetencyType, CompetencyCategory, CompetencyCreate, CompetencyUpdate } from "@/dtos";
+import {
+  RubricListItem,
+  Competency,
+  CompetencyListResponse,
+  CompetencyType,
+  CompetencyCategory,
+  CompetencyCreate,
+  CompetencyUpdate,
+} from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { useAuth } from "@/hooks/useAuth";
 import RubricImportModal from "@/components/teacher/RubricImportModal";
@@ -30,7 +38,9 @@ export default function RubricsListInner() {
   const [activeTab, setActiveTab] = useState<TabType>("peer");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedNiveauFilter, setSelectedNiveauFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
+  const [selectedNiveauFilter, setSelectedNiveauFilter] = useState<
+    "all" | "onderbouw" | "bovenbouw"
+  >("all");
 
   // Competencies tab state (like competencies-beheer page)
   const [viewMode, setViewMode] = useState<ViewMode>("all");
@@ -42,8 +52,12 @@ export default function RubricsListInner() {
   const [total, setTotal] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<CompetencyCreate>(initialFormData);
-  const [expandedCompetency, setExpandedCompetency] = useState<number | null>(null);
-  const [editingCompetency, setEditingCompetency] = useState<number | null>(null);
+  const [expandedCompetency, setExpandedCompetency] = useState<number | null>(
+    null,
+  );
+  const [editingCompetency, setEditingCompetency] = useState<number | null>(
+    null,
+  );
   const [editFormData, setEditFormData] = useState<CompetencyUpdate>({});
   const [showImportModal, setShowImportModal] = useState(false);
 
@@ -98,13 +112,16 @@ export default function RubricsListInner() {
         params.include_course_competencies = true;
       }
 
-      const response: CompetencyListResponse = await competencyService.listTeacherCompetencies(params);
+      const response: CompetencyListResponse =
+        await competencyService.listTeacherCompetencies(params);
 
       setCompetencies(response.items);
       setTotal(response.total);
     } catch (err) {
       console.error("Error fetching competencies:", err);
-      setError("Er is een fout opgetreden bij het ophalen van de competenties.");
+      setError(
+        "Er is een fout opgetreden bij het ophalen van de competenties.",
+      );
     } finally {
       setLoading(false);
     }
@@ -215,7 +232,9 @@ export default function RubricsListInner() {
       console.error("Error creating competency:", err);
       const axiosErr = err as { response?: { status?: number } };
       if (axiosErr?.response?.status === 409) {
-        alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
+        alert(
+          "Er bestaat al een competentie met deze naam. Kies een andere naam.",
+        );
       } else {
         alert("Er is een fout opgetreden bij het aanmaken van de competentie.");
       }
@@ -232,9 +251,13 @@ export default function RubricsListInner() {
       console.error("Error updating competency:", err);
       const axiosErr = err as { response?: { status?: number } };
       if (axiosErr?.response?.status === 409) {
-        alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
+        alert(
+          "Er bestaat al een competentie met deze naam. Kies een andere naam.",
+        );
       } else {
-        alert("Er is een fout opgetreden bij het bijwerken van de competentie.");
+        alert(
+          "Er is een fout opgetreden bij het bijwerken van de competentie.",
+        );
       }
     }
   }
@@ -256,7 +279,13 @@ export default function RubricsListInner() {
       description: competency.description || "",
       category_id: competency.category_id,
       phase: competency.phase || "",
-      level_descriptors: competency.level_descriptors || { "1": "", "2": "", "3": "", "4": "", "5": "" },
+      level_descriptors: competency.level_descriptors || {
+        "1": "",
+        "2": "",
+        "3": "",
+        "4": "",
+        "5": "",
+      },
     });
   }
 
@@ -275,7 +304,9 @@ export default function RubricsListInner() {
       fetchCompetencies();
     } catch (err) {
       console.error("Error deleting competency:", err);
-      alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
+      alert(
+        "Er is een fout opgetreden bij het verwijderen van de competentie.",
+      );
     }
   }
 
@@ -285,7 +316,9 @@ export default function RubricsListInner() {
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Rubrics</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Rubrics
+            </h1>
             <p className="text-gray-600 mt-1 text-sm">
               Beheer je beoordelingsrubrics met criteria op 5 niveaus.
             </p>
@@ -303,7 +336,8 @@ export default function RubricsListInner() {
                 href={`/teacher/rubrics/create?scope=${activeTab}`}
                 className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
               >
-                + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
+                + Nieuwe{" "}
+                {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
               </Link>
             </div>
           ) : (
@@ -322,81 +356,84 @@ export default function RubricsListInner() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-8">
-          <button
-            onClick={() => handleTabChange("peer")}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === "peer"
-                ? "border-black text-black"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Team-evaluatie (peer)
-          </button>
-          <button
-            onClick={() => handleTabChange("project")}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === "project"
-                ? "border-black text-black"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Projectbeoordeling
-          </button>
-          <button
-            onClick={() => handleTabChange("competencies")}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === "competencies"
-                ? "border-black text-black"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Competenties
-          </button>
-        </nav>
-      </div>
-
-      {activeTab !== "competencies" && (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex flex-wrap gap-3 items-center">
-            <input
-              className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Zoek op titel/omschrijving..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  fetchList(q.trim(), activeTab);
-                }
-              }}
-            />
-            {q && (
-              <button
-                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
-                onClick={() => {
-                  setQ("");
-                  fetchList("", activeTab);
-                }}
-              >
-                Reset
-              </button>
-            )}
-            <select
-              className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={selectedNiveauFilter}
-              onChange={(e) => setSelectedNiveauFilter(e.target.value as "all" | "onderbouw" | "bovenbouw")}
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8">
+            <button
+              onClick={() => handleTabChange("peer")}
+              className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "peer"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
             >
-              <option value="all">Alle niveaus</option>
-              <option value="onderbouw">Onderbouw</option>
-              <option value="bovenbouw">Bovenbouw</option>
-            </select>
-          </div>
+              Team-evaluatie (peer)
+            </button>
+            <button
+              onClick={() => handleTabChange("project")}
+              className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "project"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Projectbeoordeling
+            </button>
+            <button
+              onClick={() => handleTabChange("competencies")}
+              className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "competencies"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Competenties
+            </button>
+          </nav>
         </div>
-      )}
+
+        {activeTab !== "competencies" && (
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
+              <input
+                className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Zoek op titel/omschrijving..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    fetchList(q.trim(), activeTab);
+                  }
+                }}
+              />
+              {q && (
+                <button
+                  className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
+                  onClick={() => {
+                    setQ("");
+                    fetchList("", activeTab);
+                  }}
+                >
+                  Reset
+                </button>
+              )}
+              <select
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedNiveauFilter}
+                onChange={(e) =>
+                  setSelectedNiveauFilter(
+                    e.target.value as "all" | "onderbouw" | "bovenbouw",
+                  )
+                }
+              >
+                <option value="all">Alle niveaus</option>
+                <option value="onderbouw">Onderbouw</option>
+                <option value="bovenbouw">Bovenbouw</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {activeTab !== "competencies" && (
           <>
@@ -412,24 +449,29 @@ export default function RubricsListInner() {
             )}
             {!loading && !error && data.length === 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-                <div className="text-gray-500 mb-4">
-                  Geen rubrics gevonden.
-                </div>
+                <div className="text-gray-500 mb-4">Geen rubrics gevonden.</div>
                 <Link
                   href={`/teacher/rubrics/create?scope=${activeTab}`}
                   className="text-blue-600 hover:underline"
                 >
-                  Maak een nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"} aan
+                  Maak een nieuwe{" "}
+                  {activeTab === "peer"
+                    ? "team-evaluatie"
+                    : "projectbeoordeling"}{" "}
+                  aan
                 </Link>
               </div>
             )}
-            {!loading && !error && data.length > 0 && filteredRubrics.length === 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-                <div className="text-gray-500 mb-4">
-                  Geen rubrics gevonden voor het geselecteerde niveau.
+            {!loading &&
+              !error &&
+              data.length > 0 &&
+              filteredRubrics.length === 0 && (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+                  <div className="text-gray-500 mb-4">
+                    Geen rubrics gevonden voor het geselecteerde niveau.
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             {!loading && !error && filteredRubrics.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -520,9 +562,27 @@ export default function RubricsListInner() {
                 <div className="text-sm text-blue-800">
                   <p className="font-medium mb-1">Drie soorten competenties:</p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Centraal</span> — Beheerd door de beheerder, gekoppeld aan rubric-criteria. Alleen-lezen voor docenten.</li>
-                    <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Eigen competentie</span> — Jouw persoonlijke competenties die je zelf kunt aanmaken en bewerken.</li>
-                    <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">Gedeeld</span> — Competenties van collega&apos;s die aan hetzelfde vak zijn gekoppeld. Alleen-lezen.</li>
+                    <li>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        Centraal
+                      </span>{" "}
+                      — Beheerd door de beheerder, gekoppeld aan
+                      rubric-criteria. Alleen-lezen voor docenten.
+                    </li>
+                    <li>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                        Eigen competentie
+                      </span>{" "}
+                      — Jouw persoonlijke competenties die je zelf kunt aanmaken
+                      en bewerken.
+                    </li>
+                    <li>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
+                        Gedeeld
+                      </span>{" "}
+                      — Competenties van collega&apos;s die aan hetzelfde vak
+                      zijn gekoppeld. Alleen-lezen.
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -558,7 +618,11 @@ export default function RubricsListInner() {
               </select>
               <select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                onChange={(e) =>
+                  setCategoryFilter(
+                    e.target.value === "all" ? "all" : parseInt(e.target.value),
+                  )
+                }
                 className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
               >
                 <option value="all">Alle categorieën</option>
@@ -568,7 +632,10 @@ export default function RubricsListInner() {
                   </option>
                 ))}
               </select>
-              {(searchQuery || viewMode !== "all" || phaseFilter || categoryFilter !== "all") && (
+              {(searchQuery ||
+                viewMode !== "all" ||
+                phaseFilter ||
+                categoryFilter !== "all") && (
                 <button
                   onClick={() => {
                     setSearchQuery("");
@@ -590,37 +657,58 @@ export default function RubricsListInner() {
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
                     👤 Eigen competentie
                   </span>
-                  <span className="text-sm text-emerald-700">Nieuwe competentie aanmaken</span>
+                  <span className="text-sm text-emerald-700">
+                    Nieuwe competentie aanmaken
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Naam *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Naam *
+                    </label>
                     <input
                       type="text"
                       value={formData.name || ""}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                       placeholder="bijv. Samenwerken"
                       className="w-full px-3 py-2 border rounded"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Categorie</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Categorie
+                    </label>
                     <select
                       value={formData.category_id || ""}
-                      onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          category_id: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        })
+                      }
                       className="w-full px-3 py-2 border rounded"
                     >
                       <option value="">Geen categorie</option>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Fase</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Fase
+                    </label>
                     <select
                       value={formData.phase || ""}
-                      onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phase: e.target.value })
+                      }
                       className="w-full px-3 py-2 border rounded"
                     >
                       <option value="">Niet gespecificeerd</option>
@@ -629,31 +717,46 @@ export default function RubricsListInner() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Beschrijving
+                    </label>
                     <input
                       type="text"
                       value={formData.description || ""}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
                       placeholder="Korte beschrijving..."
                       className="w-full px-3 py-2 border rounded"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Niveaubeschrijvingen
+                  </label>
                   <div className="grid grid-cols-5 gap-2">
                     {[1, 2, 3, 4, 5].map((level) => (
                       <div key={level} className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                        <label className="text-xs font-medium text-gray-700 mb-1">
+                          Niveau {level}
+                        </label>
                         <textarea
-                          value={formData.level_descriptors?.[level.toString()] || ""}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            level_descriptors: {
-                              ...formData.level_descriptors,
-                              [level.toString()]: e.target.value
-                            }
-                          })}
+                          value={
+                            formData.level_descriptors?.[level.toString()] || ""
+                          }
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              level_descriptors: {
+                                ...formData.level_descriptors,
+                                [level.toString()]: e.target.value,
+                              },
+                            })
+                          }
                           placeholder={`Niveau ${level}`}
                           className="w-full px-2 py-1.5 border rounded text-xs resize-none"
                           rows={3}
@@ -708,10 +811,10 @@ export default function RubricsListInner() {
                   {competencies.map((comp) => {
                     const isExpanded = expandedCompetency === comp.id;
                     const isEditing = editingCompetency === comp.id;
-                    
+
                     return [
-                      <tr 
-                        key={comp.id} 
+                      <tr
+                        key={comp.id}
                         className={`hover:bg-gray-50 cursor-pointer ${getRowBackground(comp)}`}
                         onClick={() => toggleExpand(comp.id)}
                       >
@@ -720,23 +823,33 @@ export default function RubricsListInner() {
                         </td>
                         <td className="w-44 px-4 py-3 text-sm">
                           {comp.category_name ? (
-                            <span className="font-medium">{comp.category_name}</span>
+                            <span className="font-medium">
+                              {comp.category_name}
+                            </span>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="w-56 px-4 py-3 text-sm font-medium">{comp.name}</td>
+                        <td className="w-56 px-4 py-3 text-sm font-medium">
+                          {comp.name}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600 truncate">
-                          {comp.description || <span className="text-gray-400">-</span>}
+                          {comp.description || (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="w-32 px-4 py-3 text-sm">
                           {comp.phase ? (
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              comp.phase === "onderbouw" 
-                                ? "bg-blue-100 text-blue-800" 
-                                : "bg-purple-100 text-purple-800"
-                            }`}>
-                              {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                            <span
+                              className={`px-2 py-1 rounded text-xs ${
+                                comp.phase === "onderbouw"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-purple-100 text-purple-800"
+                              }`}
+                            >
+                              {comp.phase === "onderbouw"
+                                ? "Onderbouw"
+                                : "Bovenbouw"}
                             </span>
                           ) : (
                             <span className="text-gray-400">-</span>
@@ -751,64 +864,116 @@ export default function RubricsListInner() {
                               <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                   <div>
-                                    <label className="block text-sm font-medium mb-1">Naam</label>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Naam
+                                    </label>
                                     <input
                                       type="text"
                                       value={editFormData.name || ""}
-                                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                      onChange={(e) =>
+                                        setEditFormData({
+                                          ...editFormData,
+                                          name: e.target.value,
+                                        })
+                                      }
                                       className="w-full px-3 py-2 border rounded"
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium mb-1">Categorie</label>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Categorie
+                                    </label>
                                     <select
                                       value={editFormData.category_id || ""}
-                                      onChange={(e) => setEditFormData({ ...editFormData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                                      onChange={(e) =>
+                                        setEditFormData({
+                                          ...editFormData,
+                                          category_id: e.target.value
+                                            ? parseInt(e.target.value)
+                                            : undefined,
+                                        })
+                                      }
                                       className="w-full px-3 py-2 border rounded"
                                     >
                                       <option value="">Geen categorie</option>
                                       {categories.map((cat) => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        <option key={cat.id} value={cat.id}>
+                                          {cat.name}
+                                        </option>
                                       ))}
                                     </select>
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium mb-1">Fase</label>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Fase
+                                    </label>
                                     <select
                                       value={editFormData.phase || ""}
-                                      onChange={(e) => setEditFormData({ ...editFormData, phase: e.target.value })}
+                                      onChange={(e) =>
+                                        setEditFormData({
+                                          ...editFormData,
+                                          phase: e.target.value,
+                                        })
+                                      }
                                       className="w-full px-3 py-2 border rounded"
                                     >
-                                      <option value="">Niet gespecificeerd</option>
-                                      <option value="onderbouw">Onderbouw</option>
-                                      <option value="bovenbouw">Bovenbouw</option>
+                                      <option value="">
+                                        Niet gespecificeerd
+                                      </option>
+                                      <option value="onderbouw">
+                                        Onderbouw
+                                      </option>
+                                      <option value="bovenbouw">
+                                        Bovenbouw
+                                      </option>
                                     </select>
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Beschrijving
+                                  </label>
                                   <textarea
                                     value={editFormData.description || ""}
-                                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                                    onChange={(e) =>
+                                      setEditFormData({
+                                        ...editFormData,
+                                        description: e.target.value,
+                                      })
+                                    }
                                     className="w-full px-3 py-2 border rounded"
                                     rows={2}
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                                  <label className="block text-sm font-medium mb-2">
+                                    Niveaubeschrijvingen
+                                  </label>
                                   <div className="grid grid-cols-5 gap-2">
                                     {[1, 2, 3, 4, 5].map((level) => (
-                                      <div key={level} className="flex flex-col">
-                                        <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                                      <div
+                                        key={level}
+                                        className="flex flex-col"
+                                      >
+                                        <label className="text-xs font-medium text-gray-700 mb-1">
+                                          Niveau {level}
+                                        </label>
                                         <textarea
-                                          value={editFormData.level_descriptors?.[level.toString()] || ""}
-                                          onChange={(e) => setEditFormData({
-                                            ...editFormData,
-                                            level_descriptors: {
-                                              ...editFormData.level_descriptors,
-                                              [level.toString()]: e.target.value
-                                            }
-                                          })}
+                                          value={
+                                            editFormData.level_descriptors?.[
+                                              level.toString()
+                                            ] || ""
+                                          }
+                                          onChange={(e) =>
+                                            setEditFormData({
+                                              ...editFormData,
+                                              level_descriptors: {
+                                                ...editFormData.level_descriptors,
+                                                [level.toString()]:
+                                                  e.target.value,
+                                              },
+                                            })
+                                          }
                                           className="w-full px-2 py-1.5 border rounded text-xs resize-none"
                                           rows={3}
                                         />
@@ -838,23 +1003,38 @@ export default function RubricsListInner() {
                               // Read-only view with level descriptors
                               <>
                                 {comp.category_description && (
-                                  <p className="text-sm text-gray-600 mb-3">{comp.category_description}</p>
+                                  <p className="text-sm text-gray-600 mb-3">
+                                    {comp.category_description}
+                                  </p>
                                 )}
                                 <div className="text-xs font-medium text-slate-700 mb-2">
                                   Niveaubeschrijvingen (1–5)
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                                   {[1, 2, 3, 4, 5].map((level) => (
-                                    <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
-                                      <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
+                                    <div
+                                      key={level}
+                                      className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner"
+                                    >
+                                      <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                        Niveau {level}
+                                      </span>
                                       <p className="text-[11px] text-slate-700">
-                                        {comp.level_descriptors?.[level.toString()] || <em className="text-slate-400">Niet ingevuld</em>}
+                                        {comp.level_descriptors?.[
+                                          level.toString()
+                                        ] || (
+                                          <em className="text-slate-400">
+                                            Niet ingevuld
+                                          </em>
+                                        )}
                                       </p>
                                     </div>
                                   ))}
                                 </div>
                                 <div className="mt-4 flex justify-between items-center text-xs">
-                                  <span className="text-gray-400">Klik om details te verbergen</span>
+                                  <span className="text-gray-400">
+                                    Klik om details te verbergen
+                                  </span>
                                   <div className="flex gap-2">
                                     {canModify(comp) && (
                                       <>
@@ -911,7 +1091,9 @@ export default function RubricsListInner() {
                   Pagina {page} van {Math.ceil(total / limit)}
                 </span>
                 <button
-                  onClick={() => setPage((p) => Math.min(Math.ceil(total / limit), p + 1))}
+                  onClick={() =>
+                    setPage((p) => Math.min(Math.ceil(total / limit), p + 1))
+                  }
                   disabled={page === Math.ceil(total / limit)}
                   className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
                 >
@@ -925,16 +1107,28 @@ export default function RubricsListInner() {
               <p className="text-sm font-medium text-gray-700 mb-2">Legenda:</p>
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">🏛️ Centraal</span>
-                  <span className="text-gray-600">Beheerd door beheerder (alleen-lezen)</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                    🏛️ Centraal
+                  </span>
+                  <span className="text-gray-600">
+                    Beheerd door beheerder (alleen-lezen)
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">👤 Eigen</span>
-                  <span className="text-gray-600">Jouw persoonlijke competenties</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                    👤 Eigen
+                  </span>
+                  <span className="text-gray-600">
+                    Jouw persoonlijke competenties
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">👥 Gedeeld</span>
-                  <span className="text-gray-600">Van collega&apos;s in hetzelfde vak</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
+                    👥 Gedeeld
+                  </span>
+                  <span className="text-gray-600">
+                    Van collega&apos;s in hetzelfde vak
+                  </span>
                 </div>
               </div>
             </div>

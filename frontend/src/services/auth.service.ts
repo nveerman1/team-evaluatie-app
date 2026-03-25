@@ -49,8 +49,8 @@ export const authService = {
         credentials: "include", // Important: include cookies in request/response
         redirect: "manual", // Don't follow redirects automatically
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
       });
 
@@ -59,17 +59,17 @@ export const authService = {
       // - response.ok will be false
       // - response.status will be 0 (not 302!)
       // We accept this as success since the cookie is already set
-      const isRedirect = response.type === 'opaqueredirect';
+      const isRedirect = response.type === "opaqueredirect";
       const isSuccess = response.ok || isRedirect;
 
       if (!isSuccess) {
-        let errorBody = '';
+        let errorBody = "";
         try {
           const text = await response.text();
           const json = JSON.parse(text);
           errorBody = json.detail || text;
         } catch {
-          errorBody = 'Login failed';
+          errorBody = "Login failed";
         }
         throw new Error(errorBody);
       }

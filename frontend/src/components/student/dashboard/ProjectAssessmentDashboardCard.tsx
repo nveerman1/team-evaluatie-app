@@ -7,24 +7,36 @@ type ProjectAssessmentDashboardCardProps = {
   assessment: ProjectAssessmentListItem;
 };
 
-export function ProjectAssessmentDashboardCard({ 
-  assessment 
+export function ProjectAssessmentDashboardCard({
+  assessment,
 }: ProjectAssessmentDashboardCardProps) {
   const status = normalizeProjectAssessmentStatus(assessment.status);
   const isPublished = status === "published";
   const isOpen = status === "open";
   const isClosed = status === "closed";
 
-  const grade = (assessment.metadata_json as any)?.final_grade || (assessment.metadata_json as any)?.suggested_grade;
-  const teamLabel = assessment.group_name || (assessment.team_number ? `Team ${assessment.team_number}` : "Onbekend");
+  const grade =
+    (assessment.metadata_json as any)?.final_grade ||
+    (assessment.metadata_json as any)?.suggested_grade;
+  const teamLabel =
+    assessment.group_name ||
+    (assessment.team_number ? `Team ${assessment.team_number}` : "Onbekend");
 
-  const statusLabel = isPublished ? "Gepubliceerd" : isOpen ? "Open" : "Gesloten";
+  const statusLabel = isPublished
+    ? "Gepubliceerd"
+    : isOpen
+      ? "Open"
+      : "Gesloten";
   const statusClass = isPublished
     ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
     : isOpen
       ? "bg-sky-50 text-sky-700 ring-sky-200"
       : "bg-slate-100 text-slate-700 ring-slate-200";
-  const barClass = isPublished ? "bg-emerald-500" : isOpen ? "bg-sky-500" : "bg-slate-300";
+  const barClass = isPublished
+    ? "bg-emerald-500"
+    : isOpen
+      ? "bg-sky-500"
+      : "bg-slate-300";
 
   const showProjectAssessmentButton = isPublished || isClosed;
 
@@ -38,8 +50,12 @@ export function ProjectAssessmentDashboardCard({
           {/* Left: title, badge, meta tags */}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-slate-900">{assessment.title}</h3>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}>
+              <h3 className="text-base font-semibold text-slate-900">
+                {assessment.title}
+              </h3>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}
+              >
                 {statusLabel}
               </span>
               {grade && (
@@ -49,10 +65,14 @@ export function ProjectAssessmentDashboardCard({
               )}
             </div>
 
-            <div className="mt-1 text-sm text-slate-500">Projectbeoordeling</div>
+            <div className="mt-1 text-sm text-slate-500">
+              Projectbeoordeling
+            </div>
 
             <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-              <span className="rounded-lg bg-slate-100 px-2.5 py-1">{teamLabel}</span>
+              <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                {teamLabel}
+              </span>
               <span className="rounded-lg bg-slate-100 px-2.5 py-1">
                 {assessment.teacher_name || "Onbekend"}
               </span>

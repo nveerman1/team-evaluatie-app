@@ -41,14 +41,18 @@ export function useStudentCompetencyScans() {
       setError(null);
 
       try {
-        const response = await fetchWithErrorHandling("/api/v1/student/competency/scans");
+        const response = await fetchWithErrorHandling(
+          "/api/v1/student/competency/scans",
+        );
         const data = await response.json();
         if (isMounted) {
           setData(data);
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err : new Error("Failed to fetch scans"));
+          setError(
+            err instanceof Error ? err : new Error("Failed to fetch scans"),
+          );
         }
       } finally {
         if (isMounted) {
@@ -90,7 +94,7 @@ export function useStudentCompetencyRadar(scanId: string | null) {
 
       try {
         const response = await fetchWithErrorHandling(
-          `/api/v1/student/competency/scans/${scanId}/radar`
+          `/api/v1/student/competency/scans/${scanId}/radar`,
         );
         const data = await response.json();
         if (isMounted) {
@@ -98,7 +102,11 @@ export function useStudentCompetencyRadar(scanId: string | null) {
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err : new Error("Failed to fetch radar data"));
+          setError(
+            err instanceof Error
+              ? err
+              : new Error("Failed to fetch radar data"),
+          );
         }
       } finally {
         if (isMounted) {

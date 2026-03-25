@@ -9,15 +9,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Check, X, Download, Clock, Ban, Trash2 } from "lucide-react";
 import {
-  Check,
-  X,
-  Download,
-  Clock,
-  Ban,
-  Trash2,
-} from "lucide-react";
-import { attendanceService, type AttendanceEvent } from "@/services/attendance.service";
+  attendanceService,
+  type AttendanceEvent,
+} from "@/services/attendance.service";
 import { toast } from "@/lib/toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Pagination } from "@/components/ui/pagination";
@@ -42,23 +38,24 @@ const STATUS_LABEL: Record<Status, string> = {
   rejected: "Afgewezen",
 };
 
-const STATUS_BADGE: Record<Status, { ring: string; bg: string; text: string }> = {
-  pending: {
-    ring: "ring-amber-200",
-    bg: "bg-amber-50",
-    text: "text-amber-800",
-  },
-  approved: {
-    ring: "ring-emerald-200",
-    bg: "bg-emerald-50",
-    text: "text-emerald-800",
-  },
-  rejected: {
-    ring: "ring-rose-200",
-    bg: "bg-rose-50",
-    text: "text-rose-800",
-  },
-};
+const STATUS_BADGE: Record<Status, { ring: string; bg: string; text: string }> =
+  {
+    pending: {
+      ring: "ring-amber-200",
+      bg: "bg-amber-50",
+      text: "text-amber-800",
+    },
+    approved: {
+      ring: "ring-emerald-200",
+      bg: "bg-emerald-50",
+      text: "text-emerald-800",
+    },
+    rejected: {
+      ring: "ring-rose-200",
+      bg: "bg-rose-50",
+      text: "text-rose-800",
+    },
+  };
 
 function StatusPill({ status }: { status: Status }) {
   const s = STATUS_BADGE[status];
@@ -121,16 +118,16 @@ function calculateDuration(start: string, end: string): string {
 export default function ExternTab() {
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [nameQuery, setNameQuery] = useState("");
   const [classQuery, setClassQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
-  
+
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
-  
+
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<ExternalWorkRow | null>(null);
@@ -151,7 +148,7 @@ export default function ExternTab() {
   const fetchExternalWork = async () => {
     try {
       setLoading(true);
-      
+
       const params: Record<string, boolean | number | string> = {
         is_external: true,
         per_page: pageSize,
@@ -199,15 +196,24 @@ export default function ExternTab() {
         description: event.description || "",
         start: event.check_in,
         end: event.check_out || event.check_in,
-        duration: event.check_out ? calculateDuration(event.check_in, event.check_out) : "-",
+        duration: event.check_out
+          ? calculateDuration(event.check_in, event.check_out)
+          : "-",
         status: (event.approval_status as Status) || "pending",
       };
     });
   }, [events]);
 
-  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[Number(id)]).map(Number), [selected]);
+  const selectedIds = useMemo(
+    () =>
+      Object.keys(selected)
+        .filter((id) => selected[Number(id)])
+        .map(Number),
+    [selected],
+  );
   const selectedCount = selectedIds.length;
-  const allVisibleSelected = rows.length > 0 && rows.every((r) => selected[r.id]);
+  const allVisibleSelected =
+    rows.length > 0 && rows.every((r) => selected[r.id]);
 
   function toggleSelectAllVisible() {
     setSelected((prev) => {
@@ -223,8 +229,18 @@ export default function ExternTab() {
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; text: string; clear: () => void }> = [];
-    if (debouncedNameQuery.trim()) chips.push({ key: "name", text: `Naam: ${debouncedNameQuery}`, clear: () => setNameQuery("") });
-    if (classQuery.trim()) chips.push({ key: "class", text: `Klas: ${classQuery}`, clear: () => setClassQuery("") });
+    if (debouncedNameQuery.trim())
+      chips.push({
+        key: "name",
+        text: `Naam: ${debouncedNameQuery}`,
+        clear: () => setNameQuery(""),
+      });
+    if (classQuery.trim())
+      chips.push({
+        key: "class",
+        text: `Klas: ${classQuery}`,
+        clear: () => setClassQuery(""),
+      });
     if (statusFilter !== "all")
       chips.push({
         key: "status",
@@ -251,7 +267,7 @@ export default function ExternTab() {
 
   async function bulkSetStatus(status: Status) {
     if (selectedCount === 0) return;
-    
+
     try {
       if (status === "approved") {
         await attendanceService.bulkApproveExternalWork(selectedIds);
@@ -273,8 +289,12 @@ export default function ExternTab() {
 
   async function bulkDelete() {
     if (selectedCount === 0) return;
-    
-    if (!confirm(`Weet je zeker dat je ${selectedCount} registratie(s) wilt verwijderen?`)) {
+
+    if (
+      !confirm(
+        `Weet je zeker dat je ${selectedCount} registratie(s) wilt verwijderen?`,
+      )
+    ) {
       return;
     }
 
@@ -296,7 +316,11 @@ export default function ExternTab() {
       return;
     }
 
-    if (!confirm(`Weet je zeker dat je alle ${pendingVisible.length} in afwachting registraties wilt goedkeuren?`)) {
+    if (
+      !confirm(
+        `Weet je zeker dat je alle ${pendingVisible.length} in afwachting registraties wilt goedkeuren?`,
+      )
+    ) {
       return;
     }
 
@@ -312,7 +336,16 @@ export default function ExternTab() {
   }
 
   function exportCsv() {
-    const header = ["Naam", "Klas", "Locatie", "Omschrijving", "Start", "Eind", "Duur", "Status"].join(",");
+    const header = [
+      "Naam",
+      "Klas",
+      "Locatie",
+      "Omschrijving",
+      "Start",
+      "Eind",
+      "Duur",
+      "Status",
+    ].join(",");
     const lines = rows.map((r) =>
       [
         r.student_name,
@@ -323,7 +356,7 @@ export default function ExternTab() {
         formatDateTime(r.end),
         r.duration,
         STATUS_LABEL[r.status],
-      ].join(",")
+      ].join(","),
     );
     const csv = [header, ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -363,7 +396,9 @@ export default function ExternTab() {
               <select
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-100 md:w-44"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as "all" | Status)}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as "all" | Status)
+                }
               >
                 <option value="all">Alle</option>
                 <option value="pending">In afwachting</option>
@@ -373,7 +408,11 @@ export default function ExternTab() {
             </div>
 
             <div className="flex shrink-0 items-center gap-2 md:ml-auto">
-              <Button variant="secondary" onClick={() => setStatusFilter("pending")} className="gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setStatusFilter("pending")}
+                className="gap-2"
+              >
                 <Clock className="h-4 w-4" />
                 Alle in afwachting
               </Button>
@@ -382,7 +421,9 @@ export default function ExternTab() {
 
           {activeChips.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <div className="text-xs font-medium text-slate-500">Actieve filters:</div>
+              <div className="text-xs font-medium text-slate-500">
+                Actieve filters:
+              </div>
               {activeChips.map((c) => (
                 <Chip key={c.key} text={c.text} onRemove={c.clear} />
               ))}
@@ -397,11 +438,15 @@ export default function ExternTab() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
               <span className="text-slate-500">Geselecteerd</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{selectedCount}</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">
+                {selectedCount}
+              </span>
             </span>
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
               <span className="text-slate-500">Deze pagina</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">{rows.length}</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-slate-900 ring-1 ring-slate-200">
+                {rows.length}
+              </span>
             </span>
           </div>
 
@@ -430,7 +475,11 @@ export default function ExternTab() {
               <Trash2 className="h-4 w-4" />
               Verwijderen
             </Button>
-            <Button variant="secondary" onClick={approveAllFilteredPending} className="gap-2 px-3 py-1.5 text-xs h-auto">
+            <Button
+              variant="secondary"
+              onClick={approveAllFilteredPending}
+              className="gap-2 px-3 py-1.5 text-xs h-auto"
+            >
               <Check className="h-4 w-4" />
               Goedkeur pending
             </Button>
@@ -442,8 +491,12 @@ export default function ExternTab() {
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
-            <div className="text-sm font-semibold text-slate-900">Externe werkregistraties</div>
-            <div className="text-xs text-slate-500">Beheer en review per leerling</div>
+            <div className="text-sm font-semibold text-slate-900">
+              Externe werkregistraties
+            </div>
+            <div className="text-xs text-slate-500">
+              Beheer en review per leerling
+            </div>
           </div>
           <Button variant="secondary" onClick={exportCsv} className="gap-2">
             <Download className="h-4 w-4" />
@@ -487,80 +540,102 @@ export default function ExternTab() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-5 py-10 text-center">
-                    <div className="text-sm font-medium text-slate-900">Geen resultaten</div>
-                    <div className="mt-1 text-xs text-slate-500">Pas je filters aan of wis ze om alles te zien.</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      Geen resultaten
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Pas je filters aan of wis ze om alles te zien.
+                    </div>
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
-                <tr key={r.id} className="group hover:bg-slate-50/60">
-                  <td className="px-5 py-4 align-top">
-                    <input
-                      type="checkbox"
-                      checked={!!selected[r.id]}
-                      onChange={() => toggleSelectOne(r.id)}
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                      aria-label={`Selecteer ${r.student_name}`}
-                    />
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm font-bold text-slate-900">{r.student_name}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                      {r.class_name}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <span className="text-sm text-slate-700">{r.location}</span>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm text-slate-700">
-                      <span className="line-clamp-2">{r.description}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="mt-2 text-xs font-medium text-slate-600 hover:text-slate-900"
-                      onClick={() => openDetailModal(r)}
-                    >
-                      Lees meer
-                    </button>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm text-slate-700">{formatDateTime(r.start)}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm text-slate-700">{formatDateTime(r.end)}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="text-sm font-semibold text-slate-900">{r.duration}</div>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <div className="flex items-center gap-2">
-                      <StatusPill status={r.status} />
-                      <select
-                        className="h-9 w-28 rounded-xl border border-slate-200 bg-white px-2 text-xs text-slate-700 shadow-sm opacity-0 transition group-hover:opacity-100 focus:opacity-100"
-                        value={r.status}
-                        onChange={(e) => handleStatusChange(r.id, e.target.value as Status)}
-                        aria-label={`Wijzig status voor ${r.student_name}`}
+                  <tr key={r.id} className="group hover:bg-slate-50/60">
+                    <td className="px-5 py-4 align-top">
+                      <input
+                        type="checkbox"
+                        checked={!!selected[r.id]}
+                        onChange={() => toggleSelectOne(r.id)}
+                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                        aria-label={`Selecteer ${r.student_name}`}
+                      />
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm font-bold text-slate-900">
+                        {r.student_name}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                        {r.class_name}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <span className="text-sm text-slate-700">
+                        {r.location}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm text-slate-700">
+                        <span className="line-clamp-2">{r.description}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                        onClick={() => openDetailModal(r)}
                       >
-                        <option value="pending">In afwachting</option>
-                        <option value="approved">Goedgekeurd</option>
-                        <option value="rejected">Afgewezen</option>
-                      </select>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        Lees meer
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm text-slate-700">
+                        {formatDateTime(r.start)}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm text-slate-700">
+                        {formatDateTime(r.end)}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="text-sm font-semibold text-slate-900">
+                        {r.duration}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <div className="flex items-center gap-2">
+                        <StatusPill status={r.status} />
+                        <select
+                          className="h-9 w-28 rounded-xl border border-slate-200 bg-white px-2 text-xs text-slate-700 shadow-sm opacity-0 transition group-hover:opacity-100 focus:opacity-100"
+                          value={r.status}
+                          onChange={(e) =>
+                            handleStatusChange(r.id, e.target.value as Status)
+                          }
+                          aria-label={`Wijzig status voor ${r.student_name}`}
+                        >
+                          <option value="pending">In afwachting</option>
+                          <option value="approved">Goedgekeurd</option>
+                          <option value="rejected">Afgewezen</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
         <div className="flex flex-col items-center justify-between border-t border-slate-200 px-5 py-4 gap-4 sm:flex-row">
-          <div className="text-xs text-slate-500">Toont {rows.length} van {total} registraties</div>
+          <div className="text-xs text-slate-500">
+            Toont {rows.length} van {total} registraties
+          </div>
           {totalPages > 1 && (
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
           )}
         </div>
       </div>
@@ -573,7 +648,10 @@ export default function ExternTab() {
             <DialogDescription>
               {selectedRow && (
                 <>
-                  <span className="font-semibold">{selectedRow.student_name}</span> • {selectedRow.class_name}
+                  <span className="font-semibold">
+                    {selectedRow.student_name}
+                  </span>{" "}
+                  • {selectedRow.class_name}
                 </>
               )}
             </DialogDescription>
@@ -582,11 +660,17 @@ export default function ExternTab() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm font-medium text-slate-600">Locatie</div>
-                  <div className="text-sm text-slate-900">{selectedRow.location}</div>
+                  <div className="text-sm font-medium text-slate-600">
+                    Locatie
+                  </div>
+                  <div className="text-sm text-slate-900">
+                    {selectedRow.location}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-slate-600">Status</div>
+                  <div className="text-sm font-medium text-slate-600">
+                    Status
+                  </div>
                   <div className="mt-1">
                     <StatusPill status={selectedRow.status} />
                   </div>
@@ -594,20 +678,32 @@ export default function ExternTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm font-medium text-slate-600">Starttijd</div>
-                  <div className="text-sm text-slate-900">{formatDateTime(selectedRow.start)}</div>
+                  <div className="text-sm font-medium text-slate-600">
+                    Starttijd
+                  </div>
+                  <div className="text-sm text-slate-900">
+                    {formatDateTime(selectedRow.start)}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-slate-600">Eindtijd</div>
-                  <div className="text-sm text-slate-900">{formatDateTime(selectedRow.end)}</div>
+                  <div className="text-sm font-medium text-slate-600">
+                    Eindtijd
+                  </div>
+                  <div className="text-sm text-slate-900">
+                    {formatDateTime(selectedRow.end)}
+                  </div>
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium text-slate-600">Duur</div>
-                <div className="text-sm text-slate-900">{selectedRow.duration}</div>
+                <div className="text-sm text-slate-900">
+                  {selectedRow.duration}
+                </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-600 mb-2">Omschrijving</div>
+                <div className="text-sm font-medium text-slate-600 mb-2">
+                  Omschrijving
+                </div>
                 <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-800 whitespace-pre-wrap">
                   {selectedRow.description}
                 </div>

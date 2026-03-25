@@ -18,14 +18,16 @@ export const studentService = {
    * Get all evaluations allocated to the current student
    * @param status - Optional status filter: "open", "closed", or undefined for all
    */
-  async getMyEvaluations(status?: "open" | "closed"): Promise<StudentEvaluation[]> {
+  async getMyEvaluations(
+    status?: "open" | "closed",
+  ): Promise<StudentEvaluation[]> {
     try {
       const params: { status?: string } = {};
       if (status) {
         params.status = status;
       }
       const { data } = await api.get<any[]>("/evaluations", { params });
-      
+
       // For each evaluation, fetch allocations to calculate progress
       const evaluations = await Promise.all(
         data.map(async (evaluation) => {
@@ -34,35 +36,36 @@ export const studentService = {
               params: { evaluation_id: evaluation.id },
             });
             const allocs = allocsRes.data || [];
-            
+
             const selfAlloc = allocs.find((a) => a.is_self);
             const peerAllocs = allocs.filter((a) => !a.is_self);
-            
+
             const selfCompleted = selfAlloc?.completed ?? false;
             const peersCompleted = peerAllocs.filter((a) => a.completed).length;
             const peersTotal = peerAllocs.length;
-            
+
             // Check reflection status
             let reflectionCompleted = false;
             try {
               const refRes = await api.get(
-                `/evaluations/${evaluation.id}/reflections/me`
+                `/evaluations/${evaluation.id}/reflections/me`,
               );
               reflectionCompleted = !!refRes.data?.submitted_at;
             } catch {
               // No reflection yet
             }
-            
+
             // Calculate overall progress
             const totalSteps = 4; // self, peers, overview, reflection
             let completedSteps = 0;
             if (selfCompleted) completedSteps++;
-            if (peersTotal === 0 || peersCompleted === peersTotal) completedSteps++;
+            if (peersTotal === 0 || peersCompleted === peersTotal)
+              completedSteps++;
             completedSteps++; // overview is just a view, always "complete"
             if (reflectionCompleted) completedSteps++;
-            
+
             const progress = Math.round((completedSteps / totalSteps) * 100);
-            
+
             // Determine next step
             let nextStep = 1;
             if (selfCompleted) {
@@ -70,7 +73,7 @@ export const studentService = {
               else if (!reflectionCompleted) nextStep = 4;
               else nextStep = 3; // all done, show overview
             }
-            
+
             return {
               ...evaluation,
               progress,
@@ -79,7 +82,8 @@ export const studentService = {
               peersTotal,
               reflectionCompleted,
               canStartPeers: selfCompleted,
-              canSubmitReflection: selfCompleted && peersCompleted === peersTotal,
+              canSubmitReflection:
+                selfCompleted && peersCompleted === peersTotal,
               nextStep,
             } as StudentEvaluation;
           } catch {
@@ -96,9 +100,9 @@ export const studentService = {
               nextStep: 1,
             } as StudentEvaluation;
           }
-        })
+        }),
       );
-      
+
       return evaluations;
     } catch (error) {
       // Handle ApiAuthError separately
@@ -120,45 +124,54 @@ export const studentService = {
       // Fetch all evaluations to check if student has any
       const allEvaluations = await this.getMyEvaluations();
       // Include both open and closed evaluations for display
-      const openEvaluations = allEvaluations.filter((e) => e.status === "open" || e.status === "closed");
-      
+      const openEvaluations = allEvaluations.filter(
+        (e) => e.status === "open" || e.status === "closed",
+      );
+
       // Count completed evaluations based on closed status
       const completedEvaluations = allEvaluations.filter(
-        (e) => e.status === "closed"
+        (e) => e.status === "closed",
       ).length;
-      
+
       const pendingReviews = openEvaluations.reduce(
         (sum, e) => sum + (e.peersTotal - e.peersCompleted),
-        0
+        0,
       );
-      
+
       const pendingReflections = openEvaluations.filter(
-        (e) => !e.reflectionCompleted && e.canSubmitReflection
+        (e) => !e.reflectionCompleted && e.canSubmitReflection,
       ).length;
-      
+
       // Fetch competency windows and project assessments in parallel
       let openScans = 0;
       let newAssessments = 0;
       let userName: string | undefined;
       let userClass: string | undefined;
-      
+
       try {
         // Import services dynamically to avoid circular dependency
         const { competencyService } = await import("./competency.service");
-        const { projectAssessmentService } = await import("./project-assessment.service");
-        
+        const { projectAssessmentService } =
+          await import("./project-assessment.service");
+
         const [windows, assessmentsData] = await Promise.all([
           competencyService.getWindows("open"),
-          projectAssessmentService.getProjectAssessments(undefined, undefined, "published"),
+          projectAssessmentService.getProjectAssessments(
+            undefined,
+            undefined,
+            "published",
+          ),
         ]);
-        
+
         openScans = windows?.length || 0;
         newAssessments = assessmentsData?.items?.length || 0;
-        
+
         // Try to get user info from first competency window if available
         if (windows && windows.length > 0) {
           try {
-            const overview = await competencyService.getMyWindowOverview(windows[0].id);
+            const overview = await competencyService.getMyWindowOverview(
+              windows[0].id,
+            );
             userName = overview?.user_name;
             // Note: class_name is not in StudentCompetencyOverview, we'll try to get it from evaluations
           } catch {
@@ -168,7 +181,7 @@ export const studentService = {
       } catch {
         // Ignore errors for these optional counts
       }
-      
+
       return {
         openEvaluations,
         completedEvaluations,
@@ -219,7 +232,7 @@ export const studentService = {
    */
   async getCriteria(rubricId: number): Promise<Criterion[]> {
     const { data } = await api.get<Criterion[]>(
-      `/rubrics/${rubricId}/criteria`
+      `/rubrics/${rubricId}/criteria`,
     );
     return data || [];
   },
@@ -227,10 +240,7 @@ export const studentService = {
   /**
    * Submit scores for an allocation
    */
-  async submitScores(
-    allocationId: number,
-    items: ScoreItem[]
-  ): Promise<void> {
+  async submitScores(allocationId: number, items: ScoreItem[]): Promise<void> {
     await api.post("/scores", {
       allocation_id: allocationId,
       items,
@@ -256,7 +266,7 @@ export const studentService = {
   } | null> {
     try {
       const { data } = await api.get(
-        `/evaluations/${evaluationId}/reflections/me`
+        `/evaluations/${evaluationId}/reflections/me`,
       );
       return data;
     } catch (error: any) {
@@ -278,7 +288,7 @@ export const studentService = {
    */
   async submitReflection(
     evaluationId: number,
-    reflection: ReflectionSubmit
+    reflection: ReflectionSubmit,
   ): Promise<void> {
     await api.post(`/evaluations/${evaluationId}/reflections/me`, reflection);
   },
@@ -288,13 +298,13 @@ export const studentService = {
    */
   async getResults(
     evaluationId: number,
-    userId: number
+    userId: number,
   ): Promise<StudentResult | null> {
     try {
       const { data } = await api.get(
-        `/evaluations/${evaluationId}/students/${userId}/overview`
+        `/evaluations/${evaluationId}/students/${userId}/overview`,
       );
-      
+
       return {
         evaluation_id: data.evaluation_id,
         evaluation_title: "", // Will be filled by caller if needed
@@ -342,7 +352,7 @@ export const studentService = {
     // Fetch all evaluations (not just open ones) to get closed evaluations with results
     const evaluations = await this.getMyEvaluations();
     const results: StudentResult[] = [];
-    
+
     for (const evaluation of evaluations) {
       if (evaluation.status === "closed" || evaluation.progress === 100) {
         const result = await this.getResults(evaluation.id, userId);
@@ -352,7 +362,7 @@ export const studentService = {
         }
       }
     }
-    
+
     return results;
   },
 
@@ -361,7 +371,7 @@ export const studentService = {
    */
   async getGrowthData(): Promise<StudentGrowthData> {
     const { data } = await api.get<StudentGrowthData>(
-      "/student/competency/growth"
+      "/student/competency/growth",
     );
     return data;
   },
@@ -371,7 +381,7 @@ export const studentService = {
    */
   async regenerateGrowthSummary(): Promise<{ ai_summary: string }> {
     const { data } = await api.post<{ ai_summary: string }>(
-      "/student/competency/growth/summary"
+      "/student/competency/growth/summary",
     );
     return data;
   },
@@ -380,9 +390,7 @@ export const studentService = {
    * Get list of all competency scans (windows) where the student has submitted scores
    */
   async getCompetencyScans(): Promise<ScanListItem[]> {
-    const { data } = await api.get<ScanListItem[]>(
-      "/student/competency/scans"
-    );
+    const { data } = await api.get<ScanListItem[]>("/student/competency/scans");
     return data;
   },
 
@@ -391,7 +399,7 @@ export const studentService = {
    */
   async getScanRadarData(scanId: string): Promise<ScanRadarData> {
     const { data } = await api.get<ScanRadarData>(
-      `/student/competency/scans/${scanId}/radar`
+      `/student/competency/scans/${scanId}/radar`,
     );
     return data;
   },
@@ -399,9 +407,11 @@ export const studentService = {
   /**
    * Get individual competency scores for a specific scan
    */
-  async getScanCompetencyScores(scanId: string): Promise<GrowthCompetencyScore[]> {
+  async getScanCompetencyScores(
+    scanId: string,
+  ): Promise<GrowthCompetencyScore[]> {
     const { data } = await api.get<GrowthCompetencyScore[]>(
-      `/student/competency/scans/${scanId}/competencies`
+      `/student/competency/scans/${scanId}/competencies`,
     );
     return data;
   },

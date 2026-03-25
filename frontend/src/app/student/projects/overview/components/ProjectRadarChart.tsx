@@ -20,7 +20,7 @@ Chart.register(
   LineElement,
   Filler,
   Tooltip,
-  Legend
+  Legend,
 );
 
 type ProjectRadarChartProps = {
@@ -41,7 +41,9 @@ const FALLBACK_COLORS = [
   { bg: "rgba(236, 72, 153, 0.2)", border: "#ec4899" }, // pink-500
 ];
 
-export function ProjectRadarChart({ categoryAverages }: ProjectRadarChartProps) {
+export function ProjectRadarChart({
+  categoryAverages,
+}: ProjectRadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
 
@@ -67,9 +69,10 @@ export function ProjectRadarChart({ categoryAverages }: ProjectRadarChartProps) 
     });
 
     // Use first color for line color (or a neutral color)
-    const lineColor = labels.length > 0 && CATEGORY_COLORS[labels[0]] 
-      ? CATEGORY_COLORS[labels[0]].border 
-      : "#8b5cf6";
+    const lineColor =
+      labels.length > 0 && CATEGORY_COLORS[labels[0]]
+        ? CATEGORY_COLORS[labels[0]].border
+        : "#8b5cf6";
 
     chartRef.current = new Chart(ctx, {
       type: "radar",

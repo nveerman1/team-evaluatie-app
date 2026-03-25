@@ -23,7 +23,9 @@ type CompetencyScanDashboardTabProps = {
   searchQuery?: string;
 };
 
-export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanDashboardTabProps) {
+export function CompetencyScanDashboardTab({
+  searchQuery = "",
+}: CompetencyScanDashboardTabProps) {
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,9 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
       if (wins.length > 0 && !currentUserId) {
         for (const win of wins) {
           try {
-            const overview = await competencyService.getMyWindowOverview(win.id);
+            const overview = await competencyService.getMyWindowOverview(
+              win.id,
+            );
             setCurrentUserId(overview.user_id);
             break;
           } catch (err) {
@@ -89,7 +93,9 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
   }
 
   const searchFiltered = searchQuery.trim()
-    ? windows.filter((w) => w.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? windows.filter((w) =>
+        w.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
     : windows;
 
   const filteredWindows = searchFiltered.filter((w) => {
@@ -103,7 +109,9 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
       {/* Card header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Competentiescans</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Competentiescans
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             Krijg inzicht in je competenties en werk aan je leerdoelen.
           </p>
@@ -119,7 +127,7 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
                 "rounded-full px-3 py-1.5 text-sm font-medium transition",
                 filter === value
                   ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
               {label}
@@ -149,7 +157,8 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
                   let userId = currentUserId;
                   if (!userId) {
                     try {
-                      const overview = await competencyService.getMyWindowOverview(window.id);
+                      const overview =
+                        await competencyService.getMyWindowOverview(window.id);
                       userId = overview.user_id;
                       setCurrentUserId(userId);
                     } catch (err) {
@@ -165,21 +174,25 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
                 }}
               />
               {isExternalFeedbackEnabled(window) &&
-               expandedWindow === window.id &&
-               currentUserId && (
-                <div className="ml-4 pl-4 border-l-2 border-slate-200">
-                  <ExternalInviteList
-                    windowId={window.id}
-                    subjectUserId={currentUserId}
-                  />
-                </div>
-              )}
+                expandedWindow === window.id &&
+                currentUserId && (
+                  <div className="ml-4 pl-4 border-l-2 border-slate-200">
+                    <ExternalInviteList
+                      windowId={window.id}
+                      subjectUserId={currentUserId}
+                    />
+                  </div>
+                )}
             </div>
           ))
         ) : (
           <div className="rounded-xl bg-slate-50 p-8 text-center">
             <p className="text-slate-500">
-              {searchQuery ? "Geen competentiescans gevonden met deze zoekopdracht." : filter === "gesloten" ? "Geen gesloten competentiescans." : "Geen open competentiescans op dit moment."}
+              {searchQuery
+                ? "Geen competentiescans gevonden met deze zoekopdracht."
+                : filter === "gesloten"
+                  ? "Geen gesloten competentiescans."
+                  : "Geen open competentiescans op dit moment."}
             </p>
           </div>
         )}
@@ -197,4 +210,3 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
     </div>
   );
 }
-

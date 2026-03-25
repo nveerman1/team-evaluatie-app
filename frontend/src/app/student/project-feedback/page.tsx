@@ -27,7 +27,7 @@ export default function StudentProjectFeedbackPage() {
             } catch {
               return null;
             }
-          })
+          }),
         );
         setSubmittedIds(new Set(checked.filter(Boolean) as number[]));
       } catch (e: any) {

@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { skillTrainingService } from "@/services/skill-training.service";
-import type { SkillTraining, SkillTrainingStatus } from "@/dtos/skill-training.dto";
+import type {
+  SkillTraining,
+  SkillTrainingStatus,
+} from "@/dtos/skill-training.dto";
 import { STATUS_META } from "@/dtos/skill-training.dto";
 
 interface SkillTrainingsSectionProps {
@@ -23,7 +26,10 @@ interface TrainingRow {
   status: SkillTrainingStatus;
 }
 
-export function SkillTrainingsSection({ studentId, courseId }: SkillTrainingsSectionProps) {
+export function SkillTrainingsSection({
+  studentId,
+  courseId,
+}: SkillTrainingsSectionProps) {
   const [rows, setRows] = useState<TrainingRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +39,9 @@ export function SkillTrainingsSection({ studentId, courseId }: SkillTrainingsSec
         setLoading(true);
         const matrix = await skillTrainingService.getProgressMatrix(courseId);
 
-        const studentRow = matrix.students.find((s) => s.student_id === studentId);
+        const studentRow = matrix.students.find(
+          (s) => s.student_id === studentId,
+        );
         const progress = studentRow?.progress ?? {};
 
         const visibleRows: TrainingRow[] = matrix.trainings
@@ -60,7 +68,9 @@ export function SkillTrainingsSection({ studentId, courseId }: SkillTrainingsSec
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Vaardigheidstrainingen</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Vaardigheidstrainingen
+        </h3>
         <div className="animate-pulse space-y-2">
           <div className="h-10 bg-gray-200 rounded"></div>
           <div className="h-10 bg-gray-200 rounded"></div>
@@ -71,10 +81,14 @@ export function SkillTrainingsSection({ studentId, courseId }: SkillTrainingsSec
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Vaardigheidstrainingen</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Vaardigheidstrainingen
+      </h3>
 
       {rows.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen vaardigheidstrainingen gevonden</p>
+        <p className="text-gray-500 text-center py-4">
+          Geen vaardigheidstrainingen gevonden
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">

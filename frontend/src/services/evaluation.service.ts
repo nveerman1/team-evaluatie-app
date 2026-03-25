@@ -28,7 +28,8 @@ export const evaluationService = {
     if (params?.q) sp.set("q", params.q);
     if (params?.status) sp.set("status", params.status);
     if (params?.course_id) sp.set("course_id", String(params.course_id));
-    if (params?.evaluation_type) sp.set("evaluation_type", params.evaluation_type);
+    if (params?.evaluation_type)
+      sp.set("evaluation_type", params.evaluation_type);
 
     const { data } = await api.get<EvaluationListResponse>(
       `/evaluations${sp.size ? `?${sp.toString()}` : ""}`,
@@ -70,7 +71,9 @@ export const evaluationService = {
    * Haal één evaluatie op
    */
   async getEvaluation(id: number, signal?: AbortSignal): Promise<Evaluation> {
-    const { data } = await api.get<Evaluation>(`/evaluations/${id}`, { signal });
+    const { data } = await api.get<Evaluation>(`/evaluations/${id}`, {
+      signal,
+    });
     return data;
   },
 
@@ -86,11 +89,11 @@ export const evaluationService = {
    */
   async getEvaluationTeams(
     evaluationId: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<EvaluationTeamContext> {
     const { data } = await api.get<EvaluationTeamContext>(
       `/evaluations/${evaluationId}/teams`,
-      { signal }
+      { signal },
     );
     return data;
   },
@@ -100,11 +103,11 @@ export const evaluationService = {
    */
   async getAllocationsWithTeams(
     evaluationId: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<AllocationsWithTeamsResponse> {
     const { data } = await api.get<AllocationsWithTeamsResponse>(
       `/evaluations/${evaluationId}/allocations-with-teams`,
-      { signal }
+      { signal },
     );
     return data;
   },

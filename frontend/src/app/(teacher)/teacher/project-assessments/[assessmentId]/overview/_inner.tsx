@@ -17,21 +17,29 @@ export default function ProjectAssessmentOverviewInner() {
   const [data, setData] = useState<ProjectAssessmentTeamOverview | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [sortBy, setSortBy] = useState<"team" | "status" | "progress" | "updated">("team");
+  const [sortBy, setSortBy] = useState<
+    "team" | "status" | "progress" | "updated"
+  >("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await projectAssessmentService.getTeamOverview(assessmentId);
+      const result =
+        await projectAssessmentService.getTeamOverview(assessmentId);
       setData(result);
     } catch (e: unknown) {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        const err = e as { response?: { data?: { detail?: string } }; message?: string };
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt",
+        );
       }
     } finally {
       setLoading(false);
@@ -48,7 +56,7 @@ export default function ProjectAssessmentOverviewInner() {
 
   // Filter teams based on status and search
   let filteredTeams = data.teams;
-  
+
   // Apply status filter
   if (statusFilter !== "all") {
     filteredTeams = filteredTeams.filter((t) => {
@@ -58,17 +66,19 @@ export default function ProjectAssessmentOverviewInner() {
       return true;
     });
   }
-  
+
   // Apply search filter
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
     filteredTeams = filteredTeams.filter((t) => {
       const teamMatch = t.team_number?.toString().includes(query);
-      const membersMatch = t.members.some(m => m.name.toLowerCase().includes(query));
+      const membersMatch = t.members.some((m) =>
+        m.name.toLowerCase().includes(query),
+      );
       return teamMatch || membersMatch;
     });
   }
-  
+
   // Apply sorting
   const sortedTeams = [...filteredTeams].sort((a, b) => {
     let comparison = 0;
@@ -81,8 +91,10 @@ export default function ProjectAssessmentOverviewInner() {
         comparison = statusOrder[a.status] - statusOrder[b.status];
         break;
       case "progress":
-        const aProgress = a.total_criteria > 0 ? a.scores_count / a.total_criteria : 0;
-        const bProgress = b.total_criteria > 0 ? b.scores_count / b.total_criteria : 0;
+        const aProgress =
+          a.total_criteria > 0 ? a.scores_count / a.total_criteria : 0;
+        const bProgress =
+          b.total_criteria > 0 ? b.scores_count / b.total_criteria : 0;
         comparison = aProgress - bProgress;
         break;
       case "updated":
@@ -108,7 +120,11 @@ export default function ProjectAssessmentOverviewInner() {
           <select
             className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "team" | "status" | "progress" | "updated")}
+            onChange={(e) =>
+              setSortBy(
+                e.target.value as "team" | "status" | "progress" | "updated",
+              )
+            }
           >
             <option value="team">Teamnummer</option>
             <option value="status">Status</option>
@@ -163,13 +179,19 @@ export default function ProjectAssessmentOverviewInner() {
             <tbody className="divide-y divide-gray-100">
               {sortedTeams.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={6}
+                    className="px-5 py-8 text-center text-gray-500"
+                  >
                     Geen teams gevonden voor dit filter
                   </td>
                 </tr>
               )}
               {sortedTeams.map((team) => (
-                <tr key={team.team_number || team.group_id} className="bg-white hover:bg-gray-50">
+                <tr
+                  key={team.team_number || team.group_id}
+                  className="bg-white hover:bg-gray-50"
+                >
                   <td className="px-5 py-3 font-medium sticky left-0 bg-white">
                     <Link
                       href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
@@ -179,7 +201,7 @@ export default function ProjectAssessmentOverviewInner() {
                     </Link>
                   </td>
                   <td className="px-5 py-3">
-                    <div 
+                    <div
                       className="text-sm text-gray-600 min-w-0 truncate"
                       title={team.members.map((m) => m.name).join(", ")}
                     >
@@ -213,7 +235,11 @@ export default function ProjectAssessmentOverviewInner() {
                         style={{
                           width: `${
                             team.total_criteria > 0
-                              ? Math.min(100, (team.scores_count / team.total_criteria) * 100)
+                              ? Math.min(
+                                  100,
+                                  (team.scores_count / team.total_criteria) *
+                                    100,
+                                )
                               : 0
                           }%`,
                         }}
@@ -224,7 +250,9 @@ export default function ProjectAssessmentOverviewInner() {
                     {team.updated_at ? (
                       <>
                         <div className="text-gray-900">
-                          {new Date(team.updated_at).toLocaleDateString("nl-NL")}
+                          {new Date(team.updated_at).toLocaleDateString(
+                            "nl-NL",
+                          )}
                         </div>
                         {team.updated_by && (
                           <div className="text-xs text-gray-500">
@@ -244,8 +272,8 @@ export default function ProjectAssessmentOverviewInner() {
                       {team.status === "not_started"
                         ? "Start beoordeling"
                         : team.status === "in_progress"
-                        ? "Verder invullen"
-                        : "Bekijk rubric"}
+                          ? "Verder invullen"
+                          : "Bekijk rubric"}
                     </Link>
                   </td>
                 </tr>

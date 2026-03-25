@@ -19,7 +19,7 @@ interface ListPeerCriteriaOptions {
 
 export async function listPeerCriteria(
   subjectId: number,
-  options?: ListPeerCriteriaOptions
+  options?: ListPeerCriteriaOptions,
 ): Promise<PeerEvaluationCriterionTemplateDto[]> {
   let url = `/templates/peer-criteria?subject_id=${subjectId}`;
   if (options?.target_level) {
@@ -30,22 +30,22 @@ export async function listPeerCriteria(
 }
 
 export async function createPeerCriterion(
-  data: PeerEvaluationCriterionTemplateCreateDto
+  data: PeerEvaluationCriterionTemplateCreateDto,
 ): Promise<PeerEvaluationCriterionTemplateDto> {
   const response = await api.post<PeerEvaluationCriterionTemplateDto>(
     `/templates/peer-criteria`,
-    data
+    data,
   );
   return response.data;
 }
 
 export async function updatePeerCriterion(
   id: number,
-  data: PeerEvaluationCriterionTemplateUpdateDto
+  data: PeerEvaluationCriterionTemplateUpdateDto,
 ): Promise<PeerEvaluationCriterionTemplateDto> {
   const response = await api.patch<PeerEvaluationCriterionTemplateDto>(
     `/templates/peer-criteria/${id}`,
-    data
+    data,
   );
   return response.data;
 }

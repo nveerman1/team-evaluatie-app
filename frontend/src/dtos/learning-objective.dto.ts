@@ -4,12 +4,12 @@ export interface LearningObjectiveDto {
   title: string;
   description: string | null;
   order: number;
-  phase: string | null;  // "onderbouw" | "bovenbouw"
-  subject_id: number | null;  // For template/central learning objectives
-  teacher_id: number | null;  // For teacher-specific learning objectives
-  course_id: number | null;  // For teacher-specific learning objectives
-  is_template: boolean;  // True = central/admin managed, False = teacher-specific
-  objective_type: "template" | "teacher";  // Computed field: "template" (centraal) or "teacher" (docentdoel)
+  phase: string | null; // "onderbouw" | "bovenbouw"
+  subject_id: number | null; // For template/central learning objectives
+  teacher_id: number | null; // For teacher-specific learning objectives
+  course_id: number | null; // For teacher-specific learning objectives
+  is_template: boolean; // True = central/admin managed, False = teacher-specific
+  objective_type: "template" | "teacher"; // Computed field: "template" (centraal) or "teacher" (docentdoel)
   metadata_json: Record<string, unknown>;
 }
 
@@ -18,10 +18,10 @@ export interface LearningObjectiveCreateDto {
   title: string;
   description?: string | null;
   order?: number;
-  phase?: string | null;  // "onderbouw" | "bovenbouw"
-  subject_id?: number | null;  // For template/central learning objectives
-  course_id?: number | null;  // For teacher-specific learning objectives
-  is_template?: boolean;  // True = central/admin managed (admin only), False = teacher-specific (default)
+  phase?: string | null; // "onderbouw" | "bovenbouw"
+  subject_id?: number | null; // For template/central learning objectives
+  course_id?: number | null; // For teacher-specific learning objectives
+  is_template?: boolean; // True = central/admin managed (admin only), False = teacher-specific (default)
   metadata_json?: Record<string, unknown>;
 }
 
@@ -30,9 +30,9 @@ export interface LearningObjectiveUpdateDto {
   title?: string;
   description?: string | null;
   order?: number;
-  phase?: string | null;  // "onderbouw" | "bovenbouw"
-  subject_id?: number | null;  // For template-specific learning objectives
-  course_id?: number | null;  // For teacher-specific learning objectives
+  phase?: string | null; // "onderbouw" | "bovenbouw"
+  subject_id?: number | null; // For template-specific learning objectives
+  course_id?: number | null; // For teacher-specific learning objectives
   metadata_json?: Record<string, unknown>;
   // Note: is_template and teacher_id cannot be changed after creation
 }
@@ -49,7 +49,7 @@ export interface LearningObjectiveImportItem {
   title: string;
   description?: string | null;
   order?: number;
-  phase?: string | null;  // "onderbouw" | "bovenbouw"
+  phase?: string | null; // "onderbouw" | "bovenbouw"
 }
 
 export interface LearningObjectiveImportRequest {

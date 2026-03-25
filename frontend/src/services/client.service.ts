@@ -68,7 +68,7 @@ export const clientService = {
    */
   async getClientLog(clientId: number): Promise<ClientLogListResponse> {
     const response = await api.get<ClientLogListResponse>(
-      `/clients/${clientId}/log`
+      `/clients/${clientId}/log`,
     );
     return response.data;
   },
@@ -78,11 +78,11 @@ export const clientService = {
    */
   async createLogEntry(
     clientId: number,
-    data: ClientLogCreate
+    data: ClientLogCreate,
   ): Promise<ClientLog> {
     const response = await api.post<ClientLog>(
       `/clients/${clientId}/log`,
-      data
+      data,
     );
     return response.data;
   },
@@ -91,10 +91,10 @@ export const clientService = {
    * Get projects linked to a client
    */
   async getClientProjects(
-    clientId: number
+    clientId: number,
   ): Promise<ClientProjectListResponse> {
     const response = await api.get<ClientProjectListResponse>(
-      `/clients/${clientId}/projects`
+      `/clients/${clientId}/projects`,
     );
     return response.data;
   },
@@ -103,11 +103,11 @@ export const clientService = {
    * Get upcoming reminders for client communications
    */
   async getUpcomingReminders(
-    daysAhead?: number
+    daysAhead?: number,
   ): Promise<ReminderListResponse> {
     const response = await api.get<ReminderListResponse>(
       "/clients/upcoming-reminders",
-      { params: { days_ahead: daysAhead } }
+      { params: { days_ahead: daysAhead } },
     );
     return response.data;
   },
@@ -132,9 +132,8 @@ export const clientService = {
    * List available email templates
    */
   async listEmailTemplates(): Promise<EmailTemplateListResponse> {
-    const response = await api.get<EmailTemplateListResponse>(
-      "/clients/templates"
-    );
+    const response =
+      await api.get<EmailTemplateListResponse>("/clients/templates");
     return response.data;
   },
 
@@ -143,11 +142,11 @@ export const clientService = {
    */
   async renderEmailTemplate(
     templateKey: string,
-    variables: Record<string, any>
+    variables: Record<string, any>,
   ): Promise<RenderedEmail> {
     const response = await api.post<RenderedEmail>(
       `/clients/templates/${templateKey}/render`,
-      variables
+      variables,
     );
     return response.data;
   },
@@ -158,7 +157,7 @@ export const clientService = {
   async linkProjectToClient(
     clientId: number,
     projectId: number,
-    role: string = "main"
+    role: string = "main",
   ): Promise<void> {
     await api.post(`/clients/${clientId}/projects/${projectId}`, null, {
       params: { role },
@@ -170,7 +169,7 @@ export const clientService = {
    */
   async unlinkProjectFromClient(
     clientId: number,
-    projectId: number
+    projectId: number,
   ): Promise<void> {
     await api.delete(`/clients/${clientId}/projects/${projectId}`);
   },
@@ -180,7 +179,7 @@ export const clientService = {
    */
   async getDashboardKPI(): Promise<import("@/dtos/client.dto").DashboardKPI> {
     const response = await api.get<import("@/dtos/client.dto").DashboardKPI>(
-      "/clients/dashboard/kpi"
+      "/clients/dashboard/kpi",
     );
     return response.data;
   },
@@ -189,7 +188,7 @@ export const clientService = {
    * Get new clients for dashboard
    */
   async getNewClients(
-    limit: number = 3
+    limit: number = 3,
   ): Promise<import("@/dtos/client.dto").ClientInsightListResponse> {
     const response = await api.get<
       import("@/dtos/client.dto").ClientInsightListResponse
@@ -201,7 +200,7 @@ export const clientService = {
    * Get top collaborations for dashboard
    */
   async getTopCollaborations(
-    limit: number = 3
+    limit: number = 3,
   ): Promise<import("@/dtos/client.dto").ClientInsightListResponse> {
     const response = await api.get<
       import("@/dtos/client.dto").ClientInsightListResponse
@@ -213,7 +212,7 @@ export const clientService = {
    * Get at-risk clients for dashboard
    */
   async getAtRiskClients(
-    limit: number = 3
+    limit: number = 3,
   ): Promise<import("@/dtos/client.dto").ClientInsightListResponse> {
     const response = await api.get<
       import("@/dtos/client.dto").ClientInsightListResponse
@@ -225,7 +224,7 @@ export const clientService = {
    * Get recent communications for dashboard
    */
   async getRecentCommunications(
-    limit: number = 10
+    limit: number = 10,
   ): Promise<import("@/dtos/client.dto").RecentCommunicationListResponse> {
     const response = await api.get<
       import("@/dtos/client.dto").RecentCommunicationListResponse

@@ -5,10 +5,10 @@
 /**
  * Convert a full name to short format: "FirstName L."
  * E.g., "Casper Daniels" -> "Casper D."
- * 
+ *
  * @param fullName - The full name to shorten
  * @returns Shortened name with first name and last initial, or empty string if invalid
- * 
+ *
  * @example
  * shortName("Casper Daniels")        // "Casper D."
  * shortName("Ahmed Yassin Jacinto")  // "Ahmed J."
@@ -27,10 +27,10 @@ export function shortName(fullName: string): string {
 /**
  * Formats a number with a sign (+/-) and 1 decimal place.
  * Returns "–" for null, undefined, NaN, or Infinity values.
- * 
+ *
  * @param value - The number to format (can be null or undefined)
  * @returns Formatted string with sign and 1 decimal place, or "–" if invalid
- * 
+ *
  * @example
  * formatSigned1dp(1.25)     // "+1.3"
  * formatSigned1dp(-1.21)    // "-1.2"

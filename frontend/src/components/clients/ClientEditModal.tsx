@@ -11,7 +11,12 @@ interface ClientEditModalProps {
   client: Client;
 }
 
-export function ClientEditModal({ isOpen, onClose, onSuccess, client }: ClientEditModalProps) {
+export function ClientEditModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  client,
+}: ClientEditModalProps) {
   const [formData, setFormData] = useState<ClientUpdate>({
     organization: client.organization,
     contact_name: client.contact_name,
@@ -79,7 +84,10 @@ export function ClientEditModal({ isOpen, onClose, onSuccess, client }: ClientEd
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black bg-opacity-30 transition-opacity" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
+          onClick={onClose}
+        />
         <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
           <h2 className="text-xl font-semibold text-slate-900 mb-4">
             Opdrachtgever bewerken
@@ -100,37 +108,51 @@ export function ClientEditModal({ isOpen, onClose, onSuccess, client }: ClientEd
                 type="text"
                 required
                 value={formData.organization}
-                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, organization: e.target.value })
+                }
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contactpersoon</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Contactpersoon
+              </label>
               <input
                 type="text"
                 value={formData.contact_name || ""}
-                onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, contact_name: e.target.value })
+                }
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Email
+                </label>
                 <input
                   type="email"
                   value={formData.email || ""}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Telefoon</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Telefoon
+                </label>
                 <input
                   type="tel"
                   value={formData.phone || ""}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 />
               </div>
@@ -138,10 +160,14 @@ export function ClientEditModal({ isOpen, onClose, onSuccess, client }: ClientEd
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Niveau</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Niveau
+                </label>
                 <select
                   value={formData.level || ""}
-                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, level: e.target.value })
+                  }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 >
                   <option value="">Selecteer niveau</option>
@@ -150,18 +176,24 @@ export function ClientEditModal({ isOpen, onClose, onSuccess, client }: ClientEd
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Sector</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Sector
+                </label>
                 <input
                   type="text"
                   value={formData.sector || ""}
-                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sector: e.target.value })
+                  }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Tags
+              </label>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
@@ -209,7 +241,9 @@ export function ClientEditModal({ isOpen, onClose, onSuccess, client }: ClientEd
                 type="checkbox"
                 id="active-edit"
                 checked={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({ ...formData, active: e.target.checked })
+                }
                 className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
               />
               <label htmlFor="active-edit" className="text-sm text-slate-700">

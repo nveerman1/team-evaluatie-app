@@ -65,7 +65,7 @@ export default function SubjectFormModal({
       console.error("Failed to submit subject:", err);
       setError(
         err?.response?.data?.detail ||
-          `Kon sectie niet ${mode === "create" ? "aanmaken" : "bijwerken"}. Probeer het opnieuw.`
+          `Kon sectie niet ${mode === "create" ? "aanmaken" : "bijwerken"}. Probeer het opnieuw.`,
       );
     } finally {
       setSubmitting(false);
@@ -195,8 +195,8 @@ export default function SubjectFormModal({
                   ? "Aanmaken..."
                   : "Bijwerken..."
                 : mode === "create"
-                ? "Sectie aanmaken"
-                : "Wijzigingen opslaan"}
+                  ? "Sectie aanmaken"
+                  : "Wijzigingen opslaan"}
             </button>
           </div>
         </form>

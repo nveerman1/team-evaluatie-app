@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { submissionService } from '@/services/submission.service';
-import { SubmissionOut, SubmissionCreate } from '@/dtos/submission.dto';
-import { SubmissionCard } from '@/components/submissions/SubmissionCard';
-import { Loading } from '@/components';
-import { toast } from '@/lib/toast';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Upload, ArrowLeft, Info } from 'lucide-react';
-import { studentStyles } from '@/styles/student-dashboard.styles';
+import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { submissionService } from "@/services/submission.service";
+import { SubmissionOut, SubmissionCreate } from "@/dtos/submission.dto";
+import { SubmissionCard } from "@/components/submissions/SubmissionCard";
+import { Loading } from "@/components";
+import { toast } from "@/lib/toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Upload, ArrowLeft, Info } from "lucide-react";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 export default function StudentSubmissionsPage() {
   const params = useParams();
   const router = useRouter();
   const assessmentId = parseInt(params.assessmentId as string);
-  
+
   const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamId, setTeamId] = useState<number | null>(null);
@@ -30,16 +30,19 @@ export default function StudentSubmissionsPage() {
     try {
       const data = await submissionService.getMyTeamSubmissions(assessmentId);
       setSubmissions(data.submissions);
-      
+
       // Get team ID from response
       if (data.team_id) {
         setTeamId(data.team_id);
       } else {
-        toast.error('Je zit niet in een team voor dit project');
+        toast.error("Je zit niet in een team voor dit project");
       }
     } catch (err: any) {
-      console.error('Failed to load submissions:', err);
-      const message = err.response?.data?.detail || err.message || 'Kon inleveringen niet laden';
+      console.error("Failed to load submissions:", err);
+      const message =
+        err.response?.data?.detail ||
+        err.message ||
+        "Kon inleveringen niet laden";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -48,14 +51,14 @@ export default function StudentSubmissionsPage() {
 
   const handleSubmit = async (docType: string, url: string) => {
     if (!teamId) {
-      toast.error('Team niet gevonden');
+      toast.error("Team niet gevonden");
       return;
     }
 
     const createData: SubmissionCreate = {
-      doc_type: docType as 'report' | 'slides' | 'attachment',
+      doc_type: docType as "report" | "slides" | "attachment",
       url,
-      version_label: 'v1',
+      version_label: "v1",
     };
 
     await submissionService.submitLink(assessmentId, teamId, createData);
@@ -77,8 +80,8 @@ export default function StudentSubmissionsPage() {
     );
   }
 
-  const reportSubmission = submissions.find((s) => s.doc_type === 'report');
-  const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
+  const reportSubmission = submissions.find((s) => s.doc_type === "report");
+  const slidesSubmission = submissions.find((s) => s.doc_type === "slides");
 
   return (
     <div className={studentStyles.layout.pageContainer}>
@@ -96,8 +99,8 @@ export default function StudentSubmissionsPage() {
               </p>
             </div>
             <div className="flex gap-2 sm:self-start">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => router.back()}
                 className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
               >
@@ -112,7 +115,6 @@ export default function StudentSubmissionsPage() {
       {/* Content */}
       <div className={studentStyles.layout.contentWrapper}>
         <div className="space-y-6">
-
           {/* Info Card */}
           <Card className={studentStyles.cards.infoCard.container}>
             <CardContent className={studentStyles.cards.infoCard.content}>
@@ -129,7 +131,8 @@ export default function StudentSubmissionsPage() {
                       • Upload je bestanden eerst naar SharePoint of OneDrive
                     </p>
                     <p className={studentStyles.typography.infoText}>
-                      • Klik met de rechtermuisknop op het bestand en kies "Delen"
+                      • Klik met de rechtermuisknop op het bestand en kies
+                      "Delen"
                     </p>
                     <p className={studentStyles.typography.infoText}>
                       • Zorg dat iedereen met de link het bestand kan bekijken
@@ -138,7 +141,8 @@ export default function StudentSubmissionsPage() {
                       • Kopieer de link en plak deze hieronder
                     </p>
                     <p className={studentStyles.typography.infoText}>
-                      • Controleer na het inleveren of de link werkt door erop te klikken
+                      • Controleer na het inleveren of de link werkt door erop
+                      te klikken
                     </p>
                   </div>
                 </div>

@@ -17,7 +17,7 @@ import type {
 function getDescriptorForLevel(
   criterion: RubricCriterionForExternal,
   level: number,
-  scaleMin: number
+  scaleMin: number,
 ): string {
   const raw: any = criterion.descriptors;
 
@@ -37,7 +37,7 @@ function getDescriptorForLevel(
         (d.level === level ||
           d.value === level ||
           d.score === level ||
-          d.index === level - scaleMin)
+          d.index === level - scaleMin),
     );
     if (!match) return "";
     return match.description ?? match.text ?? match.label ?? "";
@@ -114,7 +114,7 @@ export default function ExternalAssessmentTeamPage() {
 
       data.rubric.criteria.forEach((criterion) => {
         const existing = data.existing_scores.find(
-          (s) => s.criterion_id === criterion.id
+          (s) => s.criterion_id === criterion.id,
         );
         if (existing) {
           initialScores[criterion.id] = existing.score;
@@ -124,7 +124,7 @@ export default function ExternalAssessmentTeamPage() {
         } else {
           // Default to middle of scale
           initialScores[criterion.id] = Math.ceil(
-            (data.rubric.scale_min + data.rubric.scale_max) / 2
+            (data.rubric.scale_min + data.rubric.scale_max) / 2,
           );
         }
       });
@@ -135,7 +135,7 @@ export default function ExternalAssessmentTeamPage() {
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
-          "Fout bij het laden van de beoordeling. Probeer het opnieuw."
+          "Fout bij het laden van de beoordeling. Probeer het opnieuw.",
       );
     } finally {
       setLoading(false);
@@ -155,7 +155,7 @@ export default function ExternalAssessmentTeamPage() {
 
     // Validate all criteria have scores
     const allScored = detail?.rubric.criteria.every(
-      (c) => scores[c.id] !== undefined
+      (c) => scores[c.id] !== undefined,
     );
     if (!allScored) {
       setValidationError("Geef voor alle criteria een score.");
@@ -179,25 +179,27 @@ export default function ExternalAssessmentTeamPage() {
           scores: submitScores,
           general_comment: generalComment || undefined,
           submit,
-        }
+        },
       );
 
       if (submit) {
         // Show success and redirect to overview
         alert(
-          "Beoordeling succesvol ingeleverd! De docent ontvangt je advies."
+          "Beoordeling succesvol ingeleverd! De docent ontvangt je advies.",
         );
         router.push(`/external/assessment/${token}`);
       } else {
         // Show success message for draft save
-        alert("Concept opgeslagen! Je kunt later terugkomen om verder te werken.");
+        alert(
+          "Concept opgeslagen! Je kunt later terugkomen om verder te werken.",
+        );
         // Reload to get updated status
         await loadDetail();
       }
     } catch (err: any) {
       setValidationError(
         err.response?.data?.detail ||
-          "Fout bij het opslaan. Probeer het opnieuw."
+          "Fout bij het opslaan. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);
@@ -210,7 +212,10 @@ export default function ExternalAssessmentTeamPage() {
   const currentTeamIndex = allTeams.findIndex((t) => t.team_id === teamId);
   const showNavigation = allTeams.length > 1 && currentTeamIndex !== -1;
   const prevTeam = currentTeamIndex > 0 ? allTeams[currentTeamIndex - 1] : null;
-  const nextTeam = currentTeamIndex < allTeams.length - 1 ? allTeams[currentTeamIndex + 1] : null;
+  const nextTeam =
+    currentTeamIndex < allTeams.length - 1
+      ? allTeams[currentTeamIndex + 1]
+      : null;
 
   if (loading) {
     return (
@@ -293,12 +298,12 @@ export default function ExternalAssessmentTeamPage() {
             )}
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            {detail.team_number ? `Team ${detail.team_number}` : detail.team_name}
+            {detail.team_number
+              ? `Team ${detail.team_number}`
+              : detail.team_name}
           </h1>
           {detail.members && (
-            <p className="text-sm text-gray-500 mb-2">
-              {detail.members}
-            </p>
+            <p className="text-sm text-gray-500 mb-2">{detail.members}</p>
           )}
           {detail.project_title && (
             <p className="text-sm text-gray-600 mb-1">
@@ -311,12 +316,17 @@ export default function ExternalAssessmentTeamPage() {
               {detail.project_description}
             </p>
           )}
-          
+
           {/* Team Navigation Buttons */}
           {showNavigation && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
               <button
-                onClick={() => prevTeam && router.push(`/external/assessment/${token}/team/${prevTeam.team_id}`)}
+                onClick={() =>
+                  prevTeam &&
+                  router.push(
+                    `/external/assessment/${token}/team/${prevTeam.team_id}`,
+                  )
+                }
                 disabled={!prevTeam}
                 className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
                   prevTeam
@@ -343,7 +353,12 @@ export default function ExternalAssessmentTeamPage() {
                 {currentTeamIndex + 1} / {allTeams.length}
               </span>
               <button
-                onClick={() => nextTeam && router.push(`/external/assessment/${token}/team/${nextTeam.team_id}`)}
+                onClick={() =>
+                  nextTeam &&
+                  router.push(
+                    `/external/assessment/${token}/team/${nextTeam.team_id}`,
+                  )
+                }
                 disabled={!nextTeam}
                 className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
                   nextTeam
@@ -409,7 +424,8 @@ export default function ExternalAssessmentTeamPage() {
 
           <div className="divide-y divide-slate-100">
             {detail.rubric.criteria.map((criterion, idx) => {
-              const currentScore = scores[criterion.id] ?? detail.rubric.scale_min;
+              const currentScore =
+                scores[criterion.id] ?? detail.rubric.scale_min;
               const currentComment = comments[criterion.id] ?? "";
 
               return (
@@ -436,14 +452,19 @@ export default function ExternalAssessmentTeamPage() {
                     {/* Levels */}
                     <div className="grid grid-cols-5 gap-2">
                       {Array.from(
-                        { length: detail.rubric.scale_max - detail.rubric.scale_min + 1 },
-                        (_, i) => i + detail.rubric.scale_min
+                        {
+                          length:
+                            detail.rubric.scale_max -
+                            detail.rubric.scale_min +
+                            1,
+                        },
+                        (_, i) => i + detail.rubric.scale_min,
                       ).map((level) => {
                         const isSelected = currentScore === level;
                         const descriptor = getDescriptorForLevel(
                           criterion,
                           level,
-                          detail.rubric.scale_min
+                          detail.rubric.scale_min,
                         );
 
                         return (
@@ -451,7 +472,9 @@ export default function ExternalAssessmentTeamPage() {
                             key={level}
                             type="button"
                             disabled={isReadOnly}
-                            onClick={() => handleScoreChange(criterion.id, level)}
+                            onClick={() =>
+                              handleScoreChange(criterion.id, level)
+                            }
                             className={`group flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
                               isSelected
                                 ? "border-emerald-600 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.5)]"
@@ -501,7 +524,9 @@ export default function ExternalAssessmentTeamPage() {
                         className="min-h-[80px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Tip: benoem zowel wat goed gaat als 1 verbeterpunt.</span>
+                        <span>
+                          Tip: benoem zowel wat goed gaat als 1 verbeterpunt.
+                        </span>
                         <span>{currentComment.length}/400</span>
                       </div>
                     </div>

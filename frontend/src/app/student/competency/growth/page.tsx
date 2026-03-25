@@ -52,9 +52,7 @@ export default function GrowthPage() {
       <div className={studentStyles.layout.pageContainer}>
         <div className={studentStyles.header.container}>
           <header className={studentStyles.header.wrapper}>
-            <h1 className={studentStyles.header.title}>
-              Mijn Groei
-            </h1>
+            <h1 className={studentStyles.header.title}>Mijn Groei</h1>
             <p className={studentStyles.header.subtitle}>
               Bekijk hoe jouw competenties, leerdoelen en reflecties zich
               ontwikkelen over meerdere scans.
@@ -64,11 +62,16 @@ export default function GrowthPage() {
         <main className={studentStyles.layout.contentWrapper}>
           <div className="p-8 border border-slate-200 rounded-2xl bg-slate-50 text-center">
             <p className="text-slate-500">
-              {error ? `Fout: ${error}` : "Nog geen groei-data beschikbaar. Maak eerst een competentiescan."}
+              {error
+                ? `Fout: ${error}`
+                : "Nog geen groei-data beschikbaar. Maak eerst een competentiescan."}
             </p>
             <Link
               href="/student"
-              className={studentStyles.buttons.primary + " mt-4 inline-block px-4 py-2 text-white"}
+              className={
+                studentStyles.buttons.primary +
+                " mt-4 inline-block px-4 py-2 text-white"
+              }
             >
               Terug naar Dashboard
             </Link>
@@ -85,9 +88,7 @@ export default function GrowthPage() {
         <header className={studentStyles.header.wrapper}>
           <div className={studentStyles.header.flexContainer}>
             <div className={studentStyles.header.titleSection}>
-              <h1 className={studentStyles.header.title}>
-                Mijn Groei
-              </h1>
+              <h1 className={studentStyles.header.title}>Mijn Groei</h1>
               <p className={studentStyles.header.subtitle}>
                 Bekijk hoe jouw competenties, leerdoelen en reflecties zich
                 ontwikkelen over meerdere scans.
@@ -102,7 +103,10 @@ export default function GrowthPage() {
                 Terug
               </Link>
               <button
-                className={studentStyles.buttons.primary + " px-4 py-2 text-sm font-semibold text-white shadow-sm"}
+                className={
+                  studentStyles.buttons.primary +
+                  " px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                }
                 onClick={() => {
                   // TODO: Implement portfolio export functionality
                   alert("Exportfunctie komt binnenkort beschikbaar.");
@@ -137,10 +141,16 @@ export default function GrowthPage() {
         {!isLoading && data && (
           <>
             {/* 1. Competentieprofiel (radardiagram) with scan selector */}
-            <CompetencyProfileSection profile={data.competency_profile} scans={data.scans} />
+            <CompetencyProfileSection
+              profile={data.competency_profile}
+              scans={data.scans}
+            />
 
             {/* 2. Scores per competentie (table with scan selector) */}
-            <CompetencyScoresSection scores={data.competency_scores} scans={data.scans} />
+            <CompetencyScoresSection
+              scores={data.competency_scores}
+              scans={data.scans}
+            />
 
             {/* 3. Leerdoelen tabel (updated to table format) */}
             <GoalsTableSection goals={data.goals} />
@@ -164,7 +174,9 @@ function CompetencyProfileSection({
   scans: { id: string; title: string; date: string }[];
 }) {
   const [selectedScanId, setSelectedScanId] = useState<string>("");
-  const [scanRadarData, setScanRadarData] = useState<RadarCategoryScore[] | null>(null);
+  const [scanRadarData, setScanRadarData] = useState<
+    RadarCategoryScore[] | null
+  >(null);
   const [loadingScan, setLoadingScan] = useState(false);
 
   useEffect(() => {
@@ -188,9 +200,13 @@ function CompetencyProfileSection({
   }, [selectedScanId]);
 
   // Use scan data if selected, otherwise use overall profile
-  const displayProfile = selectedScanId && scanRadarData
-    ? scanRadarData.map(cat => ({ name: cat.category_name, value: cat.average_score }))
-    : profile;
+  const displayProfile =
+    selectedScanId && scanRadarData
+      ? scanRadarData.map((cat) => ({
+          name: cat.category_name,
+          value: cat.average_score,
+        }))
+      : profile;
 
   if (!profile || profile.length === 0) {
     return (
@@ -213,7 +229,11 @@ function CompetencyProfileSection({
             Competentieprofiel
           </h2>
           <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-            Jouw gemiddelde niveau per competentiecategorie{selectedScanId ? " voor de geselecteerde scan" : ", op basis van meerdere scans"}.
+            Jouw gemiddelde niveau per competentiecategorie
+            {selectedScanId
+              ? " voor de geselecteerde scan"
+              : ", op basis van meerdere scans"}
+            .
           </p>
         </div>
         <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -295,15 +315,17 @@ function CompetencyProfileSection({
 }
 
 // Competency scores table with scan filter
-function CompetencyScoresSection({ 
+function CompetencyScoresSection({
   scores,
   scans,
-}: { 
+}: {
   scores: GrowthCompetencyScore[];
   scans: { id: string; title: string; date: string }[];
 }) {
   const [selectedScanId, setSelectedScanId] = useState<string>("");
-  const [scanScores, setScanScores] = useState<GrowthCompetencyScore[] | null>(null);
+  const [scanScores, setScanScores] = useState<GrowthCompetencyScore[] | null>(
+    null,
+  );
   const [loadingScores, setLoadingScores] = useState(false);
 
   useEffect(() => {
@@ -314,7 +336,8 @@ function CompetencyScoresSection({
       }
       try {
         setLoadingScores(true);
-        const data = await studentService.getScanCompetencyScores(selectedScanId);
+        const data =
+          await studentService.getScanCompetencyScores(selectedScanId);
         setScanScores(data);
       } catch (err) {
         console.error("Failed to load scan scores:", err);
@@ -342,7 +365,8 @@ function CompetencyScoresSection({
   }
 
   // Use scan-specific scores if available, otherwise use overall scores
-  const displayScores = selectedScanId && scanScores !== null ? scanScores : scores;
+  const displayScores =
+    selectedScanId && scanScores !== null ? scanScores : scores;
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -351,10 +375,12 @@ function CompetencyScoresSection({
           Scores per competentie
         </h2>
         <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-          {selectedScanId ? "Scores voor de geselecteerde scan" : "De meest recente score per competentie over alle scans"}
+          {selectedScanId
+            ? "Scores voor de geselecteerde scan"
+            : "De meest recente score per competentie over alle scans"}
         </p>
       </div>
-      
+
       {/* Scan filter dropdown */}
       {scans && scans.length > 0 && (
         <div className="px-5 py-4 border-b border-slate-200 bg-white">
@@ -397,7 +423,10 @@ function CompetencyScoresSection({
             <tbody className="divide-y divide-slate-100">
               {displayScores.length > 0 ? (
                 displayScores.map((score) => (
-                  <tr key={`${score.competency_id}-${score.window_id}`} className="hover:bg-slate-50">
+                  <tr
+                    key={`${score.competency_id}-${score.window_id}`}
+                    className="hover:bg-slate-50"
+                  >
                     <td className="px-5 py-3 text-slate-600">
                       {score.category_name || "—"}
                     </td>
@@ -425,7 +454,10 @@ function CompetencyScoresSection({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-slate-500"
+                  >
                     Geen scores gevonden voor deze scan.
                   </td>
                 </tr>
@@ -515,7 +547,9 @@ function ReflectionsSection({
 }: {
   reflections: GrowthReflection[];
 }) {
-  const [expandedReflectionId, setExpandedReflectionId] = useState<string | null>(null);
+  const [expandedReflectionId, setExpandedReflectionId] = useState<
+    string | null
+  >(null);
 
   if (!reflections || reflections.length === 0) {
     return (
@@ -563,7 +597,9 @@ function ReflectionsSection({
                     setExpandedReflectionId(isExpanded ? null : ref.id);
                   }}
                 >
-                  {isExpanded ? "Verberg reflectie" : "Open volledige reflectie"}
+                  {isExpanded
+                    ? "Verberg reflectie"
+                    : "Open volledige reflectie"}
                 </button>
               </div>
             </div>

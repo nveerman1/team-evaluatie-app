@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 
 export default function RFIDRedirect() {
   const router = useRouter();
-  
+
   useEffect(() => {
     router.replace("/teacher/3de-blok");
   }, [router]);
-  
+
   return (
     <div className="flex items-center justify-center h-96">
       <div className="text-center">

@@ -111,16 +111,16 @@ export interface CompetencyOverviewData {
   studentsImproved: number;
   studentsDeclined: number;
   totalStudents: number;
-  
+
   // Category summaries for radar/bar charts
   categorySummaries: CompetencyCategorySummary[];
-  
+
   // Scans for time series
   scans: ScanSummary[];
-  
+
   // Heatmap data
   heatmapRows: HeatmapStudentRow[];
-  
+
   // Notable students
   notableStudents: NotableStudent[];
 }
@@ -179,20 +179,20 @@ export interface StudentDetailData {
   name: string;
   className: string | null;
   email: string | null;
-  
+
   // Current profile (latest scan)
   currentOverallScore: number | null;
   currentCategoryScores: StudentCategoryScore[];
   trendDelta: number | null;
   strongestCategory: string | null;
   weakestCategory: string | null;
-  
+
   // All scans for this student
   scans: StudentScanData[];
-  
+
   // Learning goals for this student
   learningGoals: LearningGoalSummary[];
-  
+
   // Reflections for this student
   reflections: ReflectionSummary[];
 }

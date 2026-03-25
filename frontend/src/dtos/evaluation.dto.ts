@@ -81,4 +81,3 @@ export interface AllocationWithTeam {
 export interface AllocationsWithTeamsResponse {
   allocations: AllocationWithTeam[];
 }
-

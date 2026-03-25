@@ -2,8 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
@@ -11,13 +10,13 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         className={cn(
           "flex min-h-[80px] w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className
+          className,
         )}
         ref={ref}
         {...props}
       />
     );
-  }
+  },
 );
 Textarea.displayName = "Textarea";
 

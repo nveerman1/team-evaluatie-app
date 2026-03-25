@@ -11,7 +11,12 @@ import {
 } from "@/dtos";
 import { SubmissionOut } from "@/dtos/submission.dto";
 import { Loading, ErrorMessage } from "@/components";
-import { TeamBar, RubricPane, ReferencePanelWrapper, PanelView } from "@/components/teacher/project-assessments/split-view";
+import {
+  TeamBar,
+  RubricPane,
+  ReferencePanelWrapper,
+  PanelView,
+} from "@/components/teacher/project-assessments/split-view";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
 import { useFocusMode } from "../layout";
 
@@ -193,7 +198,9 @@ function RubricLevelsRow({
             <div key={`${qc}-${idx}`} className="group relative inline-flex">
               <button
                 type="button"
-                onClick={() => onCommentChange(comment ? comment + " " + qc : qc)}
+                onClick={() =>
+                  onCommentChange(comment ? comment + " " + qc : qc)
+                }
                 className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white"
               >
                 {qc}
@@ -346,8 +353,12 @@ function CategoryCard({
                     onCommentChange(criterion.id, newComment)
                   }
                   quickComments={quickCommentsByCriterion[criterion.id] || []}
-                  onAddQuickComment={(text) => onAddQuickComment(criterion.id, text)}
-                  onDeleteQuickComment={(text) => onDeleteQuickComment(criterion.id, text)}
+                  onAddQuickComment={(text) =>
+                    onAddQuickComment(criterion.id, text)
+                  }
+                  onDeleteQuickComment={(text) =>
+                    onDeleteQuickComment(criterion.id, text)
+                  }
                 />
               </div>
             </div>
@@ -398,16 +409,18 @@ export default function EditProjectAssessmentInner() {
   const [docMode] = useState<"dock" | "overlay">("dock");
   const [docWidth, setDocWidth] = useState(0);
   const [docType, setDocType] = useState<"Verslag" | "Presentatie">("Verslag");
-  const [linkHealth, setLinkHealth] = useState<"Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link">("Onbekend");
+  const [linkHealth, setLinkHealth] = useState<
+    "Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link"
+  >("Onbekend");
   const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
-  const [panelView, setPanelView] = useState<PanelView>('document');
-  
+  const [panelView, setPanelView] = useState<PanelView>("document");
+
   // Layout context for sidebar collapse
   const { setSidebarCollapsed } = useTeacherLayout();
-  
+
   // Layout context for parent container width
   const { setFocusMode: setLayoutFocusMode } = useFocusMode();
-  
+
   // Focus mode = docOpen && docMode === "dock"
   const focusMode = docOpen && docMode === "dock";
   const maxDocWidth = focusMode ? 1500 : 560;
@@ -417,7 +430,12 @@ export default function EditProjectAssessmentInner() {
 
   // Set document panel width when opening
   useEffect(() => {
-    if (docOpen && docMode === "dock" && docWidth === 0 && typeof window !== 'undefined') {
+    if (
+      docOpen &&
+      docMode === "dock" &&
+      docWidth === 0 &&
+      typeof window !== "undefined"
+    ) {
       setDocWidth(Math.floor(window.innerWidth * 0.5));
     }
   }, [docOpen, docMode, docWidth]);
@@ -459,16 +477,17 @@ export default function EditProjectAssessmentInner() {
   // Load submissions for the current team
   useEffect(() => {
     if (teamNumber === undefined) return;
-    
+
     async function loadSubmissions() {
       try {
-        const data = await submissionService.getSubmissionsForAssessment(assessmentId);
+        const data =
+          await submissionService.getSubmissionsForAssessment(assessmentId);
         const teamSubmissions = data.items
-          .filter(item => item.team_number === teamNumber)
-          .map(item => item.submission);
+          .filter((item) => item.team_number === teamNumber)
+          .map((item) => item.submission);
         setSubmissions(teamSubmissions);
       } catch (err) {
-        console.error('Failed to load submissions:', err);
+        console.error("Failed to load submissions:", err);
       }
     }
     loadSubmissions();
@@ -543,7 +562,10 @@ export default function EditProjectAssessmentInner() {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
-    if (teamNumber !== undefined && (Object.keys(scores).length > 0 || generalComment)) {
+    if (
+      teamNumber !== undefined &&
+      (Object.keys(scores).length > 0 || generalComment)
+    ) {
       autoSaveTimerRef.current = setTimeout(() => {
         autoSaveScores();
       }, 2000);
@@ -644,39 +666,43 @@ export default function EditProjectAssessmentInner() {
   );
 
   // Get current document based on docType (must be before early returns due to hooks rules)
-  const reportSubmission = submissions.find((s) => s.doc_type === 'report');
-  const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
-  const currentSubmission = docType === 'Verslag' ? reportSubmission : slidesSubmission;
+  const reportSubmission = submissions.find((s) => s.doc_type === "report");
+  const slidesSubmission = submissions.find((s) => s.doc_type === "slides");
+  const currentSubmission =
+    docType === "Verslag" ? reportSubmission : slidesSubmission;
   const currentDocUrl = currentSubmission?.url || null;
-  const currentDocUpdatedAt = currentSubmission?.updated_at 
-    ? new Date(currentSubmission.updated_at).toLocaleString('nl-NL', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+  const currentDocUpdatedAt = currentSubmission?.updated_at
+    ? new Date(currentSubmission.updated_at).toLocaleString("nl-NL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
-    : '—';
+    : "—";
   const hasLink = Boolean(currentDocUrl);
 
   // Handler for link health change
-  const handleLinkHealthChange = useCallback(async (newHealth: typeof linkHealth) => {
-    setLinkHealth(newHealth);
-    if (!currentSubmission) return;
-    
-    try {
-      // Map to submission status
-      let status: SubmissionOut['status'] = 'submitted';
-      if (newHealth === 'OK') status = 'ok';
-      else if (newHealth === 'Toegang gevraagd') status = 'access_requested';
-      else if (newHealth === 'Kapotte link') status = 'broken';
-      
-      await submissionService.updateStatus(currentSubmission.id, { status });
-      // TODO: Trigger student notification
-    } catch (err) {
-      console.error('Failed to update link status:', err);
-    }
-  }, [currentSubmission]);
+  const handleLinkHealthChange = useCallback(
+    async (newHealth: typeof linkHealth) => {
+      setLinkHealth(newHealth);
+      if (!currentSubmission) return;
+
+      try {
+        // Map to submission status
+        let status: SubmissionOut["status"] = "submitted";
+        if (newHealth === "OK") status = "ok";
+        else if (newHealth === "Toegang gevraagd") status = "access_requested";
+        else if (newHealth === "Kapotte link") status = "broken";
+
+        await submissionService.updateStatus(currentSubmission.id, { status });
+        // TODO: Trigger student notification
+      } catch (err) {
+        console.error("Failed to update link status:", err);
+      }
+    },
+    [currentSubmission],
+  );
 
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
@@ -762,9 +788,13 @@ export default function EditProjectAssessmentInner() {
       )}
 
       {/* Split view */}
-      <div 
-        className="grid gap-6" 
-        style={docOpen && docMode === "dock" ? { gridTemplateColumns: `${docWidth}px 1fr` } : undefined}
+      <div
+        className="grid gap-6"
+        style={
+          docOpen && docMode === "dock"
+            ? { gridTemplateColumns: `${docWidth}px 1fr` }
+            : undefined
+        }
       >
         {/* Document pane */}
         {docOpen && (
@@ -788,7 +818,7 @@ export default function EditProjectAssessmentInner() {
             onLinkHealthChange={handleLinkHealthChange}
             onOpenInTab={() => {
               if (currentDocUrl) {
-                window.open(currentDocUrl, '_blank');
+                window.open(currentDocUrl, "_blank");
               }
             }}
           />
@@ -835,7 +865,9 @@ export default function EditProjectAssessmentInner() {
                   onDeleteQuickComment={(criterionId, text) =>
                     setQuickCommentsByCriterion((prev) => ({
                       ...prev,
-                      [criterionId]: (prev[criterionId] || []).filter((qc) => qc !== text),
+                      [criterionId]: (prev[criterionId] || []).filter(
+                        (qc) => qc !== text,
+                      ),
                     }))
                   }
                 />
@@ -903,7 +935,10 @@ export default function EditProjectAssessmentInner() {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           {categoryGroups.map((group) => {
             const groupCriteria = group.criteria;
-            const totalWeight = groupCriteria.reduce((sum, c) => sum + c.weight, 0);
+            const totalWeight = groupCriteria.reduce(
+              (sum, c) => sum + c.weight,
+              0,
+            );
             const categoryGrade =
               totalWeight > 0
                 ? scoreToGrade(
@@ -929,7 +964,10 @@ export default function EditProjectAssessmentInner() {
             <span className="font-semibold text-emerald-700">
               {(() => {
                 const allCriteria = data.criteria;
-                const totalWeight = allCriteria.reduce((sum, c) => sum + c.weight, 0);
+                const totalWeight = allCriteria.reduce(
+                  (sum, c) => sum + c.weight,
+                  0,
+                );
                 if (totalWeight === 0) return "—";
                 const avgScore =
                   allCriteria.reduce((sum, c) => {

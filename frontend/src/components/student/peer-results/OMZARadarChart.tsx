@@ -18,7 +18,7 @@ Chart.register(
   PointElement,
   LineElement,
   Filler,
-  Tooltip
+  Tooltip,
 );
 
 type OMZARadarChartProps = {

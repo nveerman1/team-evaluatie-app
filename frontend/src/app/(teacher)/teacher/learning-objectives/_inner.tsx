@@ -31,7 +31,7 @@ export default function LearningObjectivesInner() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [domainFilter, setDomainFilter] = useState<string>("");
-  const [phaseFilter, setPhaseFilter] = useState<string>("");  // "onderbouw" | "bovenbouw" | ""
+  const [phaseFilter, setPhaseFilter] = useState<string>(""); // "onderbouw" | "bovenbouw" | ""
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -145,7 +145,9 @@ export default function LearningObjectivesInner() {
 
   function openEditModal(objective: LearningObjectiveDto) {
     if (!canModify(objective)) {
-      alert("Centrale leerdoelen kunnen alleen door een beheerder worden bewerkt.");
+      alert(
+        "Centrale leerdoelen kunnen alleen door een beheerder worden bewerkt.",
+      );
       return;
     }
     setCurrentObjective(objective);
@@ -168,7 +170,7 @@ export default function LearningObjectivesInner() {
     try {
       // Create as teacher-specific objective (is_template: false)
       await createLearningObjective({
-        ...formData as LearningObjectiveCreateDto,
+        ...(formData as LearningObjectiveCreateDto),
         is_template: false,
       });
       setIsCreateModalOpen(false);
@@ -181,16 +183,18 @@ export default function LearningObjectivesInner() {
 
   async function handleUpdate() {
     if (!currentObjective) return;
-    
+
     if (!canModify(currentObjective)) {
-      alert("Centrale leerdoelen kunnen alleen door een beheerder worden bewerkt.");
+      alert(
+        "Centrale leerdoelen kunnen alleen door een beheerder worden bewerkt.",
+      );
       return;
     }
 
     try {
       await updateLearningObjective(
         currentObjective.id,
-        formData as LearningObjectiveUpdateDto
+        formData as LearningObjectiveUpdateDto,
       );
       setIsEditModalOpen(false);
       setCurrentObjective(null);
@@ -203,10 +207,12 @@ export default function LearningObjectivesInner() {
 
   async function handleDelete(objective: LearningObjectiveDto) {
     if (!canModify(objective)) {
-      alert("Centrale leerdoelen kunnen alleen door een beheerder worden verwijderd.");
+      alert(
+        "Centrale leerdoelen kunnen alleen door een beheerder worden verwijderd.",
+      );
       return;
     }
-    
+
     if (!confirm("Weet je zeker dat je dit leerdoel wilt verwijderen?")) {
       return;
     }
@@ -229,13 +235,13 @@ export default function LearningObjectivesInner() {
    */
   function parseCSVLine(line: string): string[] {
     const result: string[] = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
     let fieldStart = true;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      
+
       if (char === '"' && (fieldStart || inQuotes)) {
         // Start or end of quoted field
         if (fieldStart && !inQuotes) {
@@ -252,9 +258,9 @@ export default function LearningObjectivesInner() {
             inQuotes = false;
           }
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === "," && !inQuotes) {
         result.push(current.trim());
-        current = '';
+        current = "";
         fieldStart = true;
       } else {
         current += char;
@@ -262,7 +268,7 @@ export default function LearningObjectivesInner() {
       }
     }
     result.push(current.trim());
-    
+
     return result;
   }
 
@@ -279,11 +285,12 @@ export default function LearningObjectivesInner() {
 
       // Skip header if present (check for common Dutch/English header keywords)
       const firstLine = lines[0].toLowerCase();
-      const hasHeader = firstLine.includes("domein") || 
-                       firstLine.includes("domain") || 
-                       firstLine.includes("nummer") ||
-                       firstLine.includes("titel") ||
-                       firstLine.includes("title");
+      const hasHeader =
+        firstLine.includes("domein") ||
+        firstLine.includes("domain") ||
+        firstLine.includes("nummer") ||
+        firstLine.includes("titel") ||
+        firstLine.includes("title");
       const startIdx = hasHeader ? 1 : 0;
 
       for (let i = startIdx; i < lines.length; i++) {
@@ -298,10 +305,10 @@ export default function LearningObjectivesInner() {
         let phase = parts[4] || null;
         if (phase) {
           const phaseUpper = phase.toUpperCase();
-          if (phaseUpper === 'B' || phaseUpper === 'ONDERBOUW') {
-            phase = 'onderbouw';
-          } else if (phaseUpper === 'E' || phaseUpper === 'BOVENBOUW') {
-            phase = 'bovenbouw';
+          if (phaseUpper === "B" || phaseUpper === "ONDERBOUW") {
+            phase = "onderbouw";
+          } else if (phaseUpper === "E" || phaseUpper === "BOVENBOUW") {
+            phase = "bovenbouw";
           }
           // Truncate if too long (max 20 chars for database)
           if (phase.length > 20) {
@@ -312,14 +319,18 @@ export default function LearningObjectivesInner() {
         items.push({
           domain: parts[0] || null,
           order: parts[1] ? parseInt(parts[1], 10) : 0,
-          title: parts[2] || parts[1],  // fallback if structure differs
+          title: parts[2] || parts[1], // fallback if structure differs
           description: parts[3] || null,
           phase: phase,
         });
       }
 
       // Import as teacher objectives (is_template: false)
-      const result = await importLearningObjectives({ items }, undefined, false);
+      const result = await importLearningObjectives(
+        { items },
+        undefined,
+        false,
+      );
       setImportResult(result);
       if (result.errors.length === 0) {
         fetchObjectives();
@@ -346,7 +357,9 @@ export default function LearningObjectivesInner() {
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Leerdoelen / Eindtermen</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Leerdoelen / Eindtermen
+            </h1>
             <p className="text-gray-600 mt-1 text-sm">
               Bekijk centrale leerdoelen en beheer je eigen doelen.
             </p>
@@ -370,69 +383,86 @@ export default function LearningObjectivesInner() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800">
+            {error}
+          </div>
+        )}
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800">
-          {error}
-        </div>
-      )}
-
-      {/* Info banner */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <span className="text-blue-500 text-xl">ℹ️</span>
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Drie soorten leerdoelen:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Centraal</span> — Beheerd door de beheerder, gekoppeld aan rubric-criteria. Alleen-lezen voor docenten.</li>
-              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Eigen doel</span> — Jouw persoonlijke leerdoelen die je zelf kunt aanmaken en bewerken.</li>
-              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">Gedeeld</span> — Leerdoelen van collega&apos;s die aan dezelfde course zijn gekoppeld. Alleen-lezen.</li>
-            </ul>
+        {/* Info banner */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <span className="text-blue-500 text-xl">ℹ️</span>
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">Drie soorten leerdoelen:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                    Centraal
+                  </span>{" "}
+                  — Beheerd door de beheerder, gekoppeld aan rubric-criteria.
+                  Alleen-lezen voor docenten.
+                </li>
+                <li>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                    Eigen doel
+                  </span>{" "}
+                  — Jouw persoonlijke leerdoelen die je zelf kunt aanmaken en
+                  bewerken.
+                </li>
+                <li>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
+                    Gedeeld
+                  </span>{" "}
+                  — Leerdoelen van collega&apos;s die aan dezelfde course zijn
+                  gekoppeld. Alleen-lezen.
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Type Filter Pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-gray-700">Toon:</span>
-        <button
-          onClick={() => setViewMode("all")}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-            viewMode === "all"
-              ? "bg-sky-100 text-sky-700 border-sky-300"
-              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-          }`}
-        >
-          Alle
-        </button>
-        <button
-          onClick={() => setViewMode("template")}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-            viewMode === "template"
-              ? "bg-amber-100 text-amber-700 border-amber-300"
-              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-          }`}
-        >
-          Centrale doelen
-        </button>
-        <button
-          onClick={() => setViewMode("teacher")}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-            viewMode === "teacher"
-              ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-          }`}
-        >
-          Mijn eigen doelen
-        </button>
-      </div>
-
-      {/* Phase Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-8" aria-label="Tabs">
+        {/* Type Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Toon:</span>
           <button
-            onClick={() => setPhaseFilter("")}
-            className={`
+            onClick={() => setViewMode("all")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              viewMode === "all"
+                ? "bg-sky-100 text-sky-700 border-sky-300"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => setViewMode("template")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              viewMode === "template"
+                ? "bg-amber-100 text-amber-700 border-amber-300"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            Centrale doelen
+          </button>
+          <button
+            onClick={() => setViewMode("teacher")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              viewMode === "teacher"
+                ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            Mijn eigen doelen
+          </button>
+        </div>
+
+        {/* Phase Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            <button
+              onClick={() => setPhaseFilter("")}
+              className={`
               py-4 px-1 border-b-2 font-medium text-sm transition-colors
               ${
                 phaseFilter === ""
@@ -440,12 +470,12 @@ export default function LearningObjectivesInner() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }
             `}
-          >
-            Alle fasen
-          </button>
-          <button
-            onClick={() => setPhaseFilter("onderbouw")}
-            className={`
+            >
+              Alle fasen
+            </button>
+            <button
+              onClick={() => setPhaseFilter("onderbouw")}
+              className={`
               py-4 px-1 border-b-2 font-medium text-sm transition-colors
               ${
                 phaseFilter === "onderbouw"
@@ -453,12 +483,12 @@ export default function LearningObjectivesInner() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }
             `}
-          >
-            Onderbouw
-          </button>
-          <button
-            onClick={() => setPhaseFilter("bovenbouw")}
-            className={`
+            >
+              Onderbouw
+            </button>
+            <button
+              onClick={() => setPhaseFilter("bovenbouw")}
+              className={`
               py-4 px-1 border-b-2 font-medium text-sm transition-colors
               ${
                 phaseFilter === "bovenbouw"
@@ -466,448 +496,466 @@ export default function LearningObjectivesInner() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }
             `}
-          >
-            Bovenbouw
-          </button>
-        </nav>
-      </div>
+            >
+              Bovenbouw
+            </button>
+          </nav>
+        </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Zoek op titel of beschrijving..."
-          className="h-9 w-64 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-        <input
-          type="text"
-          value={domainFilter}
-          onChange={(e) => setDomainFilter(e.target.value)}
-          placeholder="Domein (A, B, C...)"
-          className="h-9 w-40 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-        {(searchQuery || domainFilter) && (
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setDomainFilter("");
-            }}
-            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
-          >
-            Reset
-          </button>
-        )}
-      </div>
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek op titel of beschrijving..."
+            className="h-9 w-64 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <input
+            type="text"
+            value={domainFilter}
+            onChange={(e) => setDomainFilter(e.target.value)}
+            placeholder="Domein (A, B, C...)"
+            className="h-9 w-40 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          {(searchQuery || domainFilter) && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setDomainFilter("");
+              }}
+              className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
+            >
+              Reset
+            </button>
+          )}
+        </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
-        <table className="w-full table-fixed">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Type
-              </th>
-              <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Domein
-              </th>
-              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Nr
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Titel
-              </th>
-              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Fase
-              </th>
-              <th className="w-44 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                Acties
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {objectives.map((obj) => (
-              <tr key={obj.id} className={`hover:bg-gray-50 ${
-                obj.is_template 
-                  ? "bg-amber-50/30" 
-                  : isShared(obj) 
-                    ? "bg-cyan-50/30" 
-                    : ""
-              }`}>
-                <td className="w-36 px-4 py-3 text-sm">
-                  {obj.is_template ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                      🏛️ Centraal
-                    </span>
-                  ) : isShared(obj) ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
-                      👥 Gedeeld
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                      👤 Eigen doel
-                    </span>
-                  )}
-                </td>
-                <td className="w-28 px-4 py-3 text-sm font-medium">{obj.domain || "-"}</td>
-                <td className="w-20 px-4 py-3 text-sm">{obj.order}</td>
-                <td className="px-4 py-3 text-sm">{obj.title}</td>
-                <td className="w-32 px-4 py-3 text-sm">
-                  {obj.phase ? (
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      obj.phase === "onderbouw" 
-                        ? "bg-blue-100 text-blue-800" 
-                        : "bg-purple-100 text-purple-800"
-                    }`}>
-                      {obj.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="w-44 px-4 py-3 text-sm text-right">
-                  {canModify(obj) ? (
-                    <>
-                      <button
-                        onClick={() => openEditModal(obj)}
-                        className="text-blue-600 hover:text-blue-800 mr-3"
-                      >
-                        Bewerken
-                      </button>
-                      <button
-                        onClick={() => handleDelete(obj)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Verwijderen
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-gray-400 text-xs italic">Alleen-lezen</span>
-                  )}
-                </td>
+        {/* Table */}
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
+          <table className="w-full table-fixed">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Type
+                </th>
+                <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Domein
+                </th>
+                <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Nr
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Titel
+                </th>
+                <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Fase
+                </th>
+                <th className="w-44 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  Acties
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {objectives.map((obj) => (
+                <tr
+                  key={obj.id}
+                  className={`hover:bg-gray-50 ${
+                    obj.is_template
+                      ? "bg-amber-50/30"
+                      : isShared(obj)
+                        ? "bg-cyan-50/30"
+                        : ""
+                  }`}
+                >
+                  <td className="w-36 px-4 py-3 text-sm">
+                    {obj.is_template ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        🏛️ Centraal
+                      </span>
+                    ) : isShared(obj) ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
+                        👥 Gedeeld
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                        👤 Eigen doel
+                      </span>
+                    )}
+                  </td>
+                  <td className="w-28 px-4 py-3 text-sm font-medium">
+                    {obj.domain || "-"}
+                  </td>
+                  <td className="w-20 px-4 py-3 text-sm">{obj.order}</td>
+                  <td className="px-4 py-3 text-sm">{obj.title}</td>
+                  <td className="w-32 px-4 py-3 text-sm">
+                    {obj.phase ? (
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          obj.phase === "onderbouw"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-purple-100 text-purple-800"
+                        }`}
+                      >
+                        {obj.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="w-44 px-4 py-3 text-sm text-right">
+                    {canModify(obj) ? (
+                      <>
+                        <button
+                          onClick={() => openEditModal(obj)}
+                          className="text-blue-600 hover:text-blue-800 mr-3"
+                        >
+                          Bewerken
+                        </button>
+                        <button
+                          onClick={() => handleDelete(obj)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Verwijderen
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-gray-400 text-xs italic">
+                        Alleen-lezen
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        {objectives.length === 0 && !loading && (
-          <div className="text-center py-8 text-gray-500">
-            Geen leerdoelen gevonden
+          {objectives.length === 0 && !loading && (
+            <div className="text-center py-8 text-gray-500">
+              Geen leerdoelen gevonden
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
+            >
+              Vorige
+            </button>
+            <span className="px-4 py-2">
+              Pagina {page} van {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
+            >
+              Volgende
+            </button>
           </div>
         )}
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
-          >
-            Vorige
-          </button>
-          <span className="px-4 py-2">
-            Pagina {page} van {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
-          >
-            Volgende
-          </button>
-        </div>
-      )}
-
-      {/* Create Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-2">Nieuw Eigen Leerdoel</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Dit leerdoel wordt als persoonlijk doel opgeslagen en is alleen voor jou zichtbaar.
-            </p>
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                  👤 Eigen doel
-                </span>
-                <span className="text-xs text-emerald-700">Dit doel kun je later bewerken en verwijderen.</span>
+        {/* Create Modal */}
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold mb-2">Nieuw Eigen Leerdoel</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Dit leerdoel wordt als persoonlijk doel opgeslagen en is alleen
+                voor jou zichtbaar.
+              </p>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                    👤 Eigen doel
+                  </span>
+                  <span className="text-xs text-emerald-700">
+                    Dit doel kun je later bewerken en verwijderen.
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Domein
-                </label>
-                <input
-                  type="text"
-                  value={formData.domain || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, domain: e.target.value })
-                  }
-                  placeholder="A, B, C, D, E"
-                  className="w-full px-3 py-2 border rounded"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Domein
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.domain || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, domain: e.target.value })
+                    }
+                    placeholder="A, B, C, D, E"
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Nummer
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.order || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        order: parseInt(e.target.value, 10),
+                      })
+                    }
+                    placeholder="9, 11, 13, 14, 16..."
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Titel *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    placeholder="Conceptontwikkeling"
+                    className="w-full px-3 py-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Beschrijving
+                  </label>
+                  <textarea
+                    value={formData.description || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Ontwerprichtingen genereren en onderbouwen"
+                    className="w-full px-3 py-2 border rounded"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Fase</label>
+                  <select
+                    value={formData.phase || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phase: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded"
+                  >
+                    <option value="">Niet gespecificeerd</option>
+                    <option value="onderbouw">Onderbouw</option>
+                    <option value="bovenbouw">Bovenbouw</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nummer
-                </label>
-                <input
-                  type="number"
-                  value={formData.order || 0}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      order: parseInt(e.target.value, 10),
-                    })
-                  }
-                  placeholder="9, 11, 13, 14, 16..."
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Titel *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  placeholder="Conceptontwikkeling"
-                  className="w-full px-3 py-2 border rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Beschrijving
-                </label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Ontwerprichtingen genereren en onderbouwen"
-                  className="w-full px-3 py-2 border rounded"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Fase</label>
-                <select
-                  value={formData.phase || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phase: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded"
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleCreate}
+                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
                 >
-                  <option value="">Niet gespecificeerd</option>
-                  <option value="onderbouw">Onderbouw</option>
-                  <option value="bovenbouw">Bovenbouw</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={handleCreate}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              >
-                Aanmaken
-              </button>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Annuleren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {isEditModalOpen && currentObjective && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-2">Eigen Leerdoel Bewerken</h2>
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                  👤 Eigen doel
-                </span>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Domein
-                </label>
-                <input
-                  type="text"
-                  value={formData.domain || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, domain: e.target.value })
-                  }
-                  placeholder="A, B, C, D, E"
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nummer
-                </label>
-                <input
-                  type="number"
-                  value={formData.order || 0}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      order: parseInt(e.target.value, 10),
-                    })
-                  }
-                  placeholder="9, 11, 13, 14, 16..."
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Titel *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  placeholder="Conceptontwikkeling"
-                  className="w-full px-3 py-2 border rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Beschrijving
-                </label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Ontwerprichtingen genereren en onderbouwen"
-                  className="w-full px-3 py-2 border rounded"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Fase</label>
-                <select
-                  value={formData.phase || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phase: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded"
+                  Aanmaken
+                </button>
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
                 >
-                  <option value="">Niet gespecificeerd</option>
-                  <option value="onderbouw">Onderbouw</option>
-                  <option value="bovenbouw">Bovenbouw</option>
-                </select>
+                  Annuleren
+                </button>
               </div>
             </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={handleUpdate}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              >
-                Opslaan
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setCurrentObjective(null);
-                }}
-                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Annuleren
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Import Modal */}
-      {isImportModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-2">
-              Importeer Eigen Leerdoelen (CSV)
-            </h2>
-            <p className="text-sm text-gray-600 mb-2">
-              Geïmporteerde leerdoelen worden opgeslagen als jouw persoonlijke doelen.
-            </p>
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                  👤 Eigen doelen
-                </span>
-                <span className="text-xs text-emerald-700">Deze doelen kun je later bewerken en verwijderen.</span>
+        {/* Edit Modal */}
+        {isEditModalOpen && currentObjective && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold mb-2">
+                Eigen Leerdoel Bewerken
+              </h2>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                    👤 Eigen doel
+                  </span>
+                </div>
               </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Formaat: domein,nummer,titel,beschrijving,fase
-              <br />
-              Bijvoorbeeld: D,9,Conceptontwikkeling,Ontwerprichtingen genereren en onderbouwen,onderbouw
-            </p>
-            <textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder="Plak CSV-gegevens hier..."
-              className="w-full px-3 py-2 border rounded font-mono text-sm"
-              rows={10}
-            />
-            {importResult && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-                <p className="font-medium">Resultaat:</p>
-                <p>Aangemaakt: {importResult.created}</p>
-                <p>Bijgewerkt: {importResult.updated}</p>
-                {importResult.errors.length > 0 && (
-                  <div className="mt-2">
-                    <p className="font-medium text-red-600">Fouten:</p>
-                    <ul className="list-disc list-inside text-sm">
-                      {importResult.errors.map((err, idx) => (
-                        <li key={idx}>{err}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Domein
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.domain || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, domain: e.target.value })
+                    }
+                    placeholder="A, B, C, D, E"
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Nummer
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.order || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        order: parseInt(e.target.value, 10),
+                      })
+                    }
+                    placeholder="9, 11, 13, 14, 16..."
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Titel *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    placeholder="Conceptontwikkeling"
+                    className="w-full px-3 py-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Beschrijving
+                  </label>
+                  <textarea
+                    value={formData.description || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Ontwerprichtingen genereren en onderbouwen"
+                    className="w-full px-3 py-2 border rounded"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Fase</label>
+                  <select
+                    value={formData.phase || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phase: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded"
+                  >
+                    <option value="">Niet gespecificeerd</option>
+                    <option value="onderbouw">Onderbouw</option>
+                    <option value="bovenbouw">Bovenbouw</option>
+                  </select>
+                </div>
               </div>
-            )}
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={handleImport}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Importeren
-              </button>
-              <button
-                onClick={() => {
-                  setIsImportModalOpen(false);
-                  setImportText("");
-                  setImportResult(null);
-                }}
-                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Sluiten
-              </button>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleUpdate}
+                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                >
+                  Opslaan
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setCurrentObjective(null);
+                  }}
+                  className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+                >
+                  Annuleren
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Import Modal */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold mb-2">
+                Importeer Eigen Leerdoelen (CSV)
+              </h2>
+              <p className="text-sm text-gray-600 mb-2">
+                Geïmporteerde leerdoelen worden opgeslagen als jouw persoonlijke
+                doelen.
+              </p>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                    👤 Eigen doelen
+                  </span>
+                  <span className="text-xs text-emerald-700">
+                    Deze doelen kun je later bewerken en verwijderen.
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Formaat: domein,nummer,titel,beschrijving,fase
+                <br />
+                Bijvoorbeeld: D,9,Conceptontwikkeling,Ontwerprichtingen
+                genereren en onderbouwen,onderbouw
+              </p>
+              <textarea
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder="Plak CSV-gegevens hier..."
+                className="w-full px-3 py-2 border rounded font-mono text-sm"
+                rows={10}
+              />
+              {importResult && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+                  <p className="font-medium">Resultaat:</p>
+                  <p>Aangemaakt: {importResult.created}</p>
+                  <p>Bijgewerkt: {importResult.updated}</p>
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-2">
+                      <p className="font-medium text-red-600">Fouten:</p>
+                      <ul className="list-disc list-inside text-sm">
+                        {importResult.errors.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleImport}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Importeren
+                </button>
+                <button
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setImportText("");
+                    setImportResult(null);
+                  }}
+                  className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+                >
+                  Sluiten
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

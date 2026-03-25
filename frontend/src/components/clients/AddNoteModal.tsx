@@ -11,7 +11,12 @@ interface AddNoteModalProps {
   clientId: number;
 }
 
-export function AddNoteModal({ isOpen, onClose, onSuccess, clientId }: AddNoteModalProps) {
+export function AddNoteModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  clientId,
+}: AddNoteModalProps) {
   const [formData, setFormData] = useState<ClientLogCreate>({
     log_type: "Notitie",
     text: "",
@@ -45,7 +50,10 @@ export function AddNoteModal({ isOpen, onClose, onSuccess, clientId }: AddNoteMo
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black bg-opacity-30 transition-opacity" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
+          onClick={onClose}
+        />
         <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
           <h2 className="text-xl font-semibold text-slate-900 mb-4">
             Nieuwe notitie toevoegen
@@ -64,7 +72,9 @@ export function AddNoteModal({ isOpen, onClose, onSuccess, clientId }: AddNoteMo
               </label>
               <select
                 value={formData.log_type}
-                onChange={(e) => setFormData({ ...formData, log_type: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, log_type: e.target.value })
+                }
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
               >
                 <option value="Notitie">Notitie</option>
@@ -82,7 +92,9 @@ export function AddNoteModal({ isOpen, onClose, onSuccess, clientId }: AddNoteMo
               <textarea
                 required
                 value={formData.text}
-                onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, text: e.target.value })
+                }
                 rows={6}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 placeholder="Voer hier je notitie in..."

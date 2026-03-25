@@ -3,9 +3,9 @@ export type SubmissionOut = {
   school_id: number;
   project_assessment_id: number;
   project_team_id: number;
-  doc_type: 'report' | 'slides' | 'attachment';
+  doc_type: "report" | "slides" | "attachment";
   url?: string | null;
-  status: 'missing' | 'submitted' | 'ok' | 'access_requested' | 'broken';
+  status: "missing" | "submitted" | "ok" | "access_requested" | "broken";
   version_label?: string | null;
   submitted_by_user_id?: number | null;
   submitted_at?: string | null;
@@ -16,7 +16,7 @@ export type SubmissionOut = {
 };
 
 export type SubmissionCreate = {
-  doc_type: 'report' | 'slides' | 'attachment';
+  doc_type: "report" | "slides" | "attachment";
   url: string;
   version_label?: string;
 };
@@ -26,7 +26,7 @@ export type SubmissionUpdate = {
 };
 
 export type SubmissionStatusUpdate = {
-  status: 'missing' | 'submitted' | 'ok' | 'access_requested' | 'broken';
+  status: "missing" | "submitted" | "ok" | "access_requested" | "broken";
 };
 
 export type SubmissionWithTeamInfo = {
@@ -50,7 +50,12 @@ export type SubmissionEventOut = {
   school_id: number;
   submission_id: number;
   actor_user_id?: number | null;
-  event_type: 'submitted' | 'status_changed' | 'cleared' | 'opened' | 'commented';
+  event_type:
+    | "submitted"
+    | "status_changed"
+    | "cleared"
+    | "opened"
+    | "commented";
   payload?: Record<string, any> | null;
   created_at: string;
 };

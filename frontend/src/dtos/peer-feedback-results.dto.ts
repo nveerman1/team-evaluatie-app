@@ -1,6 +1,10 @@
 // DTOs for Student Peer-Feedback Results Page
 
-export type OmzaKey = "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie";
+export type OmzaKey =
+  | "organiseren"
+  | "meedoen"
+  | "zelfvertrouwen"
+  | "autonomie";
 
 export type PeerScore = {
   peerLabel: string; // anoniem label of naam

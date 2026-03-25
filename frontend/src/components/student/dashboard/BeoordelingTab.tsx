@@ -30,7 +30,7 @@ export function BeoordelingTab({
   const [filter, setFilter] = useState<FilterType>("alles");
 
   const relevant = (projectAssessments || []).filter((p) =>
-    ["open", "published", "closed"].includes(p.status)
+    ["open", "published", "closed"].includes(p.status),
   );
 
   const filtered = relevant.filter((a) => {
@@ -47,9 +47,12 @@ export function BeoordelingTab({
       {/* Card header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Projectbeoordeling</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Projectbeoordeling
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Beoordelingen per project. Klik door voor rubric, feedback en je eindresultaat.
+            Beoordelingen per project. Klik door voor rubric, feedback en je
+            eindresultaat.
           </p>
         </div>
 
@@ -63,7 +66,7 @@ export function BeoordelingTab({
                 "rounded-full px-3 py-1.5 text-sm font-medium transition",
                 filter === value
                   ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
               {label}
@@ -88,7 +91,10 @@ export function BeoordelingTab({
           </div>
         ) : (
           filtered.map((assessment) => (
-            <ProjectAssessmentDashboardCard key={assessment.id} assessment={assessment} />
+            <ProjectAssessmentDashboardCard
+              key={assessment.id}
+              assessment={assessment}
+            />
           ))
         )}
       </div>

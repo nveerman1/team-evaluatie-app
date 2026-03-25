@@ -17,7 +17,9 @@ export const subjectService = {
     is_active?: boolean;
     search?: string;
   }): Promise<SubjectListResponse> {
-    const response = await api.get<SubjectListResponse>("/subjects", { params });
+    const response = await api.get<SubjectListResponse>("/subjects", {
+      params,
+    });
     return response.data;
   },
 
@@ -34,14 +36,11 @@ export const subjectService = {
    */
   async getSubjectCourses(
     subjectId: number,
-    isActive?: boolean
+    isActive?: boolean,
   ): Promise<Course[]> {
-    const response = await api.get<Course[]>(
-      `/subjects/${subjectId}/courses`,
-      {
-        params: { is_active: isActive },
-      }
-    );
+    const response = await api.get<Course[]>(`/subjects/${subjectId}/courses`, {
+      params: { is_active: isActive },
+    });
     return response.data;
   },
 
@@ -58,7 +57,7 @@ export const subjectService = {
    */
   async updateSubject(
     subjectId: number,
-    data: SubjectUpdate
+    data: SubjectUpdate,
   ): Promise<Subject> {
     const response = await api.patch<Subject>(`/subjects/${subjectId}`, data);
     return response.data;

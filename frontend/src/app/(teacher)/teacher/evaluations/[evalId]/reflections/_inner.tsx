@@ -18,14 +18,16 @@ export default function ReflectionsPageInner() {
   const evalIdNum = useNumericEvalId(); // null op /create
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "";
   const { setExportCsvUrl } = useEvaluationLayout();
-  
+
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   // UI state
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "missing">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "submitted" | "missing"
+  >("all");
   const [sort, setSort] = useState<
     "name_asc" | "name_desc" | "date_new" | "date_old" | "words_hi" | "words_lo"
   >("name_asc");
@@ -34,7 +36,9 @@ export default function ReflectionsPageInner() {
   // Set export CSV URL in context
   useEffect(() => {
     if (evalIdNum != null) {
-      setExportCsvUrl(`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`);
+      setExportCsvUrl(
+        `/api/v1/evaluations/${evalIdStr}/reflections/export.csv`,
+      );
     }
     return () => {
       setExportCsvUrl(null);
@@ -160,7 +164,9 @@ export default function ReflectionsPageInner() {
 
       {loading && <div className="text-slate-500">Laden…</div>}
       {err && (
-        <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">{err}</div>
+        <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
+          {err}
+        </div>
       )}
 
       {!loading && !err && (
@@ -194,7 +200,9 @@ export default function ReflectionsPageInner() {
                       }
                     >
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold text-slate-900">{r.student_name}</span>
+                        <span className="font-semibold text-slate-900">
+                          {r.student_name}
+                        </span>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
                             r.submitted_at
@@ -247,11 +255,11 @@ export default function ReflectionsPageInner() {
         </>
       )}
 
-        {evalIdNum == null && (
-          <p className="text-sm text-slate-500">
-            Geen geldige evaluatie geselecteerd.
-          </p>
-        )}
+      {evalIdNum == null && (
+        <p className="text-sm text-slate-500">
+          Geen geldige evaluatie geselecteerd.
+        </p>
+      )}
     </>
   );
 }

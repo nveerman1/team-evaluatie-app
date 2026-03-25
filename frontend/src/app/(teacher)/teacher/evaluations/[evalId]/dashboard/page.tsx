@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useNumericEvalId } from "@/utils";
 import { useDashboardData } from "@/hooks";
-import { Tile, Loading, ErrorMessage, TeamBadge, TeamFilter } from "@/components";
+import {
+  Tile,
+  Loading,
+  ErrorMessage,
+  TeamBadge,
+  TeamFilter,
+} from "@/components";
 import { useState, useMemo, useEffect } from "react";
 import { dashboardService } from "@/services/dashboard.service";
 import { evaluationService } from "@/services/evaluation.service";
@@ -62,8 +68,9 @@ type FilterType = "all" | "not_started" | "partial" | "completed";
 
 export default function EvaluationDashboardPage() {
   const evalIdNum = useNumericEvalId();
-  const { kpis, studentProgress, loading, error } =
-    useDashboardData(evalIdNum ?? undefined);
+  const { kpis, studentProgress, loading, error } = useDashboardData(
+    evalIdNum ?? undefined,
+  );
 
   const evalId = evalIdNum?.toString() ?? "";
 
@@ -73,39 +80,47 @@ export default function EvaluationDashboardPage() {
   const [filterType, setFilterType] = useState<FilterType>("all");
 
   // State for team context
-  const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(null);
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<number | null>(null);
+  const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(
+    null,
+  );
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<number | null>(
+    null,
+  );
 
   // Load team context
   useEffect(() => {
     if (!evalIdNum) return;
-    
+
     const controller = new AbortController();
     const currentEvalId = evalIdNum; // Capture the value to ensure type safety
-    
+
     async function loadTeams() {
       try {
         const context = await evaluationService.getEvaluationTeams(
           currentEvalId,
-          controller.signal
+          controller.signal,
         );
         setTeamContext(context);
       } catch (error: any) {
-        if (error.name !== 'AbortError' && error.name !== 'CanceledError' && error.message !== 'canceled') {
-          console.error('Failed to load team context:', error);
+        if (
+          error.name !== "AbortError" &&
+          error.name !== "CanceledError" &&
+          error.message !== "canceled"
+        ) {
+          console.error("Failed to load team context:", error);
         }
       }
     }
-    
+
     loadTeams();
-    
+
     return () => controller.abort();
   }, [evalIdNum]);
 
   // Map user IDs to team numbers for quick lookup
   const userTeamMap = useMemo(() => {
     if (!teamContext) return new Map<number, number>();
-    
+
     const map = new Map<number, number>();
     teamContext.teams.forEach((team) => {
       team.members.forEach((member) => {
@@ -134,7 +149,9 @@ export default function EvaluationDashboardPage() {
 
     // Apply team filter
     if (selectedTeamFilter !== null && userTeamMap.size > 0) {
-      filtered = filtered.filter((s) => userTeamMap.get(s.user_id) === selectedTeamFilter);
+      filtered = filtered.filter(
+        (s) => userTeamMap.get(s.user_id) === selectedTeamFilter,
+      );
     }
 
     // Apply sort
@@ -189,7 +206,14 @@ export default function EvaluationDashboardPage() {
     });
 
     return filtered;
-  }, [studentProgress, filterType, selectedTeamFilter, userTeamMap, sortField, sortDirection]);
+  }, [
+    studentProgress,
+    filterType,
+    selectedTeamFilter,
+    userTeamMap,
+    sortField,
+    sortDirection,
+  ]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -220,15 +244,19 @@ export default function EvaluationDashboardPage() {
 
   const handleSendReminders = async () => {
     if (!evalIdNum) return;
-    if (!confirm("Weet je zeker dat je herinneringen wilt versturen naar alle studenten met onvolledige taken?")) {
+    if (
+      !confirm(
+        "Weet je zeker dat je herinneringen wilt versturen naar alle studenten met onvolledige taken?",
+      )
+    ) {
       return;
     }
     try {
       const result = await dashboardService.sendReminders(evalIdNum);
       alert(
         `${result.message}\n\n` +
-        `Aantal studenten: ${result.reminders_sent}\n` +
-        `(Email functionaliteit wordt nog geïmplementeerd)`
+          `Aantal studenten: ${result.reminders_sent}\n` +
+          `(Email functionaliteit wordt nog geïmplementeerd)`,
       );
     } catch (e) {
       console.error("Send reminders failed:", e);
@@ -244,11 +272,11 @@ export default function EvaluationDashboardPage() {
         <>
           {/* KPI tiles */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Tile label="Self-reviews" value={kpis?.selfreviews_present ?? 0} />
-          <Tile label="Peer-reviews" value={kpis?.reviewers_total ?? 0} />
-          <Tile label="Reflecties" value={kpis?.reflections_count ?? 0} />
-          <Tile label="Totaal studenten" value={kpis?.students_total ?? 0} />
-        </section>
+            <Tile label="Self-reviews" value={kpis?.selfreviews_present ?? 0} />
+            <Tile label="Peer-reviews" value={kpis?.reviewers_total ?? 0} />
+            <Tile label="Reflecties" value={kpis?.reflections_count ?? 0} />
+            <Tile label="Totaal studenten" value={kpis?.students_total ?? 0} />
+          </section>
 
           {/* Student Progress Table */}
           <section className="space-y-3">
@@ -274,7 +302,9 @@ export default function EvaluationDashboardPage() {
 
             {/* Filters */}
             <div className="flex gap-2 items-center flex-wrap">
-              <label className="text-sm font-medium text-slate-600">Filter:</label>
+              <label className="text-sm font-medium text-slate-600">
+                Filter:
+              </label>
               <button
                 onClick={() => setFilterType("all")}
                 className={`px-3 py-1 rounded-lg text-sm ${
@@ -315,13 +345,13 @@ export default function EvaluationDashboardPage() {
               >
                 Voltooid
               </button>
-              
+
               {/* Team filter */}
               {teamContext && teamContext.teams.length > 0 && (
                 <>
                   <div className="mx-2 h-6 w-px bg-slate-300"></div>
                   <TeamFilter
-                    teams={teamContext.teams.map(t => ({
+                    teams={teamContext.teams.map((t) => ({
                       teamId: t.team_id,
                       teamNumber: t.team_number,
                       displayName: t.display_name,
@@ -430,13 +460,21 @@ export default function EvaluationDashboardPage() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredStudents.length === 0 ? (
                       <tr>
-                        <td colSpan={teamContext && teamContext.teams.length > 0 ? 9 : 8} className="px-4 py-8 text-center text-slate-500">
+                        <td
+                          colSpan={
+                            teamContext && teamContext.teams.length > 0 ? 9 : 8
+                          }
+                          className="px-4 py-8 text-center text-slate-500"
+                        >
                           Geen studenten gevonden
                         </td>
                       </tr>
                     ) : (
                       filteredStudents.map((student) => (
-                        <tr key={student.user_id} className="bg-white hover:bg-slate-50">
+                        <tr
+                          key={student.user_id}
+                          className="bg-white hover:bg-slate-50"
+                        >
                           <td className="px-5 py-3 text-sm text-slate-800 font-medium">
                             {student.user_name}
                           </td>
@@ -446,9 +484,14 @@ export default function EvaluationDashboardPage() {
                           {teamContext && teamContext.teams.length > 0 && (
                             <td className="px-4 py-3 text-sm">
                               {userTeamMap.get(student.user_id) ? (
-                                <TeamBadge teamNumber={userTeamMap.get(student.user_id)!} size="sm" />
+                                <TeamBadge
+                                  teamNumber={userTeamMap.get(student.user_id)!}
+                                  size="sm"
+                                />
                               ) : (
-                                <span className="text-gray-400 text-xs">Geen team</span>
+                                <span className="text-gray-400 text-xs">
+                                  Geen team
+                                </span>
                               )}
                             </td>
                           )}
@@ -472,7 +515,9 @@ export default function EvaluationDashboardPage() {
                             {student.flags.length > 0 ? (
                               <span
                                 className="cursor-help text-lg"
-                                title={student.flags.map(getFlagDescription).join("\n• ")}
+                                title={student.flags
+                                  .map(getFlagDescription)
+                                  .join("\n• ")}
                               >
                                 ⚠️ {student.flags.length}
                               </span>

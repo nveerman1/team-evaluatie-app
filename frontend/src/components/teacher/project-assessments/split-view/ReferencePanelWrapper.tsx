@@ -1,19 +1,21 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { DocumentPane } from './DocumentPane';
-import { SelfAssessmentPane } from './SelfAssessmentPane';
+import React, { useEffect } from "react";
+import { DocumentPane } from "./DocumentPane";
+import { SelfAssessmentPane } from "./SelfAssessmentPane";
 
-export type PanelView = 'document' | 'self-assessment';
+export type PanelView = "document" | "self-assessment";
 
 interface DocumentPaneProps {
-  docType: 'Verslag' | 'Presentatie';
-  linkHealth: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link';
+  docType: "Verslag" | "Presentatie";
+  linkHealth: "Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link";
   currentDocUrl?: string | null;
   currentDocUpdatedAt?: string | null;
   hasLink: boolean;
-  onDocTypeChange: (type: 'Verslag' | 'Presentatie') => void;
-  onLinkHealthChange: (health: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link') => void;
+  onDocTypeChange: (type: "Verslag" | "Presentatie") => void;
+  onLinkHealthChange: (
+    health: "Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link",
+  ) => void;
   onOpenInTab?: () => void;
 }
 
@@ -45,27 +47,30 @@ export function ReferencePanelWrapper({
     const startWidth = docWidth;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(340, Math.min(maxDocWidth, startWidth + (e.clientX - startX)));
+      const newWidth = Math.max(
+        340,
+        Math.min(maxDocWidth, startWidth + (e.clientX - startX)),
+      );
       onDocWidthChange(newWidth);
     };
 
     const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
   };
 
   useEffect(() => {
     return () => {
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
   }, []);
 
@@ -76,18 +81,20 @@ export function ReferencePanelWrapper({
         <div className="rounded-t-2xl border-t border-x border-slate-200 bg-white px-3 py-2 flex items-center justify-between shrink-0">
           {/* Toggle group */}
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-            {(['document', 'self-assessment'] as PanelView[]).map((view) => (
+            {(["document", "self-assessment"] as PanelView[]).map((view) => (
               <button
                 key={view}
                 onClick={() => onPanelViewChange(view)}
                 className={
-                  'rounded-md px-2 py-1 text-xs font-medium transition ' +
+                  "rounded-md px-2 py-1 text-xs font-medium transition " +
                   (panelView === view
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:bg-white')
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:bg-white")
                 }
               >
-                {view === 'document' ? '📄 Ingeleverd werk' : '📝 Zelfbeoordeling'}
+                {view === "document"
+                  ? "📄 Ingeleverd werk"
+                  : "📝 Zelfbeoordeling"}
               </button>
             ))}
           </div>
@@ -102,10 +109,13 @@ export function ReferencePanelWrapper({
         </div>
 
         {/* Panel content */}
-        {panelView === 'document' ? (
+        {panelView === "document" ? (
           <DocumentPane {...documentPaneProps} />
         ) : (
-          <SelfAssessmentPane assessmentId={assessmentId} teamNumber={teamNumber} />
+          <SelfAssessmentPane
+            assessmentId={assessmentId}
+            teamNumber={teamNumber}
+          />
         )}
       </div>
 

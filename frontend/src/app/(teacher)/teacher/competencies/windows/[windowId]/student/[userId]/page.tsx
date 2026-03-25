@@ -13,16 +13,23 @@ export default function StudentDetailPage() {
   const windowId = Number(params.windowId);
   const userId = Number(params.userId);
 
-  const [overview, setOverview] = useState<StudentCompetencyOverview | null>(null);
+  const [overview, setOverview] = useState<StudentCompetencyOverview | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
-  const [expandedCompetencies, setExpandedCompetencies] = useState<Set<number>>(new Set());
+  const [expandedCompetencies, setExpandedCompetencies] = useState<Set<number>>(
+    new Set(),
+  );
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await competencyService.getStudentWindowOverview(windowId, userId);
+      const data = await competencyService.getStudentWindowOverview(
+        windowId,
+        userId,
+      );
       setOverview(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
@@ -58,15 +65,15 @@ export default function StudentDetailPage() {
   // Calculate category averages (must be called before early returns)
   const categoryAverages = useMemo(() => {
     if (!overview) return [];
-    
+
     const categoryScores: Record<string, { total: number; count: number }> = {};
-    
+
     overview.scores.forEach((score) => {
       const category = score.category_name || score.category || "Overig";
       if (!categoryScores[category]) {
         categoryScores[category] = { total: 0, count: 0 };
       }
-      
+
       if (score.final_score !== null && score.final_score !== undefined) {
         categoryScores[category].total += score.final_score;
         categoryScores[category].count += 1;
@@ -106,13 +113,16 @@ export default function StudentDetailPage() {
           {overview.user_name} - Competentieoverzicht
         </h1>
         <p className="text-slate-600">
-          Gedetailleerd overzicht van competentiescores, leerdoelen en reflecties
+          Gedetailleerd overzicht van competentiescores, leerdoelen en
+          reflecties
         </p>
       </div>
 
       {/* Radar diagram and Category Scores */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Radardiagram - Gemiddelden per categorie</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Radardiagram - Gemiddelden per categorie
+        </h2>
         <div className="flex flex-col md:flex-row gap-8">
           {/* Radar chart */}
           <div className="flex-1 min-h-[250px] flex items-center justify-center">
@@ -144,10 +154,12 @@ export default function StudentDetailPage() {
               </div>
             )}
           </div>
-          
+
           {/* Category scores */}
           <div className="flex-1 flex flex-col justify-center">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Scores per categorie</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">
+              Scores per categorie
+            </h3>
             <div className="space-y-3">
               {categoryAverages
                 .sort((a, b) => b.average - a.average)
@@ -162,8 +174,8 @@ export default function StudentDetailPage() {
                           item.average >= 4
                             ? "bg-green-500"
                             : item.average >= 3
-                            ? "bg-blue-500"
-                            : "bg-orange-500"
+                              ? "bg-blue-500"
+                              : "bg-orange-500"
                         }`}
                         style={{ width: `${(item.average / 5) * 100}%` }}
                       />
@@ -181,7 +193,9 @@ export default function StudentDetailPage() {
       {/* Competency Scores Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-lg font-semibold text-slate-900">Scores per competentie</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Scores per competentie
+          </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -214,10 +228,12 @@ export default function StudentDetailPage() {
                   return a.competency_name.localeCompare(b.competency_name);
                 })
                 .map((score) => {
-                  const isExpanded = expandedCompetencies.has(score.competency_id);
+                  const isExpanded = expandedCompetencies.has(
+                    score.competency_id,
+                  );
                   return (
                     <React.Fragment key={score.competency_id}>
-                      <tr 
+                      <tr
                         className="bg-white hover:bg-slate-50 cursor-pointer"
                         onClick={() => toggleCompetency(score.competency_id)}
                       >
@@ -228,14 +244,15 @@ export default function StudentDetailPage() {
                           {score.competency_name}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          {score.self_score !== null && score.self_score !== undefined ? (
+                          {score.self_score !== null &&
+                          score.self_score !== undefined ? (
                             <span
                               className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
                                 score.self_score >= 4
                                   ? "bg-green-100 text-green-700"
                                   : score.self_score >= 3
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-orange-100 text-orange-700"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-orange-100 text-orange-700"
                               }`}
                             >
                               {score.self_score.toFixed(1)}
@@ -245,19 +262,22 @@ export default function StudentDetailPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          {score.external_score !== null && score.external_score !== undefined ? (
+                          {score.external_score !== null &&
+                          score.external_score !== undefined ? (
                             <span
                               className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
                                 score.external_score >= 4
                                   ? "bg-green-100 text-green-700"
                                   : score.external_score >= 3
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-orange-100 text-orange-700"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-orange-100 text-orange-700"
                               }`}
                             >
                               {score.external_score.toFixed(1)}
                               {score.external_count > 0 && (
-                                <span className="ml-1 text-xs">({score.external_count})</span>
+                                <span className="ml-1 text-xs">
+                                  ({score.external_count})
+                                </span>
                               )}
                             </span>
                           ) : (
@@ -265,14 +285,15 @@ export default function StudentDetailPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          {score.final_score !== null && score.final_score !== undefined ? (
+                          {score.final_score !== null &&
+                          score.final_score !== undefined ? (
                             <span
                               className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
                                 score.final_score >= 4
                                   ? "bg-green-100 text-green-700"
                                   : score.final_score >= 3
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-orange-100 text-orange-700"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-orange-100 text-orange-700"
                               }`}
                             >
                               {score.final_score.toFixed(1)}
@@ -288,7 +309,11 @@ export default function StudentDetailPage() {
                             <div className="space-y-2">
                               <div className="flex items-start gap-2">
                                 <span className="text-sm font-medium text-slate-700 min-w-[120px]">
-                                  Niveau {score.self_score ? Math.round(score.self_score) : ''}:
+                                  Niveau{" "}
+                                  {score.self_score
+                                    ? Math.round(score.self_score)
+                                    : ""}
+                                  :
                                 </span>
                                 <p className="text-sm text-slate-600 flex-1">
                                   {score.self_level_description}
@@ -335,9 +360,11 @@ export default function StudentDetailPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {overview.goals.map((goal) => {
-                  const competency = overview.scores.find(s => s.competency_id === goal.competency_id);
+                  const competency = overview.scores.find(
+                    (s) => s.competency_id === goal.competency_id,
+                  );
                   const isExpanded = expandedGoals.has(goal.id);
-                  
+
                   return (
                     <React.Fragment key={goal.id}>
                       <tr className="bg-white hover:bg-slate-50">
@@ -345,7 +372,10 @@ export default function StudentDetailPage() {
                           {competency?.competency_name || "–"}
                         </td>
                         <td className="px-5 py-3 text-sm text-slate-800">
-                          <div className="max-w-md truncate" title={goal.goal_text}>
+                          <div
+                            className="max-w-md truncate"
+                            title={goal.goal_text}
+                          >
                             {goal.goal_text}
                           </div>
                         </td>
@@ -355,23 +385,27 @@ export default function StudentDetailPage() {
                               goal.status === "achieved"
                                 ? "bg-green-100 text-green-700"
                                 : goal.status === "not_achieved"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-blue-100 text-blue-700"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-blue-100 text-blue-700"
                             }`}
                           >
                             {goal.status === "achieved"
                               ? "Behaald"
                               : goal.status === "not_achieved"
-                              ? "Niet behaald"
-                              : "Bezig"}
+                                ? "Niet behaald"
+                                : "Bezig"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-slate-600">
                           {goal.updated_at
-                            ? new Date(goal.updated_at).toLocaleDateString("nl-NL")
+                            ? new Date(goal.updated_at).toLocaleDateString(
+                                "nl-NL",
+                              )
                             : goal.submitted_at
-                            ? new Date(goal.submitted_at).toLocaleDateString("nl-NL")
-                            : "–"}
+                              ? new Date(goal.submitted_at).toLocaleDateString(
+                                  "nl-NL",
+                                )
+                              : "–"}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
@@ -408,7 +442,9 @@ export default function StudentDetailPage() {
                                 {goal.submitted_at && (
                                   <span>
                                     Ingediend:{" "}
-                                    {new Date(goal.submitted_at).toLocaleDateString("nl-NL")}
+                                    {new Date(
+                                      goal.submitted_at,
+                                    ).toLocaleDateString("nl-NL")}
                                   </span>
                                 )}
                               </div>
@@ -433,14 +469,20 @@ export default function StudentDetailPage() {
           </h2>
           <div className="space-y-4">
             {overview.reflections.map((reflection, index) => {
-              const goal = overview.goals.find(g => g.id === reflection.goal_id);
+              const goal = overview.goals.find(
+                (g) => g.id === reflection.goal_id,
+              );
               const reflectionsCount = overview.reflections?.length || 0;
               return (
-                <div key={reflection.id} className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-3">
+                <div
+                  key={reflection.id}
+                  className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-3"
+                >
                   {reflectionsCount > 1 && (
                     <div className="font-medium text-slate-700 text-sm">
                       Reflectie {index + 1}
-                      {goal && ` - ${goal.goal_text.substring(0, 50)}${goal.goal_text.length > 50 ? '...' : ''}`}
+                      {goal &&
+                        ` - ${goal.goal_text.substring(0, 50)}${goal.goal_text.length > 50 ? "..." : ""}`}
                     </div>
                   )}
                   <div>
@@ -448,22 +490,25 @@ export default function StudentDetailPage() {
                       {reflection.text}
                     </p>
                   </div>
-                  
-                  {reflection.goal_achieved !== null && reflection.goal_achieved !== undefined && (
-                    <div className="pt-3 border-t border-indigo-200">
-                      <span className="text-sm text-slate-600">Doel behaald: </span>
-                      <span
-                        className={`text-sm font-semibold ${
-                          reflection.goal_achieved
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {reflection.goal_achieved ? "Ja" : "Nee"}
-                      </span>
-                    </div>
-                  )}
-                  
+
+                  {reflection.goal_achieved !== null &&
+                    reflection.goal_achieved !== undefined && (
+                      <div className="pt-3 border-t border-indigo-200">
+                        <span className="text-sm text-slate-600">
+                          Doel behaald:{" "}
+                        </span>
+                        <span
+                          className={`text-sm font-semibold ${
+                            reflection.goal_achieved
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {reflection.goal_achieved ? "Ja" : "Nee"}
+                        </span>
+                      </div>
+                    )}
+
                   {reflection.evidence && (
                     <div className="pt-3 border-t border-indigo-200">
                       <p className="text-sm text-slate-600 mb-1">
@@ -474,13 +519,13 @@ export default function StudentDetailPage() {
                       </p>
                     </div>
                   )}
-                  
+
                   {reflection.submitted_at && (
                     <div className="pt-3 border-t border-indigo-200">
                       <p className="text-xs text-slate-500">
                         Ingediend op:{" "}
                         {new Date(reflection.submitted_at).toLocaleDateString(
-                          "nl-NL"
+                          "nl-NL",
                         )}
                       </p>
                     </div>
@@ -493,12 +538,15 @@ export default function StudentDetailPage() {
       )}
 
       {/* No data message */}
-      {overview.scores.every((s) => s.self_score === null && s.external_score === null) &&
+      {overview.scores.every(
+        (s) => s.self_score === null && s.external_score === null,
+      ) &&
         overview.goals.length === 0 &&
         (!overview.reflections || overview.reflections.length === 0) && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
             <p className="text-slate-500">
-              Deze leerling heeft nog geen competentiedata ingevoerd voor dit venster.
+              Deze leerling heeft nog geen competentiedata ingevoerd voor dit
+              venster.
             </p>
           </div>
         )}

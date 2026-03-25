@@ -29,7 +29,7 @@ export function InleverenTab({
 
   // Assessments that belong to a project (have a project_id)
   const withProject = projectAssessments.filter(
-    (a) => a.project_id !== null && a.project_id !== undefined
+    (a) => a.project_id !== null && a.project_id !== undefined,
   );
 
   // hasSubmitted is a placeholder (always false) – mirrors SubmissionDashboardCard
@@ -66,7 +66,7 @@ export function InleverenTab({
                 "rounded-full px-3 py-1.5 text-sm font-medium transition",
                 filter === value
                   ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
               {label}
@@ -91,7 +91,10 @@ export function InleverenTab({
           </div>
         ) : (
           filtered.map((assessment) => (
-            <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
+            <SubmissionDashboardCard
+              key={assessment.id}
+              assessment={assessment}
+            />
           ))
         )}
       </div>

@@ -15,7 +15,7 @@ export function Sparkline({ points, max = 5 }: SparklineProps) {
     h = 28,
     pad = 2;
   const xs = points.map(
-    (_, i) => pad + (i * (w - pad * 2)) / (points.length - 1 || 1)
+    (_, i) => pad + (i * (w - pad * 2)) / (points.length - 1 || 1),
   );
   const ys = points.map((p) => h - pad - (p / max) * (h - pad * 2));
   const d = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x},${ys[i]}`).join(" ");

@@ -71,13 +71,19 @@ const MOCK_PROJECTS = [
   "Health Tech Innovation",
 ];
 
-const MOCK_ASSIGNEES = ["Nick Veerman", "Eva de Vries", "Mark Jansen", "Lisa Peters"];
+const MOCK_ASSIGNEES = [
+  "Nick Veerman",
+  "Eva de Vries",
+  "Mark Jansen",
+  "Lisa Peters",
+];
 
 const INITIAL_TASKS: Task[] = [
   {
     id: "1",
     title: "Feedback tussenpresentatie verwerken",
-    description: "Feedback van de opdrachtgever verwerken en doorsturen naar team.",
+    description:
+      "Feedback van de opdrachtgever verwerken en doorsturen naar team.",
     status: "todo",
     projectName: "Dutch Wave Power",
     className: "H3a",
@@ -102,7 +108,8 @@ const INITIAL_TASKS: Task[] = [
   {
     id: "3",
     title: "Rubric eindpresentatie aanpassen",
-    description: "Criteria voor eindpresentatie bijwerken op basis van feedback sectie.",
+    description:
+      "Criteria voor eindpresentatie bijwerken op basis van feedback sectie.",
     status: "in_progress",
     projectName: "Eco Building Design",
     assignees: ["Nick Veerman", "Mark Jansen"],
@@ -113,7 +120,8 @@ const INITIAL_TASKS: Task[] = [
   {
     id: "4",
     title: "Externe beoordelaar uitnodigen",
-    description: "Contact opnemen met bedrijf voor externe beoordeling eindproduct.",
+    description:
+      "Contact opnemen met bedrijf voor externe beoordeling eindproduct.",
     status: "waiting",
     projectName: "Health Tech Innovation",
     className: "H4c",
@@ -237,20 +245,26 @@ function TaskCard({
       }`}
     >
       {/* Title */}
-      <h4 className="font-semibold text-slate-900 text-sm mb-1">{task.title}</h4>
+      <h4 className="font-semibold text-slate-900 text-sm mb-1">
+        {task.title}
+      </h4>
 
       {/* Project and Class info */}
       {(task.projectName || task.className) && (
         <div className="text-xs text-slate-500 mb-2">
           {task.projectName && <span>{task.projectName}</span>}
-          {task.projectName && task.className && <span className="mx-1">•</span>}
+          {task.projectName && task.className && (
+            <span className="mx-1">•</span>
+          )}
           {task.className && <span>{task.className}</span>}
         </div>
       )}
 
       {/* Description */}
       {task.description && (
-        <p className="text-xs text-slate-600 line-clamp-2 mb-3">{task.description}</p>
+        <p className="text-xs text-slate-600 line-clamp-2 mb-3">
+          {task.description}
+        </p>
       )}
 
       {/* Badges row */}
@@ -798,7 +812,7 @@ export default function TeacherKanbanPage() {
       activationConstraint: {
         distance: 8,
       },
-    })
+    }),
   );
 
   // Filter tasks
@@ -822,7 +836,10 @@ export default function TeacherKanbanPage() {
       }
 
       // Assignee filter
-      if (assigneeFilter !== "all" && !task.assignees.includes(assigneeFilter)) {
+      if (
+        assigneeFilter !== "all" &&
+        !task.assignees.includes(assigneeFilter)
+      ) {
         return false;
       }
 
@@ -838,7 +855,14 @@ export default function TeacherKanbanPage() {
 
       return true;
     });
-  }, [tasks, searchTerm, statusFilter, assigneeFilter, projectFilter, showMyTasks]);
+  }, [
+    tasks,
+    searchTerm,
+    statusFilter,
+    assigneeFilter,
+    projectFilter,
+    showMyTasks,
+  ]);
 
   // Group tasks by status
   const tasksByStatus = useMemo(() => {
@@ -877,8 +901,8 @@ export default function TeacherKanbanPage() {
     if (targetStatus) {
       setTasks((prev) =>
         prev.map((task) =>
-          task.id === taskId ? { ...task, status: targetStatus } : task
-        )
+          task.id === taskId ? { ...task, status: targetStatus } : task,
+        ),
       );
     }
   };

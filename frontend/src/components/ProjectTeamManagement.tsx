@@ -1,6 +1,6 @@
 /**
  * Project Team Management Component
- * 
+ *
  * Allows teachers to:
  * - Select a project context
  * - View project-specific teams
@@ -28,20 +28,24 @@ type ProjectTeamManagementProps = {
 
 // ============ Component ============
 
-export default function ProjectTeamManagement({ 
-  courseId, 
+export default function ProjectTeamManagement({
+  courseId,
   onSelectProject,
-  onSelectProjectTeam 
+  onSelectProjectTeam,
 }: ProjectTeamManagementProps) {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
-  const [selectedProject, setSelectedProject] = useState<ProjectListItem | null>(null);
+  const [selectedProject, setSelectedProject] =
+    useState<ProjectListItem | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [projectTeams, setProjectTeams] = useState<ProjectTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCloneModal, setShowCloneModal] = useState(false);
-  const [cloneSourceProject, setCloneSourceProject] = useState<ProjectListItem | null>(null);
+  const [cloneSourceProject, setCloneSourceProject] =
+    useState<ProjectListItem | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">(
+    "info",
+  );
 
   // Load projects for the course
   useEffect(() => {
@@ -51,12 +55,14 @@ export default function ProjectTeamManagement({
           course_id: courseId,
           per_page: 100,
         });
-        
+
         setProjects(data.items || []);
-        
+
         // Auto-select most recent active project only on initial load
         if (data.items && data.items.length > 0 && !selectedProject) {
-          const activeProjects = data.items.filter((p) => p.status === "active");
+          const activeProjects = data.items.filter(
+            (p) => p.status === "active",
+          );
           if (activeProjects.length > 0) {
             handleProjectSelect(activeProjects[0]);
           }
@@ -82,7 +88,9 @@ export default function ProjectTeamManagement({
 
       setLoading(true);
       try {
-        const response = await projectTeamService.listProjectTeams(selectedProject.id);
+        const response = await projectTeamService.listProjectTeams(
+          selectedProject.id,
+        );
         setProjectTeams(response.teams || []);
       } catch (error) {
         console.error("Error loading project teams:", error);
@@ -115,16 +123,18 @@ export default function ProjectTeamManagement({
     try {
       const response = await projectTeamService.cloneProjectTeams(
         selectedProject.id,
-        cloneSourceProject.id
+        cloneSourceProject.id,
       );
 
       showAlert(
         `${response.teams_cloned} teams met ${response.members_cloned} leden succesvol gekopieerd`,
-        "success"
+        "success",
       );
 
       // Reload project teams
-      const teamsResponse = await projectTeamService.listProjectTeams(selectedProject.id);
+      const teamsResponse = await projectTeamService.listProjectTeams(
+        selectedProject.id,
+      );
       setProjectTeams(teamsResponse.teams || []);
 
       setShowCloneModal(false);
@@ -182,7 +192,9 @@ export default function ProjectTeamManagement({
           <select
             value={selectedProject?.id || ""}
             onChange={(e) => {
-              const project = projects.find((p) => p.id === parseInt(e.target.value));
+              const project = projects.find(
+                (p) => p.id === parseInt(e.target.value),
+              );
               handleProjectSelect(project || null);
             }}
             className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none pr-10"
@@ -228,20 +240,22 @@ export default function ProjectTeamManagement({
             <div className="text-center py-8 text-gray-500">
               <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
               <p className="text-sm">Nog geen teams in dit project</p>
-              <p className="text-xs mt-1 text-gray-400">Kopieer teams van een ander project om te beginnen</p>
+              <p className="text-xs mt-1 text-gray-400">
+                Kopieer teams van een ander project om te beginnen
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {projectTeams.map((team) => {
                 const isSelected = selectedTeamId === team.id;
-                
+
                 return (
                   <button
                     key={team.id}
                     onClick={() => handleTeamSelect(team.id)}
                     className={`w-full border rounded-lg p-4 text-left transition-colors ${
-                      isSelected 
-                        ? "border-blue-500 bg-blue-50" 
+                      isSelected
+                        ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:border-blue-300"
                     }`}
                   >
@@ -252,16 +266,23 @@ export default function ProjectTeamManagement({
                             {team.display_name_at_time}
                           </h4>
                           {team.is_locked && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded" title="Vergrendeld">
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded"
+                              title="Vergrendeld"
+                            >
                               <Lock className="w-3 h-3" />
                             </span>
                           )}
-                          <span className="text-xs text-gray-500" title={`Versie ${team.version}`}>
+                          <span
+                            className="text-xs text-gray-500"
+                            title={`Versie ${team.version}`}
+                          >
                             v{team.version}
                           </span>
                         </div>
                         <p className="text-xs text-gray-600">
-                          {team.member_count} {team.member_count !== 1 ? "leden" : "lid"}
+                          {team.member_count}{" "}
+                          {team.member_count !== 1 ? "leden" : "lid"}
                         </p>
                       </div>
                     </div>
@@ -281,13 +302,16 @@ export default function ProjectTeamManagement({
               Teams kopiëren
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Selecteer een project om alle teamstructuren en leden van te kopiëren:
+              Selecteer een project om alle teamstructuren en leden van te
+              kopiëren:
             </p>
 
             <select
               value={cloneSourceProject?.id || ""}
               onChange={(e) => {
-                const project = projects.find((p) => p.id === parseInt(e.target.value));
+                const project = projects.find(
+                  (p) => p.id === parseInt(e.target.value),
+                );
                 setCloneSourceProject(project || null);
               }}
               className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-6"

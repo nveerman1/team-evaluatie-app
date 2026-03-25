@@ -15,11 +15,11 @@ export const submissionService = {
   async submitLink(
     assessmentId: number,
     teamId: number,
-    data: SubmissionCreate
+    data: SubmissionCreate,
   ): Promise<SubmissionOut> {
     const response = await api.post<SubmissionOut>(
       `/submissions/assessments/${assessmentId}/teams/${teamId}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -36,11 +36,11 @@ export const submissionService = {
    */
   async updateStatus(
     submissionId: number,
-    data: SubmissionStatusUpdate
+    data: SubmissionStatusUpdate,
   ): Promise<SubmissionOut> {
     const response = await api.patch<SubmissionOut>(
       `/submissions/${submissionId}/status`,
-      data
+      data,
     );
     return response.data;
   },
@@ -52,7 +52,7 @@ export const submissionService = {
     assessmentId: number,
     docType?: string,
     status?: string,
-    missingOnly?: boolean
+    missingOnly?: boolean,
   ): Promise<SubmissionListResponse> {
     const params = new URLSearchParams();
     if (docType) params.set("doc_type", docType);
@@ -69,9 +69,11 @@ export const submissionService = {
   /**
    * Get submissions for current user's team (student view)
    */
-  async getMyTeamSubmissions(assessmentId: number): Promise<MyTeamSubmissionsResponse> {
+  async getMyTeamSubmissions(
+    assessmentId: number,
+  ): Promise<MyTeamSubmissionsResponse> {
     const response = await api.get<MyTeamSubmissionsResponse>(
-      `/submissions/assessments/${assessmentId}/my-team`
+      `/submissions/assessments/${assessmentId}/my-team`,
     );
     return response.data;
   },

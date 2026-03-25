@@ -23,12 +23,14 @@ export default function CreateProjectPlanInner() {
   const [courseId, setCourseId] = useState<number | "">("");
   const [projectId, setProjectId] = useState<number | "">("");
   const [version, setVersion] = useState("");
-  const [status, setStatus] = useState<ProjectPlanStatus>(ProjectPlanStatus.DRAFT);
+  const [status, setStatus] = useState<ProjectPlanStatus>(
+    ProjectPlanStatus.DRAFT,
+  );
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
     if (typeof courseId !== "number") return [];
-    return projects.filter(p => p.course_id === Number(courseId));
+    return projects.filter((p) => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
   useEffect(() => {
@@ -88,7 +90,8 @@ export default function CreateProjectPlanInner() {
       <header>
         <h1 className="text-2xl font-semibold">Nieuw projectplan</h1>
         <p className="text-gray-600">
-          Maak een projectplan aan voor een project. Teams kunnen het projectplan in 8 secties invullen.
+          Maak een projectplan aan voor een project. Teams kunnen het
+          projectplan in 8 secties invullen.
         </p>
       </header>
 
@@ -97,13 +100,13 @@ export default function CreateProjectPlanInner() {
         className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-5"
       >
         {error && (
-          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">{error}</div>
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+            {error}
+          </div>
         )}
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium">
-            Titel (optioneel)
-          </label>
+          <label className="block text-sm font-medium">Titel (optioneel)</label>
           <input
             className="w-full border border-gray-300 rounded-lg px-3 py-2"
             value={title}
@@ -111,7 +114,8 @@ export default function CreateProjectPlanInner() {
             placeholder="Bijv. Projectplan periode 1"
           />
           <p className="text-xs text-gray-500">
-            Laat leeg om standaard titel te gebruiken: &quot;Projectplan: [Projectnaam]&quot;
+            Laat leeg om standaard titel te gebruiken: &quot;Projectplan:
+            [Projectnaam]&quot;
           </p>
         </div>
 
@@ -180,7 +184,8 @@ export default function CreateProjectPlanInner() {
             placeholder="Bijv. v1.0, concept, definitief"
           />
           <p className="text-xs text-gray-500">
-            Gebruik om verschillende versies van een projectplan te onderscheiden.
+            Gebruik om verschillende versies van een projectplan te
+            onderscheiden.
           </p>
         </div>
 
@@ -194,13 +199,23 @@ export default function CreateProjectPlanInner() {
             onChange={(e) => setStatus(e.target.value as ProjectPlanStatus)}
             required
           >
-            <option value={ProjectPlanStatus.DRAFT}>Concept (niet zichtbaar voor studenten)</option>
-            <option value={ProjectPlanStatus.OPEN}>Open (zichtbaar voor studenten)</option>
-            <option value={ProjectPlanStatus.PUBLISHED}>Gepubliceerd (zichtbaar voor studenten)</option>
-            <option value={ProjectPlanStatus.CLOSED}>Gesloten (alleen lezen voor studenten)</option>
+            <option value={ProjectPlanStatus.DRAFT}>
+              Concept (niet zichtbaar voor studenten)
+            </option>
+            <option value={ProjectPlanStatus.OPEN}>
+              Open (zichtbaar voor studenten)
+            </option>
+            <option value={ProjectPlanStatus.PUBLISHED}>
+              Gepubliceerd (zichtbaar voor studenten)
+            </option>
+            <option value={ProjectPlanStatus.CLOSED}>
+              Gesloten (alleen lezen voor studenten)
+            </option>
           </select>
           <p className="text-xs text-gray-500">
-            Bepaalt of studenten het projectplan kunnen zien. Kies &quot;Concept&quot; om eerst in te stellen voordat studenten het zien.
+            Bepaalt of studenten het projectplan kunnen zien. Kies
+            &quot;Concept&quot; om eerst in te stellen voordat studenten het
+            zien.
           </p>
         </div>
 

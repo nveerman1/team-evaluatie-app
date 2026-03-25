@@ -4,14 +4,14 @@
 
 /**
  * Maps peer score (1-5 scale) to icon level (1-4 scale)
- * 
+ *
  * Mapping:
  * - 5 → 1 (🙂)
  * - 4 → 1 (🙂)
  * - 3 → 2 (V)
  * - 2 → 3 (!)
  * - 1 → 4 (!!)
- * 
+ *
  * @param peerScore Score on 1-5 scale from peer review
  * @returns Icon level on 1-4 scale
  */

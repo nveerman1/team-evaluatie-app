@@ -51,14 +51,16 @@ export const competencyService = {
     return response.data;
   },
 
-  async createCategory(data: CompetencyCategoryCreate): Promise<CompetencyCategory> {
+  async createCategory(
+    data: CompetencyCategoryCreate,
+  ): Promise<CompetencyCategory> {
     const response = await api.post("/competencies/categories", data);
     return response.data;
   },
 
   async updateCategory(
     id: number,
-    data: CompetencyCategoryUpdate
+    data: CompetencyCategoryUpdate,
   ): Promise<CompetencyCategory> {
     const response = await api.patch(`/competencies/categories/${id}`, data);
     return response.data;
@@ -88,7 +90,7 @@ export const competencyService = {
 
   /**
    * List competencies with two-tier filtering for teachers.
-   * 
+   *
    * @param params.competency_type - "central", "teacher", "shared", or "all"
    * @param params.include_teacher_competencies - Include teacher's own competencies
    * @param params.include_course_competencies - Include shared course competencies
@@ -109,9 +111,12 @@ export const competencyService = {
     phase?: string;
     search?: string;
   }): Promise<CompetencyListResponse> {
-    const response = await api.get<CompetencyListResponse>("/competencies/teacher-list", {
-      params,
-    });
+    const response = await api.get<CompetencyListResponse>(
+      "/competencies/teacher-list",
+      {
+        params,
+      },
+    );
     return response.data;
   },
 
@@ -127,7 +132,7 @@ export const competencyService = {
 
   async updateCompetency(
     id: number,
-    data: CompetencyUpdate
+    data: CompetencyUpdate,
   ): Promise<Competency> {
     const response = await api.patch(`/competencies/${id}`, data);
     return response.data;
@@ -141,7 +146,7 @@ export const competencyService = {
 
   async reorderCompetencies(
     categoryId: number,
-    items: Array<{ id: number; order_index: number }>
+    items: Array<{ id: number; order_index: number }>,
   ): Promise<Competency[]> {
     const response = await api.patch("/competencies/reorder", {
       category_id: categoryId,
@@ -152,18 +157,22 @@ export const competencyService = {
 
   // ============ Competency Rubric Level CRUD ============
 
-  async getRubricLevels(competencyId: number): Promise<CompetencyRubricLevel[]> {
-    const response = await api.get(`/competencies/${competencyId}/rubric-levels`);
+  async getRubricLevels(
+    competencyId: number,
+  ): Promise<CompetencyRubricLevel[]> {
+    const response = await api.get(
+      `/competencies/${competencyId}/rubric-levels`,
+    );
     return response.data;
   },
 
   async createRubricLevel(
     competencyId: number,
-    data: CompetencyRubricLevelCreate
+    data: CompetencyRubricLevelCreate,
   ): Promise<CompetencyRubricLevel> {
     const response = await api.post(
       `/competencies/${competencyId}/rubric-levels`,
-      data
+      data,
     );
     return response.data;
   },
@@ -171,22 +180,28 @@ export const competencyService = {
   async updateRubricLevel(
     competencyId: number,
     levelId: number,
-    data: CompetencyRubricLevelUpdate
+    data: CompetencyRubricLevelUpdate,
   ): Promise<CompetencyRubricLevel> {
     const response = await api.patch(
       `/competencies/${competencyId}/rubric-levels/${levelId}`,
-      data
+      data,
     );
     return response.data;
   },
 
-  async deleteRubricLevel(competencyId: number, levelId: number): Promise<void> {
+  async deleteRubricLevel(
+    competencyId: number,
+    levelId: number,
+  ): Promise<void> {
     await api.delete(`/competencies/${competencyId}/rubric-levels/${levelId}`);
   },
 
   // ============ Competency Window CRUD ============
 
-  async getWindows(statusFilter?: string, courseId?: number): Promise<CompetencyWindow[]> {
+  async getWindows(
+    statusFilter?: string,
+    courseId?: number,
+  ): Promise<CompetencyWindow[]> {
     const params: any = {};
     if (statusFilter) params.status_filter = statusFilter;
     if (courseId) params.course_id = courseId;
@@ -206,7 +221,7 @@ export const competencyService = {
 
   async updateWindow(
     id: number,
-    data: CompetencyWindowUpdate
+    data: CompetencyWindowUpdate,
   ): Promise<CompetencyWindow> {
     const response = await api.patch(`/competencies/windows/${id}`, data);
     return response.data;
@@ -219,7 +234,7 @@ export const competencyService = {
   // ============ Self Score Endpoints ============
 
   async submitSelfScores(
-    data: CompetencySelfScoreBulkCreate
+    data: CompetencySelfScoreBulkCreate,
   ): Promise<CompetencySelfScore[]> {
     const response = await api.post("/competencies/self-scores/", data);
     return response.data;
@@ -246,7 +261,10 @@ export const competencyService = {
     return response.data;
   },
 
-  async updateGoal(id: number, data: CompetencyGoalUpdate): Promise<CompetencyGoal> {
+  async updateGoal(
+    id: number,
+    data: CompetencyGoalUpdate,
+  ): Promise<CompetencyGoal> {
     const response = await api.patch(`/competencies/goals/${id}`, data);
     return response.data;
   },
@@ -254,14 +272,14 @@ export const competencyService = {
   // ============ Reflection Endpoints ============
 
   async createReflection(
-    data: CompetencyReflectionCreate
+    data: CompetencyReflectionCreate,
   ): Promise<CompetencyReflection> {
     const response = await api.post("/competencies/reflections/", data);
     return response.data;
   },
 
   async createReflectionsBulk(
-    data: CompetencyReflectionBulkCreate
+    data: CompetencyReflectionBulkCreate,
   ): Promise<CompetencyReflection[]> {
     const response = await api.post("/competencies/reflections/bulk", data);
     return response.data;
@@ -277,7 +295,7 @@ export const competencyService = {
   // ============ Teacher Observation Endpoints ============
 
   async createObservation(
-    data: CompetencyTeacherObservationCreate
+    data: CompetencyTeacherObservationCreate,
   ): Promise<CompetencyTeacherObservation> {
     const response = await api.post("/competencies/observations/", data);
     return response.data;
@@ -286,29 +304,34 @@ export const competencyService = {
   // ============ Overview/Aggregate Endpoints ============
 
   async getMyWindowOverview(
-    windowId: number
+    windowId: number,
   ): Promise<StudentCompetencyOverview> {
-    const response = await api.get(`/competencies/windows/${windowId}/overview`);
+    const response = await api.get(
+      `/competencies/windows/${windowId}/overview`,
+    );
     return response.data;
   },
 
   async getStudentWindowOverview(
     windowId: number,
-    userId: number
+    userId: number,
   ): Promise<StudentCompetencyOverview> {
     const response = await api.get(
-      `/competencies/windows/${windowId}/student/${userId}/overview`
+      `/competencies/windows/${windowId}/student/${userId}/overview`,
     );
     return response.data;
   },
 
   async getClassHeatmap(
     windowId: number,
-    className?: string
+    className?: string,
   ): Promise<ClassHeatmap> {
-    const response = await api.get(`/competencies/windows/${windowId}/heatmap`, {
-      params: className ? { class_name: className } : {},
-    });
+    const response = await api.get(
+      `/competencies/windows/${windowId}/heatmap`,
+      {
+        params: className ? { class_name: className } : {},
+      },
+    );
     return response.data;
   },
 
@@ -317,7 +340,7 @@ export const competencyService = {
   async getWindowGoals(
     windowId: number,
     className?: string,
-    status?: string
+    status?: string,
   ): Promise<TeacherGoalsList> {
     const params: Record<string, string> = {};
     if (className) params.class_name = className;
@@ -330,18 +353,21 @@ export const competencyService = {
 
   async getWindowReflections(
     windowId: number,
-    className?: string
+    className?: string,
   ): Promise<TeacherReflectionsList> {
-    const response = await api.get(`/competencies/windows/${windowId}/reflections`, {
-      params: className ? { class_name: className } : {},
-    });
+    const response = await api.get(
+      `/competencies/windows/${windowId}/reflections`,
+      {
+        params: className ? { class_name: className } : {},
+      },
+    );
     return response.data;
   },
 
   // ============ External Invites ============
 
   async createExternalInvites(
-    data: ExternalInviteCreate
+    data: ExternalInviteCreate,
   ): Promise<ExternalInvite[]> {
     const response = await api.post("/competencies/external/invites", data);
     return response.data;
@@ -349,7 +375,7 @@ export const competencyService = {
 
   async getExternalInvites(
     windowId?: number,
-    subjectUserId?: number
+    subjectUserId?: number,
   ): Promise<ExternalInvite[]> {
     const response = await api.get("/competencies/external/invites", {
       params: {
@@ -368,17 +394,17 @@ export const competencyService = {
 
   async getPublicInviteInfo(token: string): Promise<ExternalInvitePublicInfo> {
     const response = await api.get(
-      `/competencies/external/public/invite/${token}`
+      `/competencies/external/public/invite/${token}`,
     );
     return response.data;
   },
 
   async submitExternalScores(
-    data: ExternalScoreSubmit
+    data: ExternalScoreSubmit,
   ): Promise<{ message: string; invite_id: number }> {
     const response = await api.post(
       "/competencies/external/public/submit",
-      data
+      data,
     );
     return response.data;
   },

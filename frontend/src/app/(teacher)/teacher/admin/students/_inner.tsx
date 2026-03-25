@@ -145,7 +145,9 @@ export default function StudentsAdminInner() {
                 type="file"
                 accept=".csv,text/csv"
                 className="hidden"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onImport(e.target.files?.[0] ?? null)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onImport(e.target.files?.[0] ?? null)
+                }
                 disabled={importBusy}
               />
               <button
@@ -173,207 +175,210 @@ export default function StudentsAdminInner() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* Filterbalk */}
+        <div className="flex flex-wrap items-end gap-3 bg-white border rounded-2xl p-3">
+          <TextInput
+            label="Zoek (naam/email/klas/course)"
+            value={q}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
+            className="w-80"
+          />
+          <Select
+            label="Status"
+            value={status}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+              setPage(1);
+              setStatus(e.target.value);
+            }}
+            className="w-40"
+          >
+            <option value="active">Actief</option>
+            <option value="inactive">Inactief</option>
+            <option value="">Alle</option>
+          </Select>
+        </div>
 
-      {/* Filterbalk */}
-      <div className="flex flex-wrap items-end gap-3 bg-white border rounded-2xl p-3">
-        <TextInput
-          label="Zoek (naam/email/klas/course)"
-          value={q}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            setPage(1);
-            setQ(e.target.value);
-          }}
-          className="w-80"
-        />
-        <Select
-          label="Status"
-          value={status}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-            setPage(1);
-            setStatus(e.target.value);
-          }}
-          className="w-40"
-        >
-          <option value="active">Actief</option>
-          <option value="inactive">Inactief</option>
-          <option value="">Alle</option>
-        </Select>
-      </div>
-
-      {/* Tabel */}
-      <div className="overflow-hidden border rounded-2xl bg-white">
-        <table className="w-full table-auto border-collapse">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[10%]">
-                Leerlingnr.
-              </th>
-              <SortableTh
-                label="Naam"
-                col="name"
-                sort={sort}
-                dir={dir}
-                onClick={toggleSort}
-                className="w-[16%]"
-              />
-              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[18%]">
-                Email
-              </th>
-              <SortableTh
-                label="Vak/Course"
-                col="course_name"
-                sort={sort}
-                dir={dir}
-                onClick={toggleSort}
-                className="w-[12%]"
-              />
-              <SortableTh
-                label="Klas"
-                col="class_name"
-                sort={sort}
-                dir={dir}
-                onClick={toggleSort}
-                className="w-[10%]"
-              />
-              <SortableTh
-                label="Team #"
-                col="team_number"
-                sort={sort}
-                dir={dir}
-                onClick={toggleSort}
-                className="w-[8%]"
-                center
-              />
-              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[10%]">
-                Status
-              </th>
-              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[16%]">
-                Acties
-              </th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y">
-            {loading && (
+        {/* Tabel */}
+        <div className="overflow-hidden border rounded-2xl bg-white">
+          <table className="w-full table-auto border-collapse">
+            <thead className="bg-gray-50">
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-6 text-sm text-gray-500 text-center"
-                >
-                  Laden…
-                </td>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[10%]">
+                  Leerlingnr.
+                </th>
+                <SortableTh
+                  label="Naam"
+                  col="name"
+                  sort={sort}
+                  dir={dir}
+                  onClick={toggleSort}
+                  className="w-[16%]"
+                />
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[18%]">
+                  Email
+                </th>
+                <SortableTh
+                  label="Vak/Course"
+                  col="course_name"
+                  sort={sort}
+                  dir={dir}
+                  onClick={toggleSort}
+                  className="w-[12%]"
+                />
+                <SortableTh
+                  label="Klas"
+                  col="class_name"
+                  sort={sort}
+                  dir={dir}
+                  onClick={toggleSort}
+                  className="w-[10%]"
+                />
+                <SortableTh
+                  label="Team #"
+                  col="team_number"
+                  sort={sort}
+                  dir={dir}
+                  onClick={toggleSort}
+                  className="w-[8%]"
+                  center
+                />
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[10%]">
+                  Status
+                </th>
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[16%]">
+                  Acties
+                </th>
               </tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-6 text-sm text-gray-500 text-center"
-                >
-                  Geen leerlingen gevonden.
-                </td>
-              </tr>
-            )}
+            </thead>
 
-            {!loading &&
-              rows.map((s) => (
-                <tr
-                  key={s.id}
-                  className="text-sm hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-4 py-2 text-left text-gray-500">{s.student_number || "-"}</td>
-                  <td className="px-4 py-2 truncate">{s.name || "-"}</td>
-                  <td className="px-4 py-2 truncate">
-                    <a href={`mailto:${s.email}`} className="hover:underline">
-                      {s.email}
-                    </a>
-                  </td>
-                  <td className="px-4 py-2 text-left">
-                    {s.course_name || "-"}
-                  </td>
-                  <td className="px-4 py-2 text-left">{s.class_name || "-"}</td>
-
-                  {/* Inline Team # edit */}
-                  <td className="px-4 py-2 text-center">
-                    <TeamNumberCell
-                      value={s.team_number}
-                      onChange={async (next) => {
-                        const old = s.team_number ?? null;
-                        updateRowLocal(s.id, { team_number: next }); // optimistic
-                        try {
-                          await api.put(`/admin/students/${s.id}`, {
-                            team_number: next,
-                          });
-                        } catch (e: any) {
-                          updateRowLocal(s.id, { team_number: old }); // rollback
-                          alert(
-                            e?.response?.data?.detail ||
-                              e?.message ||
-                              "Teamnummer opslaan mislukt",
-                          );
-                        }
-                      }}
-                    />
-                  </td>
-
-                  <td className="px-4 py-2 text-center">
-                    {s.status === "inactive" ? "Inactief" : "Actief"}
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <div className="flex justify-center gap-3">
-                      <Button onClick={() => setEdit(s)}>Bewerken</Button>
-                      <DeleteStudentButton id={s.id} onDone={fetchRows} />
-                    </div>
+            <tbody className="divide-y">
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-6 text-sm text-gray-500 text-center"
+                  >
+                    Laden…
                   </td>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              )}
+              {!loading && rows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-6 text-sm text-gray-500 text-center"
+                  >
+                    Geen leerlingen gevonden.
+                  </td>
+                </tr>
+              )}
 
-      {/* Paginatie */}
-      <div className="flex items-center justify-between text-sm">
-        <div>
-          Totaal: <b>{total}</b> • Pagina <b>{page}</b> / <b>{pageCount}</b>
+              {!loading &&
+                rows.map((s) => (
+                  <tr
+                    key={s.id}
+                    className="text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-2 text-left text-gray-500">
+                      {s.student_number || "-"}
+                    </td>
+                    <td className="px-4 py-2 truncate">{s.name || "-"}</td>
+                    <td className="px-4 py-2 truncate">
+                      <a href={`mailto:${s.email}`} className="hover:underline">
+                        {s.email}
+                      </a>
+                    </td>
+                    <td className="px-4 py-2 text-left">
+                      {s.course_name || "-"}
+                    </td>
+                    <td className="px-4 py-2 text-left">
+                      {s.class_name || "-"}
+                    </td>
+
+                    {/* Inline Team # edit */}
+                    <td className="px-4 py-2 text-center">
+                      <TeamNumberCell
+                        value={s.team_number}
+                        onChange={async (next) => {
+                          const old = s.team_number ?? null;
+                          updateRowLocal(s.id, { team_number: next }); // optimistic
+                          try {
+                            await api.put(`/admin/students/${s.id}`, {
+                              team_number: next,
+                            });
+                          } catch (e: any) {
+                            updateRowLocal(s.id, { team_number: old }); // rollback
+                            alert(
+                              e?.response?.data?.detail ||
+                                e?.message ||
+                                "Teamnummer opslaan mislukt",
+                            );
+                          }
+                        }}
+                      />
+                    </td>
+
+                    <td className="px-4 py-2 text-center">
+                      {s.status === "inactive" ? "Inactief" : "Actief"}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <div className="flex justify-center gap-3">
+                        <Button onClick={() => setEdit(s)}>Bewerken</Button>
+                        <DeleteStudentButton id={s.id} onDone={fetchRows} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={!canPrev}
-          >
-            ← Vorige
-          </Button>
-          <Select
-            value={String(limit)}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
+
+        {/* Paginatie */}
+        <div className="flex items-center justify-between text-sm">
+          <div>
+            Totaal: <b>{total}</b> • Pagina <b>{page}</b> / <b>{pageCount}</b>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!canPrev}
+            >
+              ← Vorige
+            </Button>
+            <Select
+              value={String(limit)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value="10">10 / p</option>
+              <option value="25">25 / p</option>
+              <option value="50">50 / p</option>
+              <option value="100">100 / p</option>
+            </Select>
+            <Button
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+              disabled={!canNext}
+            >
+              Volgende →
+            </Button>
+          </div>
+        </div>
+
+        {/* Edit-modal */}
+        {edit && (
+          <EditStudentModal
+            student={edit}
+            onClose={() => setEdit(null)}
+            onSaved={async () => {
+              await fetchRows(); // reload zodat Vak/Course direct zichtbaar is
             }}
-          >
-            <option value="10">10 / p</option>
-            <option value="25">25 / p</option>
-            <option value="50">50 / p</option>
-            <option value="100">100 / p</option>
-          </Select>
-          <Button
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            disabled={!canNext}
-          >
-            Volgende →
-          </Button>
-        </div>
-      </div>
-
-      {/* Edit-modal */}
-      {edit && (
-        <EditStudentModal
-          student={edit}
-          onClose={() => setEdit(null)}
-          onSaved={async () => {
-            await fetchRows(); // reload zodat Vak/Course direct zichtbaar is
-          }}
-        />
-      )}
+          />
+        )}
       </div>
     </>
   );
@@ -545,7 +550,9 @@ function TeamNumberCell({
     <input
       autoFocus
       value={local}
-      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocal(e.target.value)}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+        setLocal(e.target.value)
+      }
       onBlur={commit}
       onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") commit();
@@ -609,7 +616,9 @@ function EditStudentModal({
   const [teamNumber, setTeamNumber] = useState<string>(
     student.team_number?.toString() ?? "",
   );
-  const [studentNumber, setStudentNumber] = useState(student.student_number ?? "");
+  const [studentNumber, setStudentNumber] = useState(
+    student.student_number ?? "",
+  );
   const [saving, setSaving] = useState(false);
 
   const save = useCallback(async () => {
@@ -619,7 +628,8 @@ function EditStudentModal({
       const pfx = prefix.trim() || null;
       const ln = lastName.trim() || null;
       const nameParts = [fn, pfx, ln].filter(Boolean);
-      const computedName = nameParts.length > 0 ? nameParts.join(" ") : (name.trim() || null);
+      const computedName =
+        nameParts.length > 0 ? nameParts.join(" ") : name.trim() || null;
 
       await api.put(`/admin/students/${student.id}`, {
         name: computedName,
@@ -671,50 +681,68 @@ function EditStudentModal({
           <TextInput
             label="Voornaam"
             value={firstName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFirstName(e.target.value)
+            }
           />
           <TextInput
             label="Tussenvoegsel"
             placeholder="Bijv. van der"
             value={prefix}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrefix(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setPrefix(e.target.value)
+            }
           />
           <TextInput
             label="Achternaam"
             value={lastName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setLastName(e.target.value)
+            }
           />
           <TextInput
             label="Email"
             value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEmail(e.target.value)
+            }
           />
           <TextInput
             label="Leerlingnummer"
             placeholder="Bijv. 450000"
             value={studentNumber}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentNumber(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setStudentNumber(e.target.value)
+            }
           />
           <TextInput
             label="Vak/Course"
             value={courseName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCourseName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setCourseName(e.target.value)
+            }
           />
           {/* vervangt Cluster */}
           <TextInput
             label="Klas"
             value={className}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClassName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setClassName(e.target.value)
+            }
           />
           <TextInput
             label="Team #"
             value={teamNumber}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTeamNumber(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setTeamNumber(e.target.value)
+            }
           />
           <Select
             label="Status"
             value={status}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatus(e.target.value as "active" | "inactive")}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setStatus(e.target.value as "active" | "inactive")
+            }
           >
             <option value="active">Actief</option>
             <option value="inactive">Inactief</option>

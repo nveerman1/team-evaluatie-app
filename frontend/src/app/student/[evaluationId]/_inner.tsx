@@ -3,11 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useNumericEvalId } from "@/lib/id";
-import {
-  MyAllocation,
-  Criterion,
-  ScoreItem,
-} from "@/dtos";
+import { MyAllocation, Criterion, ScoreItem } from "@/dtos";
 import {
   WizardProgress,
   SelfEvaluationStep,
@@ -69,8 +65,6 @@ export default function StudentWizardInner() {
       })
       .finally(() => setLoadingAlloc(false));
   }, [evaluationIdNum]);
-
-
 
   const selfAlloc = useMemo(() => allocs.find((a) => a.is_self), [allocs]);
   const peerAllocs = useMemo(() => allocs.filter((a) => !a.is_self), [allocs]);
@@ -140,9 +134,7 @@ export default function StudentWizardInner() {
         <header className={studentStyles.header.wrapper}>
           <div className="mb-4 flex items-center justify-between">
             <div className={studentStyles.header.titleSection}>
-              <h1 className={studentStyles.header.title}>
-                Evaluatie Invullen
-              </h1>
+              <h1 className={studentStyles.header.title}>Evaluatie Invullen</h1>
               <p className={studentStyles.header.subtitle}>
                 Evaluatie #{evaluationId}
               </p>
@@ -166,70 +158,75 @@ export default function StudentWizardInner() {
       {/* Main Content */}
       <main className={studentStyles.layout.contentWrapper}>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {/* Step 1: Self Evaluation */}
-        {step === 1 && (
-          <>
-            <h2 className={studentStyles.typography.sectionTitle + " mb-6"}>
-              Stap 1: Zelfbeoordeling
-            </h2>
-            {!selfAlloc && (
-              <div className="py-8 text-center">
-                <div className="mx-auto max-w-md rounded-xl border border-amber-200 bg-amber-50 p-6">
-                  <p className="mb-4 text-amber-800">
-                    Je zelfbeoordeling wordt klaargezet. Probeer het zo opnieuw.
-                  </p>
-                  <button
-                    onClick={() => {
-                      if (evaluationIdNum) {
-                        setLoadingAlloc(true);
-                        studentService
-                          .getAllocations(evaluationIdNum)
-                          .then((data) => setAllocs(data))
-                          .catch((e) => setError(e?.message || "Laden mislukt"))
-                          .finally(() => setLoadingAlloc(false));
+          {/* Step 1: Self Evaluation */}
+          {step === 1 && (
+            <>
+              <h2 className={studentStyles.typography.sectionTitle + " mb-6"}>
+                Stap 1: Zelfbeoordeling
+              </h2>
+              {!selfAlloc && (
+                <div className="py-8 text-center">
+                  <div className="mx-auto max-w-md rounded-xl border border-amber-200 bg-amber-50 p-6">
+                    <p className="mb-4 text-amber-800">
+                      Je zelfbeoordeling wordt klaargezet. Probeer het zo
+                      opnieuw.
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (evaluationIdNum) {
+                          setLoadingAlloc(true);
+                          studentService
+                            .getAllocations(evaluationIdNum)
+                            .then((data) => setAllocs(data))
+                            .catch((e) =>
+                              setError(e?.message || "Laden mislukt"),
+                            )
+                            .finally(() => setLoadingAlloc(false));
+                        }
+                      }}
+                      className={
+                        studentStyles.buttons.primary + " px-4 py-2 text-white"
                       }
-                    }}
-                    className={studentStyles.buttons.primary + " px-4 py-2 text-white"}
-                  >
-                    Opnieuw proberen
-                  </button>
+                    >
+                      Opnieuw proberen
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-            {selfAlloc && selfCriteria.length > 0 && (
-              <SelfEvaluationStep
-                allocationId={selfAlloc.allocation_id}
-                criteria={selfCriteria}
-                onSubmit={submitScores}
-                sending={sending}
-              />
-            )}
-          </>
-        )}
+              )}
+              {selfAlloc && selfCriteria.length > 0 && (
+                <SelfEvaluationStep
+                  allocationId={selfAlloc.allocation_id}
+                  criteria={selfCriteria}
+                  onSubmit={submitScores}
+                  sending={sending}
+                />
+              )}
+            </>
+          )}
 
-        {/* Step 2: Peer Reviews */}
-        {step === 2 && (
-          <>
-            <h2 className={studentStyles.typography.sectionTitle + " mb-6"}>
-              Stap 2: Peer-reviews
-            </h2>
-            {!selfCompleted && (
-              <div className="mb-6 rounded-xl bg-amber-50 p-4">
-                <p className="text-sm text-amber-800">
-                  ⚠️ Voltooi eerst je zelfbeoordeling voordat je peers kunt
-                  beoordelen.
-                </p>
-              </div>
-            )}
-            {selfCompleted && peerCriteria.length > 0 && (
-              <PeerReviewStep
-                peerAllocations={peerAllocs}
-                criteria={peerCriteria}
-                onSubmit={submitScores}
-              />
-            )}
-          </>
-        )}
+          {/* Step 2: Peer Reviews */}
+          {step === 2 && (
+            <>
+              <h2 className={studentStyles.typography.sectionTitle + " mb-6"}>
+                Stap 2: Peer-reviews
+              </h2>
+              {!selfCompleted && (
+                <div className="mb-6 rounded-xl bg-amber-50 p-4">
+                  <p className="text-sm text-amber-800">
+                    ⚠️ Voltooi eerst je zelfbeoordeling voordat je peers kunt
+                    beoordelen.
+                  </p>
+                </div>
+              )}
+              {selfCompleted && peerCriteria.length > 0 && (
+                <PeerReviewStep
+                  peerAllocations={peerAllocs}
+                  criteria={peerCriteria}
+                  onSubmit={submitScores}
+                />
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>

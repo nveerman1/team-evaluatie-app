@@ -10,11 +10,11 @@ type ScanDashboardCardProps = {
   onInviteExternal?: () => void;
 };
 
-export function ScanDashboardCard({ 
-  window, 
+export function ScanDashboardCard({
+  window,
   hasInvites = false,
   onShowInvites,
-  onInviteExternal
+  onInviteExternal,
 }: ScanDashboardCardProps) {
   const isOpen = window.status === "open";
   const endDate = window.end_date
@@ -41,8 +41,12 @@ export function ScanDashboardCard({
           {/* Left: title, badge, deadline */}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-slate-900">{window.title}</h3>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}>
+              <h3 className="text-base font-semibold text-slate-900">
+                {window.title}
+              </h3>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}
+              >
                 {statusLabel}
               </span>
             </div>
@@ -63,8 +67,12 @@ export function ScanDashboardCard({
           {/* Right: deadline block + action buttons */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
             <div className="min-w-[108px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Sluitdatum</div>
-              <div className="mt-1 text-base font-semibold text-slate-900">{endDate}</div>
+              <div className="text-xs uppercase tracking-wide text-slate-500">
+                Sluitdatum
+              </div>
+              <div className="mt-1 text-base font-semibold text-slate-900">
+                {endDate}
+              </div>
             </div>
 
             <div className="flex gap-2">

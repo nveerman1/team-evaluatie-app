@@ -23,7 +23,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Lock, AlertCircle, CheckCircle, FileText, Save, Send, Download } from "lucide-react";
+import {
+  Lock,
+  AlertCircle,
+  CheckCircle,
+  FileText,
+  Save,
+  Send,
+  Download,
+} from "lucide-react";
 import { ApiAuthError } from "@/lib/api";
 
 // Section metadata
@@ -158,20 +166,26 @@ export default function ProjectPlanEditor() {
 
   const [data, setData] = useState<ProjectPlanTeam | null>(null);
   const [title, setTitle] = useState("");
-  const [sections, setSections] = useState<Record<SectionKey, ProjectPlanSection | null>>({} as any);
-  const [editedSections, setEditedSections] = useState<Record<SectionKey, boolean>>({} as any);
+  const [sections, setSections] = useState<
+    Record<SectionKey, ProjectPlanSection | null>
+  >({} as any);
+  const [editedSections, setEditedSections] = useState<
+    Record<SectionKey, boolean>
+  >({} as any);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setError(null);
       try {
-        const result = await projectPlanService.getMyProjectPlan(projectPlanTeamId);
+        const result =
+          await projectPlanService.getMyProjectPlan(projectPlanTeamId);
         setData(result);
         setTitle(result.title || "");
 
         // Initialize sections map
-        const sectionsMap: Record<SectionKey, ProjectPlanSection | null> = {} as any;
+        const sectionsMap: Record<SectionKey, ProjectPlanSection | null> =
+          {} as any;
         Object.values(SectionKey).forEach((key) => {
           const section = result.sections.find((s) => s.key === key);
           sectionsMap[key] = section || null;
@@ -200,7 +214,9 @@ export default function ProjectPlanEditor() {
     setError(null);
     setSuccessMsg(null);
     try {
-      await projectPlanService.updateMyProjectPlanTitle(projectPlanTeamId, { title });
+      await projectPlanService.updateMyProjectPlanTitle(projectPlanTeamId, {
+        title,
+      });
       setSuccessMsg("Titel opgeslagen ✓");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (e: any) {
@@ -216,7 +232,7 @@ export default function ProjectPlanEditor() {
 
   const handleSaveSection = async (sectionKey: SectionKey) => {
     const section = sections[sectionKey];
-    
+
     // Validate section content
     if (sectionKey === SectionKey.CLIENT) {
       const client = section?.client;
@@ -245,12 +261,18 @@ export default function ProjectPlanEditor() {
         payload.text = section?.text;
       }
 
-      await projectPlanService.updateMySection(projectPlanTeamId, sectionKey, payload);
-      
+      await projectPlanService.updateMySection(
+        projectPlanTeamId,
+        sectionKey,
+        payload,
+      );
+
       // Reload data to get updated section
-      const result = await projectPlanService.getMyProjectPlan(projectPlanTeamId);
+      const result =
+        await projectPlanService.getMyProjectPlan(projectPlanTeamId);
       setData(result);
-      const sectionsMap: Record<SectionKey, ProjectPlanSection | null> = {} as any;
+      const sectionsMap: Record<SectionKey, ProjectPlanSection | null> =
+        {} as any;
       Object.values(SectionKey).forEach((key) => {
         const sec = result.sections.find((s) => s.key === key);
         sectionsMap[key] = sec || null;
@@ -288,7 +310,7 @@ export default function ProjectPlanEditor() {
       setError(
         `Vul alle verplichte secties in voordat je indient: ${unfilledSections
           .map((k) => SECTION_INFO[k].label)
-          .join(", ")}`
+          .join(", ")}`,
       );
       return;
     }
@@ -298,11 +320,12 @@ export default function ProjectPlanEditor() {
     setSuccessMsg(null);
     try {
       await projectPlanService.submitProjectPlan(projectPlanTeamId);
-      
+
       // Reload data
-      const result = await projectPlanService.getMyProjectPlan(projectPlanTeamId);
+      const result =
+        await projectPlanService.getMyProjectPlan(projectPlanTeamId);
       setData(result);
-      
+
       setSuccessMsg("Projectplan ingediend! Wacht op feedback van de docent.");
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (e: any) {
@@ -329,7 +352,11 @@ export default function ProjectPlanEditor() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Export mislukt. Probeer het opnieuw.");
+      setError(
+        e?.response?.data?.detail ||
+          e?.message ||
+          "Export mislukt. Probeer het opnieuw.",
+      );
     } finally {
       setExporting(false);
     }
@@ -339,7 +366,7 @@ export default function ProjectPlanEditor() {
     const section = sections[SectionKey.CLIENT];
     const currentClient = section?.client || {};
     const updatedClient = { ...currentClient, [field]: value };
-    
+
     setSections({
       ...sections,
       [SectionKey.CLIENT]: {
@@ -372,13 +399,13 @@ export default function ProjectPlanEditor() {
     data.status === PlanStatus.CONCEPT &&
     Object.entries(SECTION_INFO)
       .filter(([_, info]) => info.required)
-      .every((([key, _]) => {
+      .every(([key, _]) => {
         const section = sections[key as SectionKey];
         if (key === SectionKey.CLIENT) {
           return section?.client?.organisation?.trim();
         }
         return section?.text?.trim();
-      }));
+      });
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -399,7 +426,8 @@ export default function ProjectPlanEditor() {
               </div>
               <h1 className="text-3xl font-bold tracking-tight">Projectplan</h1>
               <p className="mt-1 text-sm text-white/70">
-                Vul alle verplichte secties in en dien je plan in voor beoordeling.
+                Vul alle verplichte secties in en dien je plan in voor
+                beoordeling.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -443,7 +471,8 @@ export default function ProjectPlanEditor() {
                   Plan Vergrendeld
                 </h3>
                 <p className="text-sm text-green-700">
-                  Je projectplan is goedgekeurd met een GO. Je kunt nu starten met je project!
+                  Je projectplan is goedgekeurd met een GO. Je kunt nu starten
+                  met je project!
                 </p>
               </div>
             </div>
@@ -459,7 +488,9 @@ export default function ProjectPlanEditor() {
                 <h3 className="text-sm font-semibold text-blue-900">
                   Feedback van docent
                 </h3>
-                <p className="text-sm text-blue-800 mt-1">{data.global_teacher_note}</p>
+                <p className="text-sm text-blue-800 mt-1">
+                  {data.global_teacher_note}
+                </p>
               </div>
             </div>
           </div>
@@ -512,148 +543,161 @@ export default function ProjectPlanEditor() {
                     SectionKey.MOTIVATION,
                     SectionKey.RISKS,
                   ];
-                  return order.indexOf(keyA as SectionKey) - order.indexOf(keyB as SectionKey);
+                  return (
+                    order.indexOf(keyA as SectionKey) -
+                    order.indexOf(keyB as SectionKey)
+                  );
                 })
                 .map(([key, info]) => {
-                const sectionKey = key as SectionKey;
-                const section = sections[sectionKey];
-                const isEdited = editedSections[sectionKey];
+                  const sectionKey = key as SectionKey;
+                  const section = sections[sectionKey];
+                  const isEdited = editedSections[sectionKey];
 
-                return (
-                  <AccordionItem key={sectionKey} value={sectionKey}>
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center justify-between w-full pr-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {info.label}
-                            {info.required && (
-                              <span className="text-red-500 ml-1">*</span>
-                            )}
-                          </span>
+                  return (
+                    <AccordionItem key={sectionKey} value={sectionKey}>
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {info.label}
+                              {info.required && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
+                            </span>
+                          </div>
+                          {getSectionStatusBadge(
+                            section?.status || SectionStatus.EMPTY,
+                          )}
                         </div>
-                        {getSectionStatusBadge(section?.status || SectionStatus.EMPTY)}
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-4 pt-4">
-                        <p className="text-sm text-slate-600">{info.description}</p>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-4">
+                          <p className="text-sm text-slate-600">
+                            {info.description}
+                          </p>
 
-                        {/* Client section has multiple fields */}
-                        {sectionKey === SectionKey.CLIENT ? (
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-xs font-medium text-slate-700 mb-1 block">
-                                Organisatie *
-                              </label>
-                              <Input
-                                value={section?.client?.organisation || ""}
-                                onChange={(e) =>
-                                  updateClientField("organisation", e.target.value)
-                                }
-                                placeholder="Naam van de organisatie"
-                                disabled={isLocked}
-                                className="rounded-xl"
-                              />
+                          {/* Client section has multiple fields */}
+                          {sectionKey === SectionKey.CLIENT ? (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-xs font-medium text-slate-700 mb-1 block">
+                                  Organisatie *
+                                </label>
+                                <Input
+                                  value={section?.client?.organisation || ""}
+                                  onChange={(e) =>
+                                    updateClientField(
+                                      "organisation",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Naam van de organisatie"
+                                  disabled={isLocked}
+                                  className="rounded-xl"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-slate-700 mb-1 block">
+                                  Contactpersoon
+                                </label>
+                                <Input
+                                  value={section?.client?.contact || ""}
+                                  onChange={(e) =>
+                                    updateClientField("contact", e.target.value)
+                                  }
+                                  placeholder="Naam contactpersoon"
+                                  disabled={isLocked}
+                                  className="rounded-xl"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-slate-700 mb-1 block">
+                                  Email
+                                </label>
+                                <Input
+                                  type="email"
+                                  value={section?.client?.email || ""}
+                                  onChange={(e) =>
+                                    updateClientField("email", e.target.value)
+                                  }
+                                  placeholder="email@voorbeeld.nl"
+                                  disabled={isLocked}
+                                  className="rounded-xl"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-slate-700 mb-1 block">
+                                  Telefoon
+                                </label>
+                                <Input
+                                  type="tel"
+                                  value={section?.client?.phone || ""}
+                                  onChange={(e) =>
+                                    updateClientField("phone", e.target.value)
+                                  }
+                                  placeholder="+31 6 12345678"
+                                  disabled={isLocked}
+                                  className="rounded-xl"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-slate-700 mb-1 block">
+                                  Beschrijving
+                                </label>
+                                <Textarea
+                                  value={section?.client?.description || ""}
+                                  onChange={(e) =>
+                                    updateClientField(
+                                      "description",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Omschrijving van de opdrachtgever"
+                                  disabled={isLocked}
+                                  className="rounded-xl min-h-[100px] resize-y"
+                                />
+                              </div>
                             </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-700 mb-1 block">
-                                Contactpersoon
-                              </label>
-                              <Input
-                                value={section?.client?.contact || ""}
-                                onChange={(e) =>
-                                  updateClientField("contact", e.target.value)
-                                }
-                                placeholder="Naam contactpersoon"
-                                disabled={isLocked}
-                                className="rounded-xl"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-700 mb-1 block">
-                                Email
-                              </label>
-                              <Input
-                                type="email"
-                                value={section?.client?.email || ""}
-                                onChange={(e) =>
-                                  updateClientField("email", e.target.value)
-                                }
-                                placeholder="email@voorbeeld.nl"
-                                disabled={isLocked}
-                                className="rounded-xl"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-700 mb-1 block">
-                                Telefoon
-                              </label>
-                              <Input
-                                type="tel"
-                                value={section?.client?.phone || ""}
-                                onChange={(e) =>
-                                  updateClientField("phone", e.target.value)
-                                }
-                                placeholder="+31 6 12345678"
-                                disabled={isLocked}
-                                className="rounded-xl"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-700 mb-1 block">
-                                Beschrijving
-                              </label>
-                              <Textarea
-                                value={section?.client?.description || ""}
-                                onChange={(e) =>
-                                  updateClientField("description", e.target.value)
-                                }
-                                placeholder="Omschrijving van de opdrachtgever"
-                                disabled={isLocked}
-                                className="rounded-xl min-h-[100px] resize-y"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          /* Other sections have a large textarea */
-                          <Textarea
-                            value={section?.text || ""}
-                            onChange={(e) =>
-                              updateSectionText(sectionKey, e.target.value)
-                            }
-                            placeholder={`Vul hier de ${info.label.toLowerCase()} in...`}
-                            disabled={isLocked}
-                            className="rounded-xl min-h-[200px] resize-y"
-                          />
-                        )}
+                          ) : (
+                            /* Other sections have a large textarea */
+                            <Textarea
+                              value={section?.text || ""}
+                              onChange={(e) =>
+                                updateSectionText(sectionKey, e.target.value)
+                              }
+                              placeholder={`Vul hier de ${info.label.toLowerCase()} in...`}
+                              disabled={isLocked}
+                              className="rounded-xl min-h-[200px] resize-y"
+                            />
+                          )}
 
-                        {/* Teacher feedback */}
-                        {section?.teacher_note && (
-                          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-                            <p className="text-xs font-medium text-amber-900 mb-1">
-                              Feedback docent:
-                            </p>
-                            <p className="text-xs text-amber-800">
-                              {section.teacher_note}
-                            </p>
-                          </div>
-                        )}
+                          {/* Teacher feedback */}
+                          {section?.teacher_note && (
+                            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                              <p className="text-xs font-medium text-amber-900 mb-1">
+                                Feedback docent:
+                              </p>
+                              <p className="text-xs text-amber-800">
+                                {section.teacher_note}
+                              </p>
+                            </div>
+                          )}
 
-                        {/* Save button */}
-                        <Button
-                          onClick={() => handleSaveSection(sectionKey)}
-                          disabled={saving || isLocked || !isEdited}
-                          size="sm"
-                          className="rounded-xl"
-                        >
-                          <Save className="mr-2 h-4 w-4" />
-                          Opslaan
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
+                          {/* Save button */}
+                          <Button
+                            onClick={() => handleSaveSection(sectionKey)}
+                            disabled={saving || isLocked || !isEdited}
+                            size="sm"
+                            className="rounded-xl"
+                          >
+                            <Save className="mr-2 h-4 w-4" />
+                            Opslaan
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
             </Accordion>
           </CardContent>
         </Card>
@@ -668,7 +712,8 @@ export default function ProjectPlanEditor() {
                     Klaar om in te dienen?
                   </h3>
                   <p className="text-sm text-slate-600 mt-1">
-                    Controleer of alle verplichte secties ingevuld zijn voordat je indient.
+                    Controleer of alle verplichte secties ingevuld zijn voordat
+                    je indient.
                   </p>
                 </div>
                 <Button

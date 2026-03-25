@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { projectAssessmentService } from '@/services';
-import { ProjectAssessmentSelfOverview } from '@/dtos';
-import { Loading, ErrorMessage } from '@/components';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { projectAssessmentService } from "@/services";
+import { ProjectAssessmentSelfOverview } from "@/dtos";
+import { Loading, ErrorMessage } from "@/components";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export interface SelfAssessmentPaneProps {
   assessmentId: number;
@@ -13,7 +13,11 @@ export interface SelfAssessmentPaneProps {
 
 // Convert score to grade using curved mapping (matches backend calculation)
 // grade = 1 + (normalized ** 0.85) * 9
-function scoreToGrade(score: number, scaleMin: number, scaleMax: number): number {
+function scoreToGrade(
+  score: number,
+  scaleMin: number,
+  scaleMax: number,
+): number {
   const scaleRange = scaleMax - scaleMin;
   if (scaleRange <= 0) return 1.0;
   const clampedScore = Math.max(scaleMin, Math.min(scaleMax, score));
@@ -23,11 +27,16 @@ function scoreToGrade(score: number, scaleMin: number, scaleMax: number): number
   return Math.round(curved * 10) / 10;
 }
 
-export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentPaneProps) {
+export function SelfAssessmentPane({
+  assessmentId,
+  teamNumber,
+}: SelfAssessmentPaneProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProjectAssessmentSelfOverview | null>(null);
-  const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
+  const [expandedStudents, setExpandedStudents] = useState<Set<number>>(
+    new Set(),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -35,47 +44,57 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
       setLoading(true);
       setError(null);
       try {
-        const result = await projectAssessmentService.getSelfAssessmentOverview(assessmentId);
+        const result =
+          await projectAssessmentService.getSelfAssessmentOverview(
+            assessmentId,
+          );
         if (!cancelled) setData(result);
       } catch (e: any) {
-        if (!cancelled) setError(e?.response?.data?.detail || e?.message || 'Laden mislukt');
+        if (!cancelled)
+          setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     loadData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [assessmentId]);
 
-  if (loading) return (
-    <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center">
-      <Loading />
-    </div>
-  );
-  if (error) return (
-    <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center p-4">
-      <ErrorMessage message={error} />
-    </div>
-  );
-  if (!data) return (
-    <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center p-4">
-      <ErrorMessage message="Geen data gevonden" />
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center">
+        <Loading />
+      </div>
+    );
+  if (error)
+    return (
+      <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center p-4">
+        <ErrorMessage message={error} />
+      </div>
+    );
+  if (!data)
+    return (
+      <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center p-4">
+        <ErrorMessage message="Geen data gevonden" />
+      </div>
+    );
 
   const team = data.team_overviews.find((t) => t.team_number === teamNumber);
 
-  if (!team) return (
-    <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center p-4 text-sm text-slate-500">
-      Geen zelfbeoordeling gevonden voor team {teamNumber}.
-    </div>
-  );
+  if (!team)
+    return (
+      <div className="border-x border-b border-slate-200 bg-white h-full flex items-center justify-center p-4 text-sm text-slate-500">
+        Geen zelfbeoordeling gevonden voor team {teamNumber}.
+      </div>
+    );
 
   // Group criteria by category
   const groupedCriteria: Record<string, typeof data.criteria> = {};
   const categories: string[] = [];
   data.criteria.forEach((c) => {
-    const cat = c.category || 'Overig';
+    const cat = c.category || "Overig";
     if (!groupedCriteria[cat]) {
       groupedCriteria[cat] = [];
       categories.push(cat);
@@ -84,7 +103,7 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
   });
 
   // Calculate weighted average scores per category for the team
-  const getTeamCategoryAverages = (t: typeof data.team_overviews[0]) => {
+  const getTeamCategoryAverages = (t: (typeof data.team_overviews)[0]) => {
     const categoryAverages: Record<string, number> = {};
     categories.forEach((category) => {
       const categoryCriteria = groupedCriteria[category];
@@ -92,9 +111,12 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
       let weightedSum = 0;
       categoryCriteria.forEach((criterion) => {
         const criterionScore = t.avg_criterion_scores.find(
-          (cs) => cs.criterion_id === criterion.id
+          (cs) => cs.criterion_id === criterion.id,
         );
-        if (criterionScore?.score !== null && criterionScore?.score !== undefined) {
+        if (
+          criterionScore?.score !== null &&
+          criterionScore?.score !== undefined
+        ) {
           const weight = criterion.weight || 1.0;
           weightedSum += criterionScore.score * weight;
           totalWeight += weight;
@@ -102,7 +124,11 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
       });
       if (totalWeight > 0) {
         const avgScore = weightedSum / totalWeight;
-        categoryAverages[category] = scoreToGrade(avgScore, data.rubric_scale_min, data.rubric_scale_max);
+        categoryAverages[category] = scoreToGrade(
+          avgScore,
+          data.rubric_scale_min,
+          data.rubric_scale_max,
+        );
       }
     });
     return categoryAverages;
@@ -138,14 +164,14 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
             <div key={cat} className="flex items-center gap-1 text-xs">
               <span className="text-slate-500">{cat}:</span>
               <span className="font-semibold text-slate-900">
-                {categoryAverages[cat] ? categoryAverages[cat].toFixed(1) : '—'}
+                {categoryAverages[cat] ? categoryAverages[cat].toFixed(1) : "—"}
               </span>
             </div>
           ))}
           <div className="flex items-center gap-1 text-xs">
             <span className="text-slate-500">Eindcijfer:</span>
             <span className="font-semibold text-blue-600">
-              {team.avg_grade ? team.avg_grade.toFixed(1) : '—'}
+              {team.avg_grade ? team.avg_grade.toFixed(1) : "—"}
             </span>
           </div>
         </div>
@@ -174,12 +200,17 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
                     </span>
                   </div>
                   <div className="text-xs font-semibold text-slate-700">
-                    {student.has_self_assessment
-                      ? student.grade != null
-                        ? student.grade.toFixed(1)
-                        : '—'
-                      : <span className="text-slate-400 font-normal">Niet ingevuld</span>
-                    }
+                    {student.has_self_assessment ? (
+                      student.grade != null ? (
+                        student.grade.toFixed(1)
+                      ) : (
+                        "—"
+                      )
+                    ) : (
+                      <span className="text-slate-400 font-normal">
+                        Niet ingevuld
+                      </span>
+                    )}
                   </div>
                 </button>
 
@@ -203,11 +234,15 @@ export function SelfAssessmentPane({ assessmentId, teamNumber }: SelfAssessmentP
                       <tbody className="divide-y divide-slate-100">
                         {student.criterion_scores.map((cs) => (
                           <tr key={cs.criterion_id} className="hover:bg-white">
-                            <td className="py-1.5 pr-3 text-slate-900">{cs.criterion_name}</td>
-                            <td className="py-1.5 text-center font-semibold text-slate-900">
-                              {cs.score ?? '—'}
+                            <td className="py-1.5 pr-3 text-slate-900">
+                              {cs.criterion_name}
                             </td>
-                            <td className="py-1.5 text-slate-600">{cs.comment || '—'}</td>
+                            <td className="py-1.5 text-center font-semibold text-slate-900">
+                              {cs.score ?? "—"}
+                            </td>
+                            <td className="py-1.5 text-slate-600">
+                              {cs.comment || "—"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

@@ -34,7 +34,7 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 /* =========================================
@@ -67,8 +67,7 @@ type SortOrder = "asc" | "desc";
    MOCK DATA - for constants only
    ========================================= */
 
-const COURSES = [
-];
+const COURSES = [];
 
 const PERIODS = ["Alle periodes", "P1", "P2", "P3", "P4"];
 
@@ -119,7 +118,7 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
       });
 
       // Fetch trends from API
-      console.log('[TRENDS-FRONTEND] Fetching trends with filters:', {
+      console.log("[TRENDS-FRONTEND] Fetching trends with filters:", {
         schoolYear: filters.schoolYear,
         courseId: filters.courseId,
       });
@@ -127,32 +126,46 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
         schoolYear: filters.schoolYear,
         courseId: filters.courseId,
       });
-      console.log('[TRENDS-FRONTEND] Received trend data:', trendsResponse);
-      console.log('[TRENDS-FRONTEND] Trend data points:', trendsResponse.trend_data?.length || 0);
+      console.log("[TRENDS-FRONTEND] Received trend data:", trendsResponse);
+      console.log(
+        "[TRENDS-FRONTEND] Trend data points:",
+        trendsResponse.trend_data?.length || 0,
+      );
       if (trendsResponse.trend_data) {
-        console.log('[TRENDS-FRONTEND] First trend data point:', trendsResponse.trend_data[0]);
+        console.log(
+          "[TRENDS-FRONTEND] First trend data point:",
+          trendsResponse.trend_data[0],
+        );
       }
 
       // Map API response to component format
-      const mappedProjects: ProjectOverviewItem[] = projectsResponse.projects.map((p) => ({
-        projectId: p.project_id,
-        projectName: p.project_name,
-        courseName: p.course_name || "",
-        clientName: p.client_name || "",
-        periodLabel: p.period_label,
-        year: p.year,
-        numTeams: p.num_teams,
-        averageScoreOverall: p.average_score_overall ?? null,
-        averageScoresByCategory: p.average_scores_by_category,
-        status: p.status,
-      }));
+      const mappedProjects: ProjectOverviewItem[] =
+        projectsResponse.projects.map((p) => ({
+          projectId: p.project_id,
+          projectName: p.project_name,
+          courseName: p.course_name || "",
+          clientName: p.client_name || "",
+          periodLabel: p.period_label,
+          year: p.year,
+          numTeams: p.num_teams,
+          averageScoreOverall: p.average_score_overall ?? null,
+          averageScoresByCategory: p.average_scores_by_category,
+          status: p.status,
+        }));
 
       setProjects(mappedProjects);
       setTrendData(trendsResponse.trend_data);
-      console.log('[TRENDS-FRONTEND] Set trend data, length:', trendsResponse.trend_data?.length || 0);
+      console.log(
+        "[TRENDS-FRONTEND] Set trend data, length:",
+        trendsResponse.trend_data?.length || 0,
+      );
     } catch (e) {
-      console.error('[TRENDS-FRONTEND] Error fetching data:', e);
-      setError(e instanceof Error ? e.message : "Fout bij het laden van projectgegevens");
+      console.error("[TRENDS-FRONTEND] Error fetching data:", e);
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Fout bij het laden van projectgegevens",
+      );
     } finally {
       setLoading(false);
     }
@@ -223,7 +236,9 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-xl overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-semibold text-gray-900">{project.projectName}</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {project.projectName}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -250,7 +265,9 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
               </div>
               <div>
                 <span className="text-gray-500">Periode:</span>
-                <span className="ml-2 text-gray-900">{project.periodLabel}</span>
+                <span className="ml-2 text-gray-900">
+                  {project.periodLabel}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500">Teams:</span>
@@ -284,23 +301,25 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
             </h3>
             {Object.keys(project.averageScoresByCategory).length > 0 ? (
               <div className="space-y-2">
-                {Object.entries(project.averageScoresByCategory).map(([cat, score]) => (
-                  <div
-                    key={cat}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <span className="text-sm text-gray-700">
-                      {CATEGORY_LABELS[cat] || cat}
-                    </span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(
-                        score
-                      )}`}
+                {Object.entries(project.averageScoresByCategory).map(
+                  ([cat, score]) => (
+                    <div
+                      key={cat}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                     >
-                      {score.toFixed(1)}
-                    </span>
-                  </div>
-                ))}
+                      <span className="text-sm text-gray-700">
+                        {CATEGORY_LABELS[cat] || cat}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(
+                          score,
+                        )}`}
+                      >
+                        {score.toFixed(1)}
+                      </span>
+                    </div>
+                  ),
+                )}
               </div>
             ) : (
               <p className="text-sm text-gray-500 italic">
@@ -331,14 +350,13 @@ interface ProjectTableProps {
   loading: boolean;
 }
 
-function ProjectTable({
-  projects,
-  loading,
-}: ProjectTableProps) {
+function ProjectTable({ projects, loading }: ProjectTableProps) {
   const [sortField, setSortField] = useState<SortField>("projectName");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [teamScores, setTeamScores] = useState<Record<number, ProjectTeamScore[]>>({});
+  const [teamScores, setTeamScores] = useState<
+    Record<number, ProjectTeamScore[]>
+  >({});
   const [loadingTeams, setLoadingTeams] = useState<Set<number>>(new Set());
 
   const handleSort = (field: SortField) => {
@@ -358,18 +376,18 @@ function ProjectTable({
       newExpandedRows.add(projectId);
       // Load team scores if not already loaded
       if (!teamScores[projectId] && !loadingTeams.has(projectId)) {
-        setLoadingTeams(prev => {
+        setLoadingTeams((prev) => {
           const newSet = new Set(prev);
           newSet.add(projectId);
           return newSet;
         });
         try {
           const data = await overviewService.getProjectTeams(projectId);
-          setTeamScores(prev => ({ ...prev, [projectId]: data.teams }));
+          setTeamScores((prev) => ({ ...prev, [projectId]: data.teams }));
         } catch (error) {
           console.error("Failed to load team scores:", error);
         } finally {
-          setLoadingTeams(prev => {
+          setLoadingTeams((prev) => {
             const newSet = new Set(prev);
             newSet.delete(projectId);
             return newSet;
@@ -506,47 +524,80 @@ function ProjectTable({
                         {project.numTeams}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.projectproces)}`}>
-                          {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
+                        <span
+                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.projectproces)}`}
+                        >
+                          {project.averageScoresByCategory.projectproces?.toFixed(
+                            1,
+                          ) || "—"}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.eindresultaat)}`}>
-                          {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
+                        <span
+                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.eindresultaat)}`}
+                        >
+                          {project.averageScoresByCategory.eindresultaat?.toFixed(
+                            1,
+                          ) || "—"}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.communicatie)}`}>
-                          {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
+                        <span
+                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.communicatie)}`}
+                        >
+                          {project.averageScoresByCategory.communicatie?.toFixed(
+                            1,
+                          ) || "—"}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoreOverall)}`}>
+                        <span
+                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoreOverall)}`}
+                        >
                           {project.averageScoreOverall?.toFixed(1) || "—"}
                         </span>
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={TABLE_COLUMNS_COUNT} className="bg-slate-50 px-0 py-0">
+                        <td
+                          colSpan={TABLE_COLUMNS_COUNT}
+                          className="bg-slate-50 px-0 py-0"
+                        >
                           <div className="px-6 py-4">
                             {isLoadingTeams ? (
                               <div className="flex items-center justify-center py-4">
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-900"></div>
-                                <span className="ml-2 text-sm text-slate-600">Teamscores laden...</span>
+                                <span className="ml-2 text-sm text-slate-600">
+                                  Teamscores laden...
+                                </span>
                               </div>
                             ) : projectTeams.length > 0 ? (
                               <div className="space-y-2">
-                                <h4 className="text-sm font-semibold text-slate-700 mb-3">Teamscores</h4>
+                                <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                                  Teamscores
+                                </h4>
                                 <table className="min-w-full divide-y divide-slate-200 text-sm bg-white rounded-lg overflow-hidden">
                                   <thead className="bg-slate-100">
                                     <tr>
-                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Team</th>
-                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Teamleden</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Projectproces</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Eindresultaat</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Communicatie</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Gem. score</th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                                        Team
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                                        Teamleden
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        Projectproces
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        Eindresultaat
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        Communicatie
+                                      </th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                                        Gem. score
+                                      </th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100">
@@ -554,35 +605,65 @@ function ProjectTable({
                                         across all projects. Previously used just team.team_number which could cause
                                         duplicate key warnings if multiple projects had teams with the same number. */}
                                     {projectTeams
-                                      .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
+                                      .sort(
+                                        (a, b) =>
+                                          (b.overall_score || 0) -
+                                          (a.overall_score || 0),
+                                      )
                                       .map((team) => (
-                                        <tr key={`${project.projectId}-team-${team.team_number}`} className="hover:bg-slate-50">
+                                        <tr
+                                          key={`${project.projectId}-team-${team.team_number}`}
+                                          className="hover:bg-slate-50"
+                                        >
                                           <td className="px-3 py-2 text-sm font-medium text-slate-900">
-                                            {team.team_name || `Team ${team.team_number}`}
+                                            {team.team_name ||
+                                              `Team ${team.team_number}`}
                                           </td>
                                           <td className="px-3 py-2 text-sm text-slate-600">
-                                            <div className="max-w-xs truncate" title={team.team_members.join(", ")}>
-                                              {team.team_members.length > 0 ? team.team_members.join(", ") : "—"}
+                                            <div
+                                              className="max-w-xs truncate"
+                                              title={team.team_members.join(
+                                                ", ",
+                                              )}
+                                            >
+                                              {team.team_members.length > 0
+                                                ? team.team_members.join(", ")
+                                                : "—"}
                                             </div>
                                           </td>
                                           <td className="px-3 py-2 text-center">
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.projectproces)}`}>
-                                              {team.category_scores.projectproces?.toFixed(1) || "—"}
+                                            <span
+                                              className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.projectproces)}`}
+                                            >
+                                              {team.category_scores.projectproces?.toFixed(
+                                                1,
+                                              ) || "—"}
                                             </span>
                                           </td>
                                           <td className="px-3 py-2 text-center">
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.eindresultaat)}`}>
-                                              {team.category_scores.eindresultaat?.toFixed(1) || "—"}
+                                            <span
+                                              className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.eindresultaat)}`}
+                                            >
+                                              {team.category_scores.eindresultaat?.toFixed(
+                                                1,
+                                              ) || "—"}
                                             </span>
                                           </td>
                                           <td className="px-3 py-2 text-center">
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.communicatie)}`}>
-                                              {team.category_scores.communicatie?.toFixed(1) || "—"}
+                                            <span
+                                              className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.communicatie)}`}
+                                            >
+                                              {team.category_scores.communicatie?.toFixed(
+                                                1,
+                                              ) || "—"}
                                             </span>
                                           </td>
                                           <td className="px-3 py-2 text-center">
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.overall_score)}`}>
-                                              {team.overall_score?.toFixed(1) || "—"}
+                                            <span
+                                              className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.overall_score)}`}
+                                            >
+                                              {team.overall_score?.toFixed(1) ||
+                                                "—"}
                                             </span>
                                           </td>
                                         </tr>
@@ -591,7 +672,9 @@ function ProjectTable({
                                 </table>
                               </div>
                             ) : (
-                              <p className="text-sm text-slate-500 text-center py-4">Geen teamscores beschikbaar</p>
+                              <p className="text-sm text-slate-500 text-center py-4">
+                                Geen teamscores beschikbaar
+                              </p>
                             )}
                           </div>
                         </td>
@@ -602,7 +685,10 @@ function ProjectTable({
               })}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-slate-500">
+                  <td
+                    colSpan={TABLE_COLUMNS_COUNT}
+                    className="px-4 py-8 text-center text-slate-500"
+                  >
                     Geen projecten gevonden
                   </td>
                 </tr>
@@ -663,7 +749,7 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
             const dataIndex = context.dataIndex;
             const datasetLabel = context.dataset.label || "";
             const value = context.parsed.y;
-            
+
             // Get the trend data point for this data index
             const trendPoint = trendData[dataIndex];
             if (!trendPoint) {
@@ -672,15 +758,15 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 
             // Find category key that matches this dataset
             const categoryKey = Object.keys(CATEGORY_LABELS).find(
-              key => CATEGORY_LABELS[key] === datasetLabel
+              (key) => CATEGORY_LABELS[key] === datasetLabel,
             );
-            
+
             if (!categoryKey || !trendPoint.statistics[categoryKey]) {
               return `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`;
             }
 
             const stats = trendPoint.statistics[categoryKey];
-            
+
             // Build tooltip with statistics
             const lines = [
               `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`,
@@ -689,7 +775,7 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
               `Min-Max: ${stats.min?.toFixed(1) || "—"} - ${stats.max?.toFixed(1) || "—"}`,
               `Teams: ${stats.count_teams || 0}`,
             ];
-            
+
             return lines;
           },
         },
@@ -736,18 +822,20 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       avgByCategory[cat] = scores.reduce((a, b) => a + b, 0) / scores.length;
     });
 
-    const sortedCategories = Object.entries(avgByCategory).sort(([, a], [, b]) => b - a);
+    const sortedCategories = Object.entries(avgByCategory).sort(
+      ([, a], [, b]) => b - a,
+    );
     const highest = sortedCategories[0];
     const lowest = sortedCategories[sortedCategories.length - 1];
 
     if (highest) {
       insightsList.push(
-        `Hoogste gemiddelde categorie: ${CATEGORY_LABELS[highest[0]] || highest[0]} (${highest[1].toFixed(1)})`
+        `Hoogste gemiddelde categorie: ${CATEGORY_LABELS[highest[0]] || highest[0]} (${highest[1].toFixed(1)})`,
       );
     }
     if (lowest && lowest[0] !== highest?.[0]) {
       insightsList.push(
-        `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`
+        `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`,
       );
     }
 
@@ -759,7 +847,9 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 
     trendData.forEach((d) => {
       // Calculate average IQR across categories for this project
-      const iqrs = Object.values(d.statistics).map(s => s.iqr).filter(iqr => iqr !== null && iqr !== undefined) as number[];
+      const iqrs = Object.values(d.statistics)
+        .map((s) => s.iqr)
+        .filter((iqr) => iqr !== null && iqr !== undefined) as number[];
       if (iqrs.length > 0) {
         const avgIqr = iqrs.reduce((a, b) => a + b, 0) / iqrs.length;
         if (avgIqr > maxSpreadValue) {
@@ -775,12 +865,12 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 
     if (maxSpreadProject) {
       insightsList.push(
-        `Grootste spreiding: ${maxSpreadProject} (IQR ${maxSpreadValue.toFixed(1)})`
+        `Grootste spreiding: ${maxSpreadProject} (IQR ${maxSpreadValue.toFixed(1)})`,
       );
     }
     if (minSpreadProject && minSpreadProject !== maxSpreadProject) {
       insightsList.push(
-        `Meest consistente project: ${minSpreadProject} (IQR ${minSpreadValue.toFixed(1)})`
+        `Meest consistente project: ${minSpreadProject} (IQR ${minSpreadValue.toFixed(1)})`,
       );
     }
 
@@ -800,11 +890,13 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       avgIqrByCategory[cat] = iqrs.reduce((a, b) => a + b, 0) / iqrs.length;
     });
 
-    const sortedByVariation = Object.entries(avgIqrByCategory).sort(([, a], [, b]) => b - a);
+    const sortedByVariation = Object.entries(avgIqrByCategory).sort(
+      ([, a], [, b]) => b - a,
+    );
     if (sortedByVariation.length > 0) {
       const [mostVariedCat, avgIqr] = sortedByVariation[0];
       insightsList.push(
-        `Categorie met meeste variatie: ${CATEGORY_LABELS[mostVariedCat] || mostVariedCat} (gem. IQR ${avgIqr.toFixed(1)})`
+        `Categorie met meeste variatie: ${CATEGORY_LABELS[mostVariedCat] || mostVariedCat} (gem. IQR ${avgIqr.toFixed(1)})`,
       );
     }
 
@@ -848,28 +940,40 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
           <div className="h-72">
             <Line data={chartData} options={chartOptions} />
           </div>
-          
+
           {/* Stat Chips - Show statistics for selected category */}
           {selectedCategory !== "all" && trendData.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {(() => {
                 // Calculate overall stats for selected category across all projects
                 const categoryStats = trendData
-                  .map(d => d.statistics[selectedCategory])
-                  .filter(s => s && s.mean !== null && s.mean !== undefined);
-                
+                  .map((d) => d.statistics[selectedCategory])
+                  .filter((s) => s && s.mean !== null && s.mean !== undefined);
+
                 if (categoryStats.length === 0) return null;
-                
-                const avgMean = categoryStats.reduce((sum, s) => sum + (s.mean || 0), 0) / categoryStats.length;
-                const avgMedian = categoryStats.reduce((sum, s) => sum + (s.median || 0), 0) / categoryStats.length;
-                const avgIqr = categoryStats.reduce((sum, s) => sum + (s.iqr || 0), 0) / categoryStats.length;
-                
+
+                const avgMean =
+                  categoryStats.reduce((sum, s) => sum + (s.mean || 0), 0) /
+                  categoryStats.length;
+                const avgMedian =
+                  categoryStats.reduce((sum, s) => sum + (s.median || 0), 0) /
+                  categoryStats.length;
+                const avgIqr =
+                  categoryStats.reduce((sum, s) => sum + (s.iqr || 0), 0) /
+                  categoryStats.length;
+
                 // Find overall min and max
-                const allMins = categoryStats.map(s => s.min).filter(v => v !== null) as number[];
-                const allMaxs = categoryStats.map(s => s.max).filter(v => v !== null) as number[];
-                const overallMin = allMins.length > 0 ? Math.min(...allMins) : null;
-                const overallMax = allMaxs.length > 0 ? Math.max(...allMaxs) : null;
-                
+                const allMins = categoryStats
+                  .map((s) => s.min)
+                  .filter((v) => v !== null) as number[];
+                const allMaxs = categoryStats
+                  .map((s) => s.max)
+                  .filter((v) => v !== null) as number[];
+                const overallMin =
+                  allMins.length > 0 ? Math.min(...allMins) : null;
+                const overallMax =
+                  allMaxs.length > 0 ? Math.max(...allMaxs) : null;
+
                 return (
                   <>
                     <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
@@ -908,7 +1012,8 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
           </ul>
         ) : (
           <p className="text-sm text-gray-500 italic">
-            Nog geen inzichten beschikbaar. Data wordt weergegeven zodra er beoordelingen zijn.
+            Nog geen inzichten beschikbaar. Data wordt weergegeven zodra er
+            beoordelingen zijn.
           </p>
         )}
       </div>
@@ -924,7 +1029,7 @@ export default function ProjectOverviewTab() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  
+
   // Initialize filter values from URL
   const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
     academicYear: searchParams.get("year") || undefined,
@@ -932,50 +1037,55 @@ export default function ProjectOverviewTab() {
     period: searchParams.get("period") || PERIODS[0],
     searchQuery: searchParams.get("q") || undefined,
   });
-  
+
   const [filters, setFilters] = useState<ProjectOverviewFilters>({
     schoolYear: filterValues.academicYear || "",
     courseId: filterValues.courseId || "",
     period: filterValues.period || PERIODS[0],
   });
 
-  const [academicYears, setAcademicYears] = useState<Array<{label: string; id: number}>>([]);
-  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
+  const [academicYears, setAcademicYears] = useState<
+    Array<{ label: string; id: number }>
+  >([]);
+  const [courses, setCourses] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
   const [loadingOptions, setLoadingOptions] = useState(true);
 
-  const { projects, trendData, loading, error } = useProjectOverviewData(filters);
-  
+  const { projects, trendData, loading, error } =
+    useProjectOverviewData(filters);
+
   // Sync URL with filter values
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     if (filterValues.academicYear) {
       params.set("year", filterValues.academicYear);
     } else {
       params.delete("year");
     }
-    
+
     if (filterValues.courseId) {
       params.set("subjectId", filterValues.courseId);
     } else {
       params.delete("subjectId");
     }
-    
+
     if (filterValues.period && filterValues.period !== PERIODS[0]) {
       params.set("period", filterValues.period);
     } else {
       params.delete("period");
     }
-    
+
     if (filterValues.searchQuery) {
       params.set("q", filterValues.searchQuery);
     } else {
       params.delete("q");
     }
-    
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [filterValues, pathname, router, searchParams]);
-  
+
   // Update internal filters when filterValues change
   useEffect(() => {
     setFilters({
@@ -996,11 +1106,15 @@ export default function ProjectOverviewTab() {
         ]);
         setAcademicYears(years);
         setCourses(coursesData);
-        
+
         // Only set default if no year is selected AND years are available
         // This respects the URL as single source of truth
-        if (years.length > 0 && !filterValues.academicYear && !searchParams.get("year")) {
-          setFilterValues(prev => ({
+        if (
+          years.length > 0 &&
+          !filterValues.academicYear &&
+          !searchParams.get("year")
+        ) {
+          setFilterValues((prev) => ({
             ...prev,
             academicYear: years[0].label,
           }));
@@ -1018,9 +1132,9 @@ export default function ProjectOverviewTab() {
   const handleFilterChange = (newFilters: OverviewFilterValues) => {
     setFilterValues(newFilters);
   };
-  
+
   // Map periods to the format expected by OverviewFilters
-  const periodOptions = PERIODS.map(p => ({ value: p, label: p }));
+  const periodOptions = PERIODS.map((p) => ({ value: p, label: p }));
 
   // Show empty state if no course selected
   if (!filterValues.courseId) {
@@ -1087,7 +1201,7 @@ export default function ProjectOverviewTab() {
           Overzicht van projectbeoordelingen en trends
         </p>
       </div>
-      
+
       {/* Global Filter Bar */}
       <OverviewFilters
         filters={filterValues}
@@ -1105,15 +1219,14 @@ export default function ProjectOverviewTab() {
       {/* Project Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
-          <h3 className="text-base font-semibold text-slate-900 leading-6">Projecten</h3>
+          <h3 className="text-base font-semibold text-slate-900 leading-6">
+            Projecten
+          </h3>
           <p className="text-sm text-slate-600">
             Klik op een project om teamscores te bekijken
           </p>
         </div>
-        <ProjectTable
-          projects={projects}
-          loading={loading}
-        />
+        <ProjectTable projects={projects} loading={loading} />
       </div>
 
       {/* Category Trend Section */}

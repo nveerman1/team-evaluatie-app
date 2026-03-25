@@ -34,15 +34,15 @@ export default function AnalyseTabPage() {
   // Calculate category averages (must be called before early returns)
   const categoryAverages = useMemo(() => {
     if (!heatmap) return [];
-    
+
     const categoryScores: Record<string, { total: number; count: number }> = {};
-    
+
     heatmap.competencies.forEach((comp) => {
       const category = comp.category_name || comp.category || "Overig";
       if (!categoryScores[category]) {
         categoryScores[category] = { total: 0, count: 0 };
       }
-      
+
       heatmap.rows.forEach((row) => {
         const score = row.scores[comp.id];
         if (score !== undefined) {
@@ -70,7 +70,7 @@ export default function AnalyseTabPage() {
   // Calculate overall class average per competency (must be called before early returns)
   const competencyAverages = useMemo(() => {
     if (!heatmap) return [];
-    
+
     return heatmap.competencies.map((comp) => {
       let total = 0;
       let count = 0;
@@ -112,7 +112,9 @@ export default function AnalyseTabPage() {
 
       {/* Radar diagram */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Radardiagram - Klasgemiddelden per categorie</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Radardiagram - Klasgemiddelden per categorie
+        </h2>
         <div className="flex flex-col md:flex-row gap-8">
           {/* Radar chart */}
           <div className="flex-1 min-h-[250px] flex items-center justify-center">
@@ -144,10 +146,12 @@ export default function AnalyseTabPage() {
               </div>
             )}
           </div>
-          
+
           {/* Category scores table */}
           <div className="flex-1 flex flex-col justify-center">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Scores per categorie</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">
+              Scores per categorie
+            </h3>
             <div className="space-y-3">
               {categoryAverages
                 .sort((a, b) => b.average - a.average)
@@ -162,8 +166,8 @@ export default function AnalyseTabPage() {
                           item.average >= 4
                             ? "bg-green-500"
                             : item.average >= 3
-                            ? "bg-blue-500"
-                            : "bg-orange-500"
+                              ? "bg-blue-500"
+                              : "bg-orange-500"
                         }`}
                         style={{ width: `${(item.average / 5) * 100}%` }}
                       />
@@ -181,7 +185,9 @@ export default function AnalyseTabPage() {
       {/* Competency averages table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-lg font-semibold text-slate-900">Gemiddelde scores per competentie</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Gemiddelde scores per competentie
+          </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -206,8 +212,12 @@ export default function AnalyseTabPage() {
                 .sort((a, b) => b.average - a.average)
                 .map((item) => (
                   <tr key={item.id} className="bg-white hover:bg-slate-50">
-                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">{item.name}</td>
-                    <td className="px-5 py-3 text-sm text-slate-600">{item.category}</td>
+                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                      {item.name}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-600">
+                      {item.category}
+                    </td>
                     <td className="px-4 py-3 text-center text-sm text-slate-600">
                       {item.count} / {heatmap.rows.length}
                     </td>
@@ -218,8 +228,8 @@ export default function AnalyseTabPage() {
                             item.average >= 4
                               ? "bg-green-100 text-green-700"
                               : item.average >= 3
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-orange-100 text-orange-700"
                           }`}
                         >
                           {item.average.toFixed(1)}

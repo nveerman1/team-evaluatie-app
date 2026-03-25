@@ -1,7 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
-import { projectAssessmentService, rubricService, projectService } from "@/services";
+import {
+  projectAssessmentService,
+  rubricService,
+  projectService,
+} from "@/services";
 import { RubricListItem, ProjectAssessmentCreate } from "@/dtos";
 import { ApiAuthError } from "@/lib/api";
 import { Loading, ErrorMessage } from "@/components";
@@ -27,7 +31,7 @@ export default function CreateProjectAssessmentInner() {
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
     if (typeof courseId !== "number") return [];
-    return projects.filter(p => p.course_id === Number(courseId));
+    return projects.filter((p) => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
   useEffect(() => {
@@ -106,7 +110,9 @@ export default function CreateProjectAssessmentInner() {
         className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-5"
       >
         {error && (
-          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">{error}</div>
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+            {error}
+          </div>
         )}
 
         <div className="space-y-1">
@@ -216,7 +222,12 @@ export default function CreateProjectAssessmentInner() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={saving || rubrics.length === 0 || courses.length === 0 || !courseId}
+            disabled={
+              saving ||
+              rubrics.length === 0 ||
+              courses.length === 0 ||
+              !courseId
+            }
             className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan & verder"}

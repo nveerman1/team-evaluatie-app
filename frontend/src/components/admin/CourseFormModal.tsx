@@ -46,7 +46,7 @@ export default function CourseFormModal({
       console.error("Failed to create course:", err);
       setError(
         err?.response?.data?.detail ||
-          "Kon vak niet aanmaken. Probeer het opnieuw."
+          "Kon vak niet aanmaken. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);

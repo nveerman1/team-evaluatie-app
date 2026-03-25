@@ -15,11 +15,11 @@ export const projectTeamService = {
    */
   async listProjectTeams(
     projectId: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ProjectTeamListResponse> {
     const response = await api.get<ProjectTeamListResponse>(
       `/project-teams/projects/${projectId}/teams`,
-      { signal }
+      { signal },
     );
     return response.data;
   },
@@ -29,11 +29,11 @@ export const projectTeamService = {
    */
   async getProjectStudents(
     projectId: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ProjectStudent[]> {
     const response = await api.get<ProjectStudent[]>(
       `/project-teams/projects/${projectId}/students`,
-      { signal }
+      { signal },
     );
     return response.data;
   },
@@ -43,11 +43,11 @@ export const projectTeamService = {
    */
   async getProjectTeamMembers(
     projectTeamId: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ProjectTeamMember[]> {
     const response = await api.get<ProjectTeamMember[]>(
       `/project-teams/${projectTeamId}/members`,
-      { signal }
+      { signal },
     );
     return response.data;
   },
@@ -57,11 +57,11 @@ export const projectTeamService = {
    */
   async createProjectTeam(
     projectId: number,
-    data: ProjectTeamCreate
+    data: ProjectTeamCreate,
   ): Promise<ProjectTeam> {
     const response = await api.post<ProjectTeam>(
       `/project-teams/projects/${projectId}/teams`,
-      data
+      data,
     );
     return response.data;
   },
@@ -71,10 +71,10 @@ export const projectTeamService = {
    */
   async cloneProjectTeams(
     targetProjectId: number,
-    sourceProjectId: number
+    sourceProjectId: number,
   ): Promise<CloneProjectTeamsResponse> {
     const response = await api.post<CloneProjectTeamsResponse>(
-      `/project-teams/projects/${targetProjectId}/teams/clone-from/${sourceProjectId}`
+      `/project-teams/projects/${targetProjectId}/teams/clone-from/${sourceProjectId}`,
     );
     return response.data;
   },
@@ -84,11 +84,11 @@ export const projectTeamService = {
    */
   async addProjectTeamMembers(
     projectTeamId: number,
-    data: BulkAddMembersRequest
+    data: BulkAddMembersRequest,
   ): Promise<ProjectTeamMember[]> {
     const response = await api.post<ProjectTeamMember[]>(
       `/project-teams/${projectTeamId}/members`,
-      data
+      data,
     );
     return response.data;
   },
@@ -98,11 +98,11 @@ export const projectTeamService = {
    */
   async updateProjectStudentTeams(
     projectId: number,
-    updates: Array<{ student_id: number; team_number: number | null }>
+    updates: Array<{ student_id: number; team_number: number | null }>,
   ): Promise<{ status: string; updated: number }> {
     const response = await api.patch<{ status: string; updated: number }>(
       `/project-teams/projects/${projectId}/student-teams`,
-      updates
+      updates,
     );
     return response.data;
   },

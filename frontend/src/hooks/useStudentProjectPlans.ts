@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { projectPlanService } from '@/services/projectplan.service';
-import { ProjectPlanDetail } from '@/dtos/projectplan.dto';
+import { useState, useEffect } from "react";
+import { projectPlanService } from "@/services/projectplan.service";
+import { ProjectPlanDetail } from "@/dtos/projectplan.dto";
 
 export function useStudentProjectPlans() {
   const [projectPlans, setProjectPlans] = useState<ProjectPlanDetail[]>([]);
@@ -14,7 +14,11 @@ export function useStudentProjectPlans() {
       const data = await projectPlanService.listMyProjectPlans();
       setProjectPlans(data);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || 'Failed to load projectplans');
+      setError(
+        e?.response?.data?.detail ||
+          e?.message ||
+          "Failed to load projectplans",
+      );
     } finally {
       setLoading(false);
     }
@@ -24,10 +28,10 @@ export function useStudentProjectPlans() {
     fetchProjectPlans();
   }, []);
 
-  return { 
-    projectPlans, 
-    loading, 
-    error, 
-    refetch: fetchProjectPlans 
+  return {
+    projectPlans,
+    loading,
+    error,
+    refetch: fetchProjectPlans,
   };
 }

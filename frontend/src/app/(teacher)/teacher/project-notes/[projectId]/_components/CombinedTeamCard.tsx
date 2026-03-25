@@ -17,7 +17,10 @@ interface CombinedTeamCardProps {
   courseTeachers: TeacherCourse[];
   teamTitle: string;
   teamResponsibleTeacherId: number | null;
-  onTeamMetaChange: (teamId: number, patch: { title?: string; responsibleTeacherId?: number | null }) => void;
+  onTeamMetaChange: (
+    teamId: number,
+    patch: { title?: string; responsibleTeacherId?: number | null },
+  ) => void;
   initialOpen?: boolean;
   onNoteSaved: () => void;
 }
@@ -48,7 +51,12 @@ const QUICK_NOTES_STUDENT: { text: string; omza: string | null }[] = [
 ];
 
 // OMZA categories
-const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+const OMZA_CATEGORIES = [
+  "Organiseren",
+  "Meedoen",
+  "Zelfvertrouwen",
+  "Autonomie",
+];
 
 export function CombinedTeamCard({
   contextId,
@@ -68,16 +76,24 @@ export function CombinedTeamCard({
   const [saving, setSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(initialOpen);
   const [filter, setFilter] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
+    null,
+  );
   const [omzaTags, setOmzaTags] = useState<string[]>([]);
 
   // Local editable state for team metadata
   const [localTitle, setLocalTitle] = useState(teamTitle);
-  const [localTeacherId, setLocalTeacherId] = useState<number | null>(teamResponsibleTeacherId);
+  const [localTeacherId, setLocalTeacherId] = useState<number | null>(
+    teamResponsibleTeacherId,
+  );
 
   // Keep local state in sync if props change (e.g. after parent reload)
-  useEffect(() => { setLocalTitle(teamTitle); }, [teamTitle]);
-  useEffect(() => { setLocalTeacherId(teamResponsibleTeacherId); }, [teamResponsibleTeacherId]);
+  useEffect(() => {
+    setLocalTitle(teamTitle);
+  }, [teamTitle]);
+  useEffect(() => {
+    setLocalTeacherId(teamResponsibleTeacherId);
+  }, [teamResponsibleTeacherId]);
 
   // Update isOpen when initialOpen changes (e.g., when search matches)
   useEffect(() => {
@@ -87,8 +103,8 @@ export function CombinedTeamCard({
   }, [initialOpen]);
 
   const toggleOmza = (tag: string) => {
-    setOmzaTags(prev => 
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    setOmzaTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -106,7 +122,7 @@ export function CombinedTeamCard({
   const formatSnippet = (baseText: string, isStudent: boolean) => {
     const tags: string[] = [];
     if (isStudent && filter) tags.push(`#${filter}`);
-    if (omzaTags.length) tags.push(...omzaTags.map(t => `#${t}`));
+    if (omzaTags.length) tags.push(...omzaTags.map((t) => `#${t}`));
     const tagBlock = tags.length ? `[${tags.join("][")}]` : "";
     const trimmedText = baseText.trim();
     if (!tagBlock && !trimmedText) return "";
@@ -115,7 +131,11 @@ export function CombinedTeamCard({
     return `${tagBlock} – ${trimmedText}`;
   };
 
-  const saveQuick = (text: string, omzaTag: string | null, isStudent: boolean = false) => {
+  const saveQuick = (
+    text: string,
+    omzaTag: string | null,
+    isStudent: boolean = false,
+  ) => {
     if (!isOpen) setIsOpen(true);
     // Set the OMZA tag if provided
     if (omzaTag && !omzaTags.includes(omzaTag)) {
@@ -125,18 +145,18 @@ export function CombinedTeamCard({
     if (!line) {
       return;
     }
-    setNote(prev => prev.trim() ? `${prev.trim()}\n${line}` : line);
+    setNote((prev) => (prev.trim() ? `${prev.trim()}\n${line}` : line));
   };
 
   const saveNote = async () => {
     if (!note.trim()) return;
-    
+
     try {
       setSaving(true);
-      
+
       // Determine if this is a student note or team note
       const isStudentNote = selectedStudentId !== null;
-      
+
       await projectNotesService.createNote(contextId, {
         note_type: isStudentNote ? "student" : "team",
         // Only pass team_id for team notes, not for student notes
@@ -150,11 +170,11 @@ export function CombinedTeamCard({
         is_portfolio_evidence: false,
         metadata: { omza_tags: omzaTags },
       });
-      
+
       // Reset form
       setNote("");
       setOmzaTags([]);
-      
+
       // Notify parent to refresh notes
       onNoteSaved();
     } catch (error) {
@@ -166,10 +186,12 @@ export function CombinedTeamCard({
   };
 
   // Get the team display name
-  const teamDisplayName = team.team_number ? `Team ${team.team_number}` : team.name;
+  const teamDisplayName = team.team_number
+    ? `Team ${team.team_number}`
+    : team.name;
 
   return (
-    <article 
+    <article
       id={`team-${team.id}`}
       className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
     >
@@ -181,7 +203,9 @@ export function CombinedTeamCard({
           className="text-left shrink-0"
           aria-label={`${teamDisplayName} ${isOpen ? "inklappen" : "uitklappen"}`}
         >
-          <h3 className="text-sm font-semibold text-slate-900 whitespace-nowrap">{teamDisplayName}</h3>
+          <h3 className="text-sm font-semibold text-slate-900 whitespace-nowrap">
+            {teamDisplayName}
+          </h3>
         </button>
 
         {/* Inline editable project title */}
@@ -194,7 +218,12 @@ export function CombinedTeamCard({
               onTeamMetaChange(team.id, { title: localTitle });
             }
           }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+          }}
           placeholder="Projecttitel…"
           className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-b border-transparent hover:border-slate-400 focus:border-blue-500 focus:outline-none px-1 py-0.5 text-slate-800 placeholder:font-normal placeholder:text-slate-400"
           title="Klik om de projecttitel in te stellen"
@@ -222,18 +251,27 @@ export function CombinedTeamCard({
 
         {/* Toggle indicator */}
         <div className="flex items-center gap-1 shrink-0">
-          {saving && <span className="text-[10px] text-green-600">Opgeslagen ✓</span>}
-          <button onClick={() => setIsOpen(!isOpen)} aria-label={isOpen ? "Inklappen" : "Uitklappen"}>
-            <span className={`inline-block transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}>▸</span>
+          {saving && (
+            <span className="text-[10px] text-green-600">Opgeslagen ✓</span>
+          )}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? "Inklappen" : "Uitklappen"}
+          >
+            <span
+              className={`inline-block transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}
+            >
+              ▸
+            </span>
           </button>
         </div>
       </div>
-      
+
       {/* Content area with padding */}
       <div className="p-4 space-y-4">
         {/* Student pills */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {students.map(student => (
+          {students.map((student) => (
             <StudentPill
               key={student.id}
               name={student.name}
@@ -246,7 +284,7 @@ export function CombinedTeamCard({
         {/* Team quick notes - visible only when no student is selected */}
         {!filter && (
           <div className="flex flex-wrap gap-1.5 text-[11px]">
-            {QUICK_NOTES_TEAM.map(n => (
+            {QUICK_NOTES_TEAM.map((n) => (
               <button
                 key={n.text}
                 onClick={() => saveQuick(n.text, n.omza, false)}
@@ -262,7 +300,7 @@ export function CombinedTeamCard({
         {/* Student quick notes - only visible when a student is selected */}
         {filter && (
           <div className="flex flex-wrap gap-1.5 text-[11px]">
-            {QUICK_NOTES_STUDENT.map(n => (
+            {QUICK_NOTES_STUDENT.map((n) => (
               <button
                 key={n.text}
                 onClick={() => saveQuick(n.text, n.omza, true)}
@@ -281,14 +319,14 @@ export function CombinedTeamCard({
             {/* Note textarea */}
             <textarea
               value={note}
-              onChange={e => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value)}
               placeholder="Korte observatie..."
               className="w-full min-h-[80px] rounded-xl border border-slate-300 px-3 py-2 text-sm"
             />
-            
+
             {/* OMZA tags */}
             <div className="flex flex-wrap gap-2 text-xs">
-              {OMZA_CATEGORIES.map(tag => (
+              {OMZA_CATEGORIES.map((tag) => (
                 <button
                   key={tag}
                   onClick={() => toggleOmza(tag)}
@@ -302,7 +340,7 @@ export function CombinedTeamCard({
                 </button>
               ))}
             </div>
-            
+
             {/* Save button */}
             <button
               onClick={saveNote}
@@ -311,7 +349,7 @@ export function CombinedTeamCard({
             >
               {saving ? "Opslaan..." : "Notitie opslaan"}
             </button>
-            
+
             {/* Notes feed */}
             <NotesOverviewAll
               teamName={teamDisplayName}

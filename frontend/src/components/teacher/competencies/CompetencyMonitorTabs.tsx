@@ -4,28 +4,46 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { id: "heatmap", label: "Heatmap", href: (id: string) => `/teacher/competencies/windows/${id}` },
-  { id: "leerdoelen", label: "Leerdoelen", href: (id: string) => `/teacher/competencies/windows/${id}/leerdoelen` },
-  { id: "reflecties", label: "Reflecties", href: (id: string) => `/teacher/competencies/windows/${id}/reflecties` },
-  { id: "analyse", label: "Analyse", href: (id: string) => `/teacher/competencies/windows/${id}/analyse` },
+  {
+    id: "heatmap",
+    label: "Heatmap",
+    href: (id: string) => `/teacher/competencies/windows/${id}`,
+  },
+  {
+    id: "leerdoelen",
+    label: "Leerdoelen",
+    href: (id: string) => `/teacher/competencies/windows/${id}/leerdoelen`,
+  },
+  {
+    id: "reflecties",
+    label: "Reflecties",
+    href: (id: string) => `/teacher/competencies/windows/${id}/reflecties`,
+  },
+  {
+    id: "analyse",
+    label: "Analyse",
+    href: (id: string) => `/teacher/competencies/windows/${id}/analyse`,
+  },
 ];
 
 type CompetencyMonitorTabsProps = {
   windowId: string;
 };
 
-export function CompetencyMonitorTabs({ windowId }: CompetencyMonitorTabsProps) {
+export function CompetencyMonitorTabs({
+  windowId,
+}: CompetencyMonitorTabsProps) {
   const pathname = usePathname();
 
   // Determine active tab based on pathname
   const getActiveTab = () => {
     if (!pathname) return "heatmap";
-    
+
     // Check for specific tab paths
     if (pathname.includes("/leerdoelen")) return "leerdoelen";
     if (pathname.includes("/reflecties")) return "reflecties";
     if (pathname.includes("/analyse")) return "analyse";
-    
+
     // Default to heatmap for base path
     return "heatmap";
   };
@@ -41,7 +59,9 @@ export function CompetencyMonitorTabs({ windowId }: CompetencyMonitorTabsProps) 
             <Link
               key={tab.id}
               href={tab.href(windowId)}
-              prefetch={process.env.NODE_ENV === "production" ? false : undefined}
+              prefetch={
+                process.env.NODE_ENV === "production" ? false : undefined
+              }
               className={`
                 py-4 px-1 border-b-2 font-medium text-sm transition-colors
                 ${

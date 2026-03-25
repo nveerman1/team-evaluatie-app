@@ -52,7 +52,7 @@ export default function LinkStudentToCourseModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedCourseName) {
       setError("Selecteer een vak");
       return;
@@ -81,14 +81,17 @@ export default function LinkStudentToCourseModal({
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Koppel leerling aan vak
           </h2>
-          
+
           <p className="text-sm text-gray-600 mb-6">
             Koppel <strong>{studentName}</strong> aan een vak
           </p>
 
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
-              <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="course"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Selecteer vak *
               </label>
               {loadingCourses ? (

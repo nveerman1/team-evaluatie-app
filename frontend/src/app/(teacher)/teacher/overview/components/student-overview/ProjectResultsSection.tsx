@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { overviewService } from "@/services/overview.service";
-import type { ProjectOverviewItem, ProjectTeamScore } from "@/dtos/overview.dto";
+import type {
+  ProjectOverviewItem,
+  ProjectTeamScore,
+} from "@/dtos/overview.dto";
 
 interface ProjectResultsSectionProps {
   studentId: number;
@@ -39,35 +42,44 @@ interface StudentProjectResult {
   overall_score: number | null;
 }
 
-export function ProjectResultsSection({ studentId, studentName, courseId }: ProjectResultsSectionProps) {
-  const [studentResults, setStudentResults] = useState<StudentProjectResult[]>([]);
+export function ProjectResultsSection({
+  studentId,
+  studentName,
+  courseId,
+}: ProjectResultsSectionProps) {
+  const [studentResults, setStudentResults] = useState<StudentProjectResult[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStudentProjects() {
       try {
         setLoading(true);
-        
+
         // First, get all projects for the course
         const projectsResponse = await overviewService.getProjectOverview({
           courseId: String(courseId),
         });
-        
+
         // Then for each project, get team details to find student
         const results: StudentProjectResult[] = [];
-        
+
         for (const project of projectsResponse.projects) {
           try {
-            const teamsResponse = await overviewService.getProjectTeams(project.project_id);
-            
-            // Find the team that contains this student by name
-            const studentTeam = teamsResponse.teams.find(team => 
-              team.team_members.some(member => 
-                member.toLowerCase().includes(studentName.toLowerCase()) ||
-                studentName.toLowerCase().includes(member.toLowerCase())
-              )
+            const teamsResponse = await overviewService.getProjectTeams(
+              project.project_id,
             );
-            
+
+            // Find the team that contains this student by name
+            const studentTeam = teamsResponse.teams.find((team) =>
+              team.team_members.some(
+                (member) =>
+                  member.toLowerCase().includes(studentName.toLowerCase()) ||
+                  studentName.toLowerCase().includes(member.toLowerCase()),
+              ),
+            );
+
             if (studentTeam) {
               results.push({
                 project_id: project.project_id,
@@ -77,17 +89,22 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                 team_number: studentTeam.team_number,
                 team_name: studentTeam.team_name ?? null,
                 team_members: studentTeam.team_members,
-                projectproces: studentTeam.category_scores.projectproces ?? null,
-                eindresultaat: studentTeam.category_scores.eindresultaat ?? null,
+                projectproces:
+                  studentTeam.category_scores.projectproces ?? null,
+                eindresultaat:
+                  studentTeam.category_scores.eindresultaat ?? null,
                 communicatie: studentTeam.category_scores.communicatie ?? null,
                 overall_score: studentTeam.overall_score ?? null,
               });
             }
           } catch (error) {
-            console.error(`Error fetching teams for project ${project.project_id}:`, error);
+            console.error(
+              `Error fetching teams for project ${project.project_id}:`,
+              error,
+            );
           }
         }
-        
+
         setStudentResults(results);
       } catch (error) {
         console.error("Error fetching student projects:", error);
@@ -102,7 +119,9 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Projectresultaten</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Projectresultaten
+        </h3>
         <div className="animate-pulse space-y-2">
           <div className="h-10 bg-gray-200 rounded"></div>
           <div className="h-10 bg-gray-200 rounded"></div>
@@ -113,10 +132,14 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Projectresultaten</h3>
-      
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Projectresultaten
+      </h3>
+
       {studentResults.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen projectresultaten gevonden</p>
+        <p className="text-gray-500 text-center py-4">
+          Geen projectresultaten gevonden
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
@@ -137,13 +160,22 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                 <th className="w-[18%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Teamleden
                 </th>
-                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Projectproces">
+                <th
+                  className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider"
+                  title="Projectproces"
+                >
                   Proces
                 </th>
-                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Eindresultaat">
+                <th
+                  className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider"
+                  title="Eindresultaat"
+                >
                   Resultaat
                 </th>
-                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Communicatie">
+                <th
+                  className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider"
+                  title="Communicatie"
+                >
                   Communicatie
                 </th>
                 <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -161,20 +193,25 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                     {result.period_label}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    <div className="line-clamp-2">{result.client_name || "-"}</div>
+                    <div className="line-clamp-2">
+                      {result.client_name || "-"}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 text-center">
                     {result.team_number}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    <div className="line-clamp-2" title={result.team_members.join(", ")}>
+                    <div
+                      className="line-clamp-2"
+                      title={result.team_members.join(", ")}
+                    >
                       {result.team_members.join(", ")}
                     </div>
                   </td>
                   <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
-                        result.projectproces
+                        result.projectproces,
                       )}`}
                     >
                       {formatScore(result.projectproces)}
@@ -183,7 +220,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                   <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
-                        result.eindresultaat
+                        result.eindresultaat,
                       )}`}
                     >
                       {formatScore(result.eindresultaat)}
@@ -192,7 +229,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                   <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
-                        result.communicatie
+                        result.communicatie,
                       )}`}
                     >
                       {formatScore(result.communicatie)}
@@ -201,7 +238,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                   <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
-                        result.overall_score
+                        result.overall_score,
                       )}`}
                     >
                       {formatScore(result.overall_score)}

@@ -36,18 +36,18 @@ export default function AddCourseToSubjectModal({
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get all active courses
       const response = await courseService.listCourses({
         is_active: true,
         per_page: 100,
       });
-      
+
       // Filter out courses that are already linked to this subject
       const available = response.courses.filter(
-        (course) => !existingCourseIds.includes(course.id)
+        (course) => !existingCourseIds.includes(course.id),
       );
-      
+
       setAvailableCourses(available);
       setSelectedCourseId(available.length > 0 ? available[0].id : null);
     } catch (err) {
@@ -60,7 +60,7 @@ export default function AddCourseToSubjectModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedCourseId) {
       setError("Selecteer een course");
       return;
@@ -76,7 +76,7 @@ export default function AddCourseToSubjectModal({
       console.error("Failed to add course:", err);
       setError(
         err?.response?.data?.detail ||
-          "Kon course niet toevoegen. Probeer het opnieuw."
+          "Kon course niet toevoegen. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);
@@ -85,9 +85,11 @@ export default function AddCourseToSubjectModal({
 
   if (!isOpen) return null;
 
-  const filteredCourses = availableCourses.filter((course) =>
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (course.code && course.code.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredCourses = availableCourses.filter(
+    (course) =>
+      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (course.code &&
+        course.code.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   return (

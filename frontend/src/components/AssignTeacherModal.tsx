@@ -10,10 +10,7 @@ interface AssignTeacherModalProps {
   courseName: string;
   onClose: () => void;
   onSuccess: () => void;
-  assignTeacher: (
-    courseId: number,
-    data: TeacherCourseCreate
-  ) => Promise<any>;
+  assignTeacher: (courseId: number, data: TeacherCourseCreate) => Promise<any>;
 }
 
 export default function AssignTeacherModal({
@@ -45,18 +42,18 @@ export default function AssignTeacherModal({
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await teacherService.listTeachers({
           search: searchTerm,
           role: "teacher", // Only search for teachers, admins cannot be assigned to courses
           per_page: 20,
         });
-        
+
         // Filter out already selected teachers
         const filtered = response.teachers.filter(
-          (teacher) => !selectedTeachers.find((t) => t.id === teacher.id)
+          (teacher) => !selectedTeachers.find((t) => t.id === teacher.id),
         );
-        
+
         setTeachers(filtered);
       } catch (err) {
         console.error("Failed to load teachers:", err);
@@ -89,7 +86,7 @@ export default function AssignTeacherModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (selectedTeachers.length === 0) {
       setError("Selecteer minimaal één docent");
       return;
@@ -111,7 +108,7 @@ export default function AssignTeacherModal({
       console.error("Failed to assign teacher:", err);
       setError(
         err?.response?.data?.detail ||
-          "Kon docent(en) niet toewijzen. Probeer het opnieuw."
+          "Kon docent(en) niet toewijzen. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);
@@ -134,9 +131,7 @@ export default function AssignTeacherModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Docent toewijzen
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900">Docent toewijzen</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -158,7 +153,8 @@ export default function AssignTeacherModal({
         </div>
 
         <p className="mb-4 text-gray-600">
-          Wijs één of meerdere docenten toe aan <span className="font-semibold">{courseName}</span>
+          Wijs één of meerdere docenten toe aan{" "}
+          <span className="font-semibold">{courseName}</span>
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -183,7 +179,7 @@ export default function AssignTeacherModal({
               placeholder="Type minimaal 2 karakters om te zoeken..."
               className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            
+
             {/* Dropdown with search results */}
             {showDropdown && searchTerm.length >= 2 && (
               <div
@@ -278,7 +274,9 @@ export default function AssignTeacherModal({
             <select
               id="role"
               value={role}
-              onChange={(e) => setRole(e.target.value as "teacher" | "coordinator")}
+              onChange={(e) =>
+                setRole(e.target.value as "teacher" | "coordinator")
+              }
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="teacher">Docent</option>
@@ -309,7 +307,9 @@ export default function AssignTeacherModal({
               disabled={submitting || selectedTeachers.length === 0}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? "Toewijzen..." : `${selectedTeachers.length} docent${selectedTeachers.length !== 1 ? 'en' : ''} toewijzen`}
+              {submitting
+                ? "Toewijzen..."
+                : `${selectedTeachers.length} docent${selectedTeachers.length !== 1 ? "en" : ""} toewijzen`}
             </button>
           </div>
         </form>

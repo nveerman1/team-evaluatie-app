@@ -26,7 +26,7 @@ export function ProjectFeedbackDashboardTab() {
             } catch {
               return null;
             }
-          })
+          }),
         );
         setSubmittedIds(new Set(checked.filter(Boolean) as number[]));
       } catch (e: any) {
@@ -48,9 +48,12 @@ export function ProjectFeedbackDashboardTab() {
       {/* Card header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Projectevaluatie</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Projectevaluatie
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {openCount} open {openCount === 1 ? "evaluatie" : "evaluaties"} — geef feedback over de projecten waarbij jij betrokken was.
+            {openCount} open {openCount === 1 ? "evaluatie" : "evaluaties"} —
+            geef feedback over de projecten waarbij jij betrokken was.
           </p>
         </div>
       </div>
@@ -83,14 +86,20 @@ export function ProjectFeedbackDashboardTab() {
                   <div className="flex w-full flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-slate-900">{round.title}</h3>
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}>
+                        <h3 className="text-base font-semibold text-slate-900">
+                          {round.title}
+                        </h3>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}
+                        >
                           {statusLabel}
                         </span>
                       </div>
 
                       {round.course_name && (
-                        <div className="mt-1 text-sm text-slate-500">{round.course_name}</div>
+                        <div className="mt-1 text-sm text-slate-500">
+                          {round.course_name}
+                        </div>
                       )}
 
                       <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">

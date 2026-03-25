@@ -17,7 +17,7 @@ export class ApiException extends Error {
   constructor(
     message: string,
     public status?: number,
-    public detail?: string
+    public detail?: string,
   ) {
     super(message);
     this.name = "ApiException";

@@ -77,22 +77,26 @@ export const adminStudentService = {
   /**
    * List students with filtering and pagination
    */
-  async listStudents(params: AdminStudentListParams = {}): Promise<AdminStudentListResponse> {
+  async listStudents(
+    params: AdminStudentListParams = {},
+  ): Promise<AdminStudentListResponse> {
     // Filter out undefined, null, and empty string values to avoid sending them as query parameters
     const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => 
-        value !== undefined && value !== null && value !== ""
-      )
+      Object.entries(params).filter(
+        ([_, value]) => value !== undefined && value !== null && value !== "",
+      ),
     );
-    
-    const response = await api.get<AdminStudent[]>("/admin/students", { params: cleanParams });
-    
+
+    const response = await api.get<AdminStudent[]>("/admin/students", {
+      params: cleanParams,
+    });
+
     // Extract total count from X-Total-Count header (case-insensitive)
-    const totalCount = 
-      response.headers?.["x-total-count"] || 
+    const totalCount =
+      response.headers?.["x-total-count"] ||
       response.headers?.["X-Total-Count"];
     const total = totalCount ? parseInt(totalCount, 10) : response.data.length;
-    
+
     return {
       students: response.data,
       total,
@@ -110,7 +114,10 @@ export const adminStudentService = {
   /**
    * Update an existing student
    */
-  async updateStudent(id: number, data: AdminStudentUpdate): Promise<AdminStudent> {
+  async updateStudent(
+    id: number,
+    data: AdminStudentUpdate,
+  ): Promise<AdminStudent> {
     const response = await api.put<AdminStudent>(`/admin/students/${id}`, data);
     return response.data;
   },
@@ -128,11 +135,11 @@ export const adminStudentService = {
   async exportCSV(params: AdminStudentListParams = {}): Promise<Blob> {
     // Filter out undefined, null, and empty string values to avoid sending them as query parameters
     const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => 
-        value !== undefined && value !== null && value !== ""
-      )
+      Object.entries(params).filter(
+        ([_, value]) => value !== undefined && value !== null && value !== "",
+      ),
     );
-    
+
     const response = await api.get("/admin/students/export.csv", {
       params: cleanParams,
       responseType: "blob",
@@ -150,7 +157,7 @@ export const adminStudentService = {
   }> {
     const formData = new FormData();
     formData.append("file", file);
-    
+
     const response = await api.post<{
       created: number;
       updated: number;
@@ -160,7 +167,7 @@ export const adminStudentService = {
         "Content-Type": "multipart/form-data",
       },
     });
-    
+
     return response.data;
   },
 

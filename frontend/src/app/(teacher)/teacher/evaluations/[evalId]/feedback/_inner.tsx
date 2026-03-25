@@ -43,7 +43,7 @@ export default function FeedbackPageInner() {
       </div>
 
       {/* Aggregated Feedback Table */}
-      <PeerfeedbackTable 
+      <PeerfeedbackTable
         filters={{ evaluationId: evalIdNum }}
         searchQuery={query}
         typeFilter={typeFilter}

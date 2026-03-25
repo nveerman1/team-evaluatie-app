@@ -31,7 +31,9 @@ export default function RubricImportModal({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     if (open) {
@@ -58,28 +60,34 @@ export default function RubricImportModal({
     onClose();
   };
 
-  const handleFileSelected = useCallback(async (selectedFile: File) => {
-    if (!selectedFile.name.endsWith(".csv")) {
-      setPreviewError("Selecteer een geldig CSV-bestand (.csv)");
-      return;
-    }
-    setFile(selectedFile);
-    setPreviewError(null);
-    setLoadingPreview(true);
-    try {
-      const previewResult = await rubricImportService.preview(selectedFile, selectedSubjectId);
-      setPreview(previewResult);
-      setStep("preview");
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      setPreviewError(
-        axiosErr?.response?.data?.detail ||
-          (err instanceof Error ? err.message : "Preview mislukt"),
-      );
-    } finally {
-      setLoadingPreview(false);
-    }
-  }, [selectedSubjectId]);
+  const handleFileSelected = useCallback(
+    async (selectedFile: File) => {
+      if (!selectedFile.name.endsWith(".csv")) {
+        setPreviewError("Selecteer een geldig CSV-bestand (.csv)");
+        return;
+      }
+      setFile(selectedFile);
+      setPreviewError(null);
+      setLoadingPreview(true);
+      try {
+        const previewResult = await rubricImportService.preview(
+          selectedFile,
+          selectedSubjectId,
+        );
+        setPreview(previewResult);
+        setStep("preview");
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { detail?: string } } };
+        setPreviewError(
+          axiosErr?.response?.data?.detail ||
+            (err instanceof Error ? err.message : "Preview mislukt"),
+        );
+      } finally {
+        setLoadingPreview(false);
+      }
+    },
+    [selectedSubjectId],
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -101,7 +109,10 @@ export default function RubricImportModal({
     if (!file) return;
     setStep("importing");
     try {
-      const importResult = await rubricImportService.importCsv(file, selectedSubjectId);
+      const importResult = await rubricImportService.importCsv(
+        file,
+        selectedSubjectId,
+      );
       setResult(importResult);
       setStep("done");
     } catch (err: unknown) {
@@ -157,8 +168,8 @@ export default function RubricImportModal({
                     scope (peer/project)
                   </li>
                   <li>
-                    <strong>Optioneel:</strong> rubric_description, target_level,
-                    scale_min/max, category, weight, level1-5,
+                    <strong>Optioneel:</strong> rubric_description,
+                    target_level, scale_min/max, category, weight, level1-5,
                     learning_objectives
                   </li>
                   <li>
@@ -183,7 +194,9 @@ export default function RubricImportModal({
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    <option value="">— Alle vakgebieden (kan dubbele leerdoelen geven) —</option>
+                    <option value="">
+                      — Alle vakgebieden (kan dubbele leerdoelen geven) —
+                    </option>
                     {subjects.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} ({s.code})
@@ -191,7 +204,8 @@ export default function RubricImportModal({
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Selecteer het vakgebied waarvan de leerdoel-nummers in de CSV afkomstig zijn.
+                    Selecteer het vakgebied waarvan de leerdoel-nummers in de
+                    CSV afkomstig zijn.
                   </p>
                 </div>
               )}

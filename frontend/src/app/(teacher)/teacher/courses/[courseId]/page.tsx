@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { Course, TeacherCourse, TeacherCourseCreate, CourseUpdate } from "@/dtos/course.dto";
+import {
+  Course,
+  TeacherCourse,
+  TeacherCourseCreate,
+  CourseUpdate,
+} from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 import AssignTeacherModal from "@/components/AssignTeacherModal";
 
@@ -62,7 +67,9 @@ export default function CourseDetailPage({
   };
 
   const handleRemoveTeacher = async (teacherId: number) => {
-    if (!confirm("Weet je zeker dat je deze docent wilt verwijderen van dit vak?")) {
+    if (
+      !confirm("Weet je zeker dat je deze docent wilt verwijderen van dit vak?")
+    ) {
       return;
     }
 
@@ -229,7 +236,9 @@ export default function CourseDetailPage({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Aangemaakt</dt>
+                <dt className="text-sm font-medium text-gray-500">
+                  Aangemaakt
+                </dt>
                 <dd className="mt-1 text-sm text-gray-900">
                   {new Date(course.created_at).toLocaleDateString("nl-NL")}
                 </dd>
@@ -279,7 +288,8 @@ export default function CourseDetailPage({
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-gray-900">
-                          {teacherCourse.teacher_name || `Teacher ${teacherCourse.teacher_id}`}
+                          {teacherCourse.teacher_name ||
+                            `Teacher ${teacherCourse.teacher_id}`}
                         </h3>
                         <span
                           className={`rounded px-2 py-1 text-xs font-medium ${
@@ -305,7 +315,9 @@ export default function CourseDetailPage({
                       )}
                     </div>
                     <button
-                      onClick={() => handleRemoveTeacher(teacherCourse.teacher_id)}
+                      onClick={() =>
+                        handleRemoveTeacher(teacherCourse.teacher_id)
+                      }
                       className="rounded-lg border border-red-300 bg-white px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-50"
                     >
                       Verwijderen
@@ -387,7 +399,7 @@ function EditCourseModal({
       console.error("Failed to update course:", err);
       setError(
         err?.response?.data?.detail ||
-          "Kon vak niet bijwerken. Probeer het opnieuw."
+          "Kon vak niet bijwerken. Probeer het opnieuw.",
       );
     } finally {
       setSubmitting(false);

@@ -65,10 +65,14 @@ export default function SubjectDetailPage() {
   };
 
   const handleRemoveCourse = async (courseId: number) => {
-    if (!confirm("Weet je zeker dat je deze course wilt ontkoppelen van deze sectie?")) {
+    if (
+      !confirm(
+        "Weet je zeker dat je deze course wilt ontkoppelen van deze sectie?",
+      )
+    ) {
       return;
     }
-    
+
     // Update the course to unlink it from this subject
     await courseService.updateCourse(courseId, {
       subject_id: undefined,
@@ -193,7 +197,9 @@ export default function SubjectDetailPage() {
                   </span>
                 </div>
               ) : (
-                <span className="text-sm text-gray-500">Geen kleur ingesteld</span>
+                <span className="text-sm text-gray-500">
+                  Geen kleur ingesteld
+                </span>
               )}
             </div>
 
@@ -324,7 +330,9 @@ export default function SubjectDetailPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-900">
-                          {course.year || <span className="text-gray-400">-</span>}
+                          {course.year || (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -375,7 +383,7 @@ export default function SubjectDetailPage() {
           onClose={() => setShowAddCourseModal(false)}
           onAdd={handleAddCourse}
           subjectId={subjectId}
-          existingCourseIds={courses.map(c => c.id)}
+          existingCourseIds={courses.map((c) => c.id)}
         />
         <CourseFormModal
           isOpen={showCreateCourseModal}

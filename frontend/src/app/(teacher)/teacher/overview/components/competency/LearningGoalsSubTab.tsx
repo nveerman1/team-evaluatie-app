@@ -13,31 +13,36 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
-  
+
   // Combine parent filters with local filters
   const combinedFilters = { ...filters, status: statusFilter || undefined };
-  
-  const { data: learningGoals, loading, error } = useCompetencyLearningGoals(combinedFilters);
+
+  const {
+    data: learningGoals,
+    loading,
+    error,
+  } = useCompetencyLearningGoals(combinedFilters);
 
   // Client-side filtering for search (to avoid refetch on every keystroke)
   const [filteredGoals, setFilteredGoals] = useState(learningGoals || []);
-  
+
   useEffect(() => {
     if (!learningGoals) {
       setFilteredGoals([]);
       return;
     }
-    
+
     if (!searchQuery.trim()) {
       setFilteredGoals(learningGoals);
       return;
     }
-    
+
     const query = searchQuery.toLowerCase();
-    const filtered = learningGoals.filter((goal) => 
-      goal.goalText.toLowerCase().includes(query) ||
-      goal.studentName.toLowerCase().includes(query) ||
-      (goal.className && goal.className.toLowerCase().includes(query))
+    const filtered = learningGoals.filter(
+      (goal) =>
+        goal.goalText.toLowerCase().includes(query) ||
+        goal.studentName.toLowerCase().includes(query) ||
+        (goal.className && goal.className.toLowerCase().includes(query)),
     );
     setFilteredGoals(filtered);
   }, [learningGoals, searchQuery]);
@@ -56,11 +61,19 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
     const statusMap: Record<string, { label: string; className: string }> = {
       in_progress: { label: "Lopend", className: "bg-blue-100 text-blue-700" },
       achieved: { label: "Behaald", className: "bg-green-100 text-green-700" },
-      not_achieved: { label: "Niet behaald", className: "bg-red-100 text-red-700" },
+      not_achieved: {
+        label: "Niet behaald",
+        className: "bg-red-100 text-red-700",
+      },
     };
-    const config = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-700" };
+    const config = statusMap[status] || {
+      label: status,
+      className: "bg-gray-100 text-gray-700",
+    };
     return (
-      <span className={`px-2 py-1 rounded-md text-xs font-medium ${config.className}`}>
+      <span
+        className={`px-2 py-1 rounded-md text-xs font-medium ${config.className}`}
+      >
         {config.label}
       </span>
     );
@@ -83,7 +96,9 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
       <div className="bg-gray-50 rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              🔍 Zoeken
+            </label>
             <input
               type="text"
               value={searchQuery}
@@ -115,12 +130,24 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">Leerling</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Klas</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Categorie</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[300px]">Leerdoel</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Status</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Laatst bijgewerkt</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Leerling
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Klas
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Categorie
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[300px]">
+                    Leerdoel
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Laatst bijgewerkt
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -128,7 +155,7 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
                   const isExpanded = expandedGoals.has(goal.id);
                   const goalText = goal.goalText;
                   const shouldTruncate = goalText.length > 100;
-                  
+
                   return (
                     <tr key={goal.id} className="bg-white hover:bg-slate-50">
                       <td className="px-5 py-3 text-sm text-slate-800 font-medium">

@@ -38,15 +38,23 @@ function getStatusInfo(status: PlanStatus, locked: boolean) {
   }
 }
 
-export function ProjectPlanDashboardCard({ projectPlan }: ProjectPlanDashboardCardProps) {
+export function ProjectPlanDashboardCard({
+  projectPlan,
+}: ProjectPlanDashboardCardProps) {
   const myTeam = projectPlan.teams?.[0];
 
   if (!myTeam) return null;
 
-  const { label: statusLabel, statusClass, barClass } = getStatusInfo(myTeam.status, myTeam.locked);
+  const {
+    label: statusLabel,
+    statusClass,
+    barClass,
+  } = getStatusInfo(myTeam.status, myTeam.locked);
 
   const totalSections = 8;
-  const filledSections = myTeam.sections.filter((s) => s.status !== "empty").length;
+  const filledSections = myTeam.sections.filter(
+    (s) => s.status !== "empty",
+  ).length;
 
   return (
     <Link
@@ -64,10 +72,14 @@ export function ProjectPlanDashboardCard({ projectPlan }: ProjectPlanDashboardCa
               <h3 className="text-base font-semibold text-slate-900">
                 {projectPlan.project_name}
               </h3>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusClass}`}
+              >
                 {statusLabel}
               </span>
-              {myTeam.locked && <Lock className="h-3.5 w-3.5 text-emerald-600" />}
+              {myTeam.locked && (
+                <Lock className="h-3.5 w-3.5 text-emerald-600" />
+              )}
             </div>
 
             {myTeam.title && (
@@ -88,8 +100,12 @@ export function ProjectPlanDashboardCard({ projectPlan }: ProjectPlanDashboardCa
             {/* Teacher feedback if present */}
             {myTeam.global_teacher_note && (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs font-medium text-amber-900 mb-1">Feedback docent:</p>
-                <p className="text-xs text-amber-800">{myTeam.global_teacher_note}</p>
+                <p className="text-xs font-medium text-amber-900 mb-1">
+                  Feedback docent:
+                </p>
+                <p className="text-xs text-amber-800">
+                  {myTeam.global_teacher_note}
+                </p>
               </div>
             )}
           </div>
@@ -97,7 +113,9 @@ export function ProjectPlanDashboardCard({ projectPlan }: ProjectPlanDashboardCa
           {/* Right: progress block + action button */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
             <div className="min-w-[108px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Voortgang</div>
+              <div className="text-xs uppercase tracking-wide text-slate-500">
+                Voortgang
+              </div>
               <div className="mt-1 text-base font-semibold text-slate-900">
                 {filledSections}/{totalSections}
               </div>

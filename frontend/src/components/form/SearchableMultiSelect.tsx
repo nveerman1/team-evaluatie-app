@@ -35,7 +35,10 @@ export function SearchableMultiSelect({
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -51,15 +54,17 @@ export function SearchableMultiSelect({
     }
   }, [isOpen]);
 
-  const selectedOptions = options.filter(opt => value.includes(opt.id));
-  const filteredOptions = options.filter(opt =>
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (opt.subtitle && opt.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
+  const selectedOptions = options.filter((opt) => value.includes(opt.id));
+  const filteredOptions = options.filter(
+    (opt) =>
+      opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (opt.subtitle &&
+        opt.subtitle.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   const handleToggleOption = (optionId: number) => {
     if (value.includes(optionId)) {
-      onChange(value.filter(id => id !== optionId));
+      onChange(value.filter((id) => id !== optionId));
     } else {
       onChange([...value, optionId]);
     }
@@ -67,12 +72,12 @@ export function SearchableMultiSelect({
 
   const handleRemoveOption = (optionId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(value.filter(id => id !== optionId));
+    onChange(value.filter((id) => id !== optionId));
   };
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className={`relative ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
@@ -83,12 +88,12 @@ export function SearchableMultiSelect({
           if (!disabled && !loading) setIsOpen(true);
         }}
         className={`min-h-[38px] w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-text
-          ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}
-          ${isOpen ? 'ring-2 ring-blue-500/50 border-blue-500' : ''}`}
+          ${disabled || loading ? "opacity-50 cursor-not-allowed" : "hover:border-gray-400"}
+          ${isOpen ? "ring-2 ring-blue-500/50 border-blue-500" : ""}`}
       >
         <div className="flex flex-wrap gap-1 items-center">
           {/* Selected items as chips */}
-          {selectedOptions.map(opt => (
+          {selectedOptions.map((opt) => (
             <span
               key={opt.id}
               className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded"
@@ -104,7 +109,7 @@ export function SearchableMultiSelect({
               </button>
             </span>
           ))}
-          
+
           {/* Search input */}
           {isOpen ? (
             <input
@@ -117,7 +122,9 @@ export function SearchableMultiSelect({
               disabled={disabled || loading}
             />
           ) : selectedOptions.length === 0 ? (
-            <span className="text-gray-500 text-sm">{loading ? "Laden..." : placeholder}</span>
+            <span className="text-gray-500 text-sm">
+              {loading ? "Laden..." : placeholder}
+            </span>
           ) : null}
         </div>
       </div>
@@ -129,10 +136,12 @@ export function SearchableMultiSelect({
           <div className="max-h-60 overflow-y-auto">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-2 text-sm text-gray-500 italic">
-                {searchTerm ? "Geen resultaten gevonden" : "Geen opties beschikbaar"}
+                {searchTerm
+                  ? "Geen resultaten gevonden"
+                  : "Geen opties beschikbaar"}
               </div>
             ) : (
-              filteredOptions.map(option => {
+              filteredOptions.map((option) => {
                 const isSelected = value.includes(option.id);
                 return (
                   <div
@@ -151,7 +160,9 @@ export function SearchableMultiSelect({
                         className="rounded border-gray-300"
                       />
                       <div className="flex-1">
-                        <div className={`text-sm ${isSelected ? "font-medium text-blue-700" : ""}`}>
+                        <div
+                          className={`text-sm ${isSelected ? "font-medium text-blue-700" : ""}`}
+                        >
                           {option.label}
                         </div>
                         {option.subtitle && (

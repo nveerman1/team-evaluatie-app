@@ -1,6 +1,6 @@
 /**
  * Close Evaluation Button Component
- * 
+ *
  * Allows teachers to close and archive evaluations,
  * locking the associated project team roster
  */
@@ -32,13 +32,16 @@ export default function CloseEvaluationButton({
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/evaluations/${evaluationId}/close`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-User-Email": localStorage.getItem("user_email") || "",
+      const response = await fetch(
+        `/api/v1/evaluations/${evaluationId}/close`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Email": localStorage.getItem("user_email") || "",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         const data = await response.json();
@@ -53,7 +56,9 @@ export default function CloseEvaluationButton({
       setShowConfirmModal(false);
     } catch (err) {
       console.error("Error closing evaluation:", err);
-      setError(err instanceof Error ? err.message : "Failed to close evaluation");
+      setError(
+        err instanceof Error ? err.message : "Failed to close evaluation",
+      );
     } finally {
       setLoading(false);
     }
@@ -91,8 +96,9 @@ export default function CloseEvaluationButton({
                   Close and Archive Evaluation?
                 </h3>
                 <p className="text-sm text-gray-600">
-                  This will mark the evaluation as closed and permanently lock the team roster.
-                  You will not be able to modify team members after this action.
+                  This will mark the evaluation as closed and permanently lock
+                  the team roster. You will not be able to modify team members
+                  after this action.
                 </p>
               </div>
             </div>

@@ -18,7 +18,7 @@ export const academicYearService = {
   }): Promise<AcademicYearListResponse> {
     const response = await api.get<AcademicYearListResponse>(
       "/admin/academic-years",
-      { params }
+      { params },
     );
     return response.data;
   },
@@ -35,7 +35,10 @@ export const academicYearService = {
    * Create a new academic year
    */
   async createAcademicYear(data: AcademicYearCreate): Promise<AcademicYear> {
-    const response = await api.post<AcademicYear>("/admin/academic-years", data);
+    const response = await api.post<AcademicYear>(
+      "/admin/academic-years",
+      data,
+    );
     return response.data;
   },
 
@@ -47,7 +50,7 @@ export const academicYearService = {
     params?: {
       page?: number;
       per_page?: number;
-    }
+    },
   ): Promise<ClassListResponse> {
     const response = await api.get<ClassListResponse>("/admin/classes", {
       params: {
@@ -63,11 +66,11 @@ export const academicYearService = {
    */
   async executeTransition(
     sourceYearId: number,
-    request: TransitionRequest
+    request: TransitionRequest,
   ): Promise<TransitionResult> {
     const response = await api.post<TransitionResult>(
       `/admin/academic-years/${sourceYearId}/transition`,
-      request
+      request,
     );
     return response.data;
   },
@@ -77,7 +80,7 @@ export const academicYearService = {
    */
   async archiveAcademicYear(id: number): Promise<AcademicYear> {
     const response = await api.post<AcademicYear>(
-      `/admin/academic-years/${id}/archive`
+      `/admin/academic-years/${id}/archive`,
     );
     return response.data;
   },

@@ -1,6 +1,6 @@
 /**
  * Frozen Roster Display Component
- * 
+ *
  * Displays a locked/frozen roster for an evaluation with project_team_id
  */
 
@@ -17,7 +17,11 @@ type FrozenRosterProps = {
   isLegacy?: boolean;
 };
 
-export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false }: FrozenRosterProps) {
+export default function FrozenRoster({
+  projectTeamId,
+  closedAt,
+  isLegacy = false,
+}: FrozenRosterProps) {
   const [members, setMembers] = useState<ProjectTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +31,8 @@ export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false
       setLoading(true);
       setError(null);
       try {
-        const data = await projectTeamService.getProjectTeamMembers(projectTeamId);
+        const data =
+          await projectTeamService.getProjectTeamMembers(projectTeamId);
         setMembers(data);
       } catch (e: unknown) {
         console.error("Failed to load roster members:", e);
@@ -50,7 +55,8 @@ export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false
           <div>
             <p className="font-medium text-amber-900">Legacy evaluatie</p>
             <p className="text-sm text-amber-800 mt-1">
-              Deze evaluatie gebruikt de oude teamindeling. Rosterinformatie kan afwijken van de huidige teams.
+              Deze evaluatie gebruikt de oude teamindeling. Rosterinformatie kan
+              afwijken van de huidige teams.
             </p>
           </div>
         </div>
@@ -63,7 +69,9 @@ export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-2">
           <Lock className="w-5 h-5 text-amber-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Team Roster (Frozen)</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Team Roster (Frozen)
+          </h3>
         </div>
         <p className="text-sm text-gray-600">
           Deze evaluatie is gekoppeld aan een vastgelegde teamsamenstelling.
@@ -104,12 +112,16 @@ export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false
                   <p className="font-medium text-gray-900">
                     {member.user_name || "Onbekend"}
                     {member.user_status === "inactive" && (
-                      <span className="ml-2 text-xs text-gray-500">(Inactief)</span>
+                      <span className="ml-2 text-xs text-gray-500">
+                        (Inactief)
+                      </span>
                     )}
                   </p>
                   <p className="text-sm text-gray-600">{member.user_email}</p>
                   {member.role && (
-                    <p className="text-xs text-gray-500 mt-1">Rol: {member.role}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Rol: {member.role}
+                    </p>
                   )}
                 </div>
               </div>

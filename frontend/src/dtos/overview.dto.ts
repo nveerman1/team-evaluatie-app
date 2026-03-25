@@ -5,30 +5,30 @@
 export interface OverviewItem {
   id: number;
   type: "project" | "peer" | "competency";
-  
+
   // Student info
   student_id: number;
   student_name: string;
   student_class?: string | null;
-  
+
   // Item info
   title: string;
   course_name?: string | null;
   course_id?: number | null;
   teacher_name?: string | null;
   teacher_id?: number | null;
-  date?: string | null;  // ISO date
-  
+  date?: string | null; // ISO date
+
   // Score
   score?: number | null;
   score_label?: string | null;
-  
+
   // Status
   status: string;
-  
+
   // Navigation
   detail_url: string;
-  
+
   // Optional metadata
   team_number?: number | null;
   team_name?: string | null;
@@ -50,8 +50,8 @@ export interface OverviewFilters {
   teacher_id?: number;
   type?: "project" | "peer" | "competency";
   status?: string;
-  date_from?: string;  // ISO date
-  date_to?: string;    // ISO date
+  date_from?: string; // ISO date
+  date_to?: string; // ISO date
   team_number?: number;
   search?: string;
   sort_by?: "date" | "student" | "score";
@@ -102,7 +102,7 @@ export interface MatrixFilters {
   student_name?: string;
   date_from?: string;
   date_to?: string;
-  sort_by?: string;  // Column key to sort by
+  sort_by?: string; // Column key to sort by
   sort_order?: "asc" | "desc";
 }
 
@@ -111,13 +111,13 @@ export interface MatrixFilters {
 export interface CategoryStatistics {
   mean?: number | null;
   median?: number | null;
-  p25?: number | null;  // 25th percentile
-  p75?: number | null;  // 75th percentile
-  p10?: number | null;  // 10th percentile (optional whisker)
-  p90?: number | null;  // 90th percentile (optional whisker)
+  p25?: number | null; // 25th percentile
+  p75?: number | null; // 75th percentile
+  p10?: number | null; // 10th percentile (optional whisker)
+  p90?: number | null; // 90th percentile (optional whisker)
   min?: number | null;
   max?: number | null;
-  iqr?: number | null;  // Interquartile range (P75 - P25)
+  iqr?: number | null; // Interquartile range (P75 - P25)
   count_teams: number;
   count_assessments: number;
 }
@@ -144,9 +144,9 @@ export interface ProjectOverviewListResponse {
 
 export interface CategoryTrendData {
   project_label: string;
-  project_id: number;  // For filtering/linking
-  scores: Record<string, number>;  // category -> score (mean)
-  statistics: Record<string, CategoryStatistics>;  // category -> statistics
+  project_id: number; // For filtering/linking
+  scores: Record<string, number>; // category -> score (mean)
+  statistics: Record<string, CategoryStatistics>; // category -> statistics
 }
 
 export interface ProjectTrendResponse {

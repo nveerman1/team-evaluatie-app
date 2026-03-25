@@ -21,7 +21,7 @@ export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
   const [filter, setFilter] = useState<FilterType>("open");
 
   const openCount = evaluations.filter(
-    (e) => e.status === "open" && e.progress < 100
+    (e) => e.status === "open" && e.progress < 100,
   ).length;
 
   const filtered = evaluations.filter((e) => {
@@ -36,9 +36,12 @@ export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
       {/* Card header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">360° feedback</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            360° feedback
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {openCount} open evaluaties, gesorteerd op wat je nu nog moet afronden.
+            {openCount} open evaluaties, gesorteerd op wat je nu nog moet
+            afronden.
           </p>
         </div>
 
@@ -52,7 +55,7 @@ export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
                 "rounded-full px-3 py-1.5 text-sm font-medium transition",
                 filter === value
                   ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
               {label}
@@ -73,7 +76,10 @@ export function EvaluationsTab({ evaluations }: EvaluationsTabProps) {
           </div>
         ) : (
           filtered.map((evaluation) => (
-            <EvaluationDashboardCard key={evaluation.id} evaluation={evaluation} />
+            <EvaluationDashboardCard
+              key={evaluation.id}
+              evaluation={evaluation}
+            />
           ))
         )}
       </div>

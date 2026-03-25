@@ -25,7 +25,12 @@ export function OMZAOverview({ items }: OMZAOverviewProps) {
     const itemsToShow = showAllScans ? sortedItems : sortedItems.slice(-3);
 
     itemsToShow.forEach((item, idx) => {
-      const omzaKeys: OmzaKey[] = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"];
+      const omzaKeys: OmzaKey[] = [
+        "organiseren",
+        "meedoen",
+        "zelfvertrouwen",
+        "autonomie",
+      ];
       const averages = {
         O: 0,
         M: 0,
@@ -51,7 +56,7 @@ export function OMZAOverview({ items }: OMZAOverviewProps) {
       trend.push(
         { label: "Sprint 1", O: 2.4, M: 2.6, Z: 2.8, A: 2.3 },
         { label: "Sprint 2", O: 2.7, M: 2.8, Z: 3.0, A: 2.6 },
-        { label: "Sprint 3", O: 3.0, M: 3.1, Z: 3.2, A: 2.9 }
+        { label: "Sprint 3", O: 3.0, M: 3.1, Z: 3.2, A: 2.9 },
       );
     }
 
@@ -65,7 +70,12 @@ export function OMZAOverview({ items }: OMZAOverviewProps) {
     }
 
     const lastItem = items[0]; // Assuming items are sorted newest first
-    const omzaKeys: OmzaKey[] = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"];
+    const omzaKeys: OmzaKey[] = [
+      "organiseren",
+      "meedoen",
+      "zelfvertrouwen",
+      "autonomie",
+    ];
     const profile = { O: 0, M: 0, Z: 0, A: 0 };
 
     omzaKeys.forEach((key, i) => {
@@ -81,7 +91,12 @@ export function OMZAOverview({ items }: OMZAOverviewProps) {
   const { strongestDomain, growthOpportunity } = useMemo(() => {
     const entries = Object.entries(omzaProfileLastScan);
     const sorted = entries.sort((a, b) => b[1] - a[1]);
-    const labels = { O: "Organiseren", M: "Meedoen", Z: "Zelfvertrouwen", A: "Autonomie" };
+    const labels = {
+      O: "Organiseren",
+      M: "Meedoen",
+      Z: "Zelfvertrouwen",
+      A: "Autonomie",
+    };
 
     return {
       strongestDomain: {
@@ -164,16 +179,16 @@ export function OMZAOverview({ items }: OMZAOverviewProps) {
           </div>
           <div className="mt-3 space-y-1 text-xs text-slate-600">
             <p>
-              <span className="font-semibold">Sterkste domein:</span> {strongestDomain.label} (
-              {strongestDomain.value.toFixed(1)})
+              <span className="font-semibold">Sterkste domein:</span>{" "}
+              {strongestDomain.label} ({strongestDomain.value.toFixed(1)})
             </p>
             <p>
-              <span className="font-semibold">Grootste groeikans:</span> {growthOpportunity.label} (
-              {growthOpportunity.value.toFixed(1)})
+              <span className="font-semibold">Grootste groeikans:</span>{" "}
+              {growthOpportunity.label} ({growthOpportunity.value.toFixed(1)})
             </p>
             <p className="text-[11px] text-slate-500">
-              Tip: koppel een leerdoel aan jouw ontwikkelpunt en verwijs ernaar in je volgende
-              reflectie.
+              Tip: koppel een leerdoel aan jouw ontwikkelpunt en verwijs ernaar
+              in je volgende reflectie.
             </p>
           </div>
         </div>

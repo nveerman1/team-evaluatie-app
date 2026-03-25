@@ -67,11 +67,11 @@ export const groupService = {
    */
   async addGroupMember(
     groupId: number,
-    data: GroupMemberCreate
+    data: GroupMemberCreate,
   ): Promise<GroupMember> {
     const response = await api.post<GroupMember>(
       `/groups/${groupId}/members`,
-      data
+      data,
     );
     return response.data;
   },

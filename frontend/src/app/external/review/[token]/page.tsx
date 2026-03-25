@@ -16,7 +16,7 @@ export default function ExternalReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteInfo, setInviteInfo] = useState<ExternalInvitePublicInfo | null>(
-    null
+    null,
   );
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
@@ -41,13 +41,15 @@ export default function ExternalReviewPage() {
       // Initialize scores to scale_min (neutral default)
       const initialScores: Record<number, number> = {};
       info.competencies.forEach((comp) => {
-        initialScores[comp.id] = Math.ceil((info.scale_min + info.scale_max) / 2);
+        initialScores[comp.id] = Math.ceil(
+          (info.scale_min + info.scale_max) / 2,
+        );
       });
       setScores(initialScores);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
-          "Invalid or expired invitation link. Please contact the person who sent you this link."
+          "Invalid or expired invitation link. Please contact the person who sent you this link.",
       );
     } finally {
       setLoading(false);
@@ -60,7 +62,7 @@ export default function ExternalReviewPage() {
 
     // Validate all competencies have scores
     const allScored = inviteInfo?.competencies.every(
-      (comp) => scores[comp.id] !== undefined
+      (comp) => scores[comp.id] !== undefined,
     );
     if (!allScored) {
       setValidationError("Please provide a score for all competencies.");
@@ -86,7 +88,7 @@ export default function ExternalReviewPage() {
     } catch (err: any) {
       setValidationError(
         err.response?.data?.detail ||
-          "Failed to submit scores. Please try again."
+          "Failed to submit scores. Please try again.",
       );
     } finally {
       setSubmitting(false);
@@ -176,10 +178,12 @@ export default function ExternalReviewPage() {
             Competency Assessment
           </h1>
           <p className="text-gray-600">
-            Window: <span className="font-medium">{inviteInfo.window_title}</span>
+            Window:{" "}
+            <span className="font-medium">{inviteInfo.window_title}</span>
           </p>
           <p className="text-gray-600">
-            Student: <span className="font-medium">{inviteInfo.subject_name}</span>
+            Student:{" "}
+            <span className="font-medium">{inviteInfo.subject_name}</span>
           </p>
           {inviteInfo.instructions && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
@@ -192,10 +196,11 @@ export default function ExternalReviewPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-blue-900 mb-2">Privacy Notice</h3>
           <p className="text-sm text-blue-800">
-            Your assessment will be processed anonymously and aggregated with other
-            external assessments. Only the average scores will be shared with the
-            student. The teacher may see individual assessments for coaching
-            purposes. You can provide your name and organization optionally below.
+            Your assessment will be processed anonymously and aggregated with
+            other external assessments. Only the average scores will be shared
+            with the student. The teacher may see individual assessments for
+            coaching purposes. You can provide your name and organization
+            optionally below.
           </p>
         </div>
 
@@ -239,8 +244,8 @@ export default function ExternalReviewPage() {
               Competency Assessments
             </h2>
             <p className="text-sm text-gray-600 mb-6">
-              Rate the student on each competency using the scale below. A higher
-              score indicates stronger performance.
+              Rate the student on each competency using the scale below. A
+              higher score indicates stronger performance.
             </p>
 
             {validationError && (
@@ -275,7 +280,7 @@ export default function ExternalReviewPage() {
                           length:
                             inviteInfo.scale_max - inviteInfo.scale_min + 1,
                         },
-                        (_, i) => inviteInfo.scale_min + i
+                        (_, i) => inviteInfo.scale_min + i,
                       ).map((value) => (
                         <button
                           key={value}

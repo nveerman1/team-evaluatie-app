@@ -16,7 +16,7 @@ type CriterionType = SelfAssessmentDetailOut["criteria"][number];
 function getDescriptorForLevel(
   criterion: CriterionType,
   level: number,
-  scaleMin: number
+  scaleMin: number,
 ): string {
   const raw: any = (criterion as any).descriptors;
 
@@ -36,7 +36,7 @@ function getDescriptorForLevel(
         (d.level === level ||
           d.value === level ||
           d.score === level ||
-          d.index === level - scaleMin)
+          d.index === level - scaleMin),
     );
     if (!match) return "";
     return match.description ?? match.text ?? match.label ?? "";
@@ -92,7 +92,7 @@ function SelfAssessmentRubricRow({
 }) {
   const levels = Array.from(
     { length: scaleMax - scaleMin + 1 },
-    (_, i) => scaleMin + i
+    (_, i) => scaleMin + i,
   );
 
   return (
@@ -104,7 +104,9 @@ function SelfAssessmentRubricRow({
         {value !== null && (
           <span className="inline-flex items-baseline gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
             <span className="font-medium text-slate-700">Score</span>
-            <span className="text-slate-400">{value} / {scaleMax}</span>
+            <span className="text-slate-400">
+              {value} / {scaleMax}
+            </span>
           </span>
         )}
       </div>
@@ -114,7 +116,11 @@ function SelfAssessmentRubricRow({
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
           {levels.map((level) => {
             const isSelected = value === level;
-            const descriptor = getDescriptorForLevel(criterion, level, scaleMin);
+            const descriptor = getDescriptorForLevel(
+              criterion,
+              level,
+              scaleMin,
+            );
 
             return (
               <button
@@ -195,9 +201,8 @@ export default function StudentSelfAssessmentInner() {
       setLoading(true);
       setError(null);
       try {
-        const result = await projectAssessmentService.getSelfAssessment(
-          assessmentId
-        );
+        const result =
+          await projectAssessmentService.getSelfAssessment(assessmentId);
         setData(result);
 
         // Initialize scores from existing self-assessment or empty
@@ -207,7 +212,7 @@ export default function StudentSelfAssessmentInner() {
         >();
         result.criteria.forEach((c) => {
           const existingScore = result.self_assessment?.scores.find(
-            (s) => s.criterion_id === c.id
+            (s) => s.criterion_id === c.id,
           );
           initialScores.set(c.id, {
             score: existingScore?.score ?? null,
@@ -263,7 +268,7 @@ export default function StudentSelfAssessmentInner() {
 
     if (missingScores.length > 0) {
       setError(
-        `Vul alle criteria in. Nog te vullen: ${missingScores.map((c) => c.name).join(", ")}`
+        `Vul alle criteria in. Nog te vullen: ${missingScores.map((c) => c.name).join(", ")}`,
       );
       return;
     }
@@ -289,14 +294,13 @@ export default function StudentSelfAssessmentInner() {
 
       await projectAssessmentService.createOrUpdateSelfAssessment(
         assessmentId,
-        payload
+        payload,
       );
       setSuccessMsg("Zelfbeoordeling opgeslagen ✓");
-      
+
       // Reload data to get updated timestamps
-      const result = await projectAssessmentService.getSelfAssessment(
-        assessmentId
-      );
+      const result =
+        await projectAssessmentService.getSelfAssessment(assessmentId);
       setData(result);
     } catch (e: any) {
       if (e instanceof ApiAuthError) {
@@ -361,9 +365,7 @@ export default function StudentSelfAssessmentInner() {
           </div>
         )}
         {error && (
-          <div className="rounded-xl bg-rose-50 p-3 text-rose-700">
-            {error}
-          </div>
+          <div className="rounded-xl bg-rose-50 p-3 text-rose-700">{error}</div>
         )}
 
         {!canEdit && (
@@ -412,7 +414,7 @@ export default function StudentSelfAssessmentInner() {
                     );
                   })}
                 </div>
-              )
+              ),
             )}
           </div>
         </div>
