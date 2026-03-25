@@ -183,6 +183,17 @@ export const projectPlanService = {
   async submitProjectPlan(projectPlanTeamId: number): Promise<void> {
     await api.post(`/me/projectplans/${projectPlanTeamId}/submit`);
   },
+
+  /**
+   * Export projectplan as Word document (.docx)
+   */
+  async exportToWord(projectPlanTeamId: number): Promise<Blob> {
+    const response = await api.get(
+      `/me/projectplans/${projectPlanTeamId}/export-docx`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
 };
 
 export default projectPlanService;

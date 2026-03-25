@@ -23,7 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Lock, AlertCircle, CheckCircle, FileText, Save, Send } from "lucide-react";
+import { Lock, AlertCircle, CheckCircle, FileText, Save, Send, Download } from "lucide-react";
 import { ApiAuthError } from "@/lib/api";
 
 // Section metadata
@@ -152,6 +152,7 @@ export default function ProjectPlanEditor() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -271,7 +272,6 @@ export default function ProjectPlanEditor() {
   };
 
   const handleSubmitPlan = async () => {
-    // Check if all required sections are filled
     const requiredSections = Object.entries(SECTION_INFO)
       .filter(([_, info]) => info.required)
       .map(([key, _]) => key as SectionKey);
@@ -313,6 +313,25 @@ export default function ProjectPlanEditor() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleExportWord = async () => {
+    setExporting(true);
+    try {
+      const blob = await projectPlanService.exportToWord(projectPlanTeamId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Projectplan-${title || "document"}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || "Export mislukt. Probeer het opnieuw.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -385,6 +404,16 @@ export default function ProjectPlanEditor() {
             </div>
             <div className="flex items-center gap-2">
               {getPlanStatusBadge(data.status, data.locked)}
+              <Button
+                onClick={handleExportWord}
+                disabled={exporting}
+                variant="outline"
+                size="sm"
+                className="rounded-xl bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? "Exporteren..." : "Export naar Word"}
+              </Button>
             </div>
           </div>
         </div>

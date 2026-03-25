@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import List, Optional
 import logging
+import re
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -42,6 +45,7 @@ from app.api.v1.schemas.projectplans import (
     SuggestClientItem,
     LinkedClientResponse,
 )
+from app.services.projectplan_export import generate_projectplan_docx
 
 router = APIRouter(prefix="/projectplans", tags=["projectplans"])
 student_router = APIRouter(
@@ -1543,3 +1547,115 @@ def submit_projectplan(
     logger.info(f"Student {user.id} submitted projectplan team {team.id}")
 
     return {"message": "Projectplan succesvol ingediend", "status": "ingediend"}
+
+
+@student_router.get(
+    "/me/projectplans/{project_plan_team_id}/export-docx",
+    response_class=StreamingResponse,
+)
+def export_projectplan_docx(
+    project_plan_team_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Export student's team projectplan as a styled Word document (.docx)"""
+    if user.role not in ("student",):
+        raise HTTPException(
+            status_code=403, detail="Dit endpoint is alleen voor studenten"
+        )
+
+    # Get the ProjectPlanTeam record directly
+    team = (
+        db.query(ProjectPlanTeam)
+        .options(joinedload(ProjectPlanTeam.sections))
+        .filter(
+            ProjectPlanTeam.id == project_plan_team_id,
+            ProjectPlanTeam.school_id == user.school_id,
+        )
+        .first()
+    )
+
+    if not team:
+        raise HTTPException(status_code=404, detail="ProjectPlan team niet gevonden")
+
+    # Verify student is a member of this team
+    student_teams = (
+        db.query(ProjectTeamMember.project_team_id)
+        .filter(
+            ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.school_id == user.school_id,
+        )
+        .all()
+    )
+    team_ids = [t[0] for t in student_teams]
+
+    if team.project_team_id not in team_ids:
+        raise HTTPException(status_code=403, detail="Je bent geen lid van dit team")
+
+    # Verify the projectplan is accessible (status check)
+    pp = (
+        db.query(ProjectPlan)
+        .filter(
+            ProjectPlan.id == team.project_plan_id,
+            ProjectPlan.school_id == user.school_id,
+            ProjectPlan.status.in_(["open", "published", "closed"]),
+        )
+        .first()
+    )
+
+    if not pp:
+        raise HTTPException(status_code=404, detail="ProjectPlan niet beschikbaar")
+
+    # Fetch team members and team number
+    members = (
+        db.query(User.name)
+        .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+        .filter(
+            ProjectTeamMember.project_team_id == team.project_team_id,
+            ProjectTeamMember.school_id == team.school_id,
+        )
+        .all()
+    )
+    team_members = [m[0] for m in members]
+
+    project_team = (
+        db.query(ProjectTeam).filter(ProjectTeam.id == team.project_team_id).first()
+    )
+    team_number = project_team.team_number if project_team else None
+
+    # Build sections list
+    sections = []
+    for section in team.sections:
+        section_dict: dict = {"key": section.key, "text": section.text or ""}
+        if section.key == "client":
+            section_dict["client"] = {
+                "organisation": section.client_organisation,
+                "contact": section.client_contact,
+                "email": section.client_email,
+                "phone": section.client_phone,
+                "description": section.client_description,
+            }
+        sections.append(section_dict)
+
+    team_data = {
+        "title": team.title,
+        "team_number": team_number,
+        "team_members": team_members,
+        "sections": sections,
+    }
+
+    buffer = generate_projectplan_docx(team_data)
+
+    raw_title = (team.title or "document").strip()
+    safe_title = re.sub(
+        r"-{2,}", "-", re.sub(r"[^\w\s-]", "", raw_title).strip().replace(" ", "-")
+    ).strip("-")
+    filename = f"Projectplan-{safe_title or 'document'}.docx"
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
+    )

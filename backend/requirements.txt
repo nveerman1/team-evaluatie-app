@@ -20,3 +20,5 @@ msal>=1.31.0
 croniter
 urllib3>=2.6.3,<3
 jaraco.context>=6.1.0
+lxml>=5.0.0
+python-docx>=1.1.0
