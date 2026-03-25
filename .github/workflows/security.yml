@@ -68,8 +68,20 @@ jobs:
           NEXT_PUBLIC_API_URL: http://localhost:8000
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: "false"
         run: |
-          docker build -t tea-backend:ci -f backend/Dockerfile backend
-          docker build -t tea-frontend:ci -f frontend/Dockerfile frontend \
+          retry() {
+            local max=3 delay=30 n=1
+            until "$@"; do
+              if [ $n -ge $max ]; then
+                echo "Command failed after $max attempts: $*"
+                return 1
+              fi
+              echo "Attempt $n/$max failed, retrying in ${delay}s..."
+              sleep $delay
+              n=$((n + 1))
+            done
+          }
+          retry docker build -t tea-backend:ci -f backend/Dockerfile backend
+          retry docker build -t tea-frontend:ci -f frontend/Dockerfile frontend \
             --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
             --build-arg NEXT_PUBLIC_ENABLE_DEV_LOGIN=$NEXT_PUBLIC_ENABLE_DEV_LOGIN
 
@@ -99,7 +111,20 @@ jobs:
           version: v0.69.1
 
       - name: Build nginx custom image
-        run: docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
+        run: |
+          retry() {
+            local max=3 delay=30 n=1
+            until "$@"; do
+              if [ $n -ge $max ]; then
+                echo "Command failed after $max attempts: $*"
+                return 1
+              fi
+              echo "Attempt $n/$max failed, retrying in ${delay}s..."
+              sleep $delay
+              n=$((n + 1))
+            done
+          }
+          retry docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
       - name: Trivy scan nginx (custom image with updated libpng)
         uses: aquasecurity/trivy-action@v0.33.1
