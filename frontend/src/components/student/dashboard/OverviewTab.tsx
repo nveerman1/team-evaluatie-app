@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import {
   ChevronRight,
   ChevronDown,
@@ -166,9 +167,12 @@ export function OverviewTab({
                   {projectResults.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">
+                        <Link
+                          href={`/student/project-assessments/${row.id}`}
+                          className="font-semibold text-slate-900 hover:text-blue-600 hover:underline"
+                        >
                           {row.project}
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-700">
                         {row.opdrachtgever || "—"}
