@@ -77,6 +77,12 @@ export function CombinedTeamCard({
   );
   const [omzaTags, setOmzaTags] = useState<string[]>([]);
 
+  // Edit state
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+
+  // Kebab menu state
+  const [openMenuNoteId, setOpenMenuNoteId] = useState<number | null>(null);
+
   // Local editable state for team metadata
   const [localTitle, setLocalTitle] = useState(teamTitle);
   const [localTeacherId, setLocalTeacherId] = useState<number | null>(
@@ -97,7 +103,16 @@ export function CombinedTeamCard({
     setOmzaTags([]);
     setFilter(null);
     setSelectedStudentId(null);
+    setEditingNoteId(null);
   }, [team.id]);
+
+  // Close kebab menu when clicking outside (any click not stopped by the kebab button)
+  useEffect(() => {
+    if (openMenuNoteId === null) return;
+    const close = () => setOpenMenuNoteId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openMenuNoteId]);
 
   const toggleOmza = (tag: string) => {
     setOmzaTags((prev) =>
@@ -113,6 +128,36 @@ export function CombinedTeamCard({
     }
     setFilter(name);
     setSelectedStudentId(studentId);
+  };
+
+  const getNoteTags = (n: ProjectNote): string[] =>
+    n.metadata?.omza_tags ?? (n.omza_category ? [n.omza_category] : []);
+
+  const startEditing = (n: ProjectNote) => {
+    setEditingNoteId(n.id);
+    setNote(n.text);
+    setOmzaTags(getNoteTags(n));
+    if (n.note_type === "student" && n.student_id) {
+      const student = students.find(s => s.id === n.student_id);
+      if (student) {
+        setFilter(student.name);
+        setSelectedStudentId(student.id);
+      } else {
+        setFilter(null);
+        setSelectedStudentId(null);
+      }
+    } else {
+      setFilter(null);
+      setSelectedStudentId(null);
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingNoteId(null);
+    setNote("");
+    setOmzaTags([]);
+    setFilter(null);
+    setSelectedStudentId(null);
   };
 
   const formatSnippet = (baseText: string, isStudent: boolean) => {
@@ -145,22 +190,32 @@ export function CombinedTeamCard({
     try {
       setSaving(true);
 
-      // Determine if this is a student note or team note
-      const isStudentNote = selectedStudentId !== null;
+      if (editingNoteId !== null) {
+        // Update existing note
+        await projectNotesService.updateNote(editingNoteId, {
+          text: note,
+          omza_category: omzaTags.length > 0 ? omzaTags[0] : null,
+          metadata: { omza_tags: omzaTags },
+        });
+        setEditingNoteId(null);
+      } else {
+        // Determine if this is a student note or team note
+        const isStudentNote = selectedStudentId !== null;
 
-      await projectNotesService.createNote(contextId, {
-        note_type: isStudentNote ? "student" : "team",
-        // Only pass team_id for team notes, not for student notes
-        team_id: isStudentNote ? null : team.id,
-        student_id: isStudentNote ? selectedStudentId : null,
-        text: note,
-        tags: [],
-        omza_category: omzaTags.length > 0 ? omzaTags[0] : null,
-        learning_objective_id: null,
-        is_competency_evidence: false,
-        is_portfolio_evidence: false,
-        metadata: { omza_tags: omzaTags },
-      });
+        await projectNotesService.createNote(contextId, {
+          note_type: isStudentNote ? "student" : "team",
+          // Only pass team_id for team notes, not for student notes
+          team_id: isStudentNote ? null : team.id,
+          student_id: isStudentNote ? selectedStudentId : null,
+          text: note,
+          tags: [],
+          omza_category: omzaTags.length > 0 ? omzaTags[0] : null,
+          learning_objective_id: null,
+          is_competency_evidence: false,
+          is_portfolio_evidence: false,
+          metadata: { omza_tags: omzaTags },
+        });
+      }
 
       // Reset form
       setNote("");
@@ -313,6 +368,12 @@ export function CombinedTeamCard({
           </div>
 
           {/* 3. Observation textarea */}
+          {editingNoteId !== null && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
+              <span>✎</span>
+              <span>Je bewerkt een bestaande notitie</span>
+            </div>
+          )}
           <textarea
             value={note}
             onChange={e => setNote(e.target.value)}
@@ -344,13 +405,27 @@ export function CombinedTeamCard({
                 </span>
               )}
             </div>
-            <button
-              onClick={saveNote}
-              disabled={saving || !note.trim()}
-              className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-            >
-              {saving ? "Opslaan..." : "Opslaan"}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {editingNoteId !== null && (
+                <button
+                  onClick={cancelEditing}
+                  className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50"
+                >
+                  Annuleren
+                </button>
+              )}
+              <button
+                onClick={saveNote}
+                disabled={saving || !note.trim()}
+                className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving
+                  ? "Opslaan..."
+                  : editingNoteId !== null
+                    ? "Wijziging opslaan"
+                    : "Opslaan"}
+              </button>
+            </div>
           </div>
 
         </div>
@@ -386,7 +461,6 @@ export function CombinedTeamCard({
                 const allOmzaTags = n.omza_category
                   ? [n.omza_category, ...omzaTagsFromMeta.filter((t: string) => t !== n.omza_category)]
                   : omzaTagsFromMeta;
-
                 return (
                   <div
                     key={n.id}
@@ -396,13 +470,41 @@ export function CombinedTeamCard({
                         : "border-emerald-200 bg-emerald-50"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-start justify-between gap-2 mb-1">
                       <span className={`text-[11px] font-semibold ${isTeamNote ? "text-sky-700" : "text-emerald-700"}`}>
                         {target}
+                        {n.created_by_name && (
+                          <span className="font-normal text-slate-500"> · {n.created_by_name}</span>
+                        )}
                       </span>
-                      <span className="text-[11px] text-slate-500 whitespace-nowrap shrink-0">
-                        {formattedDate} · {formattedTime}
-                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[11px] text-slate-500 whitespace-nowrap">
+                          {formattedDate} · {formattedTime}
+                        </span>
+                        {/* Kebab menu */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuNoteId(openMenuNoteId === n.id ? null : n.id);
+                            }}
+                            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-black/5 transition"
+                            aria-label="Meer acties"
+                          >
+                            <span aria-hidden="true" className="text-[14px] leading-none tracking-[0.12em]">···</span>
+                          </button>
+                          {openMenuNoteId === n.id && (
+                            <div className="absolute right-0 top-full z-20 mt-1 min-w-[120px] rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+                              <button
+                                onClick={() => { startEditing(n); setOpenMenuNoteId(null); }}
+                                className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                Bewerken
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <p className="text-slate-700 text-[13px] leading-snug">
                       {highlightText(n.text)}
