@@ -45,8 +45,8 @@ export default function ProjectNotesDetailPage({
   // Live title overrides – updated on every keystroke so tiles stay in sync while typing
   const [liveTeamTitles, setLiveTeamTitles] = useState<Record<string, string>>({});
 
-  // Teams panel open/close – mirrors the focus-mode pattern used on the assessment page
-  const [teamsOpen, setTeamsOpen] = useState(false);
+  // Teams panel open/close – auto-opens on load to immediately show focus mode with team selection
+  const [teamsOpen, setTeamsOpen] = useState(true);
   const { setSidebarCollapsed, setOnSidebarIconClick } = useTeacherLayout();
 
   // Filter states
