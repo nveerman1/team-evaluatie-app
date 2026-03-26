@@ -167,7 +167,7 @@ export function CombinedTeamCard({
   const saveQuick = (text: string, omzaTag: string | null) => {
     // Set the OMZA tag if provided
     if (omzaTag && !omzaTags.includes(omzaTag)) {
-      setOmzaTags([omzaTag]);
+      setOmzaTags((prev) => [...prev, omzaTag]);
     }
     const line = formatSnippet(text);
     if (!line) {
