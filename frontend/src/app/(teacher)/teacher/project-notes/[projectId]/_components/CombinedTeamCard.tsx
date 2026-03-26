@@ -160,24 +160,16 @@ export function CombinedTeamCard({
     setSelectedStudentId(null);
   };
 
-  const formatSnippet = (baseText: string, isStudent: boolean) => {
-    const tags: string[] = [];
-    if (isStudent && filter) tags.push(`#${filter}`);
-    if (omzaTags.length) tags.push(...omzaTags.map((t) => `#${t}`));
-    const tagBlock = tags.length ? `[${tags.join("][")}]` : "";
-    const trimmedText = baseText.trim();
-    if (!tagBlock && !trimmedText) return "";
-    if (!trimmedText) return tagBlock;
-    if (!tagBlock) return trimmedText;
-    return `${tagBlock} – ${trimmedText}`;
+  const formatSnippet = (baseText: string) => {
+    return baseText.trim();
   };
 
-  const saveQuick = (text: string, omzaTag: string | null, isStudent: boolean = false) => {
+  const saveQuick = (text: string, omzaTag: string | null) => {
     // Set the OMZA tag if provided
     if (omzaTag && !omzaTags.includes(omzaTag)) {
       setOmzaTags([omzaTag]);
     }
-    const line = formatSnippet(text, isStudent);
+    const line = formatSnippet(text);
     if (!line) {
       return;
     }
@@ -353,7 +345,7 @@ export function CombinedTeamCard({
               {(!filter ? QUICK_NOTES_TEAM : QUICK_NOTES_STUDENT).map(n => (
                 <button
                   key={n.text}
-                  onClick={() => saveQuick(n.text, n.omza, !!filter)}
+                  onClick={() => saveQuick(n.text, n.omza)}
                   className={`rounded-full border px-3 py-1 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800 transition ${
                     filter
                       ? "border-indigo-100 bg-indigo-50/50 text-slate-700"
