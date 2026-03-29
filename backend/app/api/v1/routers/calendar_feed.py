@@ -40,6 +40,7 @@ router = APIRouter(prefix="/calendar", tags=["calendar-feed"])
 # ---------------------------------------------------------------------------
 
 AMS_TZ = "Europe/Amsterdam"
+UID_DOMAIN = "team-evaluatie-app"
 
 
 def _build_urls(request: Request, token: str) -> CalendarTokenResponse:
@@ -156,7 +157,7 @@ def _build_ical(school_id: int, db: Session) -> bytes:
             dt = _to_dt(project.start_date)
             if dt:
                 ev = Event()
-                ev.add("uid", vText(f"project-start-{project.id}@team-evaluatie-app"))
+                ev.add("uid", vText(f"project-start-{project.id}@{UID_DOMAIN}"))
                 ev.add("summary", f"🚀 {project.title} — Start")
                 ev.add("dtstart", dt.date())
                 ev.add("dtend", (dt + timedelta(days=1)).date())
@@ -169,7 +170,7 @@ def _build_ical(school_id: int, db: Session) -> bytes:
             dt = _to_dt(project.end_date)
             if dt:
                 ev = Event()
-                ev.add("uid", vText(f"project-end-{project.id}@team-evaluatie-app"))
+                ev.add("uid", vText(f"project-end-{project.id}@{UID_DOMAIN}"))
                 ev.add("summary", f"🏁 {project.title} — Einde")
                 ev.add("dtstart", dt.date())
                 ev.add("dtend", (dt + timedelta(days=1)).date())
@@ -192,7 +193,7 @@ def _build_ical(school_id: int, db: Session) -> bytes:
         review_dt = _to_dt(deadlines.get("review"))
         if review_dt:
             ev = Event()
-            ev.add("uid", vText(f"eval-review-{evaluation.id}@team-evaluatie-app"))
+            ev.add("uid", vText(f"eval-review-{evaluation.id}@{UID_DOMAIN}"))
             ev.add("summary", f"📝 {evaluation.title} — Review deadline")
             ev.add("dtstart", review_dt.date())
             ev.add("dtend", (review_dt + timedelta(days=1)).date())
@@ -206,7 +207,7 @@ def _build_ical(school_id: int, db: Session) -> bytes:
             ev = Event()
             ev.add(
                 "uid",
-                vText(f"eval-reflection-{evaluation.id}@team-evaluatie-app"),
+                vText(f"eval-reflection-{evaluation.id}@{UID_DOMAIN}"),
             )
             ev.add("summary", f"💭 {evaluation.title} — Reflectie deadline")
             ev.add("dtstart", reflection_dt.date())
@@ -232,7 +233,7 @@ def _build_ical(school_id: int, db: Session) -> bytes:
                 ev = Event()
                 ev.add(
                     "uid",
-                    vText(f"competency-window-{window.id}@team-evaluatie-app"),
+                    vText(f"competency-window-{window.id}@{UID_DOMAIN}"),
                 )
                 ev.add("summary", f"🎯 {window.title} — Deadline")
                 ev.add("dtstart", dt.date())
@@ -253,7 +254,7 @@ def _build_ical(school_id: int, db: Session) -> bytes:
             dt = _to_dt(task.due_date)
             if dt:
                 ev = Event()
-                ev.add("uid", vText(f"task-{task.id}@team-evaluatie-app"))
+                ev.add("uid", vText(f"task-{task.id}@{UID_DOMAIN}"))
                 ev.add("summary", f"✅ {task.title}")
                 ev.add("dtstart", dt.date())
                 ev.add("dtend", (dt + timedelta(days=1)).date())
@@ -315,7 +316,7 @@ def revoke_token(
     )
 
 
-@router.get("/token-status", response_model=CalendarTokenResponse | None)
+@router.get("/token-status", response_model=Optional[CalendarTokenResponse])
 def get_token_status(
     request: Request,
     db: Session = Depends(get_db),
