@@ -11,6 +11,7 @@ import {
 import type { ProjectListItem } from "@/dtos/project.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
+import { CalendarSubscribeModal } from "@/components/calendar/CalendarSubscribeModal";
 
 type EventType =
   | "project_start"
@@ -84,6 +85,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null,
   );
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
   useEffect(() => {
     loadCalendarData();
@@ -500,6 +502,12 @@ export default function CalendarPage() {
               >
                 Nieuw competentievenster
               </Link>
+              <button
+                onClick={() => setShowSubscribeModal(true)}
+                className="rounded-xl px-3 py-2 bg-white border border-slate-200 text-sm hover:bg-slate-50 text-center"
+              >
+                📤 Abonneer op kalender
+              </button>
             </div>
           </section>
         </aside>
@@ -606,6 +614,10 @@ export default function CalendarPage() {
           onClose={() => setSelectedEvent(null)}
         />
       )}
+      <CalendarSubscribeModal
+        isOpen={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+      />
     </div>
   );
 }
