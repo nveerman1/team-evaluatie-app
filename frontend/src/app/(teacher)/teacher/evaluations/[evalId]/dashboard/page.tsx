@@ -389,7 +389,7 @@ export default function EvaluationDashboardPage() {
                     <tr>
                       {teamContext && teamContext.teams.length > 0 && (
                         <th
-                          className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                          className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                           onClick={() => handleSort("team")}
                         >
                           <div className="flex items-center gap-1">
@@ -503,11 +503,11 @@ export default function EvaluationDashboardPage() {
                           {teamContext && teamContext.teams.length > 0 && (
                             <td className="px-4 py-3 text-sm">
                               {userTeamMap.get(student.user_id) != null ? (
-                                <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                                <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                                   {userTeamMap.get(student.user_id)}
                                 </span>
                               ) : (
-                                <span className="text-gray-400 text-xs">
+                                <span className="text-slate-400 text-xs">
                                   —
                                 </span>
                               )}
@@ -563,7 +563,7 @@ export default function EvaluationDashboardPage() {
                                   {hasSprHigh && (
                                     <span
                                       className="cursor-default text-sm"
-                                      title={`SPR: ${spr!.toFixed(2)} — beoordeelt zichzelf aanzienlijk hoger dan peers`}
+                                      title={`SPR: ${spr?.toFixed(2) ?? ""} — beoordeelt zichzelf aanzienlijk hoger dan peers`}
                                     >
                                       ⚠️
                                     </span>
@@ -571,7 +571,7 @@ export default function EvaluationDashboardPage() {
                                   {hasSprLow && (
                                     <span
                                       className="cursor-default text-sm"
-                                      title={`SPR: ${spr!.toFixed(2)} — beoordeelt zichzelf lager dan peers`}
+                                      title={`SPR: ${spr?.toFixed(2) ?? ""} — beoordeelt zichzelf lager dan peers`}
                                     >
                                       💡
                                     </span>
@@ -579,7 +579,7 @@ export default function EvaluationDashboardPage() {
                                   {hasLowGiven && (
                                     <span
                                       className="cursor-default text-sm"
-                                      title={`Geeft gem. ${prev!.given_avg_pct!.toFixed(0)}% aan peers (teamgem: ${prev!.team_given_avg!.toFixed(0)}%) — beoordeelt anderen opvallend laag`}
+                                      title={`Geeft gem. ${prev?.given_avg_pct?.toFixed(0) ?? ""}% aan peers (teamgem: ${prev?.team_given_avg?.toFixed(0) ?? ""}%) — beoordeelt anderen opvallend laag`}
                                     >
                                       🔻
                                     </span>
