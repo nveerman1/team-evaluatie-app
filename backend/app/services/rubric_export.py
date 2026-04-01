@@ -26,7 +26,6 @@ from app.services.projectplan_export import (
     _set_default_font,
 )
 
-
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 

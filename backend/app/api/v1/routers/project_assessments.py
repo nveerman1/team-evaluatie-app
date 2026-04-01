@@ -2499,7 +2499,9 @@ def _build_rubric_export_data_for_team(
         )
         .all()
     )
-    scores_map = {s.criterion_id: {"score": s.score, "comment": s.comment} for s in scores}
+    scores_map = {
+        s.criterion_id: {"score": s.score, "comment": s.comment} for s in scores
+    }
 
     # Weighted total score + grade
     total_weight = 0.0
@@ -2511,7 +2513,11 @@ def _build_rubric_export_data_for_team(
             weighted_sum += sc["score"] * w
             total_weight += w
     avg_score = weighted_sum / total_weight if total_weight > 0 else None
-    grade = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max) if avg_score is not None else None
+    grade = (
+        _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+        if avg_score is not None
+        else None
+    )
 
     # General comment
     general_comment = None
@@ -2582,13 +2588,17 @@ def export_team_rubric(
 
     from app.services.rubric_export import generate_single_team_rubric_docx
 
-    data = _build_rubric_export_data_for_team(db, pa, rubric, criteria, team_number, user)
+    data = _build_rubric_export_data_for_team(
+        db, pa, rubric, criteria, team_number, user
+    )
     buffer = generate_single_team_rubric_docx(data)
 
     import re
 
     def _safe(s: str) -> str:
-        return re.sub(r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")).strip("-")
+        return re.sub(
+            r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
+        ).strip("-")
 
     parts = []
     if data.get("project_title"):
@@ -2602,7 +2612,9 @@ def export_team_rubric(
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
     )
 
 
@@ -2639,7 +2651,9 @@ def export_all_team_rubrics(
             .order_by(ProjectTeam.team_number.asc())
             .all()
         )
-        team_numbers = sorted({pt.team_number for pt in project_teams if pt.team_number is not None})
+        team_numbers = sorted(
+            {pt.team_number for pt in project_teams if pt.team_number is not None}
+        )
 
     from app.services.rubric_export import generate_all_teams_rubric_docx
 
@@ -2669,7 +2683,9 @@ def export_all_team_rubrics(
     import re
 
     def _safe(s: str) -> str:
-        return re.sub(r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")).strip("-")
+        return re.sub(
+            r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
+        ).strip("-")
 
     project_title: str | None = None
     if pa.project_id:
@@ -2687,7 +2703,9 @@ def export_all_team_rubrics(
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
     )
 
 
