@@ -1005,7 +1005,7 @@ export default function CombinedAssessmentInner() {
                         </th>
                         {/* Student */}
                         <th
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100 min-w-48"
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100 min-w-36"
                           onClick={() => toggleSort("name")}
                         >
                           <div className="flex items-center gap-1">
@@ -1090,7 +1090,7 @@ export default function CombinedAssessmentInner() {
                                 )}
                               </td>
                               {/* Student link + expand button */}
-                              <td className="px-4 py-3 align-middle min-w-48">
+                              <td className="px-4 py-3 align-middle min-w-36">
                                 <div className="flex items-center gap-2">
                                   <Link
                                     href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
