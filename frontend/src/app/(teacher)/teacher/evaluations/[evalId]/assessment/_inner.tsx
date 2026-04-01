@@ -993,7 +993,7 @@ export default function CombinedAssessmentInner() {
                       <tr>
                         {/* Team */}
                         <th
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-14 cursor-pointer hover:bg-gray-100"
+                          className="px-2 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-10 cursor-pointer hover:bg-gray-100"
                           onClick={() => toggleSort("team")}
                         >
                           <div className="flex items-center gap-1">
@@ -1040,20 +1040,20 @@ export default function CombinedAssessmentInner() {
                         {/* Comment indicator */}
                         <th className="px-2 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-8" />
                         {/* Signalen */}
-                        <th className="px-2 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-12">
+                        <th className="px-1 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-10">
                           Signalen
                         </th>
                         {/* GCF */}
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-16">
+                        <th className="px-2 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-12">
                           GCF
                         </th>
                         {/* Groepscijfer */}
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-24">
+                        <th className="px-2 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-16">
                           Groepscijfer
                         </th>
                         {/* Eindcijfer */}
                         <th
-                          className="px-3 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-24 cursor-pointer hover:bg-gray-100"
+                          className="px-2 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-20 cursor-pointer hover:bg-gray-100"
                           onClick={() => toggleSort("final")}
                         >
                           <div className="flex items-center justify-end gap-1">
@@ -1083,7 +1083,7 @@ export default function CombinedAssessmentInner() {
                               }
                             >
                               {/* Team pill */}
-                              <td className="px-4 py-3 align-middle text-xs text-gray-500">
+                              <td className="px-2 py-3 align-middle text-xs text-gray-500">
                                 {r.teamNumber != null && (
                                   <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
                                     {r.teamNumber}
@@ -1170,7 +1170,7 @@ export default function CombinedAssessmentInner() {
                                 {hasComment ? "💬" : ""}
                               </td>
                               {/* Signalen */}
-                              <td className="px-2 py-3 align-middle text-center w-12">
+                              <td className="px-1 py-3 align-middle text-center w-10">
                                 <div className="flex items-center justify-center gap-0.5">
                                   {r.spr > 1.20 && (
                                     <div className="relative group inline-flex">
@@ -1208,7 +1208,7 @@ export default function CombinedAssessmentInner() {
                                 </div>
                               </td>
                               {/* GCF */}
-                              <td className="px-3 py-3 align-middle text-right">
+                              <td className="px-2 py-3 align-middle text-right">
                                 <span
                                   className={`text-sm ${
                                     r.gcf < 0.9
@@ -1222,10 +1222,10 @@ export default function CombinedAssessmentInner() {
                                 </span>
                               </td>
                               {/* Groepscijfer */}
-                              <td className="px-3 py-3 align-middle text-right">
+                              <td className="px-2 py-3 align-middle text-right">
                                 <input
                                   type="text"
-                                  className="w-20 text-right rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                  className="w-14 text-right rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
                                   value={
                                     r.rowGroupGrade != null &&
                                     !Number.isNaN(r.rowGroupGrade)
@@ -1241,11 +1241,11 @@ export default function CombinedAssessmentInner() {
                                 />
                               </td>
                               {/* Eindcijfer */}
-                              <td className="px-3 py-3 align-middle text-right">
+                              <td className="px-2 py-3 align-middle text-right">
                                 <div className="flex items-center justify-end gap-1">
                                   <input
                                     type="text"
-                                    className={`w-16 text-right rounded-lg border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm ${
+                                    className={`w-14 text-right rounded-lg border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm ${
                                       r.override != null
                                         ? "border-blue-300 bg-blue-50"
                                         : finalGrade(r) === 0
