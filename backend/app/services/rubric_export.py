@@ -108,8 +108,7 @@ def _add_rubric_table(doc: Document, criteria: list, scores_map: dict) -> None:
     table = doc.add_table(rows=0, cols=3)
     table.style = "Table Grid"
 
-    # Set explicit column widths (DXA = twentieths of a point).
-    # Usable width ≈ 18.6 cm with 1.2 cm side margins → ~10 530 DXA total.
+    # Column proportions (DXA used for tblGrid hints only; actual width is 100 % via pct tblW).
     # Criterium: 45 % (~4740), Score: 8 % (~840), Toelichting: 47 % (~4950)
     COL_WIDTHS = (4740, 840, 4950)
     tbl = table._tbl
@@ -118,8 +117,8 @@ def _add_rubric_table(doc: Document, criteria: list, scores_map: dict) -> None:
         tblPr = OxmlElement("w:tblPr")
         tbl.insert(0, tblPr)
     tblW = OxmlElement("w:tblW")
-    tblW.set(qn("w:w"), str(sum(COL_WIDTHS)))
-    tblW.set(qn("w:type"), "dxa")
+    tblW.set(qn("w:w"), "5000")
+    tblW.set(qn("w:type"), "pct")
     tblPr.append(tblW)
 
     tblGrid = OxmlElement("w:tblGrid")
@@ -196,13 +195,8 @@ def _add_score_summary(
     general_comment: str | None,
 ) -> None:
     """Total score, grade, and optional general comment below the rubric table."""
-    if total_score is not None or grade is not None:
-        summary_parts = []
-        if total_score is not None:
-            summary_parts.append(f"Totaalscore: {total_score}")
-        if grade is not None:
-            summary_parts.append(f"Cijfer: {grade}")
-        summary_para = doc.add_paragraph("   ·   ".join(summary_parts))
+    if grade is not None:
+        summary_para = doc.add_paragraph(f"Cijfer: {grade}")
         _spacing(summary_para, before=2, after=4)
         for run in summary_para.runs:
             run.font.name = FONT_NAME
