@@ -1005,7 +1005,7 @@ export default function CombinedAssessmentInner() {
                         </th>
                         {/* Student */}
                         <th
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100 min-w-36"
                           onClick={() => toggleSort("name")}
                         >
                           <div className="flex items-center gap-1">
@@ -1037,8 +1037,7 @@ export default function CombinedAssessmentInner() {
                             {cat}
                           </th>
                         ))}
-                        {/* Comment indicator */}
-                        <th className="px-2 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-8" />
+
                         {/* Signalen */}
                         <th className="px-1 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-10">
                           Signalen
@@ -1091,7 +1090,7 @@ export default function CombinedAssessmentInner() {
                                 )}
                               </td>
                               {/* Student link + expand button */}
-                              <td className="px-4 py-3 align-middle">
+                              <td className="px-4 py-3 align-middle min-w-36">
                                 <div className="flex items-center gap-2">
                                   <Link
                                     href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
@@ -1101,7 +1100,12 @@ export default function CombinedAssessmentInner() {
                                   </Link>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-50"
+                                    className={
+                                      "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] hover:bg-opacity-80 " +
+                                      (hasComment
+                                        ? "border-indigo-300 bg-indigo-50 text-indigo-500 hover:bg-indigo-100"
+                                        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50")
+                                    }
                                     onClick={() =>
                                       setExpandedRow(
                                         isExpanded ? null : r.user_id,
@@ -1165,10 +1169,7 @@ export default function CombinedAssessmentInner() {
                                   </td>
                                 );
                               })}
-                              {/* Comment indicator */}
-                              <td className="px-2 py-3 align-middle text-center text-xs text-gray-400">
-                                {hasComment ? "💬" : ""}
-                              </td>
+
                               {/* Signalen */}
                               <td className="px-1 py-3 align-middle text-center w-10">
                                 <div className="flex items-center justify-center gap-0.5">
