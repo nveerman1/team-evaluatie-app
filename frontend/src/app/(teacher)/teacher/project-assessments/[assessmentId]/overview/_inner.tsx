@@ -50,6 +50,41 @@ export default function ProjectAssessmentOverviewInner() {
     loadData();
   }, [loadData]);
 
+  const handleExportTeam = useCallback(
+    async (teamNumber: number) => {
+      try {
+        const { blob, filename } = await projectAssessmentService.exportTeamRubric(
+          assessmentId,
+          teamNumber,
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        alert("Downloaden mislukt");
+      }
+    },
+    [assessmentId],
+  );
+
+  const handleExportAll = useCallback(async () => {
+    try {
+      const { blob, filename } =
+        await projectAssessmentService.exportAllRubrics(assessmentId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Downloaden mislukt");
+    }
+  }, [assessmentId]);
+
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
   if (!data) return <ErrorMessage message="Geen data gevonden" />;
@@ -146,6 +181,26 @@ export default function ProjectAssessmentOverviewInner() {
             className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
           >
             {sortOrder === "asc" ? "↑" : "↓"}
+          </button>
+          <button
+            onClick={handleExportAll}
+            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50 inline-flex items-center gap-1.5"
+            title="Alle rubrics downloaden als Word"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4 text-slate-500"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 3a1 1 0 011 1v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 11.586V4a1 1 0 011-1z"
+                clipRule="evenodd"
+              />
+              <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+            </svg>
+            Alle rubrics
           </button>
         </div>
       </div>
@@ -265,16 +320,39 @@ export default function ProjectAssessmentOverviewInner() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 shadow-sm inline-block"
-                    >
-                      {team.status === "not_started"
-                        ? "Start beoordeling"
-                        : team.status === "in_progress"
-                          ? "Verder invullen"
-                          : "Bekijk rubric"}
-                    </Link>
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 shadow-sm inline-block"
+                      >
+                        {team.status === "not_started"
+                          ? "Start beoordeling"
+                          : team.status === "in_progress"
+                            ? "Verder invullen"
+                            : "Bekijk rubric"}
+                      </Link>
+                      <button
+                        onClick={() =>
+                          handleExportTeam(team.team_number as number)
+                        }
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 shadow-sm"
+                        title={`Download rubric Team ${team.team_number}`}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className="w-4 h-4"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 3a1 1 0 011 1v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 11.586V4a1 1 0 011-1z"
+                            clipRule="evenodd"
+                          />
+                          <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -285,3 +363,4 @@ export default function ProjectAssessmentOverviewInner() {
     </>
   );
 }
+

@@ -1,8 +1,10 @@
 from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -2446,6 +2448,264 @@ def get_self_assessment_overview(
         criteria=criteria_list,
         team_overviews=team_overviews,
         statistics=statistics,
+    )
+
+
+# ---------- Rubric Word Export ----------
+
+
+def _build_rubric_export_data_for_team(
+    db: Session,
+    pa: ProjectAssessment,
+    rubric,
+    criteria,
+    team_number: int,
+    user,
+) -> dict:
+    """Collect all data needed to export a single team's rubric as a Word doc."""
+    from app.infra.db.models import ProjectAssessmentTeam
+
+    # Team members
+    team_members: list[str] = []
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.team_number == team_number,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        for pt in project_teams:
+            members_q = (
+                db.query(User)
+                .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+                .filter(
+                    ProjectTeamMember.project_team_id == pt.id,
+                    User.archived.is_(False),
+                )
+                .all()
+            )
+            team_members.extend(m.name for m in members_q)
+
+    # Scores for this team
+    scores = (
+        db.query(ProjectAssessmentScore)
+        .filter(
+            ProjectAssessmentScore.assessment_id == pa.id,
+            ProjectAssessmentScore.school_id == user.school_id,
+            ProjectAssessmentScore.team_number == team_number,
+        )
+        .all()
+    )
+    scores_map = {
+        s.criterion_id: {"score": s.score, "comment": s.comment} for s in scores
+    }
+
+    # Weighted total score + grade
+    total_weight = 0.0
+    weighted_sum = 0.0
+    for c in criteria:
+        sc = scores_map.get(c.id)
+        if sc and sc["score"] is not None:
+            w = c.weight or 1.0
+            weighted_sum += sc["score"] * w
+            total_weight += w
+    avg_score = weighted_sum / total_weight if total_weight > 0 else None
+    grade = (
+        _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+        if avg_score is not None
+        else None
+    )
+
+    # General comment
+    general_comment = None
+    assessment_team = (
+        db.query(ProjectAssessmentTeam)
+        .join(ProjectTeam, ProjectAssessmentTeam.project_team_id == ProjectTeam.id)
+        .filter(
+            ProjectAssessmentTeam.project_assessment_id == pa.id,
+            ProjectAssessmentTeam.school_id == user.school_id,
+            ProjectTeam.team_number == team_number,
+        )
+        .first()
+    )
+    if assessment_team:
+        general_comment = assessment_team.general_comment
+
+    criteria_list = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "weight": c.weight,
+            "category": getattr(c, "category", None),
+        }
+        for c in criteria
+    ]
+
+    # Fetch project title for the filename
+    project_title: str | None = None
+    if pa.project_id:
+        project = db.query(Project).filter(Project.id == pa.project_id).first()
+        if project:
+            project_title = project.title
+
+    return {
+        "assessment_title": pa.title or rubric.title,
+        "project_title": project_title,
+        "team_number": team_number,
+        "team_members": team_members,
+        "criteria": criteria_list,
+        "scores_map": scores_map,
+        "total_score": round(avg_score, 1) if avg_score is not None else None,
+        "grade": grade,
+        "general_comment": general_comment,
+    }
+
+
+@router.get("/{assessment_id}/export-rubric", response_class=StreamingResponse)
+def export_team_rubric(
+    assessment_id: int,
+    team_number: int = Query(..., description="Team number to export rubric for"),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Export rubric for a single team as a Word document (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Alleen docenten en admins kunnen rubrics exporteren",
+        )
+
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
+
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
+
+    from app.services.rubric_export import generate_single_team_rubric_docx
+
+    data = _build_rubric_export_data_for_team(
+        db, pa, rubric, criteria, team_number, user
+    )
+    buffer = generate_single_team_rubric_docx(data)
+
+    import re
+
+    def _safe(s: str) -> str:
+        return re.sub(
+            r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
+        ).strip("-")
+
+    parts = []
+    if data.get("project_title"):
+        parts.append(_safe(data["project_title"]))
+    parts.append(f"Team{team_number}")
+    if data.get("team_members"):
+        members_str = "_".join(_safe(m) for m in data["team_members"])
+        if members_str:
+            parts.append(members_str)
+    filename = "Rubric_" + "_".join(parts) + ".docx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
+    )
+
+
+@router.get("/{assessment_id}/export-rubric-all", response_class=StreamingResponse)
+def export_all_team_rubrics(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Export rubrics for all teams as a single Word document (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Alleen docenten en admins kunnen rubrics exporteren",
+        )
+
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
+
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
+
+    # Discover all team numbers from project teams
+    team_numbers: list[int] = []
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .order_by(ProjectTeam.team_number.asc())
+            .all()
+        )
+        team_numbers = sorted(
+            {pt.team_number for pt in project_teams if pt.team_number is not None}
+        )
+
+    from app.services.rubric_export import generate_all_teams_rubric_docx
+
+    criteria_list = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "weight": c.weight,
+            "category": getattr(c, "category", None),
+        }
+        for c in criteria
+    ]
+
+    teams_data = [
+        _build_rubric_export_data_for_team(db, pa, rubric, criteria, tn, user)
+        for tn in team_numbers
+    ]
+
+    data = {
+        "assessment_title": pa.title or rubric.title,
+        "criteria": criteria_list,
+        "teams": teams_data,
+    }
+
+    buffer = generate_all_teams_rubric_docx(data)
+
+    import re
+
+    def _safe(s: str) -> str:
+        return re.sub(
+            r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
+        ).strip("-")
+
+    project_title: str | None = None
+    if pa.project_id:
+        project = db.query(Project).filter(Project.id == pa.project_id).first()
+        if project:
+            project_title = project.title
+
+    parts = ["Rubrics"]
+    if project_title:
+        parts.append(_safe(project_title))
+    else:
+        raw_title = (pa.title or "Beoordeling").strip()
+        parts.append(_safe(raw_title))
+    filename = "_".join(parts) + ".docx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
     )
 
 
