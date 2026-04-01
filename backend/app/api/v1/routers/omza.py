@@ -29,6 +29,7 @@ from app.api.v1.schemas.omza import (
     OmzaStudentData,
     OmzaCategoryScore,
     TeacherScoreCreate,
+    TeacherScoresBatchCreate,
     TeacherCommentCreate,
     StandardCommentCreate,
     StandardCommentOut,
@@ -307,6 +308,61 @@ async def save_teacher_score(
         "message": "Teacher score saved",
         "student_id": data.student_id,
         "category": data.category,
+    }
+
+
+@router.post("/evaluations/{evaluation_id}/teacher-scores")
+async def save_teacher_scores_batch(
+    evaluation_id: int,
+    data: TeacherScoresBatchCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Save multiple teacher scores for an evaluation in a single request.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    if evaluation.settings is None:
+        evaluation.settings = {}
+
+    from sqlalchemy.orm.attributes import flag_modified
+
+    for item in data.scores:
+        teacher_key = f"teacher_score_{item.student_id}_{item.category}"
+        evaluation.settings[teacher_key] = item.score
+
+    flag_modified(evaluation, "settings")
+
+    log_update(
+        db=db,
+        user=current_user,
+        entity_type="evaluation_teacher_scores_batch",
+        entity_id=evaluation_id,
+        details={"count": len(data.scores)},
+        request=request,
+    )
+
+    db.commit()
+
+    return {
+        "message": "Teacher scores saved",
+        "count": len(data.scores),
     }
 
 

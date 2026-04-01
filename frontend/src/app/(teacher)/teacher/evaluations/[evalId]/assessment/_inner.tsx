@@ -653,17 +653,8 @@ export default function CombinedAssessmentInner() {
     });
 
     setTeacherScores(newScores);
-    // Batch in chunks of 10 to avoid overwhelming the server
-    const chunkSize = 10;
     try {
-      for (let i = 0; i < updates.length; i += chunkSize) {
-        const chunk = updates.slice(i, i + chunkSize);
-        await Promise.all(
-          chunk.map((update) =>
-            omzaService.saveTeacherScore(evalIdNum, update),
-          ),
-        );
-      }
+      await omzaService.saveTeacherScoresBatch(evalIdNum, { scores: updates });
       showToast("Docentscores overgenomen van peer scores");
     } catch (err: unknown) {
       const error = err as { message?: string };

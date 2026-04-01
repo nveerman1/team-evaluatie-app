@@ -144,7 +144,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         scoring_patterns = [
             r"^/api/v1/project-assessments/\d+/scores(?:/.*)?$",
             r"^/api/v1/evaluations/\d+/grades(?:/.*)?$",
-            r"^/api/v1/omza/evaluations/\d+/teacher-score$",  # OMZA teacher scoring
+            r"^/api/v1/omza/evaluations/\d+/teacher-score$",  # OMZA single teacher score
+            r"^/api/v1/omza/evaluations/\d+/teacher-scores$",  # OMZA batch teacher scores
         ]
 
         is_scoring_endpoint = any(

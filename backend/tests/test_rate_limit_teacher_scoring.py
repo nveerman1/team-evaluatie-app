@@ -319,6 +319,10 @@ def test_scoring_endpoint_pattern_matching():
         mock_request("/api/v1/omza/evaluations/42/teacher-score")
     )
 
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/12/teacher-scores")
+    )
+
     # Should NOT match - not scoring endpoints
     assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/123")
@@ -470,3 +474,61 @@ def test_rate_limit_uses_forwarded_for_when_no_real_ip():
     assert (
         identifier == "ip:198.51.100.5"
     ), f"Expected first forwarded IP, got: {identifier}"
+
+
+def test_omza_teacher_scores_batch_endpoint_exempted():
+    """Test that the OMZA batch teacher-scores endpoint is exempted for teachers"""
+    mock_rate_limiter = MagicMock(spec=RateLimiter)
+    mock_rate_limiter.is_allowed.return_value = (False, 30)
+
+    app = FastAPI()
+    app.add_middleware(RateLimitMiddleware, rate_limiter=mock_rate_limiter)
+
+    teacher_user = MockUser(id=1, role="teacher")
+
+    @app.post("/api/v1/omza/evaluations/12/teacher-scores")
+    def omza_batch_teacher_scores_endpoint():
+        return {"message": "teacher scores saved", "count": 8}
+
+    @app.middleware("http")
+    async def add_user_to_request(request, call_next):
+        request.state.user = teacher_user
+        return await call_next(request)
+
+    client = TestClient(app)
+
+    response = client.post("/api/v1/omza/evaluations/12/teacher-scores")
+    assert response.status_code == 200
+
+    # Rate limiter should never be called because endpoint is exempted
+    mock_rate_limiter.is_allowed.assert_not_called()
+
+
+def test_omza_batch_endpoint_pattern_matching():
+    """Test that the OMZA batch teacher-scores pattern is matched precisely"""
+    app = FastAPI()
+    middleware = RateLimitMiddleware(app, rate_limiter=MagicMock())
+
+    teacher_user = MockUser(id=1, role="teacher")
+
+    def mock_request(path: str):
+        request = MagicMock()
+        request.url.path = path
+        request.state.user = teacher_user
+        return request
+
+    # Should match - valid batch scoring endpoint
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/1/teacher-scores")
+    )
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/42/teacher-scores")
+    )
+
+    # Should NOT match - extra path segment or malformed
+    assert not middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/1/teacher-scores/extra")
+    )
+    assert not middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/omza/evaluations/abc/teacher-scores")  # non-numeric ID
+    )

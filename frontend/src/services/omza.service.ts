@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import {
   OmzaDataResponse,
   TeacherScoreCreate,
+  TeacherScoresBatchCreate,
   TeacherCommentCreate,
   StandardComment,
   StandardCommentCreate,
@@ -33,6 +34,20 @@ export const omzaService = {
   ): Promise<{ message: string; student_id: number; category: string }> {
     const response = await api.post(
       `/omza/evaluations/${evaluationId}/teacher-score`,
+      data,
+    );
+    return response.data;
+  },
+
+  /**
+   * Save multiple teacher scores in a single request
+   */
+  async saveTeacherScoresBatch(
+    evaluationId: number,
+    data: TeacherScoresBatchCreate,
+  ): Promise<{ message: string; count: number }> {
+    const response = await api.post(
+      `/omza/evaluations/${evaluationId}/teacher-scores`,
       data,
     );
     return response.data;

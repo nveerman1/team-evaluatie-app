@@ -35,6 +35,10 @@ export interface TeacherScoreCreate {
   score: number;
 }
 
+export interface TeacherScoresBatchCreate {
+  scores: TeacherScoreCreate[];
+}
+
 export interface TeacherCommentCreate {
   student_id: number;
   comment: string;

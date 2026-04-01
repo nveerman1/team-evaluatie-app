@@ -58,6 +58,14 @@ class TeacherScoreCreate(BaseModel):
     score: float = Field(description="Score value")
 
 
+class TeacherScoresBatchCreate(BaseModel):
+    """Request to save multiple teacher scores in one call"""
+
+    scores: List[TeacherScoreCreate] = Field(
+        description="List of teacher scores to save"
+    )
+
+
 class TeacherCommentCreate(BaseModel):
     """Request to save a teacher comment"""
 
