@@ -299,6 +299,7 @@ export default function CombinedAssessmentInner() {
     {},
   );
   const [toast, setToast] = useState<string | null>(null);
+  const [isApplyingPeerScores, setIsApplyingPeerScores] = useState(false);
 
   // Debounce refs
   const scoreTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>(
@@ -308,6 +309,7 @@ export default function CombinedAssessmentInner() {
     {},
   );
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const applyingPeerScoresRef = useRef(false);
   // Track whether grade data has unsaved changes
   const isDirty = useRef(false);
 
@@ -624,7 +626,9 @@ export default function CombinedAssessmentInner() {
   // ── "Neem peer score over" ────────────────────────────────────────────────
 
   const applyPeerScoresAll = useCallback(async () => {
-    if (!evalIdNum) return;
+    if (!evalIdNum || applyingPeerScoresRef.current) return;
+    applyingPeerScoresRef.current = true;
+    setIsApplyingPeerScores(true);
     const updates: Array<{
       student_id: number;
       category: string;
@@ -664,6 +668,9 @@ export default function CombinedAssessmentInner() {
     } catch (err: unknown) {
       const error = err as { message?: string };
       showToast(`Fout bij opslaan: ${error?.message || "Onbekende fout"}`);
+    } finally {
+      applyingPeerScoresRef.current = false;
+      setIsApplyingPeerScores(false);
     }
   }, [evalIdNum, rows, categories, teacherScores, showToast]);
 
@@ -920,10 +927,11 @@ export default function CombinedAssessmentInner() {
             )}
             <button
               type="button"
-              className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100"
+              className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={applyPeerScoresAll}
+              disabled={isApplyingPeerScores}
             >
-              Neem peer score over
+              {isApplyingPeerScores ? "Bezig..." : "Neem peer score over"}
             </button>
             <button
               type="button"
