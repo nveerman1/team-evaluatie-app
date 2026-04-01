@@ -108,16 +108,26 @@ def _add_rubric_table(doc: Document, criteria: list, scores_map: dict) -> None:
     table = doc.add_table(rows=0, cols=3)
     table.style = "Table Grid"
 
-    # Set approximate column widths via XML
+    # Set explicit column widths (DXA = twentieths of a point).
+    # Usable width ≈ 18.6 cm with 1.2 cm side margins → ~10 530 DXA total.
+    # Criterium: 45 % (~4740), Score: 8 % (~840), Toelichting: 47 % (~4950)
+    COL_WIDTHS = (4740, 840, 4950)
     tbl = table._tbl
     tblPr = tbl.find(qn("w:tblPr"))
     if tblPr is None:
         tblPr = OxmlElement("w:tblPr")
         tbl.insert(0, tblPr)
     tblW = OxmlElement("w:tblW")
-    tblW.set(qn("w:w"), "0")
-    tblW.set(qn("w:type"), "auto")
+    tblW.set(qn("w:w"), str(sum(COL_WIDTHS)))
+    tblW.set(qn("w:type"), "dxa")
     tblPr.append(tblW)
+
+    tblGrid = OxmlElement("w:tblGrid")
+    for w in COL_WIDTHS:
+        gridCol = OxmlElement("w:gridCol")
+        gridCol.set(qn("w:w"), str(w))
+        tblGrid.append(gridCol)
+    tbl.insert(list(tbl).index(tblPr) + 1, tblGrid)
 
     # Header row
     hdr_row = table.add_row()

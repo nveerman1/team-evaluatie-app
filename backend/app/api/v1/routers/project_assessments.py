@@ -2538,8 +2538,16 @@ def _build_rubric_export_data_for_team(
         for c in criteria
     ]
 
+    # Fetch project title for the filename
+    project_title: str | None = None
+    if pa.project_id:
+        project = db.query(Project).filter(Project.id == pa.project_id).first()
+        if project:
+            project_title = project.title
+
     return {
         "assessment_title": pa.title or rubric.title,
+        "project_title": project_title,
         "team_number": team_number,
         "team_members": team_members,
         "criteria": criteria_list,
@@ -2577,8 +2585,20 @@ def export_team_rubric(
     data = _build_rubric_export_data_for_team(db, pa, rubric, criteria, team_number, user)
     buffer = generate_single_team_rubric_docx(data)
 
-    raw_title = (pa.title or "Beoordeling").strip()
-    filename = f"Rubric_Team{team_number}_{raw_title}.docx"
+    import re
+
+    def _safe(s: str) -> str:
+        return re.sub(r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")).strip("-")
+
+    parts = []
+    if data.get("project_title"):
+        parts.append(_safe(data["project_title"]))
+    parts.append(f"Team{team_number}")
+    if data.get("team_members"):
+        members_str = "_".join(_safe(m) for m in data["team_members"])
+        if members_str:
+            parts.append(members_str)
+    filename = "Rubric_" + "_".join(parts) + ".docx"
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -2646,8 +2666,24 @@ def export_all_team_rubrics(
 
     buffer = generate_all_teams_rubric_docx(data)
 
-    raw_title = (pa.title or "Beoordeling").strip()
-    filename = f"Rubrics_{raw_title}.docx"
+    import re
+
+    def _safe(s: str) -> str:
+        return re.sub(r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")).strip("-")
+
+    project_title: str | None = None
+    if pa.project_id:
+        project = db.query(Project).filter(Project.id == pa.project_id).first()
+        if project:
+            project_title = project.title
+
+    parts = ["Rubrics"]
+    if project_title:
+        parts.append(_safe(project_title))
+    else:
+        raw_title = (pa.title or "Beoordeling").strip()
+        parts.append(_safe(raw_title))
+    filename = "_".join(parts) + ".docx"
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
