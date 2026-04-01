@@ -55,6 +55,8 @@ export type GradePreviewResponse = {
     gcf: number;
     spr: number;
     suggested_grade: number;
+    given_avg_pct?: number | null;
+    team_given_avg?: number | null;
   }[];
 };
 

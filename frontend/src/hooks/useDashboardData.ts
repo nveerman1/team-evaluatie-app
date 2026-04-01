@@ -69,6 +69,8 @@ type GradePreviewItem = {
   suggested_grade: number;
   team_number?: number | null;
   class_name?: string | null;
+  given_avg_pct?: number | null;
+  team_given_avg?: number | null;
 };
 
 type GradePreviewResponse = {

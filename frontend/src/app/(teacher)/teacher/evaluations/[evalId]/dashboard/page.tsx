@@ -1,14 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useNumericEvalId } from "@/utils";
 import { useDashboardData } from "@/hooks";
 import {
-  Tile,
   Loading,
   ErrorMessage,
-  TeamBadge,
-  TeamFilter,
 } from "@/components";
 import { useState, useMemo, useEffect } from "react";
 import { dashboardService } from "@/services/dashboard.service";
@@ -43,19 +39,8 @@ function formatLastActivity(dateStr?: string | null): string {
   return date.toLocaleDateString("nl-NL");
 }
 
-function getFlagDescription(flag: string): string {
-  const descriptions: Record<string, string> = {
-    low_progress: "Lage voortgang (<30%)",
-    no_activity: "Geen activiteit geregistreerd",
-    inactive_7days: "Meer dan 7 dagen inactief",
-    missing_peer_reviews: "Mist peer reviews (<50% ontvangen)",
-    no_self_assessment: "Zelfbeoordeling niet gestart",
-    no_reflection: "Reflectie niet ingeleverd",
-  };
-  return descriptions[flag] || flag;
-}
-
 type SortField =
+  | "team"
   | "name"
   | "class"
   | "progress"
@@ -68,22 +53,18 @@ type FilterType = "all" | "not_started" | "partial" | "completed";
 
 export default function EvaluationDashboardPage() {
   const evalIdNum = useNumericEvalId();
-  const { kpis, studentProgress, loading, error } = useDashboardData(
+  const { studentProgress, flags: flagsData, preview, loading, error } = useDashboardData(
     evalIdNum ?? undefined,
   );
-
-  const evalId = evalIdNum?.toString() ?? "";
 
   // State for sorting and filtering
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [filterType, setFilterType] = useState<FilterType>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // State for team context
   const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(
-    null,
-  );
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<number | null>(
     null,
   );
 
@@ -130,6 +111,19 @@ export default function EvaluationDashboardPage() {
     return map;
   }, [teamContext]);
 
+  // Maps for assessment-style signals (SPR and given_avg_pct)
+  const sprMap = useMemo(() => {
+    const map = new Map<number, number>();
+    flagsData.forEach((f) => map.set(f.user_id, f.spr));
+    return map;
+  }, [flagsData]);
+
+  const previewMap = useMemo(() => {
+    const map = new Map<number, { given_avg_pct?: number | null; team_given_avg?: number | null }>();
+    preview?.items.forEach((item) => map.set(item.user_id, { given_avg_pct: item.given_avg_pct, team_given_avg: item.team_given_avg }));
+    return map;
+  }, [preview]);
+
   // Filtered and sorted students
   const filteredStudents = useMemo(() => {
     if (!studentProgress?.items) return [];
@@ -147,11 +141,15 @@ export default function EvaluationDashboardPage() {
       filtered = filtered.filter((s) => s.total_progress_percent === 0);
     }
 
-    // Apply team filter
-    if (selectedTeamFilter !== null && userTeamMap.size > 0) {
-      filtered = filtered.filter(
-        (s) => userTeamMap.get(s.user_id) === selectedTeamFilter,
-      );
+    // Apply search filter (by name or team number)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((s) => {
+        const nameMatch = s.user_name.toLowerCase().includes(query);
+        const teamNum = userTeamMap.get(s.user_id);
+        const teamMatch = teamNum != null && teamNum.toString().includes(query);
+        return nameMatch || teamMatch;
+      });
     }
 
     // Apply sort
@@ -160,6 +158,10 @@ export default function EvaluationDashboardPage() {
       let bVal: any = 0;
 
       switch (sortField) {
+        case "team":
+          aVal = userTeamMap.get(a.user_id) ?? 0;
+          bVal = userTeamMap.get(b.user_id) ?? 0;
+          break;
         case "name":
           aVal = a.user_name.toLowerCase();
           bVal = b.user_name.toLowerCase();
@@ -209,7 +211,7 @@ export default function EvaluationDashboardPage() {
   }, [
     studentProgress,
     filterType,
-    selectedTeamFilter,
+    searchQuery,
     userTeamMap,
     sortField,
     sortDirection,
@@ -221,24 +223,6 @@ export default function EvaluationDashboardPage() {
     } else {
       setSortField(field);
       setSortDirection("asc");
-    }
-  };
-
-  const handleExportCSV = async () => {
-    if (!evalIdNum) return;
-    try {
-      const blob = await dashboardService.exportProgressCSV(evalIdNum);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `evaluation_${evalIdNum}_progress.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (e) {
-      console.error("Export failed:", e);
-      alert("Export mislukte. Probeer het opnieuw.");
     }
   };
 
@@ -264,26 +248,33 @@ export default function EvaluationDashboardPage() {
     }
   };
 
-  const [activeTab, setActiveTab] = useState("dashboard");
-
   return (
     <>
       {!loading && !error && (
         <>
-          {/* KPI tiles */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Tile label="Self-reviews" value={kpis?.selfreviews_present ?? 0} />
-            <Tile label="Peer-reviews" value={kpis?.reviewers_total ?? 0} />
-            <Tile label="Reflecties" value={kpis?.reflections_count ?? 0} />
-            <Tile label="Totaal studenten" value={kpis?.students_total ?? 0} />
-          </section>
-
           {/* Student Progress Table */}
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Voortgang per leerling
-              </h2>
+            {/* Filters + action buttons in one row */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex flex-wrap gap-3 items-center">
+                <input
+                  className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Zoek op teamnummer of naam..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <select
+                  className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as FilterType)}
+                >
+                  <option value="all">Alle leerlingen</option>
+                  <option value="not_started">🔴 Niet gestart</option>
+                  <option value="partial">🟡 Deels voltooid</option>
+                  <option value="completed">🟢 Voltooid</option>
+                </select>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={handleSendReminders}
@@ -291,85 +282,28 @@ export default function EvaluationDashboardPage() {
                 >
                   ✉️ Stuur herinnering
                 </button>
-                <button
-                  onClick={handleExportCSV}
-                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium shadow-sm"
-                >
-                  📥 Export naar CSV
-                </button>
               </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-2 items-center flex-wrap">
-              <label className="text-sm font-medium text-slate-600">
-                Filter:
-              </label>
-              <button
-                onClick={() => setFilterType("all")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "all"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Alle leerlingen
-              </button>
-              <button
-                onClick={() => setFilterType("not_started")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "not_started"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Niet gestart
-              </button>
-              <button
-                onClick={() => setFilterType("partial")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "partial"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Deels voltooid
-              </button>
-              <button
-                onClick={() => setFilterType("completed")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "completed"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Voltooid
-              </button>
-
-              {/* Team filter */}
-              {teamContext && teamContext.teams.length > 0 && (
-                <>
-                  <div className="mx-2 h-6 w-px bg-slate-300"></div>
-                  <TeamFilter
-                    teams={teamContext.teams.map((t) => ({
-                      teamId: t.team_id,
-                      teamNumber: t.team_number,
-                      displayName: t.display_name,
-                      memberCount: t.member_count,
-                    }))}
-                    selectedTeam={selectedTeamFilter}
-                    onTeamChange={setSelectedTeamFilter}
-                  />
-                </>
-              )}
             </div>
 
             {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50">
+                   <thead className="bg-slate-50">
                     <tr>
+                      {teamContext && teamContext.teams.length > 0 && (
+                        <th
+                          className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                          onClick={() => handleSort("team")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Team
+                            {sortField === "team" && (
+                              <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </div>
+                        </th>
+                      )}
                       <th
                         className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                         onClick={() => handleSort("name")}
@@ -392,11 +326,6 @@ export default function EvaluationDashboardPage() {
                           )}
                         </div>
                       </th>
-                      {teamContext && teamContext.teams.length > 0 && (
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
-                          Team
-                        </th>
-                      )}
                       <th
                         className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                         onClick={() => handleSort("self_assessment")}
@@ -475,26 +404,25 @@ export default function EvaluationDashboardPage() {
                           key={student.user_id}
                           className="bg-white hover:bg-slate-50"
                         >
+                          {teamContext && teamContext.teams.length > 0 && (
+                            <td className="px-4 py-3 text-sm">
+                              {userTeamMap.get(student.user_id) != null ? (
+                                <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                                  {userTeamMap.get(student.user_id)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                          )}
                           <td className="px-5 py-3 text-sm text-slate-800 font-medium">
                             {student.user_name}
                           </td>
                           <td className="px-5 py-3 text-sm text-slate-600">
                             {student.class_name || "-"}
                           </td>
-                          {teamContext && teamContext.teams.length > 0 && (
-                            <td className="px-4 py-3 text-sm">
-                              {userTeamMap.get(student.user_id) ? (
-                                <TeamBadge
-                                  teamNumber={userTeamMap.get(student.user_id)!}
-                                  size="sm"
-                                />
-                              ) : (
-                                <span className="text-gray-400 text-xs">
-                                  Geen team
-                                </span>
-                              )}
-                            </td>
-                          )}
                           <td className="px-4 py-3 text-center text-lg">
                             {getStatusIcon(student.self_assessment_status)}
                           </td>
@@ -512,18 +440,48 @@ export default function EvaluationDashboardPage() {
                             {formatLastActivity(student.last_activity)}
                           </td>
                           <td className="px-4 py-3 text-center text-sm">
-                            {student.flags.length > 0 ? (
-                              <span
-                                className="cursor-help text-lg"
-                                title={student.flags
-                                  .map(getFlagDescription)
-                                  .join("\n• ")}
-                              >
-                                ⚠️ {student.flags.length}
-                              </span>
-                            ) : (
-                              "-"
-                            )}
+                            {(() => {
+                              const spr = sprMap.get(student.user_id);
+                              const prev = previewMap.get(student.user_id);
+                              const hasSprHigh = spr != null && spr > 1.20;
+                              const hasSprLow = spr != null && spr < 0.80 && spr > 0;
+                              const hasLowGiven =
+                                prev?.given_avg_pct != null &&
+                                prev?.team_given_avg != null &&
+                                prev.given_avg_pct < prev.team_given_avg * 0.70;
+
+                              if (!hasSprHigh && !hasSprLow && !hasLowGiven) {
+                                return <span>-</span>;
+                              }
+                              return (
+                                <div className="flex items-center justify-center gap-1 flex-wrap">
+                                  {hasSprHigh && (
+                                    <span
+                                      className="cursor-default text-sm"
+                                      title={`SPR: ${spr?.toFixed(2) ?? ""} — beoordeelt zichzelf aanzienlijk hoger dan peers`}
+                                    >
+                                      ⚠️
+                                    </span>
+                                  )}
+                                  {hasSprLow && (
+                                    <span
+                                      className="cursor-default text-sm"
+                                      title={`SPR: ${spr?.toFixed(2) ?? ""} — beoordeelt zichzelf lager dan peers`}
+                                    >
+                                      💡
+                                    </span>
+                                  )}
+                                  {hasLowGiven && (
+                                    <span
+                                      className="cursor-default text-sm"
+                                      title={`Geeft gem. ${prev?.given_avg_pct?.toFixed(0) ?? ""}% aan peers (teamgem: ${prev?.team_given_avg?.toFixed(0) ?? ""}%) — beoordeelt anderen opvallend laag`}
+                                    >
+                                      🔻
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))
