@@ -40,6 +40,8 @@ class GradePreviewItem(BaseModel):
     first_name: Optional[str] = None
     prefix: Optional[str] = None
     last_name: Optional[str] = None
+    given_avg_pct: Optional[float] = None  # avg % this student gives to peers
+    team_given_avg: Optional[float] = None  # team avg of given_avg_pct
 
 
 class GradePreviewResponse(BaseModel):

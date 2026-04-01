@@ -214,9 +214,10 @@ def preview_grades(
             return None
         return 100.0 * (num / den)
 
-    # Bereken per student: peer_avg_pct, self_pct en team_id
+    # Bereken per student: peer_avg_pct, self_pct, given_avg_pct en team_id
     peer_pct_by_uid: dict[int, float] = {}
     self_pct_by_uid: dict[int, float] = {}
+    given_avg_pct_by_uid: dict[int, float] = {}
     teamid_by_uid: dict[int, int | None] = {}
 
     has_project = bool(evaluation and getattr(evaluation, "project_id", None))
@@ -263,6 +264,35 @@ def preview_grades(
             if self_vals:
                 self_pct_by_uid[u.id] = mean(self_vals)
 
+        # Bereken given_avg_pct: gemiddelde % die student aan peers geeft
+        for u in students:
+            given_allocs = (
+                db.query(Allocation)
+                .filter(
+                    Allocation.reviewer_id == u.id,
+                    *(
+                        [getattr(Allocation, "evaluation_id") == evaluation_id]
+                        if hasattr(Allocation, "evaluation_id")
+                        else []
+                    ),
+                )
+                .all()
+            )
+            given_vals = []
+            for a in given_allocs:
+                is_self = False
+                if hasattr(a, "is_self"):
+                    is_self = bool(getattr(a, "is_self"))
+                elif hasattr(a, "reviewer_id") and hasattr(a, "reviewee_id"):
+                    is_self = getattr(a, "reviewer_id") == getattr(a, "reviewee_id")
+                if is_self:
+                    continue
+                pct = alloc_percent(getattr(a, "id"))
+                if pct is not None:
+                    given_vals.append(pct)
+            if given_vals:
+                given_avg_pct_by_uid[u.id] = mean(given_vals)
+
     # GCF: normaliseer peer_avg binnen team naar mean==1.0, clamp to min_cf..max_cf
     gcf_by_uid: dict[int, float] = {}
     # verzamel per raw group id
@@ -291,9 +321,10 @@ def preview_grades(
             else 0.0
         )
 
-        # --- Suggestie op basis van Peer en Self (1–10 schaal) ---
-        # Gebruik verbeterde formule: (percentage / 100) * 8 + 2
+        # --- Suggestie puur op basis van peer-scores (1–10 schaal) ---
+        # Formule: (percentage / 100) * 8 + 2
         # Dit geeft realistischere cijfers: 50% → 6.0, 75% → 8.0, 100% → 10.0
+        # SPR wordt als informatief signaal berekend maar telt NIET mee in het cijfer
         P = ((avg_score / 100.0) * 8 + 2) if avg_score > 0 else None
         S = (
             ((self_pct / 100.0) * 8 + 2)
@@ -301,18 +332,11 @@ def preview_grades(
             else None
         )
 
-        if P is not None and S is not None:
-            # 75% peer, 25% self: gebalanceerd en robuust
-            suggested_val = 0.75 * P + 0.25 * S
-
-            # Optioneel: lichte SPR-correctie (max ±10% effect)
-            spr_val = (S / P) if P > 0 else 1.0
-            spr_val = max(0.90, min(1.10, spr_val))
-            suggested_val *= spr_val
-
-        elif P is not None:
+        if P is not None:
+            # Suggestie is puur gebaseerd op peer-scores
             suggested_val = P
         elif S is not None:
+            # Geen peer-scores maar wel self: gebruik self als fallback
             suggested_val = S
         else:
             # Geen peer en geen self evaluaties: geen voorstel
@@ -332,13 +356,15 @@ def preview_grades(
         else:
             team_num = getattr(u, "team_number", None)
 
+        given_avg = given_avg_pct_by_uid.get(u.id)
+
         items.append(
             GradePreviewItem(
                 user_id=u.id,
                 user_name=u.name,
-                avg_score=avg_score,  # 0..100 (placeholder)
-                gcf=gcf,  # placeholder
-                spr=spr,  # placeholder
+                avg_score=avg_score,
+                gcf=gcf,
+                spr=spr,
                 suggested_grade=suggested,  # 1–10
                 team_number=team_num,
                 class_name=getattr(u, "class_name", None),
@@ -346,8 +372,20 @@ def preview_grades(
                 first_name=getattr(u, "first_name", None),
                 prefix=getattr(u, "prefix", None),
                 last_name=getattr(u, "last_name", None),
+                given_avg_pct=given_avg,
             )
         )
+
+    # Bereken team_given_avg: per team het gemiddelde van given_avg_pct
+    by_team_given: dict[int | None, list[float]] = {}
+    for item in items:
+        if item.given_avg_pct is not None:
+            by_team_given.setdefault(item.team_number, []).append(item.given_avg_pct)
+    team_given_avg_map: dict[int | None, float] = {
+        tid: mean(vals) for tid, vals in by_team_given.items() if vals
+    }
+    for item in items:
+        item.team_given_avg = team_given_avg_map.get(item.team_number)
 
     return GradePreviewResponse(evaluation_id=evaluation_id, items=items)
 
