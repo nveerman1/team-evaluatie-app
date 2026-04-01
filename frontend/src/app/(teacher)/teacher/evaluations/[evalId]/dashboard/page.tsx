@@ -61,6 +61,7 @@ export default function EvaluationDashboardPage() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [filterType, setFilterType] = useState<FilterType>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // State for team context
   const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(
@@ -140,6 +141,17 @@ export default function EvaluationDashboardPage() {
       filtered = filtered.filter((s) => s.total_progress_percent === 0);
     }
 
+    // Apply search filter (by name or team number)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((s) => {
+        const nameMatch = s.user_name.toLowerCase().includes(query);
+        const teamNum = userTeamMap.get(s.user_id);
+        const teamMatch = teamNum != null && teamNum.toString().includes(query);
+        return nameMatch || teamMatch;
+      });
+    }
+
     // Apply sort
     filtered.sort((a, b) => {
       let aVal: any = 0;
@@ -199,6 +211,7 @@ export default function EvaluationDashboardPage() {
   }, [
     studentProgress,
     filterType,
+    searchQuery,
     userTeamMap,
     sortField,
     sortDirection,
@@ -260,51 +273,24 @@ export default function EvaluationDashboardPage() {
           {/* Student Progress Table */}
           <section className="space-y-3">
             {/* Filters + action buttons in one row */}
-            <div className="flex gap-2 items-center flex-wrap justify-between">
-              <div className="flex gap-2 items-center flex-wrap">
-                <label className="text-sm font-medium text-slate-600">
-                  Filter:
-                </label>
-                <button
-                  onClick={() => setFilterType("all")}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    filterType === "all"
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 hover:bg-slate-200"
-                  }`}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex flex-wrap gap-3 items-center">
+                <input
+                  className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Zoek op teamnummer of naam..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <select
+                  className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as FilterType)}
                 >
-                  Alle leerlingen
-                </button>
-                <button
-                  onClick={() => setFilterType("not_started")}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    filterType === "not_started"
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 hover:bg-slate-200"
-                  }`}
-                >
-                  Niet gestart
-                </button>
-                <button
-                  onClick={() => setFilterType("partial")}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    filterType === "partial"
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 hover:bg-slate-200"
-                  }`}
-                >
-                  Deels voltooid
-                </button>
-                <button
-                  onClick={() => setFilterType("completed")}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    filterType === "completed"
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 hover:bg-slate-200"
-                  }`}
-                >
-                  Voltooid
-                </button>
+                  <option value="all">Alle leerlingen</option>
+                  <option value="not_started">🔴 Niet gestart</option>
+                  <option value="partial">🟡 Deels voltooid</option>
+                  <option value="completed">🟢 Voltooid</option>
+                </select>
               </div>
 
               <div className="flex gap-2">
