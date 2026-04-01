@@ -1,13 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useNumericEvalId } from "@/utils";
 import { useDashboardData } from "@/hooks";
 import {
-  Tile,
   Loading,
   ErrorMessage,
-  TeamFilter,
 } from "@/components";
 import { useState, useMemo, useEffect } from "react";
 import { dashboardService } from "@/services/dashboard.service";
@@ -42,18 +39,6 @@ function formatLastActivity(dateStr?: string | null): string {
   return date.toLocaleDateString("nl-NL");
 }
 
-function getFlagDescription(flag: string): string {
-  const descriptions: Record<string, string> = {
-    low_progress: "Lage voortgang (<30%)",
-    no_activity: "Geen activiteit geregistreerd",
-    inactive_7days: "Meer dan 7 dagen inactief",
-    missing_peer_reviews: "Mist peer reviews (<50% ontvangen)",
-    no_self_assessment: "Zelfbeoordeling niet gestart",
-    no_reflection: "Reflectie niet ingeleverd",
-  };
-  return descriptions[flag] || flag;
-}
-
 type SortField =
   | "team"
   | "name"
@@ -68,11 +53,9 @@ type FilterType = "all" | "not_started" | "partial" | "completed";
 
 export default function EvaluationDashboardPage() {
   const evalIdNum = useNumericEvalId();
-  const { kpis, studentProgress, flags: flagsData, preview, loading, error } = useDashboardData(
+  const { studentProgress, flags: flagsData, preview, loading, error } = useDashboardData(
     evalIdNum ?? undefined,
   );
-
-  const evalId = evalIdNum?.toString() ?? "";
 
   // State for sorting and filtering
   const [sortField, setSortField] = useState<SortField>("name");
@@ -81,9 +64,6 @@ export default function EvaluationDashboardPage() {
 
   // State for team context
   const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(
-    null,
-  );
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<number | null>(
     null,
   );
 
@@ -160,13 +140,6 @@ export default function EvaluationDashboardPage() {
       filtered = filtered.filter((s) => s.total_progress_percent === 0);
     }
 
-    // Apply team filter
-    if (selectedTeamFilter !== null && userTeamMap.size > 0) {
-      filtered = filtered.filter(
-        (s) => userTeamMap.get(s.user_id) === selectedTeamFilter,
-      );
-    }
-
     // Apply sort
     filtered.sort((a, b) => {
       let aVal: any = 0;
@@ -226,7 +199,6 @@ export default function EvaluationDashboardPage() {
   }, [
     studentProgress,
     filterType,
-    selectedTeamFilter,
     userTeamMap,
     sortField,
     sortDirection,
@@ -281,26 +253,60 @@ export default function EvaluationDashboardPage() {
     }
   };
 
-  const [activeTab, setActiveTab] = useState("dashboard");
-
   return (
     <>
       {!loading && !error && (
         <>
-          {/* KPI tiles */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Tile label="Self-reviews" value={kpis?.selfreviews_present ?? 0} />
-            <Tile label="Peer-reviews" value={kpis?.reviewers_total ?? 0} />
-            <Tile label="Reflecties" value={kpis?.reflections_count ?? 0} />
-            <Tile label="Totaal studenten" value={kpis?.students_total ?? 0} />
-          </section>
-
           {/* Student Progress Table */}
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Voortgang per leerling
-              </h2>
+            {/* Filters + action buttons in one row */}
+            <div className="flex gap-2 items-center flex-wrap justify-between">
+              <div className="flex gap-2 items-center flex-wrap">
+                <label className="text-sm font-medium text-slate-600">
+                  Filter:
+                </label>
+                <button
+                  onClick={() => setFilterType("all")}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    filterType === "all"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 hover:bg-slate-200"
+                  }`}
+                >
+                  Alle leerlingen
+                </button>
+                <button
+                  onClick={() => setFilterType("not_started")}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    filterType === "not_started"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 hover:bg-slate-200"
+                  }`}
+                >
+                  Niet gestart
+                </button>
+                <button
+                  onClick={() => setFilterType("partial")}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    filterType === "partial"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 hover:bg-slate-200"
+                  }`}
+                >
+                  Deels voltooid
+                </button>
+                <button
+                  onClick={() => setFilterType("completed")}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    filterType === "completed"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 hover:bg-slate-200"
+                  }`}
+                >
+                  Voltooid
+                </button>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={handleSendReminders}
@@ -315,70 +321,6 @@ export default function EvaluationDashboardPage() {
                   📥 Export naar CSV
                 </button>
               </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-2 items-center flex-wrap">
-              <label className="text-sm font-medium text-slate-600">
-                Filter:
-              </label>
-              <button
-                onClick={() => setFilterType("all")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "all"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Alle leerlingen
-              </button>
-              <button
-                onClick={() => setFilterType("not_started")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "not_started"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Niet gestart
-              </button>
-              <button
-                onClick={() => setFilterType("partial")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "partial"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Deels voltooid
-              </button>
-              <button
-                onClick={() => setFilterType("completed")}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  filterType === "completed"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 hover:bg-slate-200"
-                }`}
-              >
-                Voltooid
-              </button>
-
-              {/* Team filter */}
-              {teamContext && teamContext.teams.length > 0 && (
-                <>
-                  <div className="mx-2 h-6 w-px bg-slate-300"></div>
-                  <TeamFilter
-                    teams={teamContext.teams.map((t) => ({
-                      teamId: t.team_id,
-                      teamNumber: t.team_number,
-                      displayName: t.display_name,
-                      memberCount: t.member_count,
-                    }))}
-                    selectedTeam={selectedTeamFilter}
-                    onTeamChange={setSelectedTeamFilter}
-                  />
-                </>
-              )}
             </div>
 
             {/* Table */}
@@ -545,21 +487,12 @@ export default function EvaluationDashboardPage() {
                                 prev?.given_avg_pct != null &&
                                 prev?.team_given_avg != null &&
                                 prev.given_avg_pct < prev.team_given_avg * 0.70;
-                              const hasProgressFlags = student.flags.length > 0;
 
-                              if (!hasProgressFlags && !hasSprHigh && !hasSprLow && !hasLowGiven) {
+                              if (!hasSprHigh && !hasSprLow && !hasLowGiven) {
                                 return <span>-</span>;
                               }
                               return (
                                 <div className="flex items-center justify-center gap-1 flex-wrap">
-                                  {hasProgressFlags && (
-                                    <span
-                                      className="cursor-help text-lg"
-                                      title={"• " + student.flags.map(getFlagDescription).join("\n• ")}
-                                    >
-                                      ⚠️ {student.flags.length}
-                                    </span>
-                                  )}
                                   {hasSprHigh && (
                                     <span
                                       className="cursor-default text-sm"
