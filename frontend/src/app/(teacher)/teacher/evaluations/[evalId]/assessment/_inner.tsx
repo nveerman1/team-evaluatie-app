@@ -203,6 +203,9 @@ type Row = {
   teacherComment: string | null;
   // Grades
   gcf: number;
+  spr: number;
+  givenAvgPct: number | null;
+  teamGivenAvg: number | null;
   serverSuggested: number;
   rowGroupGrade: number | null;
   override: number | null;
@@ -398,6 +401,9 @@ export default function CombinedAssessmentInner() {
             }, {}),
             teacherComment: omzaStudent?.teacher_comment ?? null,
             gcf: gradeItem?.gcf ?? 1,
+            spr: gradeItem?.spr ?? 0,
+            givenAvgPct: gradeItem?.given_avg_pct ?? null,
+            teamGivenAvg: gradeItem?.team_given_avg ?? null,
             serverSuggested: gradeItem?.suggested_grade ?? 0,
             override: saved?.override ?? null,
             rowGroupGrade: saved?.rowGroupGrade ?? null,
@@ -852,8 +858,8 @@ export default function CombinedAssessmentInner() {
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
-  // Column count: Team + Student + Klas + categories + 💬 + GCF + Groepscijfer + Eindcijfer
-  const colSpan = 3 + categories.length + 1 + 1 + 1 + 1;
+  // Column count: Team + Student + Klas + categories + 💬 + Signalen + GCF + Groepscijfer + Eindcijfer
+  const colSpan = 3 + categories.length + 1 + 1 + 1 + 1 + 1;
 
   return (
     <>
@@ -1034,6 +1040,10 @@ export default function CombinedAssessmentInner() {
                         ))}
                         {/* Comment indicator */}
                         <th className="px-2 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-8" />
+                        {/* Signalen */}
+                        <th className="px-2 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide w-12">
+                          Signalen
+                        </th>
                         {/* GCF */}
                         <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide w-16">
                           GCF
@@ -1159,6 +1169,44 @@ export default function CombinedAssessmentInner() {
                               {/* Comment indicator */}
                               <td className="px-2 py-3 align-middle text-center text-xs text-gray-400">
                                 {hasComment ? "💬" : ""}
+                              </td>
+                              {/* Signalen */}
+                              <td className="px-2 py-3 align-middle text-center w-12">
+                                <div className="flex items-center justify-center gap-0.5">
+                                  {r.spr > 1.20 && (
+                                    <div className="relative group inline-flex">
+                                      <span className="cursor-default text-sm">⚠️</span>
+                                      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                                        <div className="rounded-lg bg-gray-900 text-white text-[11px] px-2.5 py-2 shadow-lg whitespace-nowrap">
+                                          SPR: {r.spr.toFixed(2)} — beoordeelt zichzelf aanzienlijk hoger dan peers
+                                        </div>
+                                        <div className="mx-auto h-2 w-2 border-4 border-transparent border-t-gray-900 -mt-0.5" />
+                                      </div>
+                                    </div>
+                                  )}
+                                  {r.spr < 0.80 && r.spr > 0 && (
+                                    <div className="relative group inline-flex">
+                                      <span className="cursor-default text-sm">💡</span>
+                                      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                                        <div className="rounded-lg bg-gray-900 text-white text-[11px] px-2.5 py-2 shadow-lg whitespace-nowrap">
+                                          SPR: {r.spr.toFixed(2)} — beoordeelt zichzelf lager dan peers
+                                        </div>
+                                        <div className="mx-auto h-2 w-2 border-4 border-transparent border-t-gray-900 -mt-0.5" />
+                                      </div>
+                                    </div>
+                                  )}
+                                  {r.givenAvgPct != null && r.teamGivenAvg != null && r.givenAvgPct < r.teamGivenAvg * 0.70 && (
+                                    <div className="relative group inline-flex">
+                                      <span className="cursor-default text-sm">🔻</span>
+                                      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                                        <div className="rounded-lg bg-gray-900 text-white text-[11px] px-2.5 py-2 shadow-lg whitespace-nowrap">
+                                          Geeft gem. {r.givenAvgPct.toFixed(0)}% aan peers (teamgem: {r.teamGivenAvg.toFixed(0)}%) — beoordeelt anderen opvallend laag
+                                        </div>
+                                        <div className="mx-auto h-2 w-2 border-4 border-transparent border-t-gray-900 -mt-0.5" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               {/* GCF */}
                               <td className="px-3 py-3 align-middle text-right">

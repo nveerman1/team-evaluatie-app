@@ -11,6 +11,8 @@ export type GradePreviewItem = {
   first_name?: string | null;
   prefix?: string | null;
   last_name?: string | null;
+  given_avg_pct?: number | null; // avg % this student gives to peers
+  team_given_avg?: number | null; // team avg of given_avg_pct
 };
 
 export type GradePreviewResponse = {
