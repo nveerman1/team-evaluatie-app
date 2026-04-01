@@ -215,4 +215,29 @@ export const projectAssessmentService = {
     const response = await api.get<ProjectAssessmentSelfOverview>(url);
     return response.data;
   },
+
+  /**
+   * Export rubric for a single team as a Word document
+   */
+  async exportTeamRubric(
+    assessmentId: number,
+    teamNumber: number,
+  ): Promise<Blob> {
+    const response = await api.get(
+      `/project-assessments/${assessmentId}/export-rubric?team_number=${teamNumber}`,
+      { responseType: "blob" },
+    );
+    return response.data;
+  },
+
+  /**
+   * Export rubrics for all teams as a single Word document
+   */
+  async exportAllRubrics(assessmentId: number): Promise<Blob> {
+    const response = await api.get(
+      `/project-assessments/${assessmentId}/export-rubric-all`,
+      { responseType: "blob" },
+    );
+    return response.data;
+  },
 };
