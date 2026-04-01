@@ -219,9 +219,13 @@ def preview_grades(
     self_pct_by_uid: dict[int, float] = {}
     teamid_by_uid: dict[int, int | None] = {}
 
+    has_project = bool(evaluation and getattr(evaluation, "project_id", None))
     if Allocation:
         for u in students:
-            raw_gid = team_gid_by_uid.get(u.id)
+            if has_project:
+                raw_gid = project_team_map.get(u.id)
+            else:
+                raw_gid = getattr(u, "team_number", None)
             teamid_by_uid[u.id] = raw_gid
 
             allocs = (
