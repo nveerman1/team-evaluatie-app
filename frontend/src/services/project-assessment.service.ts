@@ -217,27 +217,50 @@ export const projectAssessmentService = {
   },
 
   /**
+   * Extract the filename from a Content-Disposition header value.
+   * Supports both `filename*=UTF-8''...` (RFC 5987) and plain `filename=...`.
+   */
+  _filenameFromHeader(header: string | null, fallback: string): string {
+    if (!header) return fallback;
+    const rfcMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (rfcMatch) return decodeURIComponent(rfcMatch[1]);
+    const plainMatch = header.match(/filename="?([^";]+)"?/i);
+    if (plainMatch) return plainMatch[1];
+    return fallback;
+  },
+
+  /**
    * Export rubric for a single team as a Word document
    */
   async exportTeamRubric(
     assessmentId: number,
     teamNumber: number,
-  ): Promise<Blob> {
+  ): Promise<{ blob: Blob; filename: string }> {
     const response = await api.get(
       `/project-assessments/${assessmentId}/export-rubric?team_number=${teamNumber}`,
       { responseType: "blob" },
     );
-    return response.data;
+    const filename = this._filenameFromHeader(
+      response.headers["content-disposition"] as string | null,
+      `Rubric_Team${teamNumber}.docx`,
+    );
+    return { blob: response.data, filename };
   },
 
   /**
    * Export rubrics for all teams as a single Word document
    */
-  async exportAllRubrics(assessmentId: number): Promise<Blob> {
+  async exportAllRubrics(
+    assessmentId: number,
+  ): Promise<{ blob: Blob; filename: string }> {
     const response = await api.get(
       `/project-assessments/${assessmentId}/export-rubric-all`,
       { responseType: "blob" },
     );
-    return response.data;
+    const filename = this._filenameFromHeader(
+      response.headers["content-disposition"] as string | null,
+      "Rubrics.docx",
+    );
+    return { blob: response.data, filename };
   },
 };

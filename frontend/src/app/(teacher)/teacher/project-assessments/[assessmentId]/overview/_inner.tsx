@@ -53,14 +53,14 @@ export default function ProjectAssessmentOverviewInner() {
   const handleExportTeam = useCallback(
     async (teamNumber: number) => {
       try {
-        const blob = await projectAssessmentService.exportTeamRubric(
+        const { blob, filename } = await projectAssessmentService.exportTeamRubric(
           assessmentId,
           teamNumber,
         );
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `Rubric_Team${teamNumber}.docx`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
       } catch {
@@ -72,12 +72,12 @@ export default function ProjectAssessmentOverviewInner() {
 
   const handleExportAll = useCallback(async () => {
     try {
-      const blob =
+      const { blob, filename } =
         await projectAssessmentService.exportAllRubrics(assessmentId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Rubrics.docx`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
