@@ -7,7 +7,6 @@ import {
   Tile,
   Loading,
   ErrorMessage,
-  TeamBadge,
   TeamFilter,
 } from "@/components";
 import { useState, useMemo, useEffect } from "react";
@@ -56,6 +55,7 @@ function getFlagDescription(flag: string): string {
 }
 
 type SortField =
+  | "team"
   | "name"
   | "class"
   | "progress"
@@ -68,7 +68,7 @@ type FilterType = "all" | "not_started" | "partial" | "completed";
 
 export default function EvaluationDashboardPage() {
   const evalIdNum = useNumericEvalId();
-  const { kpis, studentProgress, loading, error } = useDashboardData(
+  const { kpis, studentProgress, flags: flagsData, preview, loading, error } = useDashboardData(
     evalIdNum ?? undefined,
   );
 
@@ -130,6 +130,19 @@ export default function EvaluationDashboardPage() {
     return map;
   }, [teamContext]);
 
+  // Maps for assessment-style signals (SPR and given_avg_pct)
+  const sprMap = useMemo(() => {
+    const map = new Map<number, number>();
+    flagsData.forEach((f) => map.set(f.user_id, f.spr));
+    return map;
+  }, [flagsData]);
+
+  const previewMap = useMemo(() => {
+    const map = new Map<number, { given_avg_pct?: number | null; team_given_avg?: number | null }>();
+    preview?.items.forEach((item) => map.set(item.user_id, { given_avg_pct: item.given_avg_pct, team_given_avg: item.team_given_avg }));
+    return map;
+  }, [preview]);
+
   // Filtered and sorted students
   const filteredStudents = useMemo(() => {
     if (!studentProgress?.items) return [];
@@ -160,6 +173,10 @@ export default function EvaluationDashboardPage() {
       let bVal: any = 0;
 
       switch (sortField) {
+        case "team":
+          aVal = userTeamMap.get(a.user_id) ?? 0;
+          bVal = userTeamMap.get(b.user_id) ?? 0;
+          break;
         case "name":
           aVal = a.user_name.toLowerCase();
           bVal = b.user_name.toLowerCase();
@@ -368,8 +385,21 @@ export default function EvaluationDashboardPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50">
+                   <thead className="bg-slate-50">
                     <tr>
+                      {teamContext && teamContext.teams.length > 0 && (
+                        <th
+                          className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                          onClick={() => handleSort("team")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Team
+                            {sortField === "team" && (
+                              <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </div>
+                        </th>
+                      )}
                       <th
                         className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                         onClick={() => handleSort("name")}
@@ -392,11 +422,6 @@ export default function EvaluationDashboardPage() {
                           )}
                         </div>
                       </th>
-                      {teamContext && teamContext.teams.length > 0 && (
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
-                          Team
-                        </th>
-                      )}
                       <th
                         className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                         onClick={() => handleSort("self_assessment")}
@@ -475,26 +500,25 @@ export default function EvaluationDashboardPage() {
                           key={student.user_id}
                           className="bg-white hover:bg-slate-50"
                         >
+                          {teamContext && teamContext.teams.length > 0 && (
+                            <td className="px-4 py-3 text-sm">
+                              {userTeamMap.get(student.user_id) != null ? (
+                                <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                                  {userTeamMap.get(student.user_id)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                          )}
                           <td className="px-5 py-3 text-sm text-slate-800 font-medium">
                             {student.user_name}
                           </td>
                           <td className="px-5 py-3 text-sm text-slate-600">
                             {student.class_name || "-"}
                           </td>
-                          {teamContext && teamContext.teams.length > 0 && (
-                            <td className="px-4 py-3 text-sm">
-                              {userTeamMap.get(student.user_id) ? (
-                                <TeamBadge
-                                  teamNumber={userTeamMap.get(student.user_id)!}
-                                  size="sm"
-                                />
-                              ) : (
-                                <span className="text-gray-400 text-xs">
-                                  Geen team
-                                </span>
-                              )}
-                            </td>
-                          )}
                           <td className="px-4 py-3 text-center text-lg">
                             {getStatusIcon(student.self_assessment_status)}
                           </td>
@@ -512,18 +536,57 @@ export default function EvaluationDashboardPage() {
                             {formatLastActivity(student.last_activity)}
                           </td>
                           <td className="px-4 py-3 text-center text-sm">
-                            {student.flags.length > 0 ? (
-                              <span
-                                className="cursor-help text-lg"
-                                title={student.flags
-                                  .map(getFlagDescription)
-                                  .join("\n• ")}
-                              >
-                                ⚠️ {student.flags.length}
-                              </span>
-                            ) : (
-                              "-"
-                            )}
+                            {(() => {
+                              const spr = sprMap.get(student.user_id);
+                              const prev = previewMap.get(student.user_id);
+                              const hasSprHigh = spr != null && spr > 1.20;
+                              const hasSprLow = spr != null && spr < 0.80 && spr > 0;
+                              const hasLowGiven =
+                                prev?.given_avg_pct != null &&
+                                prev?.team_given_avg != null &&
+                                prev.given_avg_pct < prev.team_given_avg * 0.70;
+                              const hasProgressFlags = student.flags.length > 0;
+
+                              if (!hasProgressFlags && !hasSprHigh && !hasSprLow && !hasLowGiven) {
+                                return <span>-</span>;
+                              }
+                              return (
+                                <div className="flex items-center justify-center gap-1 flex-wrap">
+                                  {hasProgressFlags && (
+                                    <span
+                                      className="cursor-help text-lg"
+                                      title={"• " + student.flags.map(getFlagDescription).join("\n• ")}
+                                    >
+                                      ⚠️ {student.flags.length}
+                                    </span>
+                                  )}
+                                  {hasSprHigh && (
+                                    <span
+                                      className="cursor-default text-sm"
+                                      title={`SPR: ${spr!.toFixed(2)} — beoordeelt zichzelf aanzienlijk hoger dan peers`}
+                                    >
+                                      ⚠️
+                                    </span>
+                                  )}
+                                  {hasSprLow && (
+                                    <span
+                                      className="cursor-default text-sm"
+                                      title={`SPR: ${spr!.toFixed(2)} — beoordeelt zichzelf lager dan peers`}
+                                    >
+                                      💡
+                                    </span>
+                                  )}
+                                  {hasLowGiven && (
+                                    <span
+                                      className="cursor-default text-sm"
+                                      title={`Geeft gem. ${prev!.given_avg_pct!.toFixed(0)}% aan peers (teamgem: ${prev!.team_given_avg!.toFixed(0)}%) — beoordeelt anderen opvallend laag`}
+                                    >
+                                      🔻
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))

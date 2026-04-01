@@ -19,6 +19,8 @@ from app.infra.db.models import (
     User,
     Reflection,
     CourseEnrollment,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.api.v1.schemas.dashboard import (
     DashboardResponse,
@@ -489,6 +491,47 @@ def get_student_progress(
     else:
         users = {}
 
+    # Pre-build teammate map and team_number map to avoid per-student N+1 queries
+    # Maps user_id -> set of teammate user_ids (excluding self)
+    user_teammates_map: dict[int, set[int]] = {}
+    # Maps user_id -> team_number from ProjectTeam (for project-based evaluations)
+    user_project_team_number: dict[int, int] = {}
+
+    if ev.project_id:
+        # NEW system: use ProjectTeam / ProjectTeamMember
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == ev.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .join(User, User.id == ProjectTeamMember.user_id)
+                .filter(
+                    ProjectTeamMember.project_team_id == team.id,
+                    User.archived.is_(False),
+                )
+                .all()
+            )
+            member_ids = {m.user_id for m in members}
+            for member_id in member_ids:
+                user_teammates_map[member_id] = member_ids - {member_id}
+                user_project_team_number[member_id] = team.team_number
+    else:
+        # LEGACY system: use User.team_number
+        team_members_by_number: dict[int, set[int]] = {}
+        for uid in student_ids:
+            u = users.get(uid)
+            if u and u.team_number is not None:
+                team_members_by_number.setdefault(u.team_number, set()).add(uid)
+        for team_num, team_member_ids in team_members_by_number.items():
+            for member_id in team_member_ids:
+                user_teammates_map[member_id] = team_member_ids - {member_id}
+
     # Calculate progress for each student
     items = []
     for student_id in student_ids:
@@ -518,21 +561,8 @@ def get_student_progress(
         else:
             self_assessment_status = "not_started"
 
-        # Find valid teammates for this student (same course AND team_number)
-        # This matches the logic used in my_allocations endpoint
-        valid_teammate_ids = set()
-        if student.team_number is not None:
-            from app.api.v1.routers.allocations import _select_members_for_course
-
-            teammates = _select_members_for_course(
-                db,
-                school_id=user.school_id,
-                course_id=ev.course_id,
-                team_number=student.team_number,
-            )
-            valid_teammate_ids = set(teammates)
-            # Remove self from teammates
-            valid_teammate_ids.discard(student_id)
+        # Find valid teammates for this student using the pre-built map
+        valid_teammate_ids = user_teammates_map.get(student_id, set())
 
         # Peer reviews given (as reviewer) - only count allocations for valid teammates
         peer_allocations_given = [
@@ -680,7 +710,7 @@ def get_student_progress(
                 user_id=student_id,
                 user_name=student.name,
                 class_name=getattr(student, "class_name", None),
-                team_number=getattr(student, "team_number", None),
+                team_number=user_project_team_number.get(student_id, getattr(student, "team_number", None)),
                 self_assessment_status=self_assessment_status,
                 peer_reviews_given=peer_reviews_given,
                 peer_reviews_given_expected=peer_reviews_given_expected,
