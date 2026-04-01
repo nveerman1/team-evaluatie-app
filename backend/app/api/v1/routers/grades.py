@@ -284,9 +284,7 @@ def preview_grades(
                 if hasattr(a, "is_self"):
                     is_self = bool(getattr(a, "is_self"))
                 elif hasattr(a, "reviewer_id") and hasattr(a, "reviewee_id"):
-                    is_self = getattr(a, "reviewer_id") == getattr(
-                        a, "reviewee_id"
-                    )
+                    is_self = getattr(a, "reviewer_id") == getattr(a, "reviewee_id")
                 if is_self:
                     continue
                 pct = alloc_percent(getattr(a, "id"))
@@ -382,9 +380,7 @@ def preview_grades(
     by_team_given: dict[int | None, list[float]] = {}
     for item in items:
         if item.given_avg_pct is not None:
-            by_team_given.setdefault(item.team_number, []).append(
-                item.given_avg_pct
-            )
+            by_team_given.setdefault(item.team_number, []).append(item.given_avg_pct)
     team_given_avg_map: dict[int | None, float] = {
         tid: mean(vals) for tid, vals in by_team_given.items() if vals
     }
