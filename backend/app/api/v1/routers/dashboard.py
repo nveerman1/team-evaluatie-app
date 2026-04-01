@@ -710,7 +710,9 @@ def get_student_progress(
                 user_id=student_id,
                 user_name=student.name,
                 class_name=getattr(student, "class_name", None),
-                team_number=user_project_team_number.get(student_id, getattr(student, "team_number", None)),
+                team_number=user_project_team_number.get(
+                    student_id, getattr(student, "team_number", None)
+                ),
                 self_assessment_status=self_assessment_status,
                 peer_reviews_given=peer_reviews_given,
                 peer_reviews_given_expected=peer_reviews_given_expected,

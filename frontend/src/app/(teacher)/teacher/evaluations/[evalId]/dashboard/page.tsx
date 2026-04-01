@@ -226,24 +226,6 @@ export default function EvaluationDashboardPage() {
     }
   };
 
-  const handleExportCSV = async () => {
-    if (!evalIdNum) return;
-    try {
-      const blob = await dashboardService.exportProgressCSV(evalIdNum);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `evaluation_${evalIdNum}_progress.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (e) {
-      console.error("Export failed:", e);
-      alert("Export mislukte. Probeer het opnieuw.");
-    }
-  };
-
   const handleSendReminders = async () => {
     if (!evalIdNum) return;
     if (
@@ -299,12 +281,6 @@ export default function EvaluationDashboardPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-medium shadow-sm"
                 >
                   ✉️ Stuur herinnering
-                </button>
-                <button
-                  onClick={handleExportCSV}
-                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium shadow-sm"
-                >
-                  📥 Export naar CSV
                 </button>
               </div>
             </div>
