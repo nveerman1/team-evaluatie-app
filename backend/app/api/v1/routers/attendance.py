@@ -477,28 +477,34 @@ def checkout_all(
 
     now = datetime.now(timezone.utc)
 
-    open_sessions = (
-        db.query(AttendanceEvent)
+    # Get the IDs of open sessions in this school via a subquery
+    open_session_ids = (
+        db.query(AttendanceEvent.id)
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
             AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.is_(None),
         )
-        .all()
+        .subquery()
     )
 
-    for session in open_sessions:
-        session.check_out = now
-        session.updated_at = now
+    updated_count = (
+        db.query(AttendanceEvent)
+        .filter(AttendanceEvent.id.in_(open_session_ids))
+        .update(
+            {"check_out": now, "updated_at": now},
+            synchronize_session=False,
+        )
+    )
 
     db.commit()
 
     logger.info(
-        f"Checked out {len(open_sessions)} open sessions by user {current_user.id}"
+        f"Checked out {updated_count} open sessions by user {current_user.id}"
     )
 
-    return {"checked_out": len(open_sessions)}
+    return {"checked_out": updated_count}
 
 
 # ============ External Work ============

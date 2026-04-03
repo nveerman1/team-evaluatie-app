@@ -80,7 +80,8 @@ export default function AanwezigheidTab() {
       const result = await attendanceService.checkoutAll();
       toast.success(`${result.checked_out} student(en) uitgecheckt`);
       await fetchPresence();
-    } catch {
+    } catch (err) {
+      console.error("Error checking out all users:", err);
       toast.error("Kon studenten niet uitchecken");
     } finally {
       setCheckingOutAll(false);
