@@ -500,9 +500,7 @@ def checkout_all(
 
     db.commit()
 
-    logger.info(
-        f"Checked out {updated_count} open sessions by user {current_user.id}"
-    )
+    logger.info(f"Checked out {updated_count} open sessions by user {current_user.id}")
 
     return {"checked_out": updated_count}
 
