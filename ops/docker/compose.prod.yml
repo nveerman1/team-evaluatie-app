@@ -10,6 +10,7 @@
 # - redis: Redis for job queue and caching
 # - backend: FastAPI application
 # - worker: RQ worker for async jobs
+# - ollama: Local LLM service for AI feedback summaries (internal only)
 # - frontend: Next.js application
 # - nginx: Reverse proxy with SSL termination
 #
@@ -37,6 +38,8 @@ volumes:
   postgres-data:
     driver: local
   redis-data:
+    driver: local
+  ollama-data:
     driver: local
   certbot-certs:
     driver: local
@@ -179,6 +182,8 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tea_production}
       # Redis connection (use service name as host)
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      # Ollama connection (use internal service name; allows SSRF-safe access to ollama container)
+      OLLAMA_BASE_URL: "http://ollama:11434"
     
     depends_on:
       db:
@@ -253,6 +258,8 @@ services:
       ENABLE_DEV_LOGIN: "false"
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tea_production}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      # Ollama connection (use internal service name; allows SSRF-safe access to ollama container)
+      OLLAMA_BASE_URL: "http://ollama:11434"
     
     depends_on:
       db:
@@ -294,6 +301,64 @@ services:
       nofile:
         soft: 1024
         hard: 2048
+
+  # ===========================================================================
+  # Ollama (Local LLM for AI Feedback Summaries)
+  # ===========================================================================
+  # Runs on the private network only; backend and worker reach it via the
+  # Docker service name "ollama" (http://ollama:11434).
+  # This name is whitelisted in the SSRF allowlist in ollama_service.py.
+  #
+  # First-time model setup (run once after initial deploy):
+  #   docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  #     exec ollama ollama pull mistral
+  #
+  # Model data is persisted in the "ollama-data" volume, so models survive
+  # container restarts and rebuilds without re-downloading.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: tea_ollama
+    restart: unless-stopped
+    
+    volumes:
+      - ollama-data:/root/.ollama
+    
+    networks:
+      - private
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    
+    # No public port: Ollama is only reachable from other services on the
+    # private network. Do not expose port 11434 to the host.
+    # ports:
+    #   - "11434:11434"
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits: mistral (4-bit quant) needs ~4-5 GB RAM for inference.
+    # Adjust mem_limit to match your VPS capacity.
+    mem_limit: 6g
+    mem_reservation: 1g
+    cpus: "2.0"
+    pids_limit: 256
+    
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
 
   # ===========================================================================
   # Next.js Frontend

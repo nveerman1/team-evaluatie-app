@@ -217,6 +217,23 @@ python scripts/seed_demo_data.py  # For development data
 # Or create admin manually via API/direct DB insert
 ```
 
+### Step 7: Pull Ollama Model (first deploy only)
+
+The `ollama` service starts without any models loaded. Pull the model once; it is
+stored in the `ollama-data` Docker volume and survives container restarts.
+
+```bash
+# Pull the mistral model into the running ollama container (~4 GB download)
+bash scripts/ollama-pull-model.sh
+
+# Or pass a specific model name:
+bash scripts/ollama-pull-model.sh mistral
+
+# Verify the model is loaded:
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec ollama ollama list
+```
+
 ---
 
 ## SSL/HTTPS Configuration
@@ -494,6 +511,78 @@ docker exec tea_redis redis-cli --pass <password> info stats
 # Enable PostgreSQL query logging (temporarily)
 # Add to docker-compose-prod.yml under db service:
 # command: postgres -c log_statement=all
+```
+
+---
+
+## Ollama (AI Feedback Summaries)
+
+The `ollama` service runs as an internal Docker Compose service on the `private`
+network. `backend` and `worker` reach it via `http://ollama:11434`. The service
+name `ollama` is explicitly whitelisted in the SSRF allowlist in
+`backend/app/infra/services/ollama_service.py`.
+
+### Environment variables
+
+| Variable | Value (production) | Description |
+|---|---|---|
+| `OLLAMA_BASE_URL` | `http://ollama:11434` | Set in compose.prod.yml; overrides .env.prod |
+| `OLLAMA_MODEL` | `mistral` | LLM model to use for summaries |
+| `OLLAMA_TIMEOUT` | `60.0` | Per-request timeout in seconds |
+
+### Check Ollama status
+
+```bash
+# Is the container running and healthy?
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml ps ollama
+
+# View Ollama logs
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml logs -f ollama
+
+# Which models are loaded?
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec ollama ollama list
+
+# Test reachability from the backend container
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec backend python -c \
+  "import urllib.request; print(urllib.request.urlopen('http://ollama:11434/api/tags', timeout=10).read().decode()[:500])"
+
+# Verify OLLAMA_BASE_URL inside backend/worker
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec backend env | grep OLLAMA
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec worker env | grep OLLAMA
+```
+
+### Pull or update a model
+
+Model data is stored in the `ollama-data` Docker volume and persists across
+restarts. You only need to pull once per model:
+
+```bash
+# Pull mistral (uses helper script)
+bash scripts/ollama-pull-model.sh
+
+# Or run directly
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec ollama ollama pull mistral
+```
+
+### Re-run failed AI summary jobs
+
+After fixing the Ollama URL or pulling the model, re-trigger batch generation:
+
+```bash
+# Open a Python shell inside the backend container
+docker compose --env-file .env.prod -f ops/docker/compose.prod.yml \
+  exec backend python
+
+# Inside the shell — re-enqueue all failed summary jobs for an evaluation:
+# (replace EVALUATION_ID with the actual ID, e.g. 12)
+# from app.jobs.summary_jobs import enqueue_batch_summaries
+# enqueue_batch_summaries(evaluation_id=12)
+# exit()
 ```
 
 ---
