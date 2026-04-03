@@ -176,6 +176,10 @@ class AttendanceEventListOut(BaseModel):
 # ============ External Work Schemas ============
 
 
+MAX_EXTERNAL_HOURS = 5
+"""Maximum duration (in hours) allowed for a single external work registration."""
+
+
 class ExternalWorkCreate(BaseModel):
     """Create external work registration (student-facing)"""
 
@@ -187,12 +191,18 @@ class ExternalWorkCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_check_out_after_check_in(self):
-        """Validate that end time (check_out) is after start time (check_in)."""
-        # Ensure both datetimes are timezone-aware for comparison
+        """Validate that end time (check_out) is after start time (check_in) and
+        that the total duration does not exceed MAX_EXTERNAL_HOURS hours."""
         check_in_aware = ensure_aware_utc(self.check_in)
         check_out_aware = ensure_aware_utc(self.check_out)
         if check_out_aware <= check_in_aware:
             raise ValueError("End time must be after start time")
+        max_seconds = MAX_EXTERNAL_HOURS * 3600
+        duration_seconds = (check_out_aware - check_in_aware).total_seconds()
+        if duration_seconds > max_seconds:
+            raise ValueError(
+                f"External work registration cannot exceed {MAX_EXTERNAL_HOURS} hours"
+            )
         return self
 
 
