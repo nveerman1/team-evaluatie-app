@@ -4,6 +4,7 @@ from typing import Optional, List, Dict, Any
 import io
 import csv
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -28,7 +29,10 @@ from app.infra.db.models import (
     Project,
     ProjectTeam,
     ProjectTeamMember,
+    SummaryGenerationJob,
 )
+from app.infra.queue.connection import get_queue
+from app.infra.queue.tasks import generate_ai_summary_task
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
     EvaluationOut,
@@ -311,11 +315,110 @@ def update_status(
         raise HTTPException(status_code=404, detail="Evaluation not found")
     if payload.status not in {"draft", "open", "closed"}:
         raise HTTPException(status_code=400, detail="Invalid status")
+
+    previous_status = ev.status
     ev.status = payload.status
     db.add(ev)
     db.commit()
     db.refresh(ev)
+
+    # Automatically trigger batch AI summary generation when evaluation is published (closed)
+    if payload.status == "closed" and previous_status != "closed":
+        _trigger_batch_summary_generation(
+            db=db,
+            evaluation_id=evaluation_id,
+            school_id=user.school_id,
+        )
+
     return _to_out(ev)
+
+
+def _trigger_batch_summary_generation(
+    db: Session,
+    evaluation_id: int,
+    school_id: int,
+) -> None:
+    """
+    Automatically trigger batch AI summary generation for all students in an evaluation
+    when the evaluation is published (status set to 'closed').
+
+    Creates SummaryGenerationJob records and enqueues generate_ai_summary_task jobs
+    for each student that does not already have a queued, processing, or completed job.
+    """
+    # Get all unique reviewee_ids from allocations (excluding self-evaluations)
+    reviewee_ids = (
+        db.query(Allocation.reviewee_id)
+        .filter(
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.is_self.is_(False),
+        )
+        .distinct()
+        .all()
+    )
+    student_ids = [row[0] for row in reviewee_ids]
+
+    if not student_ids:
+        logger.info(
+            f"Auto batch summary: no students found for evaluation {evaluation_id}, skipping."
+        )
+        return
+
+    queue = get_queue("ai-summaries")
+    enqueued_count = 0
+
+    for student_id in student_ids:
+        # Idempotency: skip if a job already exists for this student/evaluation
+        existing_job = (
+            db.query(SummaryGenerationJob)
+            .filter(
+                SummaryGenerationJob.evaluation_id == evaluation_id,
+                SummaryGenerationJob.student_id == student_id,
+                SummaryGenerationJob.status.in_(["queued", "processing", "completed"]),
+            )
+            .order_by(SummaryGenerationJob.created_at.desc())
+            .first()
+        )
+        if existing_job:
+            continue
+
+        job_id = f"summary-{evaluation_id}-{student_id}-{int(time.time())}"
+
+        new_job_record = SummaryGenerationJob(
+            school_id=school_id,
+            evaluation_id=evaluation_id,
+            student_id=student_id,
+            job_id=job_id,
+            status="queued",
+            priority="normal",
+            queue_name="ai-summaries",
+        )
+        db.add(new_job_record)
+
+        try:
+            queue.enqueue(
+                generate_ai_summary_task,
+                school_id=school_id,
+                evaluation_id=evaluation_id,
+                student_id=student_id,
+                job_id=job_id,
+                job_timeout="10m",
+                result_ttl=86400,
+                failure_ttl=86400,
+            )
+            enqueued_count += 1
+        except Exception as e:
+            logger.error(
+                f"Auto batch summary: failed to enqueue job {job_id} for student {student_id}: {e}"
+            )
+            new_job_record.status = "failed"
+            new_job_record.error_message = f"Failed to queue: {str(e)}"
+
+    db.commit()
+
+    logger.info(
+        f"Auto batch summary: triggered for evaluation {evaluation_id} — "
+        f"{enqueued_count} of {len(student_ids)} student(s) enqueued."
+    )
 
 
 @router.put("/{evaluation_id}", response_model=EvaluationOut)
