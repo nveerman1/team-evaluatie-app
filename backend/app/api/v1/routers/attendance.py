@@ -65,9 +65,62 @@ def apply_project_date_filter(query, project: Project):
     return query
 
 
+FORGOTTEN_CHECKOUT_THRESHOLD_HOURS = 12
+"""Sessions open longer than this many hours are treated as forgotten check-outs."""
+
+FORGOTTEN_CHECKOUT_SESSION_MINUTES = 15
+"""Duration (minutes) assigned to auto-closed sessions that exceeded the threshold."""
+
+
+def cleanup_expired_sessions(db: Session) -> int:
+    """
+    Auto-checkout attendance sessions that have been open for more than
+    FORGOTTEN_CHECKOUT_THRESHOLD_HOURS hours.
+
+    When a student forgets to check out the session is closed with
+    check_out = check_in + FORGOTTEN_CHECKOUT_SESSION_MINUTES minutes so
+    that an unreasonably long session does not inflate their total hours.
+
+    Args:
+        db: SQLAlchemy database session.
+
+    Returns:
+        Number of sessions that were automatically closed.
+    """
+    threshold = datetime.now(timezone.utc) - timedelta(
+        hours=FORGOTTEN_CHECKOUT_THRESHOLD_HOURS
+    )
+
+    expired_sessions = (
+        db.query(AttendanceEvent)
+        .filter(
+            AttendanceEvent.is_external.is_(False),
+            AttendanceEvent.check_out.is_(None),
+            AttendanceEvent.check_in <= threshold,
+        )
+        .all()
+    )
+
+    count = 0
+    for session in expired_sessions:
+        check_in_aware = ensure_aware_utc(session.check_in)
+        session.check_out = check_in_aware + timedelta(
+            minutes=FORGOTTEN_CHECKOUT_SESSION_MINUTES
+        )
+        session.updated_at = datetime.now(timezone.utc)
+        count += 1
+
+    if count:
+        db.commit()
+        logger.info(
+            f"Auto-checked out {count} expired session(s) "
+            f"(>{FORGOTTEN_CHECKOUT_THRESHOLD_HOURS}h open)"
+        )
+
+    return count
+
+
 # ============ RFID Scan Endpoint ============
-
-
 @router.post("/scan", response_model=RFIDScanResponse)
 def rfid_scan(
     request: RFIDScanRequest,
@@ -86,6 +139,9 @@ def rfid_scan(
     Returns user info and action taken
     """
     try:
+        # Clean up any sessions that have been open longer than the threshold
+        cleanup_expired_sessions(db)
+
         # Find RFID card
         card = (
             db.query(RFIDCard)
@@ -505,9 +561,31 @@ def checkout_all(
     return {"checked_out": updated_count}
 
 
+@router.post("/cleanup-expired", status_code=status.HTTP_200_OK)
+def cleanup_expired(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Auto-checkout all sessions that have been open for more than
+    FORGOTTEN_CHECKOUT_THRESHOLD_HOURS hours (teacher/admin only).
+
+    Sets check_out = check_in + FORGOTTEN_CHECKOUT_SESSION_MINUTES minutes
+    for each affected session so the hours are not inflated.
+
+    Returns the number of sessions that were automatically closed.
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can trigger expired session cleanup",
+        )
+
+    count = cleanup_expired_sessions(db)
+    return {"cleaned_up": count}
+
+
 # ============ External Work ============
-
-
 @router.post(
     "/external", response_model=AttendanceEventOut, status_code=status.HTTP_201_CREATED
 )

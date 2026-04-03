@@ -275,11 +275,20 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
       return;
     }
 
+    const startDate = new Date(formData.start);
+    const endDate = new Date(formData.end);
+    const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+
+    if (durationHours > 5) {
+      alert("Een externe registratie mag maximaal 5 uur duren. Pas de begin- of eindtijd aan.");
+      return;
+    }
+
     try {
       setSubmitting(true);
       await attendanceService.createExternalWork({
-        check_in: new Date(formData.start).toISOString(),
-        check_out: new Date(formData.end).toISOString(),
+        check_in: startDate.toISOString(),
+        check_out: endDate.toISOString(),
         location: formData.location,
         description: formData.description,
       });
