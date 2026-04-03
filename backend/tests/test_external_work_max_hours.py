@@ -97,7 +97,7 @@ class TestExternalWorkMaxHoursValidation:
                 check_out=BASE_CHECKIN + timedelta(hours=5, seconds=1),
                 **VALID_KWARGS,
             )
-        assert "5" in str(exc_info.value)
+        assert str(MAX_EXTERNAL_HOURS) in str(exc_info.value)
 
     def test_rejects_registration_of_6_hours(self):
         """A registration of 6 hours must be rejected."""
@@ -107,7 +107,7 @@ class TestExternalWorkMaxHoursValidation:
                 check_out=BASE_CHECKIN + timedelta(hours=6),
                 **VALID_KWARGS,
             )
-        assert "5" in str(exc_info.value)
+        assert str(MAX_EXTERNAL_HOURS) in str(exc_info.value)
 
     def test_rejects_registration_of_24_hours(self):
         """A full-day registration must be rejected."""

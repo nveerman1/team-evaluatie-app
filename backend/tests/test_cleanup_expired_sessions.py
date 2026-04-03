@@ -160,20 +160,18 @@ class TestCleanupExpiredSessions:
         db = _make_db([])
         cleanup_expired_sessions(db)
 
-        # Inspect the filter call arguments to ensure is_external check is present
-        import inspect as _inspect
+        # Inspect the source to ensure is_external check is present
         from app.api.v1.routers.attendance import cleanup_expired_sessions as fn
 
-        source = _inspect.getsource(fn)
+        source = inspect.getsource(fn)
         assert "is_external" in source
         assert "check_out" in source
 
     def test_query_excludes_already_checked_out_sessions(self):
         """The DB query must only include sessions with check_out IS NULL."""
-        import inspect as _inspect
         from app.api.v1.routers.attendance import cleanup_expired_sessions as fn
 
-        source = _inspect.getsource(fn)
+        source = inspect.getsource(fn)
         assert "check_out.is_(None)" in source
 
     def test_function_signature_accepts_only_db(self):
