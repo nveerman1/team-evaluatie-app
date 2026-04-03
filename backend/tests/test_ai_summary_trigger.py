@@ -14,9 +14,11 @@ import pytest
 from unittest.mock import MagicMock, Mock, call, patch
 
 from app.infra.db.models import Allocation, Evaluation, SummaryGenerationJob
-from app.api.v1.routers.evaluations import _trigger_batch_summary_generation, update_status
+from app.api.v1.routers.evaluations import (
+    _trigger_batch_summary_generation,
+    update_status,
+)
 from app.api.v1.schemas.evaluations import EvaluationUpdateStatus
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -290,9 +292,7 @@ class TestUpdateStatusTrigger:
 
         update_status(evaluation_id=1, payload=payload, db=db, user=self._make_user())
 
-        mock_trigger.assert_called_once_with(
-            db=db, evaluation_id=1, school_id=1
-        )
+        mock_trigger.assert_called_once_with(db=db, evaluation_id=1, school_id=1)
 
     @patch("app.api.v1.routers.evaluations._trigger_batch_summary_generation")
     @patch("app.api.v1.routers.evaluations._to_out")
