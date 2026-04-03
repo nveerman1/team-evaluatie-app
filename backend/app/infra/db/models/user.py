@@ -76,6 +76,11 @@ class User(Base):
         viewonly=True,
     )
 
+    # Calendar feed token for iCal subscription (no session/cookie auth needed)
+    calendar_feed_token: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
+
     __table_args__ = (
         UniqueConstraint("school_id", "email", name="uq_user_email_per_school"),
         Index("ix_user_role_school", "school_id", "role"),

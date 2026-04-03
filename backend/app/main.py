@@ -55,6 +55,7 @@ from app.api.v1.routers import rfid as rfid_router
 from app.api.v1.routers import tasks as tasks_router
 from app.api.v1.routers import skill_trainings as skill_trainings_router
 from app.api.v1.routers import project_feedback as project_feedback_router
+from app.api.v1.routers import calendar_feed as calendar_feed_router
 from app.integrations.somtoday import router as somtoday_router
 
 # Configure logging to show INFO level messages
@@ -154,5 +155,6 @@ api_v1.include_router(rfid_router.router)
 api_v1.include_router(tasks_router.router)
 api_v1.include_router(skill_trainings_router.router)
 api_v1.include_router(project_feedback_router.router)
+api_v1.include_router(calendar_feed_router.router)
 api_v1.include_router(somtoday_router.router)
 app.include_router(api_v1)
