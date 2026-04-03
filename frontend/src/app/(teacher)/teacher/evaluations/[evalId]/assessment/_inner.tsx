@@ -297,6 +297,21 @@ export default function CombinedAssessmentInner() {
     }
   }, [focusMode, setFocusMode, evalIdStr, projectId, notesWidth]);
 
+  // Raw string values for grade inputs while the user is actively typing.
+  // Keyed by "group-<teamNumber>" or "override-<userId>". Cleared on blur so
+  // the formatted number is shown when the field is not focused.
+  const [rawGradeInputs, setRawGradeInputs] = useState<Record<string, string>>(
+    {},
+  );
+
+  const clearRawGradeInput = useCallback((key: string) => {
+    setRawGradeInputs((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
   // Saving indicators
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>(
     {},
@@ -522,6 +537,19 @@ export default function CombinedAssessmentInner() {
     };
   }, []);
 
+  // Warn the browser before unload if there are pending comment saves so the
+  // user does not lose unsaved comment text when closing or navigating away.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const hasPending = Object.keys(commentTimeouts.current).length > 0;
+      if (hasPending) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
   // ── OMZA score change ─────────────────────────────────────────────────────
 
   const handleScoreChange = useCallback(
@@ -571,7 +599,7 @@ export default function CombinedAssessmentInner() {
           .finally(() =>
             setSavingComments((prev) => ({ ...prev, [key]: false })),
           );
-      }, 500);
+      }, 1500);
     },
     [evalIdNum, showToast],
   );
@@ -723,6 +751,13 @@ export default function CombinedAssessmentInner() {
     value: string,
   ) {
     if (teamNumber == null) return;
+    // Keep the raw string so the input shows exactly what the user typed while
+    // they are still focused on the field (prevents .toFixed(1) from eating the
+    // comma before they finish entering a decimal number like "7,5").
+    setRawGradeInputs((prev) => ({
+      ...prev,
+      [`group-${teamNumber}`]: value,
+    }));
     isDirty.current = true;
     setAutoSaveState("saving");
     if (value.trim() === "") {
@@ -743,6 +778,9 @@ export default function CombinedAssessmentInner() {
   }
 
   function handleUpdateOverride(userId: number, value: string) {
+    // Keep the raw string so the input shows exactly what the user typed while
+    // they are still focused on the field.
+    setRawGradeInputs((prev) => ({ ...prev, [`override-${userId}`]: value }));
     isDirty.current = true;
     setAutoSaveState("saving");
     if (value.trim() === "") {
@@ -1228,15 +1266,26 @@ export default function CombinedAssessmentInner() {
                                   type="text"
                                   className="w-14 text-right rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
                                   value={
-                                    r.rowGroupGrade != null &&
-                                    !Number.isNaN(r.rowGroupGrade)
-                                      ? r.rowGroupGrade.toFixed(1)
-                                      : ""
+                                    rawGradeInputs[
+                                      `group-${r.teamNumber}`
+                                    ] !== undefined
+                                      ? rawGradeInputs[
+                                          `group-${r.teamNumber}`
+                                        ]
+                                      : r.rowGroupGrade != null &&
+                                          !Number.isNaN(r.rowGroupGrade)
+                                        ? r.rowGroupGrade.toFixed(1)
+                                        : ""
                                   }
                                   onChange={(e) =>
                                     handleUpdateTeamGroupGrade(
                                       r.teamNumber,
                                       e.target.value,
+                                    )
+                                  }
+                                  onBlur={() =>
+                                    clearRawGradeInput(
+                                      `group-${r.teamNumber}`,
                                     )
                                   }
                                 />
@@ -1254,15 +1303,26 @@ export default function CombinedAssessmentInner() {
                                           : "border-gray-300 bg-white"
                                     }`}
                                     value={
-                                      r.override != null &&
-                                      !Number.isNaN(r.override)
-                                        ? r.override.toFixed(1)
-                                        : finalGrade(r).toFixed(1)
+                                      rawGradeInputs[
+                                        `override-${r.user_id}`
+                                      ] !== undefined
+                                        ? rawGradeInputs[
+                                            `override-${r.user_id}`
+                                          ]
+                                        : r.override != null &&
+                                            !Number.isNaN(r.override)
+                                          ? r.override.toFixed(1)
+                                          : finalGrade(r).toFixed(1)
                                     }
                                     onChange={(e) =>
                                       handleUpdateOverride(
                                         r.user_id,
                                         e.target.value,
+                                      )
+                                    }
+                                    onBlur={() =>
+                                      clearRawGradeInput(
+                                        `override-${r.user_id}`,
                                       )
                                     }
                                   />
@@ -1322,9 +1382,6 @@ export default function CombinedAssessmentInner() {
                                             r.user_id,
                                             e.target.value,
                                           )
-                                        }
-                                        disabled={
-                                          savingComments[String(r.user_id)]
                                         }
                                       />
                                       {savingComments[String(r.user_id)] && (
