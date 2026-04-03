@@ -27,10 +27,10 @@ import requests
 
 from app.infra.services.ollama_service import ALLOWED_OLLAMA_HOSTS, OllamaService
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_service(url: str = "http://ollama:11434") -> OllamaService:
     """Instantiate OllamaService bypassing real settings."""
@@ -44,6 +44,7 @@ def _make_service(url: str = "http://ollama:11434") -> OllamaService:
 # ---------------------------------------------------------------------------
 # SSRF / allowlist — static method
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestValidateOllamaUrl:
@@ -147,6 +148,7 @@ class TestAllowedHostsConstant:
 # __init__ validation
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestOllamaServiceInit:
     """Validation is applied at instantiation time."""
@@ -185,6 +187,7 @@ class TestOllamaServiceInit:
 # generate_summary
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestGenerateSummary:
     """generate_summary orchestrates extract → summarize with fallback chain."""
@@ -215,8 +218,10 @@ class TestGenerateSummary:
         }
         summary_text = "Je werkt goed samen maar bent soms te laat."
 
-        with patch.object(svc, "_extract_structured", return_value=struct), \
-             patch.object(svc, "_summarize_from_struct", return_value=summary_text):
+        with (
+            patch.object(svc, "_extract_structured", return_value=struct),
+            patch.object(svc, "_summarize_from_struct", return_value=summary_text),
+        ):
             result = svc.generate_summary(["goede samenwerking", "te laat"])
 
         assert result == summary_text
@@ -225,11 +230,13 @@ class TestGenerateSummary:
         """If first summarize returns ≤20 chars, retry is attempted."""
         svc = self._svc()
         struct = {"positives": [], "negatives": ["slecht"], "themes": [], "action": ""}
-        short = "Te kort."           # len ≤ 20
-        good  = "Dit is een goede samenvatting van de feedback." * 2
+        short = "Te kort."  # len ≤ 20
+        good = "Dit is een goede samenvatting van de feedback." * 2
 
-        with patch.object(svc, "_extract_structured", return_value=struct), \
-             patch.object(svc, "_summarize_from_struct", side_effect=[short, good]):
+        with (
+            patch.object(svc, "_extract_structured", return_value=struct),
+            patch.object(svc, "_summarize_from_struct", side_effect=[short, good]),
+        ):
             result = svc.generate_summary(["slecht"])
 
         assert result == good
@@ -239,9 +246,11 @@ class TestGenerateSummary:
         svc = self._svc()
         single_pass_text = "Een neutrale samenvatting van de peer-feedback."
 
-        with patch.object(svc, "_extract_structured", return_value=None), \
-             patch.object(svc, "_single_pass_summary", return_value=single_pass_text), \
-             patch.object(svc, "_is_refusal", return_value=False):
+        with (
+            patch.object(svc, "_extract_structured", return_value=None),
+            patch.object(svc, "_single_pass_summary", return_value=single_pass_text),
+            patch.object(svc, "_is_refusal", return_value=False),
+        ):
             result = svc.generate_summary(["some comment"])
 
         assert result == single_pass_text
@@ -250,8 +259,10 @@ class TestGenerateSummary:
         """When all LLM attempts fail/refuse, generate_summary returns None."""
         svc = self._svc()
 
-        with patch.object(svc, "_extract_structured", return_value=None), \
-             patch.object(svc, "_single_pass_summary", return_value=None):
+        with (
+            patch.object(svc, "_extract_structured", return_value=None),
+            patch.object(svc, "_single_pass_summary", return_value=None),
+        ):
             result = svc.generate_summary(["comment"])
 
         assert result is None
@@ -261,8 +272,10 @@ class TestGenerateSummary:
         svc = self._svc()
         refusal = "Ik kan niet helpen met deze opdracht."
 
-        with patch.object(svc, "_extract_structured", return_value=None), \
-             patch.object(svc, "_single_pass_summary", return_value=refusal):
+        with (
+            patch.object(svc, "_extract_structured", return_value=None),
+            patch.object(svc, "_single_pass_summary", return_value=refusal),
+        ):
             result = svc.generate_summary(["comment"])
 
         assert result is None
@@ -271,6 +284,7 @@ class TestGenerateSummary:
 # ---------------------------------------------------------------------------
 # create_fallback_summary
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestCreateFallbackSummary:
@@ -303,7 +317,11 @@ class TestCreateFallbackSummary:
             "Onvoldoende inzet getoond",
         ]
         result = svc.create_fallback_summary(comments)
-        assert "zorgen" in result.lower() or "inzet" in result.lower() or "afspraken" in result.lower()
+        assert (
+            "zorgen" in result.lower()
+            or "inzet" in result.lower()
+            or "afspraken" in result.lower()
+        )
 
     def test_positive_terms_detected(self):
         svc = self._svc()
@@ -343,6 +361,7 @@ class TestCreateFallbackSummary:
 # _is_refusal
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestIsRefusal:
     """_is_refusal identifies LLM refusal phrases in Dutch and English."""
@@ -350,28 +369,34 @@ class TestIsRefusal:
     def _svc(self) -> OllamaService:
         return _make_service()
 
-    @pytest.mark.parametrize("phrase", [
-        "Ik kan niet helpen met dit verzoek.",
-        "Ik kan je niet helpen hiermee.",
-        "Ik kan deze taak niet uitvoeren.",
-        "Helaas kan ik niet wat je vraagt.",
-        "Ik ben niet in staat dit te doen.",
-        "Dit kan ik niet doen.",
-        "Ik kan geen samenvatting maken.",
-        "I am unable to provide this information.",
-        "I cannot provide a summary.",
-        "I can't help you with that.",
-    ])
+    @pytest.mark.parametrize(
+        "phrase",
+        [
+            "Ik kan niet helpen met dit verzoek.",
+            "Ik kan je niet helpen hiermee.",
+            "Ik kan deze taak niet uitvoeren.",
+            "Helaas kan ik niet wat je vraagt.",
+            "Ik ben niet in staat dit te doen.",
+            "Dit kan ik niet doen.",
+            "Ik kan geen samenvatting maken.",
+            "I am unable to provide this information.",
+            "I cannot provide a summary.",
+            "I can't help you with that.",
+        ],
+    )
     def test_refusal_phrases_detected(self, phrase):
         svc = self._svc()
         assert svc._is_refusal(phrase) is True
 
-    @pytest.mark.parametrize("text", [
-        "Je werkt goed samen maar bent soms te laat.",
-        "Er zijn zowel positieve als kritische punten.",
-        "Maak een planning voor volgende week.",
-        "",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Je werkt goed samen maar bent soms te laat.",
+            "Er zijn zowel positieve als kritische punten.",
+            "Maak een planning voor volgende week.",
+            "",
+        ],
+    )
     def test_normal_text_not_refusal(self, text):
         svc = self._svc()
         assert svc._is_refusal(text) is False
@@ -388,6 +413,7 @@ class TestIsRefusal:
 # ---------------------------------------------------------------------------
 # _extract_json_block
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestExtractJsonBlock:
@@ -441,6 +467,7 @@ class TestExtractJsonBlock:
 # _request_ollama (network layer)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestRequestOllama:
     """_request_ollama handles HTTP responses, timeouts, and errors."""
@@ -479,7 +506,9 @@ class TestRequestOllama:
 
     def test_connection_error_returns_none(self):
         svc = self._svc()
-        with patch("requests.post", side_effect=requests.ConnectionError("Connection refused")):
+        with patch(
+            "requests.post", side_effect=requests.ConnectionError("Connection refused")
+        ):
             result = svc._request_ollama("prompt", {})
 
         assert result is None
@@ -526,6 +555,7 @@ class TestRequestOllama:
 # Compose config — OLLAMA_BASE_URL is set to internal service name
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestComposeOllamaConfig:
     """
@@ -540,15 +570,16 @@ class TestComposeOllamaConfig:
         import yaml
 
         compose_path = (
-            Path(__file__).parent.parent.parent
-            / "ops" / "docker" / "compose.prod.yml"
+            Path(__file__).parent.parent.parent / "ops" / "docker" / "compose.prod.yml"
         )
         assert compose_path.exists(), f"compose.prod.yml not found at {compose_path}"
         return yaml.safe_load(compose_path.read_text())
 
     def test_ollama_service_exists(self):
         data = self._load_compose()
-        assert "ollama" in data["services"], "ollama service must be defined in compose.prod.yml"
+        assert (
+            "ollama" in data["services"]
+        ), "ollama service must be defined in compose.prod.yml"
 
     def test_ollama_on_private_network_only(self):
         data = self._load_compose()
@@ -564,8 +595,9 @@ class TestComposeOllamaConfig:
         data = self._load_compose()
         volumes = data["services"]["ollama"].get("volumes", [])
         mounts = [v if isinstance(v, str) else v.get("source", "") for v in volumes]
-        assert any("ollama-data" in m for m in mounts), \
-            "ollama-data volume must be mounted in the ollama service"
+        assert any(
+            "ollama-data" in m for m in mounts
+        ), "ollama-data volume must be mounted in the ollama service"
 
     def test_ollama_has_healthcheck(self):
         data = self._load_compose()
@@ -591,24 +623,25 @@ class TestComposeOllamaConfig:
         data = self._load_compose()
         env = data["services"]["backend"].get("environment", {})
         url = env.get("OLLAMA_BASE_URL", "")
-        assert url == "http://ollama:11434", (
-            f"backend OLLAMA_BASE_URL must be http://ollama:11434, got: {url!r}"
-        )
+        assert (
+            url == "http://ollama:11434"
+        ), f"backend OLLAMA_BASE_URL must be http://ollama:11434, got: {url!r}"
 
     def test_worker_ollama_base_url_is_internal(self):
         data = self._load_compose()
         env = data["services"]["worker"].get("environment", {})
         url = env.get("OLLAMA_BASE_URL", "")
-        assert url == "http://ollama:11434", (
-            f"worker OLLAMA_BASE_URL must be http://ollama:11434, got: {url!r}"
-        )
+        assert (
+            url == "http://ollama:11434"
+        ), f"worker OLLAMA_BASE_URL must be http://ollama:11434, got: {url!r}"
 
     def test_backend_and_worker_use_same_url(self):
         data = self._load_compose()
         backend_url = data["services"]["backend"]["environment"]["OLLAMA_BASE_URL"]
         worker_url = data["services"]["worker"]["environment"]["OLLAMA_BASE_URL"]
-        assert backend_url == worker_url, \
-            "backend and worker must use the same OLLAMA_BASE_URL"
+        assert (
+            backend_url == worker_url
+        ), "backend and worker must use the same OLLAMA_BASE_URL"
 
     def test_ollama_url_in_allowlist(self):
         """The hostname from the compose URL must be in ALLOWED_OLLAMA_HOSTS."""
