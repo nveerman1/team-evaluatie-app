@@ -25,7 +25,6 @@ from app.api.v1.schemas.attendance import (
     ExternalWorkCreate,
 )
 
-
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 

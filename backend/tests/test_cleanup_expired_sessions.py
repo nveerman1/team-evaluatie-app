@@ -29,7 +29,6 @@ from app.api.v1.routers.attendance import (
 )
 from app.infra.db.models import AttendanceEvent
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 
@@ -46,9 +45,7 @@ def _make_open_session(check_in: datetime) -> Mock:
 def _make_db(sessions: list) -> MagicMock:
     """Return a mock DB session whose query chain returns *sessions*."""
     db = MagicMock()
-    (
-        db.query.return_value.filter.return_value.all.return_value
-    ) = sessions
+    db.query.return_value.filter.return_value.all.return_value = sessions
     return db
 
 
@@ -114,9 +111,9 @@ class TestCleanupExpiredSessions:
 
         cleanup_expired_sessions(db)
 
-        expected_checkout = datetime(2024, 1, 10, 8, 0, 0, tzinfo=timezone.utc) + timedelta(
-            minutes=FORGOTTEN_CHECKOUT_SESSION_MINUTES
-        )
+        expected_checkout = datetime(
+            2024, 1, 10, 8, 0, 0, tzinfo=timezone.utc
+        ) + timedelta(minutes=FORGOTTEN_CHECKOUT_SESSION_MINUTES)
         assert session.check_out == expected_checkout
 
     def test_updated_at_is_refreshed(self):
