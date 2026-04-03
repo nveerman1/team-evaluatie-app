@@ -1,6 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDown,
+  ExternalLink,
+  MessageSquare,
+  EyeOff,
+} from "lucide-react";
 import type {
   EvaluationResult,
   OverviewReflection,
@@ -264,8 +270,9 @@ export function OverviewTab({
                     <td className="px-3 py-4">
                       <Link
                         href={`/student/project-assessments/${row.id}`}
-                        className="inline-flex items-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                       >
+                        <ExternalLink className="h-3.5 w-3.5" />
                         Bekijk rubric
                       </Link>
                     </td>
@@ -470,11 +477,19 @@ export function OverviewTab({
                           <td className="px-3 py-3 text-center" rowSpan={2}>
                             <button
                               onClick={() => toggleEvaluation(evaluation.id)}
-                              className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                             >
-                              {isExpanded
-                                ? "Verberg opmerkingen"
-                                : "Bekijk opmerkingen"}
+                              {isExpanded ? (
+                                <>
+                                  <EyeOff className="h-3.5 w-3.5" />
+                                  Verberg opmerkingen
+                                </>
+                              ) : (
+                                <>
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  Bekijk opmerkingen
+                                </>
+                              )}
                             </button>
                           </td>
                         </tr>
