@@ -264,7 +264,7 @@ export function OverviewTab({
                     <td className="px-3 py-4">
                       <Link
                         href={`/student/project-assessments/${row.id}`}
-                        className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                        className="text-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                       >
                         Bekijk rubric
                       </Link>
@@ -470,7 +470,7 @@ export function OverviewTab({
                           <td className="px-3 py-3 text-center" rowSpan={2}>
                             <button
                               onClick={() => toggleEvaluation(evaluation.id)}
-                              className="w-20 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-center text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                              className="w-24 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-center text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                             >
                               {isExpanded ? (
                                 <>Verberg<br />opmerkingen</>
