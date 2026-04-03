@@ -33,6 +33,8 @@ import {
 
 type PeriodFilter = "week" | "maand" | "alles";
 
+const MAX_EXTERNAL_HOURS = 5;
+
 interface AttendanceTabProps {
   searchQuery?: string;
 }
@@ -279,8 +281,8 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
     const endDate = new Date(formData.end);
     const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
 
-    if (durationHours > 5) {
-      alert("Een externe registratie mag maximaal 5 uur duren. Pas de begin- of eindtijd aan.");
+    if (durationHours > MAX_EXTERNAL_HOURS) {
+      alert(`Een externe registratie mag maximaal ${MAX_EXTERNAL_HOURS} uur duren. Pas de begin- of eindtijd aan.`);
       return;
     }
 

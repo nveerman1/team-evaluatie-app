@@ -201,7 +201,7 @@ class ExternalWorkCreate(BaseModel):
         duration_seconds = (check_out_aware - check_in_aware).total_seconds()
         if duration_seconds > max_seconds:
             raise ValueError(
-                f"Een externe registratie mag maximaal {MAX_EXTERNAL_HOURS} uur duren"
+                f"External work registration cannot exceed {MAX_EXTERNAL_HOURS} hours"
             )
         return self
 
