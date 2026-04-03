@@ -13,7 +13,12 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Allowed Ollama hosts (SSRF prevention)
+# Allowed Ollama hosts (SSRF prevention).
+# "localhost" / "127.0.0.1" / "::1" — local development and testing.
+# "ollama" — internal Docker Compose service name used in production.
+#   This name is only reachable from within the private Docker network and
+#   is never accessible from the public internet, so adding it here does not
+#   weaken the SSRF protection for external requests.
 ALLOWED_OLLAMA_HOSTS = ["localhost", "127.0.0.1", "::1", "ollama"]
 
 
