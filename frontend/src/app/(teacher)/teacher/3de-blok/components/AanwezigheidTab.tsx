@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, TrendingUp } from "lucide-react";
 import { fetchWithErrorHandling } from "@/lib/api";
+import { attendanceService } from "@/services/attendance.service";
+import { toast } from "@/lib/toast";
 
 interface OpenSession {
   id: number;
@@ -33,6 +35,7 @@ export default function AanwezigheidTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checkingOutAll, setCheckingOutAll] = useState(false);
 
   useEffect(() => {
     fetchPresence();
@@ -63,6 +66,26 @@ export default function AanwezigheidTab() {
       session.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.class_name?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  const handleCheckoutAll = async () => {
+    if (openSessions.length === 0) return;
+    if (
+      !window.confirm(
+        `Weet je zeker dat je alle ${openSessions.length} aanwezige student(en) wilt uitchecken?`,
+      )
+    )
+      return;
+    setCheckingOutAll(true);
+    try {
+      const result = await attendanceService.checkoutAll();
+      toast.success(`${result.checked_out} student(en) uitgecheckt`);
+      await fetchPresence();
+    } catch {
+      toast.error("Kon studenten niet uitchecken");
+    } finally {
+      setCheckingOutAll(false);
+    }
+  };
 
   const groupedByClass = filteredSessions.reduce(
     (acc, session) => {
@@ -107,6 +130,14 @@ export default function AanwezigheidTab() {
           />
           <Button onClick={fetchPresence} variant="outline">
             Vernieuwen
+          </Button>
+          <Button
+            onClick={handleCheckoutAll}
+            variant="outline"
+            disabled={checkingOutAll || openSessions.length === 0}
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+          >
+            {checkingOutAll ? "Bezig..." : "Iedereen uitchecken"}
           </Button>
         </div>
       </div>
