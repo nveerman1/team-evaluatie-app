@@ -365,6 +365,7 @@ def _trigger_batch_summary_generation(
 
     queue = get_queue("ai-summaries")
     enqueued_count = 0
+    batch_ts = int(time.time())
 
     for student_id in student_ids:
         # Idempotency: skip if a job already exists for this student/evaluation
@@ -381,7 +382,7 @@ def _trigger_batch_summary_generation(
         if existing_job:
             continue
 
-        job_id = f"summary-{evaluation_id}-{student_id}-{int(time.time())}"
+        job_id = f"summary-{evaluation_id}-{student_id}-{batch_ts}"
 
         new_job_record = SummaryGenerationJob(
             school_id=school_id,
