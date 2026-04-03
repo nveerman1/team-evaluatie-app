@@ -364,11 +364,11 @@ export function OverviewTab({
                     ) => {
                       if (score == null)
                         return <span className="text-slate-300">–</span>;
-                      const isWarning = score >= 3;
+                      const needsAttention = score >= 3;
                       return (
                         <div
                           className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ring-1 ${
-                            isWarning
+                            needsAttention
                               ? "bg-amber-50 text-amber-700 ring-amber-300"
                               : "bg-emerald-50 text-emerald-700 ring-emerald-300"
                           }`}
@@ -382,7 +382,7 @@ export function OverviewTab({
                                   : "Urgent: direct bespreken"
                           }
                         >
-                          {isWarning ? "!" : "✓"}
+                          {needsAttention ? "!" : "✓"}
                         </div>
                       );
                     };
@@ -415,33 +415,41 @@ export function OverviewTab({
                           <td className="px-3 py-3 text-center">
                             <ScoreBadge
                               value={
-                                avgScores.O ? avgScores.O.toFixed(1) : "-"
+                                avgScores.O != null && avgScores.O !== 0
+                                  ? avgScores.O.toFixed(1)
+                                  : "-"
                               }
-                              tone={omzaTone(avgScores.O || null)}
+                              tone={omzaTone(avgScores.O != 0 ? avgScores.O : null)}
                             />
                           </td>
                           <td className="px-3 py-3 text-center">
                             <ScoreBadge
                               value={
-                                avgScores.M ? avgScores.M.toFixed(1) : "-"
+                                avgScores.M != null && avgScores.M !== 0
+                                  ? avgScores.M.toFixed(1)
+                                  : "-"
                               }
-                              tone={omzaTone(avgScores.M || null)}
+                              tone={omzaTone(avgScores.M != 0 ? avgScores.M : null)}
                             />
                           </td>
                           <td className="px-3 py-3 text-center">
                             <ScoreBadge
                               value={
-                                avgScores.Z ? avgScores.Z.toFixed(1) : "-"
+                                avgScores.Z != null && avgScores.Z !== 0
+                                  ? avgScores.Z.toFixed(1)
+                                  : "-"
                               }
-                              tone={omzaTone(avgScores.Z || null)}
+                              tone={omzaTone(avgScores.Z != 0 ? avgScores.Z : null)}
                             />
                           </td>
                           <td className="px-3 py-3 text-center">
                             <ScoreBadge
                               value={
-                                avgScores.A ? avgScores.A.toFixed(1) : "-"
+                                avgScores.A != null && avgScores.A !== 0
+                                  ? avgScores.A.toFixed(1)
+                                  : "-"
                               }
-                              tone={omzaTone(avgScores.A || null)}
+                              tone={omzaTone(avgScores.A != 0 ? avgScores.A : null)}
                             />
                           </td>
                           <td
