@@ -454,6 +454,57 @@ def bulk_delete_events(
         logger.info(f"No valid events to delete for user {current_user.id}")
 
 
+# ============ Checkout All ============
+
+
+@router.post("/checkout-all", status_code=status.HTTP_200_OK)
+def checkout_all(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Check out all users that currently have an open session (teacher/admin only).
+    Sets check_out to the current UTC time for every open school attendance event
+    in the same school as the requesting user.
+
+    Returns the number of sessions that were closed.
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can check out all users",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    # Get the IDs of open sessions in this school via a subquery
+    open_session_ids = (
+        db.query(AttendanceEvent.id)
+        .join(User, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external.is_(False),
+            AttendanceEvent.check_out.is_(None),
+        )
+        .subquery()
+    )
+
+    updated_count = (
+        db.query(AttendanceEvent)
+        .filter(AttendanceEvent.id.in_(open_session_ids))
+        .update(
+            {"check_out": now, "updated_at": now},
+            synchronize_session=False,
+        )
+    )
+
+    db.commit()
+
+    logger.info(f"Checked out {updated_count} open sessions by user {current_user.id}")
+
+    return {"checked_out": updated_count}
+
+
 # ============ External Work ============
 
 

@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, TrendingUp } from "lucide-react";
+import { Clock, Users, TrendingUp, LogOut } from "lucide-react";
 import { fetchWithErrorHandling } from "@/lib/api";
+import { attendanceService } from "@/services/attendance.service";
+import { toast } from "@/lib/toast";
 
 interface OpenSession {
   id: number;
@@ -33,6 +35,8 @@ export default function AanwezigheidTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checkingOutAll, setCheckingOutAll] = useState(false);
+  const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPresence();
@@ -63,6 +67,43 @@ export default function AanwezigheidTab() {
       session.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.class_name?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  const handleCheckoutOne = async (session: OpenSession) => {
+    setCheckingOutId(session.id);
+    try {
+      await attendanceService.updateEvent(session.id, {
+        check_out: new Date().toISOString(),
+      });
+      toast.success(`${session.user_name} uitgecheckt`);
+      await fetchPresence();
+    } catch (err) {
+      console.error("Error checking out user:", err);
+      toast.error(`Kon ${session.user_name} niet uitchecken`);
+    } finally {
+      setCheckingOutId(null);
+    }
+  };
+
+  const handleCheckoutAll = async () => {
+    if (openSessions.length === 0) return;
+    if (
+      !window.confirm(
+        `Weet je zeker dat je alle ${openSessions.length} aanwezige student(en) wilt uitchecken?`,
+      )
+    )
+      return;
+    setCheckingOutAll(true);
+    try {
+      const result = await attendanceService.checkoutAll();
+      toast.success(`${result.checked_out} student(en) uitgecheckt`);
+      await fetchPresence();
+    } catch (err) {
+      console.error("Error checking out all users:", err);
+      toast.error("Kon studenten niet uitchecken");
+    } finally {
+      setCheckingOutAll(false);
+    }
+  };
 
   const groupedByClass = filteredSessions.reduce(
     (acc, session) => {
@@ -107,6 +148,14 @@ export default function AanwezigheidTab() {
           />
           <Button onClick={fetchPresence} variant="outline">
             Vernieuwen
+          </Button>
+          <Button
+            onClick={handleCheckoutAll}
+            variant="outline"
+            disabled={checkingOutAll || openSessions.length === 0}
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+          >
+            {checkingOutAll ? "Bezig..." : "Iedereen uitchecken"}
           </Button>
         </div>
       </div>
@@ -187,6 +236,18 @@ export default function AanwezigheidTab() {
                             {formatDuration(session.duration_seconds)}
                           </Badge>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCheckoutOne(session)}
+                          disabled={
+                            checkingOutId === session.id || checkingOutAll
+                          }
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                          title={`${session.user_name} uitchecken`}
+                        >
+                          <LogOut className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}

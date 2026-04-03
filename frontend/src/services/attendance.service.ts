@@ -175,6 +175,16 @@ export const attendanceService = {
   },
 
   /**
+   * Check out all users that currently have an open session (teacher/admin only)
+   */
+  async checkoutAll(): Promise<{ checked_out: number }> {
+    const response = await api.post<{ checked_out: number }>(
+      "/attendance/checkout-all",
+    );
+    return response.data;
+  },
+
+  /**
    * Update an attendance event
    */
   async updateEvent(
