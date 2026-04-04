@@ -19,7 +19,7 @@ jobs:
 
       - name: OSV scan pnpm-lock.yaml
         run: |
-          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.3.1 \
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
             scan -L /src/pnpm-lock.yaml
 
   backend_sbom_scan:
@@ -48,7 +48,7 @@ jobs:
 
       - name: OSV scan SBOM
         run: |
-          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.3.1 \
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
             scan -L /src/backend.cdx.json
 
   trivy_images:
