@@ -1790,7 +1790,12 @@ def get_project_teams(
     teams = []
     for team_number in sorted(team_scores_map.keys()):
         scores = team_scores_map[team_number]
-        score_map = {s.criterion_id: s.score for s in scores}
+        # Only use team-level scores (student_id IS NULL) so that individual
+        # student overrides from any team member do not affect the displayed
+        # team category scores or overall grade.
+        score_map = {
+            s.criterion_id: s.score for s in scores if s.student_id is None
+        }
 
         # Calculate weighted average overall
         total_weighted_score = 0.0
