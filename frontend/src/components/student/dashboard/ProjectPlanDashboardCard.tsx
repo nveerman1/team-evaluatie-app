@@ -51,7 +51,7 @@ export function ProjectPlanDashboardCard({
     barClass,
   } = getStatusInfo(myTeam.status, myTeam.locked);
 
-  const totalSections = 8;
+  const totalSections = myTeam.sections.length;
   const filledSections = myTeam.sections.filter(
     (s) => s.status !== "empty",
   ).length;
