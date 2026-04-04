@@ -110,6 +110,19 @@ export function ProjectFeedbackDashboardTab() {
                     </div>
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+                      {round.deadline && (
+                        <div className="min-w-[120px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
+                          <div className="text-xs uppercase tracking-wide text-slate-500">
+                            Deadline
+                          </div>
+                          <div className="mt-1 text-base font-semibold text-slate-900">
+                            {new Date(round.deadline).toLocaleDateString(
+                              "nl-NL",
+                              { day: "numeric", month: "short" },
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-slate-800">
                         {done ? "Bekijken" : "Invullen"}
                         <span className="ml-2">→</span>

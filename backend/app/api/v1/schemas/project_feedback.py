@@ -32,11 +32,13 @@ class ProjectFeedbackQuestionOut(BaseModel):
 class ProjectFeedbackRoundCreate(BaseModel):
     project_id: int
     title: str = Field(..., max_length=200)
+    deadline: Optional[datetime] = None
     questions: Optional[List[ProjectFeedbackQuestionIn]] = None
 
 
 class ProjectFeedbackRoundUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
+    deadline: Optional[datetime] = None
     questions: Optional[List[ProjectFeedbackQuestionIn]] = None
 
 
@@ -45,6 +47,7 @@ class ProjectFeedbackRoundOut(BaseModel):
     project_id: int
     title: str
     status: str
+    deadline: Optional[datetime] = None
     question_count: int
     response_count: int
     total_students: int

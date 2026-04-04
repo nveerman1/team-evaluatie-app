@@ -154,6 +154,7 @@ class ProjectPlanBase(BaseModel):
     title: Optional[str] = None
     version: Optional[str] = None
     status: Optional[ProjectPlanStatus] = ProjectPlanStatus.DRAFT
+    deadline: Optional[datetime] = None
 
 
 class ProjectPlanCreate(ProjectPlanBase):
@@ -168,6 +169,7 @@ class ProjectPlanUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=500)
     version: Optional[str] = Field(None, max_length=50)
     status: Optional[ProjectPlanStatus] = None
+    deadline: Optional[datetime] = None
 
 
 class ProjectPlanOut(ProjectPlanBase):
@@ -200,6 +202,7 @@ class ProjectPlanListItem(BaseModel):
     title: Optional[str] = None
     version: Optional[str] = None
     status: Optional[ProjectPlanStatus] = ProjectPlanStatus.DRAFT
+    deadline: Optional[datetime] = None
     project_id: int
     project_name: str
     course_id: Optional[int] = None

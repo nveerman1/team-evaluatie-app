@@ -256,6 +256,7 @@ def _build_round_out(
         project_id=r.project_id,
         title=r.title,
         status=r.status,
+        deadline=r.deadline,
         question_count=question_count,
         response_count=response_count,
         total_students=total_students,
@@ -299,6 +300,7 @@ def create_feedback_round(
         teacher_id=user.id,
         title=payload.title,
         status="draft",
+        deadline=payload.deadline,
     )
     db.add(round_)
     db.flush()
@@ -427,6 +429,11 @@ def update_feedback_round(
 
     if payload.title is not None:
         r.title = payload.title
+
+    if payload.deadline is not None:
+        r.deadline = payload.deadline
+    elif "deadline" in payload.model_fields_set:
+        r.deadline = None
 
     if payload.questions is not None:
         # Replace all questions

@@ -254,6 +254,7 @@ def create_projectplan(
         title=payload.title,
         version=payload.version,
         status=payload.status.value if payload.status else "draft",
+        deadline=payload.deadline,
     )
     db.add(pp)
     db.flush()
@@ -313,6 +314,7 @@ def create_projectplan(
         title=pp.title,
         version=pp.version,
         status=pp.status,
+        deadline=pp.deadline,
         created_at=pp.created_at,
         updated_at=pp.updated_at,
     )
@@ -424,6 +426,7 @@ def list_projectplans(
                 title=pp.title,
                 version=pp.version,
                 status=pp.status,
+                deadline=pp.deadline,
                 project_id=pp.project_id,
                 project_name=project_name,
                 course_id=course_id_val,
@@ -593,6 +596,10 @@ def update_projectplan(
         )
         logger.info(f"Setting status from {pp.status} to {new_status}")
         pp.status = new_status
+    if payload.deadline is not None:
+        pp.deadline = payload.deadline
+    elif "deadline" in payload.model_fields_set:
+        pp.deadline = None
 
     db.commit()
     db.refresh(pp)
@@ -606,6 +613,7 @@ def update_projectplan(
         title=pp.title,
         version=pp.version,
         status=pp.status,
+        deadline=pp.deadline,
         created_at=pp.created_at,
         updated_at=pp.updated_at,
     )

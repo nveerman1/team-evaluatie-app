@@ -134,6 +134,7 @@ function CreateFeedbackRoundInner() {
   const [projectId, setProjectId] = useState<number | "">(
     prefilledProjectId ? Number(prefilledProjectId) : "",
   );
+  const [deadline, setDeadline] = useState("");
   const [questions, setQuestions] = useState<ProjectFeedbackQuestionIn[]>(
     DEFAULT_QUESTIONS.map((q) => ({ ...q })),
   );
@@ -197,6 +198,7 @@ function CreateFeedbackRoundInner() {
       const round = await projectFeedbackService.createRound({
         project_id: Number(projectId),
         title: title.trim(),
+        deadline: deadline || undefined,
         questions: questions.filter((q) => q.question_text.trim()),
       });
       router.push(`/teacher/project-feedback/${round.id}`);
@@ -270,6 +272,21 @@ function CreateFeedbackRoundInner() {
               placeholder="Bijv. Projectfeedback periode 1"
               required
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Deadline (optioneel)
+            </label>
+            <input
+              type="datetime-local"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Deadline voor het invullen van de feedbackvragenlijst.
+            </p>
           </div>
         </section>
 

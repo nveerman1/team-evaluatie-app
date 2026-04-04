@@ -91,10 +91,12 @@ export default function NewProjectWizardPage() {
   const [projectPlanStatus, setProjectPlanStatus] = useState<ProjectPlanStatus>(
     ProjectPlanStatus.DRAFT,
   );
+  const [projectPlanDeadline, setProjectPlanDeadline] = useState("");
 
   // Step 4: Extras & clients
   const [projectFeedbackEnabled, setProjectFeedbackEnabled] = useState(false);
   const [projectFeedbackTitle, setProjectFeedbackTitle] = useState("");
+  const [projectFeedbackDeadline, setProjectFeedbackDeadline] = useState("");
 
   // Step 4: Clients and notes
   const [clients, setClients] = useState<ClientListItem[]>([]);
@@ -348,6 +350,7 @@ export default function NewProjectWizardPage() {
             project_id: result.project.id,
             title: projectPlanTitle || undefined,
             status: projectPlanStatus,
+            deadline: projectPlanDeadline || undefined,
           };
           const planResult =
             await projectPlanService.createProjectPlan(planPayload);
@@ -366,6 +369,7 @@ export default function NewProjectWizardPage() {
             project_id: result.project.id,
             title:
               projectFeedbackTitle || `Projectfeedback ${title.trim()}`,
+            deadline: projectFeedbackDeadline || undefined,
           });
           setCreatedFeedbackRoundId(feedbackResult.id);
         } catch (e: any) {
@@ -1115,6 +1119,22 @@ export default function NewProjectWizardPage() {
                             </option>
                           </select>
                         </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">
+                            Deadline (optioneel)
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={projectPlanDeadline}
+                            onChange={(e) =>
+                              setProjectPlanDeadline(e.target.value)
+                            }
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Deadline voor het indienen van het projectplan
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1289,6 +1309,23 @@ export default function NewProjectWizardPage() {
                             <p className="text-xs text-gray-500 mt-1">
                               Laat leeg voor standaard titel op basis van de
                               projectnaam
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Deadline (optioneel)
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={projectFeedbackDeadline}
+                              onChange={(e) =>
+                                setProjectFeedbackDeadline(e.target.value)
+                              }
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Deadline voor het invullen van de
+                              feedbackvragenlijst
                             </p>
                           </div>
                         </div>

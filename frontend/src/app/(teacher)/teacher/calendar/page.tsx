@@ -8,6 +8,8 @@ import {
   competencyService,
   taskService,
 } from "@/services";
+import { projectPlanService } from "@/services/projectplan.service";
+import { projectFeedbackService } from "@/services/project-feedback.service";
 import type { ProjectListItem } from "@/dtos/project.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
@@ -18,6 +20,8 @@ type EventType =
   | "peer_deadline_review"
   | "peer_deadline_reflection"
   | "competency_deadline"
+  | "projectplan_deadline"
+  | "project_feedback_deadline"
   | "project_note"
   | "reminder"
   | "task_opdrachtgever"
@@ -51,6 +55,8 @@ const EVENT_ICONS: Record<EventType, string> = {
   peer_deadline_review: "📝",
   peer_deadline_reflection: "💭",
   competency_deadline: "🎯",
+  projectplan_deadline: "📄",
+  project_feedback_deadline: "💬",
   project_note: "📋",
   reminder: "🔔",
   task_opdrachtgever: "📧",
@@ -64,6 +70,8 @@ const EVENT_LABELS: Record<EventType, string> = {
   peer_deadline_review: "Peer-evaluatie deadline",
   peer_deadline_reflection: "Reflectie deadline",
   competency_deadline: "Competentiescan deadline",
+  projectplan_deadline: "Projectplan deadline",
+  project_feedback_deadline: "Projectfeedback deadline",
   project_note: "Projectaantekening",
   reminder: "Reminder",
   task_opdrachtgever: "Opdrachtgever taak",
@@ -92,18 +100,22 @@ export default function CalendarPage() {
   async function loadCalendarData() {
     setLoading(true);
     try {
-      const [evalsData, projectsData, windowsData, tasksData] =
+      const [evalsData, projectsData, windowsData, tasksData, planData, feedbackData] =
         await Promise.all([
           evaluationService.getEvaluations({}),
           projectService.listProjects({ per_page: 100 }),
           competencyService.getWindows("open"),
           taskService.listTasks({ status: "open", per_page: 100 }),
+          projectPlanService.listProjectPlans({ limit: 200 }),
+          projectFeedbackService.listRounds(),
         ]);
 
       const evaluations = Array.isArray(evalsData) ? evalsData : [];
       const projectsList = projectsData?.items || [];
       const windows = Array.isArray(windowsData) ? windowsData : [];
       const tasks = tasksData?.items || [];
+      const projectPlans = planData?.items || [];
+      const feedbackRounds = Array.isArray(feedbackData) ? feedbackData : [];
 
       setProjects(projectsList);
 
@@ -274,6 +286,41 @@ export default function CalendarPage() {
               projectId: task.project_id,
               courseId: undefined, // Tasks don't have direct course_id, use project's course
             },
+          });
+        }
+      });
+
+      // Add project plan deadline events
+      projectPlans.forEach((plan) => {
+        if (plan.deadline) {
+          calendarEvents.push({
+            id: `projectplan-deadline-${plan.id}`,
+            title: `${plan.title || plan.project_name} - Projectplan deadline`,
+            description: `Deadline voor het indienen van het projectplan`,
+            date: new Date(plan.deadline),
+            type: "projectplan_deadline",
+            status: plan.status === "closed" ? "completed" : "in_progress",
+            projectName: plan.project_name,
+            courseName: plan.course_name,
+            link: `/teacher/projectplans/${plan.id}?tab=overzicht`,
+            metadata: { projectId: plan.project_id, courseId: plan.course_id },
+          });
+        }
+      });
+
+      // Add project feedback deadline events
+      feedbackRounds.forEach((round) => {
+        if (round.deadline) {
+          calendarEvents.push({
+            id: `feedback-deadline-${round.id}`,
+            title: `${round.title} - Feedbackdeadline`,
+            description: `Deadline voor het invullen van de projectfeedback`,
+            date: new Date(round.deadline),
+            type: "project_feedback_deadline",
+            status: round.status === "closed" ? "completed" : "in_progress",
+            courseName: round.course_name,
+            link: `/teacher/project-feedback/${round.id}`,
+            metadata: {},
           });
         }
       });

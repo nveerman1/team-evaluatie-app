@@ -43,6 +43,11 @@ class ProjectPlan(Base):
         String(30), default="draft", nullable=False
     )  # draft|open|published|closed
 
+    # Optional submission deadline
+    deadline: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

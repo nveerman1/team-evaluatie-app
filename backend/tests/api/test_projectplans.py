@@ -59,6 +59,7 @@ def _projectplan(pp_id: int = 100, project_id: int = 10, school_id: int = 1) -> 
     pp.title = "Test Plan"
     pp.version = "1.0"
     pp.status = "draft"
+    pp.deadline = None
     _now = datetime.now(timezone.utc)
     pp.created_at = _now
     pp.updated_at = _now
@@ -275,3 +276,108 @@ class TestProjectPlanSchemas:
         )
         assert p.project_id == 1
         assert p.status == ProjectPlanStatus.DRAFT
+
+    def test_projectplan_create_schema_with_deadline(self):
+        from datetime import datetime, timezone
+
+        from app.api.v1.schemas.projectplans import ProjectPlanCreate, ProjectPlanStatus
+
+        deadline = datetime(2026, 6, 1, 23, 59, tzinfo=timezone.utc)
+        p = ProjectPlanCreate(
+            project_id=1,
+            title="Test",
+            status=ProjectPlanStatus.OPEN,
+            deadline=deadline,
+        )
+        assert p.deadline == deadline
+
+    def test_projectplan_create_schema_deadline_optional(self):
+        from app.api.v1.schemas.projectplans import ProjectPlanCreate, ProjectPlanStatus
+
+        p = ProjectPlanCreate(project_id=1, status=ProjectPlanStatus.DRAFT)
+        assert p.deadline is None
+
+    def test_projectplan_update_schema_with_deadline(self):
+        from datetime import datetime, timezone
+
+        from app.api.v1.schemas.projectplans import ProjectPlanUpdate
+
+        deadline = datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc)
+        u = ProjectPlanUpdate(deadline=deadline)
+        assert u.deadline == deadline
+
+    def test_projectplan_list_item_includes_deadline(self):
+        from datetime import datetime, timezone
+
+        from app.api.v1.schemas.projectplans import (
+            ProjectPlanListItem,
+            ProjectPlanStatus,
+        )
+
+        now = datetime.now(timezone.utc)
+        deadline = datetime(2026, 6, 30, tzinfo=timezone.utc)
+        item = ProjectPlanListItem(
+            id=1,
+            title="Plan",
+            status=ProjectPlanStatus.OPEN,
+            deadline=deadline,
+            project_id=10,
+            project_name="Test Project",
+            team_count=2,
+            teams_summary={"concept": 1, "ingediend": 1, "go": 0, "no-go": 0},
+            created_at=now,
+            updated_at=now,
+        )
+        assert item.deadline == deadline
+
+
+# ── Deadline update via router ──────────────────────────────────────────────
+
+
+@pytest.mark.integration
+class TestProjectPlanDeadline:
+    def test_update_deadline(self):
+        from datetime import datetime, timezone
+        from unittest.mock import patch
+
+        from app.api.v1.routers.projectplans import update_projectplan
+        from app.api.v1.schemas.projectplans import ProjectPlanUpdate
+
+        db = MagicMock()
+        user = _teacher()
+        pp = _projectplan()
+        pp.deadline = None
+
+        deadline = datetime(2026, 6, 1, 23, 59, tzinfo=timezone.utc)
+        payload = ProjectPlanUpdate(deadline=deadline)
+
+        with patch(
+            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+            return_value=pp,
+        ):
+            update_projectplan(projectplan_id=pp.id, payload=payload, db=db, user=user)
+
+        assert pp.deadline == deadline
+
+    def test_clear_deadline(self):
+        from datetime import datetime, timezone
+        from unittest.mock import patch
+
+        from app.api.v1.routers.projectplans import update_projectplan
+        from app.api.v1.schemas.projectplans import ProjectPlanUpdate
+
+        db = MagicMock()
+        user = _teacher()
+        pp = _projectplan()
+        pp.deadline = datetime(2026, 6, 1, tzinfo=timezone.utc)
+
+        # Explicitly set deadline to None via model_fields_set
+        payload = ProjectPlanUpdate.model_validate({"deadline": None})
+
+        with patch(
+            "app.api.v1.routers.projectplans._get_projectplan_with_access_check",
+            return_value=pp,
+        ):
+            update_projectplan(projectplan_id=pp.id, payload=payload, db=db, user=user)
+
+        assert pp.deadline is None
