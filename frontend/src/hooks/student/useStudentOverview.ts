@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import {
   studentService,
   projectAssessmentService,
-  projectService,
-  overviewService,
 } from "@/services";
 import { ApiAuthError } from "@/lib/api";
 import type {
@@ -148,40 +146,87 @@ export function useStudentOverview() {
                 (assessment as any).client_name ||
                 assessment.metadata_json?.client;
 
-              // Get category scores from backend using the same logic as teacher overview
-              // This ensures consistency across all views (student overview, student detail, teacher overview)
+              // Calculate category scores locally, applying the same logic as
+              // the detail page (/student/project-assessments/{id}):
+              //   1. Start with team scores (student_id == null)
+              //   2. Override with the current student's own overrides, if any
+              // This ensures the overview table is consistent with the detail
+              // page and that no other student's overrides leak into the result.
               let proces: number | undefined;
               let eindresultaat: number | undefined;
               let communicatie: number | undefined;
 
               try {
-                // Fetch team scores from backend - this uses the correct weighted average and curved mapping
-                const teamsResponse = await overviewService.getProjectTeams(
-                  assessment.id,
-                );
+                // Build scoreMap: team scores first, then the student's own overrides
+                const scoreMap: Record<number, number> = {};
+                details.scores
+                  .filter((s: any) => s.student_id == null)
+                  .forEach((s: any) => {
+                    scoreMap[s.criterion_id] = s.score;
+                  });
+                // Identify which student_id the overrides belong to (defense-in-depth)
+                let overrideStudentId: number | null = null;
+                details.scores
+                  .filter((s: any) => s.student_id != null)
+                  .forEach((s: any) => {
+                    if (overrideStudentId === null) {
+                      overrideStudentId = s.student_id;
+                    }
+                    if (s.student_id === overrideStudentId) {
+                      scoreMap[s.criterion_id] = s.score;
+                    }
+                  });
 
-                // Find the student's team in the assessment
-                // The details.scores contain team_number, so we can identify which team the student belongs to
-                const studentTeamNumber = details.scores.find(
-                  (s) => s.team_number !== null,
-                )?.team_number;
-
-                if (studentTeamNumber !== undefined) {
-                  const studentTeam = teamsResponse.teams.find(
-                    (t) => t.team_number === studentTeamNumber,
-                  );
-
-                  if (studentTeam && studentTeam.category_scores) {
-                    // Use backend-calculated category scores (weighted + curved)
-                    // Note: Handle both "projectproces" and "proces" naming variations for backwards compatibility
-                    // as some older rubrics may use different category names
-                    proces =
-                      studentTeam.category_scores.projectproces ||
-                      studentTeam.category_scores.proces;
-                    eindresultaat = studentTeam.category_scores.eindresultaat;
-                    communicatie = studentTeam.category_scores.communicatie;
+                // Calculate weighted average per category, then convert to grade
+                const categoryWeightedSums: Record<string, number> = {};
+                const categoryWeights: Record<string, number> = {};
+                details.criteria.forEach((criterion: any) => {
+                  const cat = (criterion.category || "overig").toLowerCase();
+                  if (scoreMap[criterion.id] !== undefined) {
+                    if (categoryWeightedSums[cat] === undefined) {
+                      categoryWeightedSums[cat] = 0;
+                      categoryWeights[cat] = 0;
+                    }
+                    categoryWeightedSums[cat] +=
+                      scoreMap[criterion.id] * criterion.weight;
+                    categoryWeights[cat] += criterion.weight;
                   }
+                });
+
+                // Apply the same curved mapping as the backend:
+                //   grade = 1 + (normalized ** 0.85) * 9
+                const scaleMin = details.rubric_scale_min ?? 1;
+                const scaleMax = details.rubric_scale_max ?? 5;
+                const scaleRange = scaleMax - scaleMin;
+                const GRADE_CURVE_EXPONENT = 0.85;
+
+                const categoryGrades: Record<string, number> = {};
+                if (scaleRange > 0) {
+                  Object.keys(categoryWeightedSums).forEach((cat) => {
+                    if (categoryWeights[cat] > 0) {
+                      const avg =
+                        categoryWeightedSums[cat] / categoryWeights[cat];
+                      const clamped = Math.max(
+                        scaleMin,
+                        Math.min(scaleMax, avg),
+                      );
+                      const normalized = (clamped - scaleMin) / scaleRange;
+                      const grade =
+                        Math.round(
+                          (1 +
+                            Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9) *
+                            10,
+                        ) / 10;
+                      categoryGrades[cat] = grade;
+                    }
+                  });
                 }
+
+                // Map to the expected fields (support both "projectproces" and "proces")
+                proces =
+                  categoryGrades["projectproces"] ?? categoryGrades["proces"];
+                eindresultaat = categoryGrades["eindresultaat"];
+                communicatie = categoryGrades["communicatie"];
               } catch (error) {
                 // If we can't fetch team scores, leave category scores as undefined
                 console.warn(
