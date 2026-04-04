@@ -80,7 +80,7 @@ export default function SettingsPageInner() {
       const [teamOverview, rubricList, clientList] = await Promise.all([
         projectAssessmentService.getTeamOverview(assessmentId),
         rubricService.getRubrics(undefined, "project"),
-        clientService.listClients({ per_page: 200, status: "active" }),
+        clientService.listClients({ per_page: 200, status: "Actief" }),
       ]);
 
       setData(teamOverview);
@@ -166,7 +166,13 @@ export default function SettingsPageInner() {
           message?: string;
         };
         setError(
-          err?.response?.data?.detail || err?.message || "Laden mislukt",
+          typeof err?.response?.data?.detail === "string"
+            ? err.response.data.detail
+            : Array.isArray(err?.response?.data?.detail)
+              ? (err.response.data.detail as { msg?: string }[])
+                  .map((d) => d.msg || JSON.stringify(d))
+                  .join(", ")
+              : err?.message || "Laden mislukt",
         );
       }
     } finally {
