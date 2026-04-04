@@ -160,14 +160,14 @@ export function useStudentOverview() {
                 // Build scoreMap: team scores first, then the student's own overrides
                 const scoreMap: Record<number, number> = {};
                 details.scores
-                  .filter((s: any) => s.student_id == null)
+                  .filter((s: any) => s.student_id === null)
                   .forEach((s: any) => {
                     scoreMap[s.criterion_id] = s.score;
                   });
                 // Identify which student_id the overrides belong to (defense-in-depth)
                 let overrideStudentId: number | null = null;
                 details.scores
-                  .filter((s: any) => s.student_id != null)
+                  .filter((s: any) => s.student_id !== null)
                   .forEach((s: any) => {
                     if (overrideStudentId === null) {
                       overrideStudentId = s.student_id;
@@ -228,9 +228,9 @@ export function useStudentOverview() {
                 eindresultaat = categoryGrades["eindresultaat"];
                 communicatie = categoryGrades["communicatie"];
               } catch (error) {
-                // If we can't fetch team scores, leave category scores as undefined
+                // If category score calculation fails, leave category scores as undefined
                 console.warn(
-                  `Could not fetch team scores for assessment ${assessment.id}:`,
+                  `Could not calculate category scores for assessment ${assessment.id}:`,
                   error,
                 );
               }
