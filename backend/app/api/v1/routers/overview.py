@@ -1818,7 +1818,10 @@ def get_project_teams(
     teams = []
     for team_number in sorted(team_scores_map.keys()):
         scores = team_scores_map[team_number]
-        # Start with team-level scores (student_id IS NULL).
+        # Start with team-level scores.  Note: `s.student_id is None` is a
+        # Python object comparison on the already-fetched ORM objects, which is
+        # correct here (as opposed to `is_(None)` used in SQLAlchemy query
+        # filters to generate SQL IS NULL).
         score_map = {
             s.criterion_id: s.score for s in scores if s.student_id is None
         }
