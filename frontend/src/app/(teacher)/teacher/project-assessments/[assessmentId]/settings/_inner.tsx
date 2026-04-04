@@ -652,7 +652,7 @@ export default function SettingsPageInner() {
                         onChange={(e) => {
                           if (e.target.value) {
                             fillAllTeamsFromClient(Number(e.target.value));
-                            e.target.value = "";
+                            e.currentTarget.selectedIndex = 0;
                           }
                         }}
                         className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -868,7 +868,7 @@ export default function SettingsPageInner() {
                                           index,
                                           Number(e.target.value),
                                         );
-                                        e.target.value = "";
+                                        e.currentTarget.selectedIndex = 0;
                                       }
                                     }}
                                     className="w-full h-7 rounded border border-gray-200 bg-gray-50 px-1 text-xs mb-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
