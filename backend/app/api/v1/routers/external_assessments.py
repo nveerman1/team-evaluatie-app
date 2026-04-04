@@ -56,7 +56,9 @@ def _validate_token(db: Session, token: str) -> ProjectTeamExternal:
         )
 
     # Check expiration
-    if team_link.token_expires_at and team_link.token_expires_at < datetime.now(timezone.utc):
+    if team_link.token_expires_at and team_link.token_expires_at < datetime.now(
+        timezone.utc
+    ):
         raise HTTPException(status_code=403, detail="This invitation has expired")
 
     return team_link

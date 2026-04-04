@@ -667,6 +667,8 @@ def get_project_external_status(
             )
 
     return status_list
+
+
 def get_external_advisory_detail(
     project_team_id: int,
     team_number: Optional[int] = None,
