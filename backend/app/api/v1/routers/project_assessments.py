@@ -697,12 +697,23 @@ def get_project_assessment(
         weight_map = {c.id: c.weight for c in criteria}
         total_weight = sum(weight_map.values())
 
-        # Calculate weighted average - only include scores that have matching criteria
+        # Calculate weighted average.  Start with team scores (student_id is
+        # None), then — when a student is viewing — apply their own individual
+        # overrides on top, so the displayed grade reflects the student's
+        # personal score rather than the plain team score.
         if total_weight > 0:
-            weighted_sum = 0
+            effective_scores: dict[int, float] = {}
             for s in scores:
-                if s.criterion_id in weight_map:
-                    weighted_sum += s.score * weight_map[s.criterion_id]
+                if s.criterion_id in weight_map and s.student_id is None:
+                    effective_scores[s.criterion_id] = s.score
+            if user.role == "student":
+                for s in scores:
+                    if s.criterion_id in weight_map and s.student_id == user.id:
+                        effective_scores[s.criterion_id] = s.score
+
+            weighted_sum = sum(
+                score * weight_map[cid] for cid, score in effective_scores.items()
+            )
 
             total_score = weighted_sum / total_weight
 
