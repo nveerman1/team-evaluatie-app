@@ -170,14 +170,24 @@ export default function StudentProjectAssessmentInner() {
         comment: s.comment || undefined,
       };
     });
-  // Then, override with student-specific scores if any exist
+  // Then, override with student-specific scores if any exist.
+  // The backend already filters to only return the current student's own
+  // overrides, so all non-null student_id entries here belong to the same
+  // student. As a defense-in-depth measure we only apply overrides that share
+  // the same student_id as the first override we encounter.
+  let overrideStudentId: number | null = null;
   data.scores
     .filter((s) => s.student_id != null)
     .forEach((s) => {
-      scoreMap[s.criterion_id] = {
-        score: s.score,
-        comment: s.comment || undefined,
-      };
+      if (overrideStudentId === null) {
+        overrideStudentId = s.student_id as number;
+      }
+      if (s.student_id === overrideStudentId) {
+        scoreMap[s.criterion_id] = {
+          score: s.score,
+          comment: s.comment || undefined,
+        };
+      }
     });
 
   // Calculate category weighted averages and convert to 1-10 scale
