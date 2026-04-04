@@ -328,3 +328,14 @@ export type ProjectAssessmentSelfOverview = {
   team_overviews: TeamSelfAssessmentOverview[];
   statistics: SelfAssessmentStatistics;
 };
+
+export type EmailRubricResult = {
+  team_number: number;
+  emails_sent_to: string[];
+  success: boolean;
+  error?: string | null;
+};
+
+export type EmailRubricResponse = {
+  results: EmailRubricResult[];
+};

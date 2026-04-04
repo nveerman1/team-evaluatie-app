@@ -17,6 +17,7 @@ import {
   SelfAssessmentOut,
   SelfAssessmentCreate,
   ProjectAssessmentSelfOverview,
+  EmailRubricResponse,
 } from "@/dtos/project-assessment.dto";
 
 export const projectAssessmentService = {
@@ -262,5 +263,33 @@ export const projectAssessmentService = {
       "Rubrics.docx",
     );
     return { blob: response.data, filename };
+  },
+
+  /**
+   * Email rubric Word document to team members of a single team
+   */
+  async emailTeamRubric(
+    assessmentId: number,
+    teamNumber: number,
+  ): Promise<EmailRubricResponse> {
+    const response = await api.post<EmailRubricResponse>(
+      `/project-assessments/${assessmentId}/email-rubric`,
+      { team_numbers: [teamNumber] },
+    );
+    return response.data;
+  },
+
+  /**
+   * Email rubric Word documents to team members of all specified teams
+   */
+  async emailAllRubrics(
+    assessmentId: number,
+    teamNumbers: number[],
+  ): Promise<EmailRubricResponse> {
+    const response = await api.post<EmailRubricResponse>(
+      `/project-assessments/${assessmentId}/email-rubric`,
+      { team_numbers: teamNumbers },
+    );
+    return response.data;
   },
 };

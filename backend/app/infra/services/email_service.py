@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import smtplib
 from email.message import EmailMessage
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from app.core.config import settings
 
@@ -51,6 +51,7 @@ class EmailService:
         html_body: Optional[str] = None,
         bcc: Optional[List[str]] = None,
         reply_to: Optional[str] = None,
+        attachments: Optional[List[Tuple[str, bytes, str]]] = None,
     ) -> bool:
         """
         Send an email.
@@ -71,6 +72,10 @@ class EmailService:
         reply_to:
             Reply-To address.  Falls back to ``settings.SMTP_REPLY_TO`` when
             not provided explicitly.
+        attachments:
+            Optional list of attachments as ``(filename, content_bytes, mime_type)``
+            tuples.  Example: ``[("report.docx", docx_bytes,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document")]``
 
         Returns
         -------
@@ -85,7 +90,9 @@ class EmailService:
             return False
 
         try:
-            msg = self._build_message(to, subject, body, html_body, bcc, reply_to)
+            msg = self._build_message(
+                to, subject, body, html_body, bcc, reply_to, attachments
+            )
             self._deliver(msg)
             logger.info(
                 "Email sent: subject=%r to=%r bcc=%r",
@@ -112,6 +119,7 @@ class EmailService:
         html_body: Optional[str],
         bcc: Optional[List[str]],
         reply_to: Optional[str],
+        attachments: Optional[List[Tuple[str, bytes, str]]] = None,
     ) -> EmailMessage:
         msg = EmailMessage()
         msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
@@ -130,6 +138,16 @@ class EmailService:
             msg.add_alternative(html_body, subtype="html")
         else:
             msg.set_content(body)
+
+        if attachments:
+            for filename, content, mime_type in attachments:
+                maintype, _, subtype = mime_type.partition("/")
+                msg.add_attachment(
+                    content,
+                    maintype=maintype,
+                    subtype=subtype,
+                    filename=filename,
+                )
 
         return msg
 

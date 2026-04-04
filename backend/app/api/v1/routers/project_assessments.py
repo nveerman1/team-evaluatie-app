@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime, timezone
 from urllib.parse import quote
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -58,9 +59,19 @@ from app.api.v1.schemas.project_assessments import (
     TeamSelfAssessmentOverview,
     StudentSelfAssessmentInfo,
     SelfAssessmentStatistics,
+    EmailRubricRequest,
+    EmailRubricResponse,
+    EmailRubricResult,
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
+
+
+def _safe_filename(s: str) -> str:
+    """Sanitize a string for use as part of a filename."""
+    return re.sub(
+        r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
+    ).strip("-")
 
 
 def _get_assessment_with_access_check(
@@ -2729,6 +2740,126 @@ def export_all_team_rubrics(
             "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
         },
     )
+
+
+@router.post("/{assessment_id}/email-rubric", response_model=EmailRubricResponse)
+def email_team_rubrics(
+    assessment_id: int,
+    request: EmailRubricRequest,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Email rubric Word document(s) to team members (teacher/admin only)"""
+    from app.infra.services.email_service import email_service
+    from app.services.rubric_export import generate_single_team_rubric_docx
+
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
+
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
+
+    results: list[EmailRubricResult] = []
+
+    for team_number in request.team_numbers:
+        # Collect team member emails
+        emails: list[str] = []
+        if pa.project_id:
+            project_teams = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.project_id == pa.project_id,
+                    ProjectTeam.team_number == team_number,
+                    ProjectTeam.school_id == user.school_id,
+                )
+                .all()
+            )
+            for pt in project_teams:
+                members_q = (
+                    db.query(User)
+                    .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+                    .filter(
+                        ProjectTeamMember.project_team_id == pt.id,
+                        User.archived.is_(False),
+                    )
+                    .all()
+                )
+                emails.extend(m.email for m in members_q if m.email)
+
+        if not emails:
+            results.append(
+                EmailRubricResult(
+                    team_number=team_number,
+                    emails_sent_to=[],
+                    success=False,
+                    error="Geen e-mailadressen gevonden voor dit team",
+                )
+            )
+            continue
+
+        try:
+            data = _build_rubric_export_data_for_team(
+                db, pa, rubric, criteria, team_number, user
+            )
+            buffer = generate_single_team_rubric_docx(data)
+            docx_bytes = buffer.getvalue()
+
+            parts: list[str] = []
+            if data.get("project_title"):
+                parts.append(_safe_filename(data["project_title"]))
+            parts.append(f"Team{team_number}")
+            if data.get("team_members"):
+                member_names: list[str] = data["team_members"]
+                members_str = "_".join(_safe_filename(m) for m in member_names)
+                if members_str:
+                    parts.append(members_str)
+            filename = "Rubric_" + "_".join(parts) + ".docx"
+
+            assessment_title = data.get("assessment_title") or pa.title or rubric.title
+            subject = f"Beoordeling – {assessment_title} – Team {team_number}"
+            body = (
+                f"Beste teamleden,\n\n"
+                f"Hierbij ontvangen jullie de rubric-beoordeling voor Team {team_number}.\n\n"
+                f"Met vriendelijke groet"
+            )
+
+            success = email_service.send_email(
+                to=emails,
+                subject=subject,
+                body=body,
+                attachments=[
+                    (
+                        filename,
+                        docx_bytes,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                ],
+            )
+
+            results.append(
+                EmailRubricResult(
+                    team_number=team_number,
+                    emails_sent_to=emails,
+                    success=success,
+                    error=None if success else "Versturen mislukt (SMTP fout)",
+                )
+            )
+        except Exception as exc:
+            results.append(
+                EmailRubricResult(
+                    team_number=team_number,
+                    emails_sent_to=emails,
+                    success=False,
+                    error=str(exc),
+                )
+            )
+
+    return EmailRubricResponse(results=results)
 
 
 def _calculate_total_score(
