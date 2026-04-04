@@ -3,6 +3,7 @@ export type ProjectFeedbackRound = {
   project_id: number;
   title: string;
   status: "draft" | "open" | "closed";
+  deadline?: string;
   question_count: number;
   response_count: number;
   total_students: number;
@@ -67,10 +68,12 @@ export type ProjectFeedbackQuestionIn = {
 export type ProjectFeedbackRoundCreate = {
   project_id: number;
   title: string;
+  deadline?: string;
   questions?: ProjectFeedbackQuestionIn[];
 };
 
 export type ProjectFeedbackRoundUpdate = {
   title?: string;
+  deadline?: string;
   questions?: ProjectFeedbackQuestionIn[];
 };

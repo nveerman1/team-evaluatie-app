@@ -26,6 +26,7 @@ export default function CreateProjectPlanInner() {
   const [status, setStatus] = useState<ProjectPlanStatus>(
     ProjectPlanStatus.DRAFT,
   );
+  const [deadline, setDeadline] = useState("");
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
@@ -69,6 +70,7 @@ export default function CreateProjectPlanInner() {
         title: title || undefined,
         version: version || undefined,
         status: status,
+        deadline: deadline || undefined,
       };
       const result = await projectPlanService.createProjectPlan(payload);
       router.push(`/teacher/projectplans/${result.id}?tab=overzicht`);
@@ -216,6 +218,21 @@ export default function CreateProjectPlanInner() {
             Bepaalt of studenten het projectplan kunnen zien. Kies
             &quot;Concept&quot; om eerst in te stellen voordat studenten het
             zien.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">
+            Deadline (optioneel)
+          </label>
+          <input
+            type="datetime-local"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+          />
+          <p className="text-xs text-gray-500">
+            Deadline voor het indienen van het projectplan door studenten.
           </p>
         </div>
 

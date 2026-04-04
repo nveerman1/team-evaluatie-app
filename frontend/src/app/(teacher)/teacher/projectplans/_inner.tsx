@@ -395,6 +395,22 @@ export default function ProjectPlansListInner() {
                               "nl-NL",
                             )}
                           </div>
+
+                          {/* Deadline */}
+                          {item.deadline && (
+                            <div className="mt-2 text-sm text-slate-500">
+                              Deadline:{" "}
+                              <span className="font-medium text-slate-700">
+                                {new Date(item.deadline).toLocaleString(
+                                  "nl-NL",
+                                  {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  },
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Right side: buttons */}

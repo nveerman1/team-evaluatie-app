@@ -51,7 +51,7 @@ export function ProjectPlanDashboardCard({
     barClass,
   } = getStatusInfo(myTeam.status, myTeam.locked);
 
-  const totalSections = 8;
+  const totalSections = myTeam.sections.length;
   const filledSections = myTeam.sections.filter(
     (s) => s.status !== "empty",
   ).length;
@@ -112,6 +112,19 @@ export function ProjectPlanDashboardCard({
 
           {/* Right: progress block + action button */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+            {projectPlan.deadline && (
+              <div className="min-w-[120px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
+                <div className="text-xs uppercase tracking-wide text-slate-500">
+                  Deadline
+                </div>
+                <div className="mt-1 text-base font-semibold text-slate-900">
+                  {new Date(projectPlan.deadline).toLocaleDateString("nl-NL", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </div>
+              </div>
+            )}
             <div className="min-w-[108px] rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-200">
               <div className="text-xs uppercase tracking-wide text-slate-500">
                 Voortgang

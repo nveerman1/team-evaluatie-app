@@ -75,6 +75,7 @@ export interface ProjectPlan {
   title?: string;
   version?: string;
   status: ProjectPlanStatus;
+  deadline?: string;
   created_at: string;
   updated_at: string;
 }
@@ -92,6 +93,7 @@ export interface ProjectPlanListItem {
   title?: string;
   version?: string;
   status: ProjectPlanStatus;
+  deadline?: string;
   project_id: number;
   project_name: string;
   course_id?: number;
@@ -114,12 +116,14 @@ export interface ProjectPlanCreate {
   title?: string;
   version?: string;
   status?: ProjectPlanStatus;
+  deadline?: string;
 }
 
 export interface ProjectPlanUpdate {
   title?: string;
   version?: string;
   status?: ProjectPlanStatus;
+  deadline?: string;
 }
 
 export interface ProjectPlanTeamUpdate {

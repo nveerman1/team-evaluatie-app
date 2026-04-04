@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import defaultdict
 from typing import List, Optional
 import logging
 import re
@@ -254,6 +255,7 @@ def create_projectplan(
         title=payload.title,
         version=payload.version,
         status=payload.status.value if payload.status else "draft",
+        deadline=payload.deadline,
     )
     db.add(pp)
     db.flush()
@@ -313,6 +315,7 @@ def create_projectplan(
         title=pp.title,
         version=pp.version,
         status=pp.status,
+        deadline=pp.deadline,
         created_at=pp.created_at,
         updated_at=pp.updated_at,
     )
@@ -333,13 +336,20 @@ def list_projectplans(
     Access control:
     - Admins: see all projectplans in their school
     - Teachers: see projectplans for courses they're assigned to
-    - Students: see projectplans for projects where they belong to ANY team
+
+    Students should use the /me/projectplans endpoint instead.
     """
+    if user.role not in ("admin", "teacher"):
+        raise HTTPException(
+            status_code=403,
+            detail="Studenten gebruiken het /me/projectplans endpoint",
+        )
+
     stmt = select(ProjectPlan).where(ProjectPlan.school_id == user.school_id)
 
     if user.role == "admin":
         pass
-    elif user.role == "teacher":
+    else:  # teacher
         teacher_course_ids = get_teacher_course_ids(db, user)
         if teacher_course_ids:
             stmt = stmt.where(
@@ -350,30 +360,6 @@ def list_projectplans(
                     )
                 )
             )
-        else:
-            return ProjectPlanListResponse(items=[], page=page, limit=limit, total=0)
-    else:
-        student_teams = (
-            db.query(ProjectTeamMember.project_team_id)
-            .filter(
-                ProjectTeamMember.user_id == user.id,
-                ProjectTeamMember.school_id == user.school_id,
-            )
-            .all()
-        )
-        team_ids = [t[0] for t in student_teams]
-
-        if team_ids:
-            project_ids_subquery = (
-                select(ProjectTeam.project_id)
-                .where(
-                    ProjectTeam.id.in_(team_ids),
-                    ProjectTeam.school_id == user.school_id,
-                )
-                .distinct()
-            )
-
-            stmt = stmt.where(ProjectPlan.project_id.in_(project_ids_subquery))
         else:
             return ProjectPlanListResponse(items=[], page=page, limit=limit, total=0)
 
@@ -395,28 +381,49 @@ def list_projectplans(
     stmt = stmt.order_by(ProjectPlan.id.desc()).limit(limit).offset((page - 1) * limit)
     rows: List[ProjectPlan] = db.execute(stmt).scalars().all()
 
+    # Batch-load all Projects (with their Course) and team status counts in 2 queries
+    # instead of 3 queries per plan.
+    project_ids_needed = list({pp.project_id for pp in rows})
+    projects_by_id = {
+        p.id: p
+        for p in db.query(Project)
+        .options(joinedload(Project.course))
+        .filter(Project.id.in_(project_ids_needed))
+        .all()
+    }
+
+    plan_ids = [pp.id for pp in rows]
+    plan_team_data: dict[int, dict] = {}
+    for pid, st in (
+        db.query(ProjectPlanTeam.project_plan_id, ProjectPlanTeam.status)
+        .filter(ProjectPlanTeam.project_plan_id.in_(plan_ids))
+        .all()
+    ):
+        entry = plan_team_data.setdefault(
+            pid,
+            {
+                "count": 0,
+                "summary": {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0},
+            },
+        )
+        entry["count"] += 1
+        if st in entry["summary"]:
+            entry["summary"][st] += 1
+
     items = []
     for pp in rows:
-        project = db.query(Project).filter(Project.id == pp.project_id).first()
+        project = projects_by_id.get(pp.project_id)
         project_name = project.title if project else "Unknown"
         course_id_val = project.course_id if project else None
-        course_name = None
-        if course_id_val:
-            course = db.query(Course).filter(Course.id == course_id_val).first()
-            course_name = course.name if course else None
+        course_name = project.course.name if project and project.course else None
 
-        teams = (
-            db.query(ProjectPlanTeam)
-            .filter(ProjectPlanTeam.project_plan_id == pp.id)
-            .all()
+        team_info = plan_team_data.get(
+            pp.id,
+            {
+                "count": 0,
+                "summary": {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0},
+            },
         )
-        team_count = len(teams)
-
-        teams_summary = {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0}
-        for team in teams:
-            status = team.status
-            if status in teams_summary:
-                teams_summary[status] += 1
 
         items.append(
             ProjectPlanListItem(
@@ -424,17 +431,17 @@ def list_projectplans(
                 title=pp.title,
                 version=pp.version,
                 status=pp.status,
+                deadline=pp.deadline,
                 project_id=pp.project_id,
                 project_name=project_name,
                 course_id=course_id_val,
                 course_name=course_name,
-                team_count=team_count,
-                teams_summary=teams_summary,
+                team_count=team_info["count"],
+                teams_summary=team_info["summary"],
                 created_at=pp.created_at,
                 updated_at=pp.updated_at,
             )
         )
-        logger.info(f"List endpoint - ProjectPlan {pp.id} status from DB: {pp.status}")
 
     return ProjectPlanListResponse(items=items, page=page, limit=limit, total=total)
 
@@ -476,6 +483,8 @@ def get_projectplan(
         school_id=pp.school_id,
         title=pp.title,
         version=pp.version,
+        status=pp.status,
+        deadline=pp.deadline,
         project_name=project_name,
         course_id=course_id_val,
         course_name=course_name,
@@ -593,6 +602,10 @@ def update_projectplan(
         )
         logger.info(f"Setting status from {pp.status} to {new_status}")
         pp.status = new_status
+    if payload.deadline is not None:
+        pp.deadline = payload.deadline
+    elif "deadline" in payload.model_fields_set:
+        pp.deadline = None
 
     db.commit()
     db.refresh(pp)
@@ -606,6 +619,7 @@ def update_projectplan(
         title=pp.title,
         version=pp.version,
         status=pp.status,
+        deadline=pp.deadline,
         created_at=pp.created_at,
         updated_at=pp.updated_at,
     )
@@ -1107,8 +1121,6 @@ def list_my_projectplans(
         )
 
     try:
-        logger.info(f"Student {user.id} ({user.email}) requesting projectplans")
-
         student_teams = (
             db.query(ProjectTeamMember.project_team_id)
             .filter(
@@ -1119,10 +1131,7 @@ def list_my_projectplans(
         )
         team_ids = [t[0] for t in student_teams]
 
-        logger.info(f"Student {user.id} is member of teams: {team_ids}")
-
         if not team_ids:
-            logger.info(f"Student {user.id} has no team memberships")
             return []
 
         project_ids = (
@@ -1136,10 +1145,7 @@ def list_my_projectplans(
         )
         project_ids = [p[0] for p in project_ids]
 
-        logger.info(f"Student {user.id} teams are in projects: {project_ids}")
-
         if not project_ids:
-            logger.info(f"Student {user.id} teams have no associated projects")
             return []
 
         # Only show projectplans with status open, published, or closed (not draft)
@@ -1153,63 +1159,78 @@ def list_my_projectplans(
             .all()
         )
 
-        logger.info(
-            f"Found {len(projectplans)} projectplans with visible status for student {user.id}"
-        )
-        for pp in projectplans:
-            logger.info(
-                f"  - ProjectPlan {pp.id} (project {pp.project_id}): status={pp.status}"
+        if not projectplans:
+            return []
+
+        # Batch-load all Projects (with Course) and student's ProjectTeams in 2 queries.
+        project_ids_needed = list({pp.project_id for pp in projectplans})
+        projects_by_id = {
+            p.id: p
+            for p in db.query(Project)
+            .options(joinedload(Project.course))
+            .filter(Project.id.in_(project_ids_needed))
+            .all()
+        }
+
+        student_project_teams_all = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.id.in_(team_ids),
+                ProjectTeam.school_id == user.school_id,
             )
+            .all()
+        )
+        teams_by_project: dict[int, list] = defaultdict(list)
+        for pt in student_project_teams_all:
+            teams_by_project[pt.project_id].append(pt)
+
+        # Batch-load all relevant ProjectPlanTeam records with their sections in 1 query.
+        plan_ids = [pp.id for pp in projectplans]
+        all_ppts = (
+            db.query(ProjectPlanTeam)
+            .options(
+                joinedload(ProjectPlanTeam.sections).joinedload(
+                    ProjectPlanSection.linked_client
+                )
+            )
+            .filter(
+                ProjectPlanTeam.project_plan_id.in_(plan_ids),
+                ProjectPlanTeam.project_team_id.in_(team_ids),
+                ProjectPlanTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        ppt_by_plan_team: dict[tuple[int, int], ProjectPlanTeam] = {
+            (ppt.project_plan_id, ppt.project_team_id): ppt for ppt in all_ppts
+        }
 
         items = []
         for pp in projectplans:
             try:
-                project = db.query(Project).filter(Project.id == pp.project_id).first()
+                project = projects_by_id.get(pp.project_id)
                 project_name = project.title if project else "Unknown"
                 course_id_val = project.course_id if project else None
-                course_name = None
-                if course_id_val:
-                    course = db.query(Course).filter(Course.id == course_id_val).first()
-                    course_name = course.name if course else None
-
-                # Get only the student's team(s) for this projectplan
-                student_project_teams = (
-                    db.query(ProjectTeam)
-                    .filter(
-                        ProjectTeam.id.in_(team_ids),
-                        ProjectTeam.project_id == pp.project_id,
-                        ProjectTeam.school_id == user.school_id,
-                    )
-                    .all()
+                course_name = (
+                    project.course.name if project and project.course else None
                 )
+
+                student_project_teams = teams_by_project.get(pp.project_id, [])
 
                 teams_data = []
                 for project_team in student_project_teams:
-                    try:
-                        # Get the ProjectPlanTeam record
-                        ppt = (
-                            db.query(ProjectPlanTeam)
-                            .filter(
-                                ProjectPlanTeam.project_plan_id == pp.id,
-                                ProjectPlanTeam.project_team_id == project_team.id,
-                                ProjectPlanTeam.school_id == user.school_id,
-                            )
-                            .first()
+                    ppt = ppt_by_plan_team.get((pp.id, project_team.id))
+                    if not ppt:
+                        logger.info(
+                            f"No ProjectPlanTeam found for projectplan {pp.id} team {project_team.id}"
                         )
-
-                        if not ppt:
-                            logger.info(
-                                f"No ProjectPlanTeam found for projectplan {pp.id} team {project_team.id}"
-                            )
-                            continue  # Skip if no ProjectPlanTeam record exists
-
+                        continue
+                    try:
                         teams_data.append(_team_to_out(ppt, db))
                     except Exception as e:
                         logger.error(
                             f"Error processing team {project_team.id} for projectplan {pp.id}: {e}",
                             exc_info=True,
                         )
-                        continue
 
                 items.append(
                     ProjectPlanDetail(
@@ -1219,6 +1240,7 @@ def list_my_projectplans(
                         title=pp.title,
                         version=pp.version,
                         status=pp.status,
+                        deadline=pp.deadline,
                         created_at=pp.created_at,
                         updated_at=pp.updated_at,
                         project_name=project_name,

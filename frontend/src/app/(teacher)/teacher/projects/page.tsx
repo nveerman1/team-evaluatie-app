@@ -1972,6 +1972,9 @@ function ProjectFeedbackTab() {
                 >
                   Aangemaakt{sortIndicator("created_at")}
                 </th>
+                <th className="px-4 py-3 text-left font-medium select-none">
+                  Deadline
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -2021,6 +2024,16 @@ function ProjectFeedbackTab() {
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {new Date(r.created_at).toLocaleDateString("nl-NL")}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {r.deadline ? (
+                        new Date(r.deadline).toLocaleString("nl-NL", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
