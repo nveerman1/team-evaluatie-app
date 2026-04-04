@@ -519,12 +519,16 @@ export default function EditProjectAssessmentInner() {
 
         const scoresMap: Record<number, { score: number; comment: string }> =
           {};
-        result.scores.forEach((s) => {
-          scoresMap[s.criterion_id] = {
-            score: s.score,
-            comment: s.comment || "",
-          };
-        });
+        // Only use team scores (student_id is null) for the team edit view;
+        // individual overrides should not overwrite team comments here.
+        result.scores
+          .filter((s) => s.student_id == null)
+          .forEach((s) => {
+            scoresMap[s.criterion_id] = {
+              score: s.score,
+              comment: s.comment || "",
+            };
+          });
         setScores(scoresMap);
       } catch (e: any) {
         if (e instanceof ApiAuthError) {

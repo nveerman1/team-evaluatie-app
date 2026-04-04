@@ -659,6 +659,15 @@ def get_project_assessment(
         scores_query = scores_query.filter(
             ProjectAssessmentScore.team_number == team_number
         )
+    # For students: only return team scores and their own individual overrides
+    if user.role == "student":
+        from sqlalchemy import or_
+        scores_query = scores_query.filter(
+            or_(
+                ProjectAssessmentScore.student_id.is_(None),
+                ProjectAssessmentScore.student_id == user.id,
+            )
+        )
     scores = scores_query.all()
 
     # Get reflection (if student)
