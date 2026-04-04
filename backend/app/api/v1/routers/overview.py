@@ -132,11 +132,19 @@ def _calculate_statistics(values: list[float]) -> CategoryStatistics:
 
 
 def _calculate_project_score(
-    db: Session, assessment_id: int, rubric_id: int, team_number: int
+    db: Session,
+    assessment_id: int,
+    rubric_id: int,
+    team_number: int,
+    student_id: Optional[int] = None,
 ) -> Optional[float]:
     """
-    Calculate final grade for a project assessment for a specific team
-    Uses weighted average based on criterion weights, then normalizes to 1-10 scale using curved mapping
+    Calculate final grade for a project assessment for a specific team.
+    When *student_id* is provided, individual score overrides for that student
+    are applied on top of the base team scores so that the returned grade
+    reflects the student's personal result rather than the plain team average.
+    Uses weighted average based on criterion weights, then normalizes to 1-10
+    scale using curved mapping.
     """
     # Get rubric scale
     rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
@@ -151,23 +159,33 @@ def _calculate_project_score(
     if not criteria:
         return None
 
-    # Get team scores for this assessment (exclude individual student overrides so
-    # the team grade is not affected by per-student score adjustments)
-    scores = (
-        db.query(ProjectAssessmentScore)
-        .filter(
-            ProjectAssessmentScore.assessment_id == assessment_id,
-            ProjectAssessmentScore.team_number == team_number,
+    # Build the score filter: always include team scores (student_id IS NULL);
+    # when a student_id is provided, also fetch that student's overrides.
+    score_filter = [
+        ProjectAssessmentScore.assessment_id == assessment_id,
+        ProjectAssessmentScore.team_number == team_number,
+        or_(
             ProjectAssessmentScore.student_id.is_(None),
+            ProjectAssessmentScore.student_id == student_id,
         )
-        .all()
-    )
+        if student_id is not None
+        else ProjectAssessmentScore.student_id.is_(None),
+    ]
+
+    scores = db.query(ProjectAssessmentScore).filter(*score_filter).all()
 
     if not scores:
         return None
 
-    # Create a map of criterion_id -> score
-    score_map = {s.criterion_id: s.score for s in scores}
+    # Build score map: start with team scores, then apply the student's own
+    # overrides (if any) on top so they take precedence.
+    score_map: dict[int, float] = {
+        s.criterion_id: s.score for s in scores if s.student_id is None
+    }
+    if student_id is not None:
+        for s in scores:
+            if s.student_id == student_id:
+                score_map[s.criterion_id] = s.score
 
     # Calculate weighted average
     total_weighted_score = 0.0
@@ -421,6 +439,7 @@ def get_overview_all_items(
                     assessment.id,
                     assessment.rubric_id,
                     project_team.team_number,
+                    student_id=member.id,
                 )
 
                 items.append(
@@ -858,10 +877,15 @@ def get_overview_matrix(
                         "cells": {},
                     }
 
-                # Calculate score for this team (use ProjectTeam.team_number, not User.team_number)
+                # Calculate score for this team member, applying their individual
+                # overrides when present (use ProjectTeam.team_number, not User.team_number)
                 score = (
                     _calculate_project_score(
-                        db, assessment.id, assessment.rubric_id, team.team_number
+                        db,
+                        assessment.id,
+                        assessment.rubric_id,
+                        team.team_number,
+                        student_id=member.id,
                     )
                     if team.team_number is not None
                     else None
@@ -1695,11 +1719,15 @@ def get_project_trends(
 @router.get("/projects/{project_id}/teams", response_model=ProjectTeamsResponse)
 def get_project_teams(
     project_id: int,
+    student_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get team scores for a specific project assessment
+    Get team scores for a specific project assessment.
+    When *student_id* is provided, the overall_score and category_scores for
+    the team containing that student are calculated with the student's individual
+    overrides applied so the teacher sees the personalised grade.
     """
     school_id = current_user.school_id
 
@@ -1790,12 +1818,17 @@ def get_project_teams(
     teams = []
     for team_number in sorted(team_scores_map.keys()):
         scores = team_scores_map[team_number]
-        # Only use team-level scores (student_id IS NULL) so that individual
-        # student overrides from any team member do not affect the displayed
-        # team category scores or overall grade.
+        # Start with team-level scores (student_id IS NULL).
         score_map = {
             s.criterion_id: s.score for s in scores if s.student_id is None
         }
+        # When a specific student is requested and they belong to this team,
+        # apply their individual overrides on top so the shown grade is
+        # personalised rather than a plain team average.
+        if student_id is not None:
+            for s in scores:
+                if s.student_id == student_id:
+                    score_map[s.criterion_id] = s.score
 
         # Calculate weighted average overall
         total_weighted_score = 0.0

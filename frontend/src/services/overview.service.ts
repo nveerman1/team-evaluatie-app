@@ -152,9 +152,15 @@ export const overviewService = {
   /**
    * Get team scores for a specific project
    */
-  async getProjectTeams(projectId: number): Promise<ProjectTeamsResponse> {
+  async getProjectTeams(
+    projectId: number,
+    studentId?: number,
+  ): Promise<ProjectTeamsResponse> {
+    const params = new URLSearchParams();
+    if (studentId !== undefined) params.set("student_id", String(studentId));
+    const query = params.size ? `?${params.toString()}` : "";
     const { data } = await api.get<ProjectTeamsResponse>(
-      `/overview/projects/${projectId}/teams`,
+      `/overview/projects/${projectId}/teams${query}`,
     );
     return data;
   },

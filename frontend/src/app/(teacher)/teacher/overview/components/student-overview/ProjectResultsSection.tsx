@@ -69,6 +69,7 @@ export function ProjectResultsSection({
           try {
             const teamsResponse = await overviewService.getProjectTeams(
               project.project_id,
+              studentId,
             );
 
             // Find the team that contains this student by name
