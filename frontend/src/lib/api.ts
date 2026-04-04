@@ -165,7 +165,10 @@ instance.interceptors.response.use(
     // Silently ignore 404 for /my-response - expected when student hasn't submitted yet
     const isMyResponseNotFound =
       status === 404 && err.config?.url?.includes("/my-response");
-    if (!isUserMeNotFound && !isMyResponseNotFound) {
+    // Silently ignore 404 for /external-advisory - expected when no external evaluator is linked yet
+    const isExternalAdvisoryNotFound =
+      status === 404 && err.config?.url?.includes("/external-advisory");
+    if (!isUserMeNotFound && !isMyResponseNotFound && !isExternalAdvisoryNotFound) {
       const tag = err.response ? "[API ERROR]" : "[API NETWORK ERROR]";
       // eslint-disable-next-line no-console
       console.error(tag, err.message || err);
