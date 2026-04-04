@@ -400,7 +400,11 @@ def list_projectplans(
         .all()
     ):
         entry = plan_team_data.setdefault(
-            pid, {"count": 0, "summary": {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0}}
+            pid,
+            {
+                "count": 0,
+                "summary": {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0},
+            },
         )
         entry["count"] += 1
         if st in entry["summary"]:
@@ -415,7 +419,10 @@ def list_projectplans(
 
         team_info = plan_team_data.get(
             pp.id,
-            {"count": 0, "summary": {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0}},
+            {
+                "count": 0,
+                "summary": {"concept": 0, "ingediend": 0, "go": 0, "no-go": 0},
+            },
         )
 
         items.append(
@@ -1181,7 +1188,11 @@ def list_my_projectplans(
         plan_ids = [pp.id for pp in projectplans]
         all_ppts = (
             db.query(ProjectPlanTeam)
-            .options(joinedload(ProjectPlanTeam.sections).joinedload(ProjectPlanSection.linked_client))
+            .options(
+                joinedload(ProjectPlanTeam.sections).joinedload(
+                    ProjectPlanSection.linked_client
+                )
+            )
             .filter(
                 ProjectPlanTeam.project_plan_id.in_(plan_ids),
                 ProjectPlanTeam.project_team_id.in_(team_ids),
@@ -1199,7 +1210,9 @@ def list_my_projectplans(
                 project = projects_by_id.get(pp.project_id)
                 project_name = project.title if project else "Unknown"
                 course_id_val = project.course_id if project else None
-                course_name = project.course.name if project and project.course else None
+                course_name = (
+                    project.course.name if project and project.course else None
+                )
 
                 student_project_teams = teams_by_project.get(pp.project_id, [])
 
@@ -1253,7 +1266,6 @@ def list_my_projectplans(
         raise HTTPException(
             status_code=500, detail=f"Error loading projectplans: {str(e)}"
         )
-
 
 
 @student_router.get(
