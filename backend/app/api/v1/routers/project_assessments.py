@@ -2816,7 +2816,8 @@ def email_team_rubrics(
                 parts.append(_safe_filename(data["project_title"]))
             parts.append(f"Team{team_number}")
             if data.get("team_members"):
-                members_str = "_".join(_safe_filename(m) for m in data["team_members"])
+                member_names: list[str] = data["team_members"]
+                members_str = "_".join(_safe_filename(m) for m in member_names)
                 if members_str:
                     parts.append(members_str)
             filename = "Rubric_" + "_".join(parts) + ".docx"
