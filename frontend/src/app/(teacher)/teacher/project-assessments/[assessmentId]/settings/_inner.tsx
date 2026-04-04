@@ -80,7 +80,7 @@ export default function SettingsPageInner() {
       const [teamOverview, rubricList, clientList] = await Promise.all([
         projectAssessmentService.getTeamOverview(assessmentId),
         rubricService.getRubrics(undefined, "project"),
-        clientService.listClients({ per_page: 200, status: "Actief" }),
+        clientService.listClients({ per_page: 100, status: "Actief" }),
       ]);
 
       setData(teamOverview);
