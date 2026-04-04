@@ -662,6 +662,7 @@ def get_project_assessment(
     # For students: only return team scores and their own individual overrides
     if user.role == "student":
         from sqlalchemy import or_
+
         scores_query = scores_query.filter(
             or_(
                 ProjectAssessmentScore.student_id.is_(None),

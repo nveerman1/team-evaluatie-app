@@ -36,8 +36,10 @@ from app.infra.db.models import (
     ProjectAssessment,
     ProjectAssessmentScore,
 )
-from app.infra.db.models.assessments import ProjectAssessmentReflection, ProjectAssessmentTeam
-
+from app.infra.db.models.assessments import (
+    ProjectAssessmentReflection,
+    ProjectAssessmentTeam,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -116,46 +118,96 @@ def base_objects(test_db):
     school = School(id=1, name="Test School")
     # Stored in DB for teacher-name lookup and team-member checks
     teacher_row = User(
-        id=1, school_id=1, name="Docent", email="teacher@school.nl",
-        role="teacher", password_hash="x",
+        id=1,
+        school_id=1,
+        name="Docent",
+        email="teacher@school.nl",
+        role="teacher",
+        password_hash="x",
     )
     student_a_row = User(
-        id=2, school_id=1, name="Student A", email="student_a@school.nl",
-        role="student", password_hash="x",
+        id=2,
+        school_id=1,
+        name="Student A",
+        email="student_a@school.nl",
+        role="student",
+        password_hash="x",
     )
     student_b_row = User(
-        id=3, school_id=1, name="Student B", email="student_b@school.nl",
-        role="student", password_hash="x",
+        id=3,
+        school_id=1,
+        name="Student B",
+        email="student_b@school.nl",
+        role="student",
+        password_hash="x",
     )
     course = Course(id=1, school_id=1, name="Vak", code="V1", is_active=True)
     teacher_course = TeacherCourse(
-        school_id=1, teacher_id=1, course_id=1, role="teacher", is_active=True,
+        school_id=1,
+        teacher_id=1,
+        course_id=1,
+        role="teacher",
+        is_active=True,
     )
     project = Project(
-        id=1, school_id=1, course_id=1, title="Project",
-        status="active", created_by_id=1,
+        id=1,
+        school_id=1,
+        course_id=1,
+        title="Project",
+        status="active",
+        created_by_id=1,
     )
     rubric = Rubric(
-        id=1, school_id=1, title="Rubric", scope="project",
-        scale_min=1, scale_max=5,
+        id=1,
+        school_id=1,
+        title="Rubric",
+        scope="project",
+        scale_min=1,
+        scale_max=5,
     )
     criterion = RubricCriterion(
-        id=1, school_id=1, rubric_id=1, name="Criterion 1", weight=1.0,
+        id=1,
+        school_id=1,
+        rubric_id=1,
+        name="Criterion 1",
+        weight=1.0,
     )
     team = ProjectTeam(
-        id=1, school_id=1, project_id=1, team_number=1,
-        display_name_at_time="Team 1", version=1,
+        id=1,
+        school_id=1,
+        project_id=1,
+        team_number=1,
+        display_name_at_time="Team 1",
+        version=1,
     )
     member_a = ProjectTeamMember(id=1, school_id=1, project_team_id=1, user_id=2)
     member_b = ProjectTeamMember(id=2, school_id=1, project_team_id=1, user_id=3)
     assessment = ProjectAssessment(
-        id=1, school_id=1, project_id=1, rubric_id=1,
-        title="Assessment", status="published", teacher_id=1,
+        id=1,
+        school_id=1,
+        project_id=1,
+        rubric_id=1,
+        title="Assessment",
+        status="published",
+        teacher_id=1,
     )
-    test_db.add_all([
-        school, teacher_row, student_a_row, student_b_row, course, teacher_course,
-        project, rubric, criterion, team, member_a, member_b, assessment,
-    ])
+    test_db.add_all(
+        [
+            school,
+            teacher_row,
+            student_a_row,
+            student_b_row,
+            course,
+            teacher_course,
+            project,
+            rubric,
+            criterion,
+            team,
+            member_a,
+            member_b,
+            assessment,
+        ]
+    )
     test_db.commit()
 
     # Return Mock user objects to avoid SQLAlchemy lazy-loading across threads
@@ -168,6 +220,7 @@ def base_objects(test_db):
 
 def _make_client(test_db, current_user):
     """Create a TestClient with db and auth overrides for the given user."""
+
     def override_db():
         try:
             yield test_db
@@ -196,10 +249,18 @@ class TestStudentScoreFiltering:
 
     def test_student_sees_team_scores(self, test_db, base_objects):
         """A student receives the team score (student_id IS NULL)."""
-        test_db.add(ProjectAssessmentScore(
-            id=1, school_id=1, assessment_id=1, criterion_id=1,
-            team_number=1, student_id=None, score=3, comment="team comment",
-        ))
+        test_db.add(
+            ProjectAssessmentScore(
+                id=1,
+                school_id=1,
+                assessment_id=1,
+                criterion_id=1,
+                team_number=1,
+                student_id=None,
+                score=3,
+                comment="team comment",
+            )
+        )
         test_db.commit()
 
         client = _make_client(test_db, base_objects["student_a"])
@@ -216,16 +277,30 @@ class TestStudentScoreFiltering:
 
     def test_student_sees_own_override(self, test_db, base_objects):
         """A student receives their own individual override alongside the team score."""
-        test_db.add_all([
-            ProjectAssessmentScore(
-                id=1, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=None, score=3, comment="team comment",
-            ),
-            ProjectAssessmentScore(
-                id=2, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=2, score=4, comment="override for A",
-            ),
-        ])
+        test_db.add_all(
+            [
+                ProjectAssessmentScore(
+                    id=1,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=None,
+                    score=3,
+                    comment="team comment",
+                ),
+                ProjectAssessmentScore(
+                    id=2,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=2,
+                    score=4,
+                    comment="override for A",
+                ),
+            ]
+        )
         test_db.commit()
 
         client = _make_client(test_db, base_objects["student_a"])  # student_a has id=2
@@ -235,8 +310,8 @@ class TestStudentScoreFiltering:
             scores = resp.json()["scores"]
             assert len(scores) == 2
             student_ids = {s["student_id"] for s in scores}
-            assert None in student_ids   # team score present
-            assert 2 in student_ids      # own override present
+            assert None in student_ids  # team score present
+            assert 2 in student_ids  # own override present
         finally:
             _teardown_client()
 
@@ -245,16 +320,30 @@ class TestStudentScoreFiltering:
 
         This is the primary regression test for Bug 1.
         """
-        test_db.add_all([
-            ProjectAssessmentScore(
-                id=1, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=None, score=3, comment="team",
-            ),
-            ProjectAssessmentScore(
-                id=2, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=3, score=5, comment="override for B",
-            ),
-        ])
+        test_db.add_all(
+            [
+                ProjectAssessmentScore(
+                    id=1,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=None,
+                    score=3,
+                    comment="team",
+                ),
+                ProjectAssessmentScore(
+                    id=2,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=3,
+                    score=5,
+                    comment="override for B",
+                ),
+            ]
+        )
         test_db.commit()
 
         client = _make_client(test_db, base_objects["student_a"])  # id=2, NOT id=3
@@ -264,9 +353,9 @@ class TestStudentScoreFiltering:
             scores = resp.json()["scores"]
             # Student B's override (student_id=3) must be absent
             student_ids = [s["student_id"] for s in scores]
-            assert 3 not in student_ids, (
-                "Student A must not see Student B's individual override"
-            )
+            assert (
+                3 not in student_ids
+            ), "Student A must not see Student B's individual override"
             # Team score must still be present
             assert None in student_ids
         finally:
@@ -278,20 +367,39 @@ class TestStudentScoreFiltering:
         Tests the full scenario: team score + override A + override B.
         Student A should see team score and override A only.
         """
-        test_db.add_all([
-            ProjectAssessmentScore(
-                id=1, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=None, score=3,
-            ),
-            ProjectAssessmentScore(
-                id=2, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=2, score=4, comment="override A",
-            ),
-            ProjectAssessmentScore(
-                id=3, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=3, score=5, comment="override B",
-            ),
-        ])
+        test_db.add_all(
+            [
+                ProjectAssessmentScore(
+                    id=1,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=None,
+                    score=3,
+                ),
+                ProjectAssessmentScore(
+                    id=2,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=2,
+                    score=4,
+                    comment="override A",
+                ),
+                ProjectAssessmentScore(
+                    id=3,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=3,
+                    score=5,
+                    comment="override B",
+                ),
+            ]
+        )
         test_db.commit()
 
         # Student A (id=2) – should see team + own override only
@@ -333,20 +441,39 @@ class TestTeacherScoreFiltering:
 
     def test_teacher_sees_all_scores(self, test_db, base_objects):
         """Teacher receives team score plus overrides for both students."""
-        test_db.add_all([
-            ProjectAssessmentScore(
-                id=1, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=None, score=3,
-            ),
-            ProjectAssessmentScore(
-                id=2, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=2, score=4, comment="override A",
-            ),
-            ProjectAssessmentScore(
-                id=3, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=3, score=5, comment="override B",
-            ),
-        ])
+        test_db.add_all(
+            [
+                ProjectAssessmentScore(
+                    id=1,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=None,
+                    score=3,
+                ),
+                ProjectAssessmentScore(
+                    id=2,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=2,
+                    score=4,
+                    comment="override A",
+                ),
+                ProjectAssessmentScore(
+                    id=3,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=3,
+                    score=5,
+                    comment="override B",
+                ),
+            ]
+        )
         test_db.commit()
 
         client = _make_client(test_db, base_objects["teacher"])
@@ -354,9 +481,9 @@ class TestTeacherScoreFiltering:
             resp = client.get("/api/v1/project-assessments/1?team_number=1")
             assert resp.status_code == 200
             scores = resp.json()["scores"]
-            assert len(scores) == 3, (
-                "Teacher must receive all 3 scores (team + 2 overrides)"
-            )
+            assert (
+                len(scores) == 3
+            ), "Teacher must receive all 3 scores (team + 2 overrides)"
             student_ids = {s["student_id"] for s in scores}
             assert None in student_ids
             assert 2 in student_ids
@@ -370,16 +497,30 @@ class TestTeacherScoreFiltering:
         This verifies the backend returns both records separately, allowing the
         teacher edit view to filter them correctly (frontend fix for Bug 2).
         """
-        test_db.add_all([
-            ProjectAssessmentScore(
-                id=1, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=None, score=3, comment="team opmerking",
-            ),
-            ProjectAssessmentScore(
-                id=2, school_id=1, assessment_id=1, criterion_id=1,
-                team_number=1, student_id=2, score=4, comment=None,
-            ),
-        ])
+        test_db.add_all(
+            [
+                ProjectAssessmentScore(
+                    id=1,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=None,
+                    score=3,
+                    comment="team opmerking",
+                ),
+                ProjectAssessmentScore(
+                    id=2,
+                    school_id=1,
+                    assessment_id=1,
+                    criterion_id=1,
+                    team_number=1,
+                    student_id=2,
+                    score=4,
+                    comment=None,
+                ),
+            ]
+        )
         test_db.commit()
 
         client = _make_client(test_db, base_objects["teacher"])
@@ -389,8 +530,8 @@ class TestTeacherScoreFiltering:
             scores = resp.json()["scores"]
             team_scores = [s for s in scores if s["student_id"] is None]
             assert len(team_scores) == 1
-            assert team_scores[0]["comment"] == "team opmerking", (
-                "Team comment must survive even when an individual override exists"
-            )
+            assert (
+                team_scores[0]["comment"] == "team opmerking"
+            ), "Team comment must survive even when an individual override exists"
         finally:
             _teardown_client()
