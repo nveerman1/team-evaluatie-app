@@ -1478,12 +1478,13 @@ def get_assessment_scores_overview(
                 teams_dict[team_num] = []
             teams_dict[team_num].append(u)
 
-    # Get all scores for this assessment
+    # Get team scores only (exclude individual student overrides)
     all_scores = (
         db.query(ProjectAssessmentScore)
         .filter(
             ProjectAssessmentScore.assessment_id == pa.id,
             ProjectAssessmentScore.school_id == user.school_id,
+            ProjectAssessmentScore.student_id.is_(None),
         )
         .all()
     )
