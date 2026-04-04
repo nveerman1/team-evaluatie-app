@@ -697,12 +697,25 @@ def get_project_assessment(
         weight_map = {c.id: c.weight for c in criteria}
         total_weight = sum(weight_map.values())
 
-        # Calculate weighted average - only include scores that have matching criteria
+        # Calculate weighted average - individual student overrides replace the
+        # team score for the same criterion instead of being added on top of it.
         if total_weight > 0:
-            weighted_sum = 0
+            # Build effective score per criterion: process team scores first,
+            # then let any individual override (student_id is not None) win.
+            effective_scores: dict[int, float] = {}
             for s in scores:
-                if s.criterion_id in weight_map:
-                    weighted_sum += s.score * weight_map[s.criterion_id]
+                if s.criterion_id not in weight_map:
+                    continue
+                if s.student_id is not None:
+                    # Individual override always takes precedence
+                    effective_scores[s.criterion_id] = s.score
+                elif s.criterion_id not in effective_scores:
+                    # Team score – only store if no override has been set yet
+                    effective_scores[s.criterion_id] = s.score
+
+            weighted_sum = sum(
+                score * weight_map[cid] for cid, score in effective_scores.items()
+            )
 
             total_score = weighted_sum / total_weight
 

@@ -151,12 +151,14 @@ def _calculate_project_score(
     if not criteria:
         return None
 
-    # Get scores for this assessment and team
+    # Get team scores for this assessment (exclude individual student overrides so
+    # the team grade is not affected by per-student score adjustments)
     scores = (
         db.query(ProjectAssessmentScore)
         .filter(
             ProjectAssessmentScore.assessment_id == assessment_id,
             ProjectAssessmentScore.team_number == team_number,
+            ProjectAssessmentScore.student_id.is_(None),
         )
         .all()
     )
@@ -415,7 +417,10 @@ def get_overview_all_items(
             # Create an item for each student in the group
             for member in members:
                 score = _calculate_project_score(
-                    db, assessment.id, assessment.rubric_id
+                    db,
+                    assessment.id,
+                    assessment.rubric_id,
+                    project_team.team_number,
                 )
 
                 items.append(
