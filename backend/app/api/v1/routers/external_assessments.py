@@ -111,8 +111,7 @@ def _get_member_names(db: Session, project_id: int, team_number: int) -> str:
         db.query(User)
         .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
         .filter(
-            ProjectTeamMember.team_id == team.id,
-            ProjectTeamMember.active.is_(True),
+            ProjectTeamMember.project_team_id == team.id,
             User.archived.is_(False),
         )
         .all()
