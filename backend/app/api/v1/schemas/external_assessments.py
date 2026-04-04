@@ -198,6 +198,7 @@ class ExternalAssessmentPerTeamConfig(BaseModel):
     evaluator_name: str
     evaluator_email: EmailStr
     evaluator_organisation: Optional[str] = None
+    rubric_id: Optional[int] = None
 
 
 class TeamIdentifier(BaseModel):

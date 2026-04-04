@@ -136,6 +136,7 @@ export interface ExternalAssessmentPerTeamConfig {
   evaluator_name: string;
   evaluator_email: string;
   evaluator_organisation?: string;
+  rubric_id?: number;
 }
 
 export interface ExternalAssessmentAllTeamsConfig {

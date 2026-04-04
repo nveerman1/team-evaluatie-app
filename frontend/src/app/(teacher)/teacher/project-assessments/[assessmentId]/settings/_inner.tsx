@@ -3,13 +3,14 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { ApiAuthError } from "@/lib/api";
-import { projectAssessmentService, rubricService } from "@/services";
+import { projectAssessmentService, rubricService, clientService } from "@/services";
 import { externalAssessmentService } from "@/services/external-assessment.service";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
 import type {
   BulkInviteRequest,
   TeamIdentifier,
 } from "@/dtos/external-assessment.dto";
+import type { ClientListItem } from "@/dtos/client.dto";
 import { Loading, ErrorMessage } from "@/components";
 
 type ExternalMode = "none" | "all_teams" | "per_team";
@@ -22,6 +23,7 @@ type PerTeamConfig = {
   evaluator_name: string;
   evaluator_email: string;
   evaluator_organisation: string;
+  rubric_id: number;
   status: "NOT_INVITED" | "INVITED" | "IN_PROGRESS" | "SUBMITTED" | "";
 };
 
@@ -67,14 +69,18 @@ export default function SettingsPageInner() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // State for client list (for client picker)
+  const [clients, setClients] = useState<ClientListItem[]>([]);
+
   // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [teamOverview, rubricList] = await Promise.all([
+      const [teamOverview, rubricList, clientList] = await Promise.all([
         projectAssessmentService.getTeamOverview(assessmentId),
         rubricService.getRubrics(undefined, "project"),
+        clientService.listClients({ per_page: 200, status: "active" }),
       ]);
 
       setData(teamOverview);
@@ -84,6 +90,7 @@ export default function SettingsPageInner() {
           title: r.title,
         })) || [],
       );
+      setClients(clientList.items || []);
 
       // Initialize editable basic settings
       setEditTitle(teamOverview.assessment.title);
@@ -116,6 +123,7 @@ export default function SettingsPageInner() {
         evaluator_name?: string;
         evaluator_email?: string;
         evaluator_organisation?: string;
+        rubric_id?: number;
       }[] =
         teamOverview.assessment.metadata_json?.external_assessment
           ?.per_team_configs || [];
@@ -134,6 +142,7 @@ export default function SettingsPageInner() {
             evaluator_name: saved?.evaluator_name || "",
             evaluator_email: saved?.evaluator_email || "",
             evaluator_organisation: saved?.evaluator_organisation || "",
+            rubric_id: saved?.rubric_id || 0,
             status: "",
           };
         },
@@ -258,6 +267,7 @@ export default function SettingsPageInner() {
                   evaluator_name: config.evaluator_name,
                   evaluator_email: config.evaluator_email,
                   evaluator_organisation: config.evaluator_organisation,
+                  rubric_id: config.rubric_id || undefined,
                 }))
               : undefined,
         },
@@ -343,13 +353,41 @@ export default function SettingsPageInner() {
   const updatePerTeamConfig = (
     index: number,
     field: keyof PerTeamConfig,
-    value: string,
+    value: string | number,
   ) => {
     setPerTeamConfigs((prev) => {
       const newConfigs = [...prev];
       newConfigs[index] = { ...newConfigs[index], [field]: value };
       return newConfigs;
     });
+  };
+
+  // Fill per-team config from a client
+  const fillPerTeamFromClient = (index: number, clientId: number) => {
+    const client = clients.find((c) => c.id === clientId);
+    if (!client) return;
+    setPerTeamConfigs((prev) => {
+      const newConfigs = [...prev];
+      newConfigs[index] = {
+        ...newConfigs[index],
+        evaluator_name: client.contact_name || client.organization,
+        evaluator_email: client.email || "",
+        evaluator_organisation: client.organization,
+      };
+      return newConfigs;
+    });
+  };
+
+  // Fill all-teams config from a client
+  const fillAllTeamsFromClient = (clientId: number) => {
+    const client = clients.find((c) => c.id === clientId);
+    if (!client) return;
+    setAllTeamsConfig((prev) => ({
+      ...prev,
+      evaluator_name: client.contact_name || client.organization,
+      evaluator_email: client.email || "",
+      evaluator_organisation: client.organization,
+    }));
   };
 
   // Send invitation for "All Teams" mode
@@ -425,6 +463,7 @@ export default function SettingsPageInner() {
             evaluator_name: config.evaluator_name,
             evaluator_email: config.evaluator_email,
             evaluator_organisation: config.evaluator_organisation || undefined,
+            rubric_id: config.rubric_id || undefined,
           },
         ],
       };
@@ -603,6 +642,33 @@ export default function SettingsPageInner() {
                     Opdrachtgever gegevens
                   </h3>
 
+                  {clients.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Kies uit opdrachtgeversbestand
+                      </label>
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            fillAllTeamsFromClient(Number(e.target.value));
+                            e.target.value = "";
+                          }
+                        }}
+                        className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">← Selecteer een opdrachtgever...</option>
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.organization}
+                            {c.contact_name ? ` – ${c.contact_name}` : ""}
+                            {c.email ? ` (${c.email})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -759,7 +825,7 @@ export default function SettingsPageInner() {
                             <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
                               Teamleden
                             </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[170px]">
                               Opdrachtgever naam
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[180px]">
@@ -767,6 +833,9 @@ export default function SettingsPageInner() {
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
                               Organisatie
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
+                              Rubric
                             </th>
                             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
                               Acties
@@ -790,6 +859,33 @@ export default function SettingsPageInner() {
                                 </span>
                               </td>
                               <td className="px-4 py-3">
+                                {clients.length > 0 && (
+                                  <select
+                                    defaultValue=""
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        fillPerTeamFromClient(
+                                          index,
+                                          Number(e.target.value),
+                                        );
+                                        e.target.value = "";
+                                      }
+                                    }}
+                                    className="w-full h-7 rounded border border-gray-200 bg-gray-50 px-1 text-xs mb-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  >
+                                    <option value="">
+                                      ← Kies uit bestand...
+                                    </option>
+                                    {clients.map((c) => (
+                                      <option key={c.id} value={c.id}>
+                                        {c.organization}
+                                        {c.contact_name
+                                          ? ` – ${c.contact_name}`
+                                          : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
                                 <input
                                   type="text"
                                   value={config.evaluator_name}
@@ -833,6 +929,26 @@ export default function SettingsPageInner() {
                                   className="w-full h-8 rounded-lg border border-gray-300 bg-white px-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   placeholder="Organisatie"
                                 />
+                              </td>
+                              <td className="px-4 py-3">
+                                <select
+                                  value={config.rubric_id}
+                                  onChange={(e) =>
+                                    updatePerTeamConfig(
+                                      index,
+                                      "rubric_id",
+                                      Number(e.target.value),
+                                    )
+                                  }
+                                  className="w-full h-8 rounded-lg border border-gray-300 bg-white px-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                  <option value={0}>Standaard</option>
+                                  {rubrics.map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                      {r.title}
+                                    </option>
+                                  ))}
+                                </select>
                               </td>
                               <td className="px-4 py-3 text-right">
                                 {config.status === "INVITED" ||

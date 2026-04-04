@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.utils import get_teacher_course_ids
@@ -823,6 +824,7 @@ def update_project_assessment(
             pa.published_at = datetime.utcnow()
     if payload.metadata_json is not None:
         pa.metadata_json = payload.metadata_json
+        flag_modified(pa, "metadata_json")
 
     db.add(pa)
     db.commit()

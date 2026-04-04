@@ -291,6 +291,19 @@ def get_team_assessment_detail(
                 ext_rubric_id = (ext_config.get("all_teams_config") or {}).get(
                     "rubric_id"
                 )
+                # For per-team mode, look up rubric_id from the matching per-team config
+                if not ext_rubric_id:
+                    per_team_configs = ext_config.get("per_team_configs") or []
+                    matched = next(
+                        (
+                            c for c in per_team_configs
+                            if c.get("project_team_id") == team_link.project_team_id
+                            or c.get("team_number") == team_link.team_number
+                        ),
+                        None,
+                    )
+                    if matched:
+                        ext_rubric_id = matched.get("rubric_id")
                 if ext_rubric_id:
                     rubric = db.get(Rubric, ext_rubric_id)
                 if not rubric:
@@ -482,6 +495,19 @@ def submit_team_assessment(
                 ext_rubric_id = (ext_config.get("all_teams_config") or {}).get(
                     "rubric_id"
                 )
+                # For per-team mode, look up rubric_id from the matching per-team config
+                if not ext_rubric_id:
+                    per_team_configs = ext_config.get("per_team_configs") or []
+                    matched = next(
+                        (
+                            c for c in per_team_configs
+                            if c.get("project_team_id") == team_link.project_team_id
+                            or c.get("team_number") == team_link.team_number
+                        ),
+                        None,
+                    )
+                    if matched:
+                        ext_rubric_id = matched.get("rubric_id")
                 if ext_rubric_id:
                     rubric = db.get(Rubric, ext_rubric_id)
                 if not rubric:
