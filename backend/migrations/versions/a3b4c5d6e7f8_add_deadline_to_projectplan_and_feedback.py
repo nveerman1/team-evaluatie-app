@@ -1,7 +1,7 @@
 """add_deadline_to_projectplan_and_feedback
 
 Revision ID: a3b4c5d6e7f8
-Revises: f3a9c1d2e4b6
+Revises: c1d2e3f4a5b6
 Create Date: 2026-04-04 08:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "a3b4c5d6e7f8"
-down_revision = "f3a9c1d2e4b6"
+down_revision = "c1d2e3f4a5b6"
 branch_labels = None
 depends_on = None
 
