@@ -5,7 +5,7 @@ Public endpoints that use token-based authentication
 
 from __future__ import annotations
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -56,7 +56,9 @@ def _validate_token(db: Session, token: str) -> ProjectTeamExternal:
         )
 
     # Check expiration
-    if team_link.token_expires_at and team_link.token_expires_at < datetime.utcnow():
+    if team_link.token_expires_at and team_link.token_expires_at < datetime.now(
+        timezone.utc
+    ):
         raise HTTPException(status_code=403, detail="This invitation has expired")
 
     return team_link
@@ -281,16 +283,30 @@ def get_team_assessment_detail(
     if existing_assessment:
         rubric = db.get(Rubric, existing_assessment.rubric_id)
     else:
-        # For now, get any project-scope rubric
-        # TODO: This should be configurable per project
-        rubric = (
-            db.query(Rubric)
-            .filter(
-                Rubric.school_id == project.school_id,
-                Rubric.scope == "project",
+        # Try to find the configured rubric from the parent assessment settings
+        if team_link.assessment_id:
+            parent_assessment = db.get(ProjectAssessment, team_link.assessment_id)
+            if parent_assessment:
+                ext_config = (parent_assessment.metadata_json or {}).get(
+                    "external_assessment", {}
+                )
+                ext_rubric_id = (ext_config.get("all_teams_config") or {}).get(
+                    "rubric_id"
+                )
+                if ext_rubric_id:
+                    rubric = db.get(Rubric, ext_rubric_id)
+                if not rubric:
+                    rubric = db.get(Rubric, parent_assessment.rubric_id)
+        if not rubric:
+            # Final fallback: get any project-scope rubric
+            rubric = (
+                db.query(Rubric)
+                .filter(
+                    Rubric.school_id == project.school_id,
+                    Rubric.scope == "project",
+                )
+                .first()
             )
-            .first()
-        )
 
     if not rubric:
         raise HTTPException(
@@ -331,7 +347,10 @@ def get_team_assessment_detail(
     if existing_assessment:
         scores = (
             db.query(ProjectAssessmentScore)
-            .filter(ProjectAssessmentScore.assessment_id == existing_assessment.id)
+            .filter(
+                ProjectAssessmentScore.assessment_id == existing_assessment.id,
+                ProjectAssessmentScore.team_number == team_link.team_number,
+            )
             .all()
         )
 
@@ -454,16 +473,31 @@ def submit_team_assessment(
     )
 
     if not assessment:
-        # Get rubric - for now use any project-scope rubric
-        # TODO: Should be configurable
-        rubric = (
-            db.query(Rubric)
-            .filter(
-                Rubric.school_id == project.school_id,
-                Rubric.scope == "project",
+        # Get rubric from parent assessment config
+        rubric = None
+        if team_link.assessment_id:
+            parent_assessment = db.get(ProjectAssessment, team_link.assessment_id)
+            if parent_assessment:
+                ext_config = (parent_assessment.metadata_json or {}).get(
+                    "external_assessment", {}
+                )
+                ext_rubric_id = (ext_config.get("all_teams_config") or {}).get(
+                    "rubric_id"
+                )
+                if ext_rubric_id:
+                    rubric = db.get(Rubric, ext_rubric_id)
+                if not rubric:
+                    rubric = db.get(Rubric, parent_assessment.rubric_id)
+        if not rubric:
+            # Final fallback: any project-scope rubric
+            rubric = (
+                db.query(Rubric)
+                .filter(
+                    Rubric.school_id == project.school_id,
+                    Rubric.scope == "project",
+                )
+                .first()
             )
-            .first()
-        )
 
         if not rubric:
             raise HTTPException(
@@ -506,12 +540,13 @@ def submit_team_assessment(
 
     # Save/update scores
     for score_data in payload.scores:
-        # Check if score already exists
+        # Check if score already exists for this team
         existing_score = (
             db.query(ProjectAssessmentScore)
             .filter(
                 ProjectAssessmentScore.assessment_id == assessment.id,
                 ProjectAssessmentScore.criterion_id == score_data.criterion_id,
+                ProjectAssessmentScore.team_number == team_link.team_number,
             )
             .first()
         )
@@ -524,6 +559,7 @@ def submit_team_assessment(
                 school_id=project.school_id,
                 assessment_id=assessment.id,
                 criterion_id=score_data.criterion_id,
+                team_number=team_link.team_number,
                 score=score_data.score,
                 comment=score_data.comment,
             )
@@ -534,9 +570,9 @@ def submit_team_assessment(
     team_link.status = new_status
 
     if payload.submit:
-        team_link.submitted_at = datetime.utcnow()
+        team_link.submitted_at = datetime.now(timezone.utc)
         assessment.status = "published"
-        assessment.published_at = datetime.utcnow()
+        assessment.published_at = datetime.now(timezone.utc)
 
     db.commit()
 
