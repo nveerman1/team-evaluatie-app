@@ -10,7 +10,7 @@ alembic==1.15.2
 passlib[argon2]==1.7.4
 pyjwt==2.10.1
 cryptography==46.0.5
-redis==5.3.0
+redis==5.3.1
 rq==2.3.3
 boto3==1.38.20
 pydantic[email]==2.11.3
