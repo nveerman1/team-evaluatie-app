@@ -159,16 +159,21 @@ instance.interceptors.response.use(
 
     // Netwerk/overige fouten één keer loggen
     // (bijv. 404/500 of geen response door netwerkfout)
-    // Silently ignore 404 errors for /users/me endpoint - it's expected when not authenticated
-    const isUserMeNotFound =
-      status === 404 && err.config?.url?.includes("/users/me");
-    // Silently ignore 404 for /my-response - expected when student hasn't submitted yet
-    const isMyResponseNotFound =
-      status === 404 && err.config?.url?.includes("/my-response");
-    // Silently ignore 404 for /external-advisory - expected when no external evaluator is linked yet
-    const isExternalAdvisoryNotFound =
-      status === 404 && err.config?.url?.includes("/external-advisory");
-    if (!isUserMeNotFound && !isMyResponseNotFound && !isExternalAdvisoryNotFound) {
+    // Suppress console noise for expected 404 responses:
+    //   /users/me          – not authenticated yet
+    //   /my-response       – student hasn't submitted yet
+    //   /external-advisory – no external evaluator linked yet
+    //   /reflections/me    – student hasn't created a reflection yet
+    const SILENT_404_URLS = [
+      "/users/me",
+      "/my-response",
+      "/external-advisory",
+      "/reflections/me",
+    ];
+    const isSilent404 =
+      status === 404 &&
+      SILENT_404_URLS.some((p) => err.config?.url?.includes(p));
+    if (!isSilent404) {
       const tag = err.response ? "[API ERROR]" : "[API NETWORK ERROR]";
       // eslint-disable-next-line no-console
       console.error(tag, err.message || err);
