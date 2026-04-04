@@ -157,24 +157,20 @@ export function useStudentOverview() {
               let communicatie: number | undefined;
 
               try {
-                // Build scoreMap: team scores first, then the student's own overrides
+                // Build scoreMap: team scores first, then the student's own overrides.
+                // The backend already filters scores to only include team scores
+                // (student_id === null) and the current student's own overrides,
+                // so all non-null student_id entries here belong to the viewer.
                 const scoreMap: Record<number, number> = {};
                 details.scores
                   .filter((s: any) => s.student_id === null)
                   .forEach((s: any) => {
                     scoreMap[s.criterion_id] = s.score;
                   });
-                // Identify which student_id the overrides belong to (defense-in-depth)
-                let overrideStudentId: number | null = null;
                 details.scores
                   .filter((s: any) => s.student_id !== null)
                   .forEach((s: any) => {
-                    if (overrideStudentId === null) {
-                      overrideStudentId = s.student_id;
-                    }
-                    if (s.student_id === overrideStudentId) {
-                      scoreMap[s.criterion_id] = s.score;
-                    }
+                    scoreMap[s.criterion_id] = s.score;
                   });
 
                 // Calculate weighted average per category, then convert to grade

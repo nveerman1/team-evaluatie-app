@@ -708,7 +708,10 @@ def get_project_assessment(
                     effective_scores[s.criterion_id] = s.score
             if user.role == "student":
                 for s in scores:
-                    if s.criterion_id in weight_map and s.student_id is not None:
+                    if (
+                        s.criterion_id in weight_map
+                        and s.student_id == user.id
+                    ):
                         effective_scores[s.criterion_id] = s.score
 
             weighted_sum = sum(

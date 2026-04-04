@@ -159,35 +159,27 @@ export default function StudentProjectAssessmentInner() {
   if (!data) return <ErrorMessage message="Geen data gevonden" />;
 
   // Get score for each criterion
-  // Prioritize student-specific overrides over team scores
+  // Prioritize student-specific overrides over team scores.
+  // The backend already filters scores to only include team scores
+  // (student_id === null) and the current student's own overrides.
   const scoreMap: Record<number, { score: number; comment?: string }> = {};
   // First, add all team scores (student_id is null)
   data.scores
-    .filter((s) => s.student_id == null)
+    .filter((s) => s.student_id === null)
     .forEach((s) => {
       scoreMap[s.criterion_id] = {
         score: s.score,
         comment: s.comment || undefined,
       };
     });
-  // Then, override with student-specific scores if any exist.
-  // The backend already filters to only return the current student's own
-  // overrides, so all non-null student_id entries here belong to the same
-  // student. As a defense-in-depth measure we only apply overrides that share
-  // the same student_id as the first override we encounter.
-  let overrideStudentId: number | null = null;
+  // Then override with the student's own individual scores, if any.
   data.scores
-    .filter((s) => s.student_id != null)
+    .filter((s) => s.student_id !== null)
     .forEach((s) => {
-      if (overrideStudentId === null) {
-        overrideStudentId = s.student_id as number;
-      }
-      if (s.student_id === overrideStudentId) {
-        scoreMap[s.criterion_id] = {
-          score: s.score,
-          comment: s.comment || undefined,
-        };
-      }
+      scoreMap[s.criterion_id] = {
+        score: s.score,
+        comment: s.comment || undefined,
+      };
     });
 
   // Calculate category weighted averages and convert to 1-10 scale
