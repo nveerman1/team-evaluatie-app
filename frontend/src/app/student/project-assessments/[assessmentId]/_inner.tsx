@@ -180,7 +180,7 @@ export default function StudentProjectAssessmentInner() {
     .filter((s) => s.student_id != null)
     .forEach((s) => {
       if (overrideStudentId === null) {
-        overrideStudentId = s.student_id;
+        overrideStudentId = s.student_id as number;
       }
       if (s.student_id === overrideStudentId) {
         scoreMap[s.criterion_id] = {
