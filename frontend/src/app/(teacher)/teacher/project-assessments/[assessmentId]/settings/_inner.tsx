@@ -109,18 +109,34 @@ export default function SettingsPageInner() {
         }
       }
 
-      // Initialize per-team configs from team data
+      // Initialize per-team configs from team data, merging saved evaluator info from metadata
+      const savedPerTeamConfigs: {
+        project_team_id?: number;
+        team_number?: number;
+        evaluator_name?: string;
+        evaluator_email?: string;
+        evaluator_organisation?: string;
+      }[] =
+        teamOverview.assessment.metadata_json?.external_assessment
+          ?.per_team_configs || [];
       const initialPerTeamConfigs: PerTeamConfig[] = teamOverview.teams.map(
-        (team) => ({
-          project_team_id: team.group_id, // group_id is actually project_team_id in this context
-          team_number: team.team_number || 0,
-          team_name: team.group_name || `Team ${team.team_number}`,
-          members: team.members.map((m) => m.name),
-          evaluator_name: "",
-          evaluator_email: "",
-          evaluator_organisation: "",
-          status: "",
-        }),
+        (team) => {
+          const saved = savedPerTeamConfigs.find(
+            (c) =>
+              c.project_team_id === team.group_id ||
+              c.team_number === (team.team_number || 0),
+          );
+          return {
+            project_team_id: team.group_id, // group_id is actually project_team_id in this context
+            team_number: team.team_number || 0,
+            team_name: team.group_name || `Team ${team.team_number}`,
+            members: team.members.map((m) => m.name),
+            evaluator_name: saved?.evaluator_name || "",
+            evaluator_email: saved?.evaluator_email || "",
+            evaluator_organisation: saved?.evaluator_organisation || "",
+            status: "",
+          };
+        },
       );
       setPerTeamConfigs(initialPerTeamConfigs);
 
@@ -233,6 +249,16 @@ export default function SettingsPageInner() {
                   evaluator_organisation: allTeamsConfig.evaluator_organisation,
                   rubric_id: allTeamsConfig.rubric_id,
                 }
+              : undefined,
+          per_team_configs:
+            externalMode === "per_team"
+              ? perTeamConfigs.map((config) => ({
+                  project_team_id: config.project_team_id,
+                  team_number: config.team_number,
+                  evaluator_name: config.evaluator_name,
+                  evaluator_email: config.evaluator_email,
+                  evaluator_organisation: config.evaluator_organisation,
+                }))
               : undefined,
         },
       };

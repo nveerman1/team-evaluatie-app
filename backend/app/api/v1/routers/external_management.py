@@ -4,7 +4,7 @@ Teacher/Admin endpoints for managing external assessments
 
 from __future__ import annotations
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -36,6 +36,15 @@ from app.infra.services.email_service import email_service
 router = APIRouter(
     prefix="/projects/external-management", tags=["external-assessments-management"]
 )
+
+
+def _utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Return datetime with UTC timezone, or None. Treats naive datetimes as UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 # ============ External Evaluator CRUD ============
@@ -556,8 +565,8 @@ def get_project_external_status(
                         ),
                         status=link.status,
                         invitation_sent=(link.status != "NOT_INVITED"),
-                        submitted_at=link.submitted_at,
-                        updated_at=link.updated_at,
+                        submitted_at=_utc(link.submitted_at),
+                        updated_at=_utc(link.updated_at),
                     )
                 )
             else:
@@ -652,15 +661,12 @@ def get_project_external_status(
                     ),
                     status=link.status,
                     invitation_sent=(link.status != "NOT_INVITED"),
-                    submitted_at=link.submitted_at,
-                    updated_at=link.updated_at,
+                    submitted_at=_utc(link.submitted_at),
+                    updated_at=_utc(link.updated_at),
                 )
             )
 
     return status_list
-
-
-@router.get("/project-teams/{project_team_id}/external-advisory")
 def get_external_advisory_detail(
     project_team_id: int,
     team_number: Optional[int] = None,
@@ -775,6 +781,6 @@ def get_external_advisory_detail(
         rubric_scale_max=rubric.scale_max,
         scores=score_outputs,
         general_comment=general_comment,
-        submitted_at=link.submitted_at,
+        submitted_at=_utc(link.submitted_at),
         status=link.status,
     )
