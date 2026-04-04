@@ -396,3 +396,21 @@ class ProjectAssessmentSelfOverview(BaseModel):
     criteria: List[Dict[str, Any]]  # All rubric criteria
     team_overviews: List[TeamSelfAssessmentOverview]
     statistics: SelfAssessmentStatistics
+
+
+# ---------- Email Rubric ----------
+
+
+class EmailRubricRequest(BaseModel):
+    team_numbers: List[int]
+
+
+class EmailRubricResult(BaseModel):
+    team_number: int
+    emails_sent_to: List[str]
+    success: bool
+    error: Optional[str] = None
+
+
+class EmailRubricResponse(BaseModel):
+    results: List[EmailRubricResult]

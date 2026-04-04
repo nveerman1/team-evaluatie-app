@@ -21,6 +21,8 @@ export default function ProjectAssessmentOverviewInner() {
     "team" | "status" | "progress" | "updated"
   >("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [emailingTeam, setEmailingTeam] = useState<number | null>(null);
+  const [emailingAll, setEmailingAll] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -84,6 +86,56 @@ export default function ProjectAssessmentOverviewInner() {
       alert("Downloaden mislukt");
     }
   }, [assessmentId]);
+
+  const handleEmailTeam = useCallback(
+    async (teamNumber: number) => {
+      if (!confirm(`Rubric mailen naar alle leden van Team ${teamNumber}?`))
+        return;
+      setEmailingTeam(teamNumber);
+      try {
+        const result = await projectAssessmentService.emailTeamRubric(
+          assessmentId,
+          teamNumber,
+        );
+        const success = result.results.find((r) => r.team_number === teamNumber);
+        if (success?.success) {
+          alert(`Rubric verstuurd naar Team ${teamNumber}`);
+        } else {
+          alert(
+            `Mailen mislukt: ${success?.error ?? "Onbekende fout"}`,
+          );
+        }
+      } catch {
+        alert("Mailen mislukt");
+      } finally {
+        setEmailingTeam(null);
+      }
+    },
+    [assessmentId],
+  );
+
+  const handleEmailAll = useCallback(async () => {
+    const teamNumbers = data!.teams
+      .map((t) => t.team_number)
+      .filter((n): n is number => n != null);
+    if (!confirm(`Rubrics mailen naar alle ${teamNumbers.length} teams?`))
+      return;
+    setEmailingAll(true);
+    try {
+      const result = await projectAssessmentService.emailAllRubrics(
+        assessmentId,
+        teamNumbers,
+      );
+      const successCount = result.results.filter((r) => r.success).length;
+      alert(
+        `Rubrics verstuurd naar ${successCount} van ${teamNumbers.length} teams`,
+      );
+    } catch {
+      alert("Mailen mislukt");
+    } finally {
+      setEmailingAll(false);
+    }
+  }, [assessmentId, data]);
 
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
@@ -201,6 +253,23 @@ export default function ProjectAssessmentOverviewInner() {
               <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
             </svg>
             Alle rubrics
+          </button>
+          <button
+            onClick={handleEmailAll}
+            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50 inline-flex items-center gap-1.5"
+            title="Alle rubrics mailen naar teamleden"
+            disabled={emailingAll}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4 text-slate-500"
+            >
+              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v.586l-7 4.667-7-4.667V4z" />
+              <path d="M2 7.414V15a1 1 0 001 1h14a1 1 0 001-1V7.414l-7 4.667-7-4.667z" />
+            </svg>
+            {emailingAll ? "Bezig..." : "Alle rubrics mailen"}
           </button>
         </div>
       </div>
@@ -350,6 +419,24 @@ export default function ProjectAssessmentOverviewInner() {
                             clipRule="evenodd"
                           />
                           <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleEmailTeam(team.team_number as number)
+                        }
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 shadow-sm"
+                        title={`Mail rubric naar Team ${team.team_number}`}
+                        disabled={emailingTeam === team.team_number}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className="w-4 h-4"
+                        >
+                          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v.586l-7 4.667-7-4.667V4z" />
+                          <path d="M2 7.414V15a1 1 0 001 1h14a1 1 0 001-1V7.414l-7 4.667-7-4.667z" />
                         </svg>
                       </button>
                     </div>

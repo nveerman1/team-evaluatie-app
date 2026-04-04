@@ -243,3 +243,84 @@ class TestEmailServiceSendEmail:
 
         msg_arg = smtp_instance.send_message.call_args[0][0]
         assert msg_arg["Reply-To"] == "custom@school.nl"
+
+    @patch("smtplib.SMTP")
+    def test_attachment_included_in_message(self, mock_smtp_cls):
+        from app.infra.services.email_service import EmailService
+
+        smtp_instance = MagicMock()
+        mock_smtp_cls.return_value.__enter__.return_value = smtp_instance
+
+        svc = EmailService()
+        attachment_bytes = b"fake docx content"
+        with patch("app.infra.services.email_service.settings", _make_settings()):
+            result = svc.send_email(
+                to=["student@school.nl"],
+                subject="Rubric",
+                body="Hierbij de rubric.",
+                attachments=[
+                    (
+                        "rubric.docx",
+                        attachment_bytes,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                ],
+            )
+
+        assert result is True
+        msg_arg = smtp_instance.send_message.call_args[0][0]
+        # The message should be multipart when attachments are present
+        assert msg_arg.is_multipart()
+        # Find the attachment part
+        attachment_part = None
+        for part in msg_arg.walk():
+            if part.get_filename() == "rubric.docx":
+                attachment_part = part
+                break
+        assert attachment_part is not None
+        assert attachment_part.get_payload(decode=True) == attachment_bytes
+
+    @patch("smtplib.SMTP")
+    def test_multiple_attachments_included(self, mock_smtp_cls):
+        from app.infra.services.email_service import EmailService
+
+        smtp_instance = MagicMock()
+        mock_smtp_cls.return_value.__enter__.return_value = smtp_instance
+
+        svc = EmailService()
+        with patch("app.infra.services.email_service.settings", _make_settings()):
+            result = svc.send_email(
+                to=["student@school.nl"],
+                subject="Rubrics",
+                body="Hierbij de rubrics.",
+                attachments=[
+                    ("team1.docx", b"team1 content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                    ("team2.docx", b"team2 content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                ],
+            )
+
+        assert result is True
+        msg_arg = smtp_instance.send_message.call_args[0][0]
+        filenames = [part.get_filename() for part in msg_arg.walk() if part.get_filename()]
+        assert "team1.docx" in filenames
+        assert "team2.docx" in filenames
+
+    @patch("smtplib.SMTP")
+    def test_no_attachments_when_none_provided(self, mock_smtp_cls):
+        from app.infra.services.email_service import EmailService
+
+        smtp_instance = MagicMock()
+        mock_smtp_cls.return_value.__enter__.return_value = smtp_instance
+
+        svc = EmailService()
+        with patch("app.infra.services.email_service.settings", _make_settings()):
+            result = svc.send_email(
+                to=["student@school.nl"],
+                subject="Test",
+                body="Body",
+            )
+
+        assert result is True
+        msg_arg = smtp_instance.send_message.call_args[0][0]
+        # Without attachments, should not be multipart/mixed
+        assert msg_arg.get_content_type() in ("text/plain", "multipart/alternative")
