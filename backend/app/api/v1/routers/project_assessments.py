@@ -700,17 +700,15 @@ def get_project_assessment(
         # Calculate weighted average - individual student overrides replace the
         # team score for the same criterion instead of being added on top of it.
         if total_weight > 0:
-            # Build effective score per criterion: process team scores first,
-            # then let any individual override (student_id is not None) win.
+            # Two-pass approach: first collect team scores, then let individual
+            # overrides (student_id is not None) replace them.  This is
+            # explicit and independent of the order rows are returned by the DB.
             effective_scores: dict[int, float] = {}
             for s in scores:
-                if s.criterion_id not in weight_map:
-                    continue
-                if s.student_id is not None:
-                    # Individual override always takes precedence
+                if s.criterion_id in weight_map and s.student_id is None:
                     effective_scores[s.criterion_id] = s.score
-                elif s.criterion_id not in effective_scores:
-                    # Team score – only store if no override has been set yet
+            for s in scores:
+                if s.criterion_id in weight_map and s.student_id is not None:
                     effective_scores[s.criterion_id] = s.score
 
             weighted_sum = sum(
