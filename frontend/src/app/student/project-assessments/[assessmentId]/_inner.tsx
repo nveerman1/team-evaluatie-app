@@ -330,66 +330,58 @@ export default function StudentProjectAssessmentInner() {
           </div>
         </div>
 
-        {/* Category Grades and Final Grade */}
-        {Object.keys(categoryGrades).length > 0 && (
-          <div className="space-y-4">
-            {/* Category Grades */}
-            <div className="bg-white border border-slate-200 rounded-xl p-6">
-              <h2 className="text-xl font-bold mb-4">Cijfers per categorie</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Sort categories in desired order: Projectproces, Eindresultaat, Communicatie */}
-                {(() => {
-                  const sortedCategories = Object.entries(categoryGrades).sort(
-                    ([a], [b]) => {
-                      // Use lowercase for comparison since backend stores categories in lowercase
-                      const order = [
-                        "projectproces",
-                        "eindresultaat",
-                        "communicatie",
-                      ];
+        {/* Grade Overview */}
+        {(data.grade != null || Object.keys(categoryGrades).length > 0) && (
+          <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+              {/* Left: Team grade */}
+              {data.grade != null && (
+                <div className="lg:max-w-sm">
+                  <p className="text-sm font-medium text-slate-500">Teamcijfer</p>
+                  <div className="mt-3 flex items-end gap-3">
+                    <h2 className="text-6xl font-bold tracking-tight text-indigo-600 sm:text-7xl">
+                      {data.grade.toLocaleString("nl-NL", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })}
+                    </h2>
+                    <span className="pb-2 text-2xl text-slate-400">/ 10</span>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-slate-600">
+                    Dit is het cijfer voor het werk van jullie team. Je individuele deel (OMZA) wordt hier later nog bij opgeteld.
+                  </p>
+                </div>
+              )}
+
+              {/* Right: Category grades */}
+              {Object.keys(categoryGrades).length > 0 && (
+                <div className="grid flex-1 gap-4 sm:grid-cols-3">
+                  {Object.entries(categoryGrades)
+                    .sort(([a], [b]) => {
+                      const order = ["projectproces", "eindresultaat", "communicatie"];
                       const indexA = order.indexOf(a.toLowerCase());
                       const indexB = order.indexOf(b.toLowerCase());
-                      // If both are in order array, sort by order
-                      if (indexA !== -1 && indexB !== -1)
-                        return indexA - indexB;
-                      // If only one is in order array, it comes first
+                      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
                       if (indexA !== -1) return -1;
                       if (indexB !== -1) return 1;
-                      // Otherwise sort alphabetically
                       return a.localeCompare(b);
-                    },
-                  );
-                  return sortedCategories.map(([category, grade]) => (
-                    <div key={category} className="flex flex-col">
-                      <p className="text-xs text-gray-600 mb-1">{category}</p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {grade.toFixed(1)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        schaal 1-10
-                      </p>
-                    </div>
-                  ));
-                })()}
-              </div>
-            </div>
-
-            {/* Final Grade - More Prominent */}
-            {data.grade != null && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-300 rounded-xl p-6">
-                <h2 className="text-2xl font-bold mb-4">Eindcijfer</h2>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-6xl font-bold text-indigo-600">
-                    {data.grade?.toFixed(1)}
-                  </p>
-                  <p className="text-lg text-gray-500">/ 10</p>
+                    })
+                    .map(([category, grade]) => (
+                      <div key={category} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <p className="text-sm font-medium text-slate-500">{category}</p>
+                        <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900">
+                          {grade.toLocaleString("nl-NL", {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">schaal 1–10</p>
+                      </div>
+                    ))}
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  Dit is je uiteindelijke cijfer voor dit project
-                </p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </section>
         )}
 
         {/* Reflection Section */}
