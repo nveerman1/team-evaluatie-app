@@ -164,12 +164,14 @@ def _calculate_project_score(
     score_filter = [
         ProjectAssessmentScore.assessment_id == assessment_id,
         ProjectAssessmentScore.team_number == team_number,
-        or_(
-            ProjectAssessmentScore.student_id.is_(None),
-            ProjectAssessmentScore.student_id == student_id,
-        )
-        if student_id is not None
-        else ProjectAssessmentScore.student_id.is_(None),
+        (
+            or_(
+                ProjectAssessmentScore.student_id.is_(None),
+                ProjectAssessmentScore.student_id == student_id,
+            )
+            if student_id is not None
+            else ProjectAssessmentScore.student_id.is_(None)
+        ),
     ]
 
     scores = db.query(ProjectAssessmentScore).filter(*score_filter).all()
@@ -1822,9 +1824,7 @@ def get_project_teams(
         # Python object comparison on the already-fetched ORM objects, which is
         # correct here (as opposed to `is_(None)` used in SQLAlchemy query
         # filters to generate SQL IS NULL).
-        score_map = {
-            s.criterion_id: s.score for s in scores if s.student_id is None
-        }
+        score_map = {s.criterion_id: s.score for s in scores if s.student_id is None}
         # When a specific student is requested and they belong to this team,
         # apply their individual overrides on top so the shown grade is
         # personalised rather than a plain team average.
