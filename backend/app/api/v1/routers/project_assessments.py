@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime, timezone
 from urllib.parse import quote
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -64,6 +65,13 @@ from app.api.v1.schemas.project_assessments import (
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
+
+
+def _safe_filename(s: str) -> str:
+    """Sanitize a string for use as part of a filename."""
+    return re.sub(
+        r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
+    ).strip("-")
 
 
 def _get_assessment_with_access_check(
@@ -2803,19 +2811,12 @@ def email_team_rubrics(
             buffer = generate_single_team_rubric_docx(data)
             docx_bytes = buffer.getvalue()
 
-            import re
-
-            def _safe(s: str) -> str:
-                return re.sub(
-                    r"-{2,}", "-", re.sub(r"[^\w\s-]", "", s).strip().replace(" ", "-")
-                ).strip("-")
-
             parts: list[str] = []
             if data.get("project_title"):
-                parts.append(_safe(data["project_title"]))
+                parts.append(_safe_filename(data["project_title"]))
             parts.append(f"Team{team_number}")
             if data.get("team_members"):
-                members_str = "_".join(_safe(m) for m in data["team_members"])
+                members_str = "_".join(_safe_filename(m) for m in data["team_members"])
                 if members_str:
                     parts.append(members_str)
             filename = "Rubric_" + "_".join(parts) + ".docx"

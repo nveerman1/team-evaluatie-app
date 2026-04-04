@@ -117,7 +117,7 @@ export default function ProjectAssessmentOverviewInner() {
   const handleEmailAll = useCallback(async () => {
     const teamNumbers = data!.teams
       .map((t) => t.team_number)
-      .filter((n): n is number => n != null);
+      .filter((n): n is number => n !== null);
     if (!confirm(`Rubrics mailen naar alle ${teamNumbers.length} teams?`))
       return;
     setEmailingAll(true);
