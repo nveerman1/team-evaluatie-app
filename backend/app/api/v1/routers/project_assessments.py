@@ -2789,9 +2789,7 @@ def email_team_rubrics(
                     )
                     .all()
                 )
-                emails.extend(
-                    m.email for m in members_q if m.email
-                )
+                emails.extend(m.email for m in members_q if m.email)
 
         if not emails:
             results.append(

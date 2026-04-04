@@ -294,14 +294,24 @@ class TestEmailServiceSendEmail:
                 subject="Rubrics",
                 body="Hierbij de rubrics.",
                 attachments=[
-                    ("team1.docx", b"team1 content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-                    ("team2.docx", b"team2 content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                    (
+                        "team1.docx",
+                        b"team1 content",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ),
+                    (
+                        "team2.docx",
+                        b"team2 content",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ),
                 ],
             )
 
         assert result is True
         msg_arg = smtp_instance.send_message.call_args[0][0]
-        filenames = [part.get_filename() for part in msg_arg.walk() if part.get_filename()]
+        filenames = [
+            part.get_filename() for part in msg_arg.walk() if part.get_filename()
+        ]
         assert "team1.docx" in filenames
         assert "team2.docx" in filenames
 
