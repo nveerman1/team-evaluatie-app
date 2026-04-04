@@ -697,18 +697,14 @@ def get_project_assessment(
         weight_map = {c.id: c.weight for c in criteria}
         total_weight = sum(weight_map.values())
 
-        # Calculate weighted average - individual student overrides replace the
-        # team score for the same criterion instead of being added on top of it.
+        # Calculate weighted average using only team scores (student_id is None).
+        # Individual student overrides are excluded so that the displayed grade
+        # matches what the teacher sees in the rubric editor (which also shows
+        # only team-level scores).
         if total_weight > 0:
-            # Two-pass approach: first collect team scores, then let individual
-            # overrides (student_id is not None) replace them.  This is
-            # explicit and independent of the order rows are returned by the DB.
             effective_scores: dict[int, float] = {}
             for s in scores:
                 if s.criterion_id in weight_map and s.student_id is None:
-                    effective_scores[s.criterion_id] = s.score
-            for s in scores:
-                if s.criterion_id in weight_map and s.student_id is not None:
                     effective_scores[s.criterion_id] = s.score
 
             weighted_sum = sum(
