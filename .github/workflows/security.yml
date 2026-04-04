@@ -48,7 +48,7 @@ jobs:
 
       - name: OSV scan SBOM
         run: |
-          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.3.1 \
             scan -L /src/backend.cdx.json
 
   trivy_images:
