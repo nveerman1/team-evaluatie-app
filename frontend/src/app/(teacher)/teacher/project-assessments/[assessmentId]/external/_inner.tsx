@@ -84,20 +84,27 @@ export default function ExternalAssessmentPageInner() {
           );
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
-        const is404 =
-          typeof e === "object" &&
-          e !== null &&
-          "response" in e &&
-          (e as { response?: { status?: number } }).response?.status === 404;
-        if (!is404) {
+        const errObj = e as {
+          response?: { status?: number; data?: { detail?: string } };
+        };
+        const status404 = errObj?.response?.status === 404;
+        const backendDetail = errObj?.response?.data?.detail ?? "";
+        if (!status404) {
           console.error("Could not load team details:", e);
         }
-        const errorMessage =
-          e instanceof ApiAuthError
-            ? e.originalMessage
-            : is404
-              ? "Geen externe adviseur gekoppeld aan dit team."
-              : "Kon advies niet laden. Probeer het opnieuw.";
+        let errorMessage: string;
+        if (e instanceof ApiAuthError) {
+          errorMessage = e.originalMessage;
+        } else if (status404) {
+          if (backendDetail.toLowerCase().includes("assessment")) {
+            errorMessage =
+              "De beoordeling is nog niet ingediend of kon niet worden geladen.";
+          } else {
+            errorMessage = "Geen externe adviseur gekoppeld aan dit team.";
+          }
+        } else {
+          errorMessage = "Kon advies niet laden. Probeer het opnieuw.";
+        }
         setTeamLoadErrors((prev) => new Map(prev).set(key, errorMessage));
       } finally {
         setLoadingTeams((prev) => {

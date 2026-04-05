@@ -28,14 +28,13 @@ from app.infra.db.models import (
     School,
     User,
     Course,
-    Group,
-    GroupMember,
     Project,
     ProjectTeam,
     ProjectTeamMember,
     Rubric,
     RubricCriterion,
     ProjectAssessment,
+    ProjectAssessmentTeam,
     ProjectAssessmentScore,
     ExternalEvaluator,
     ProjectTeamExternal,
@@ -236,66 +235,11 @@ def seed_external_assessment_test():
             print(f"✓ Using existing Course: {course.name} (ID: {course.id})")
 
         # ============================================================
-        # 5. Groups with Students
+        # 5. ProjectTeams with Students
         # ============================================================
         print("\n" + "=" * 70)
-        print("5. GROUPS SETUP")
+        print("5. PROJECT TEAMS SETUP")
         print("=" * 70)
-
-        # Create two groups with different team numbers
-        group_configs = [
-            (1, "Team 1", [students[0], students[1]]),  # Students 2, 3
-            (2, "Team 2", [students[2], students[3], students[4]]),  # Students 4, 5, 6
-        ]
-
-        groups = []
-        for team_number, group_name, group_students in group_configs:
-            group = (
-                db.query(Group)
-                .filter(Group.course_id == course.id, Group.team_number == team_number)
-                .first()
-            )
-
-            if not group:
-                group = Group(
-                    school_id=school.id,
-                    course_id=course.id,
-                    name=group_name,
-                    team_number=team_number,
-                )
-                db.add(group)
-                db.flush()
-                print(
-                    f"✓ Created Group: {group_name} (ID: {group.id}, Team: {team_number})"
-                )
-            else:
-                print(
-                    f"✓ Using existing Group: {group.name} (ID: {group.id}, Team: {team_number})"
-                )
-
-            # Add members to group
-            for student in group_students:
-                existing_member = (
-                    db.query(GroupMember)
-                    .filter(
-                        GroupMember.group_id == group.id,
-                        GroupMember.user_id == student.id,
-                    )
-                    .first()
-                )
-
-                if not existing_member:
-                    member = GroupMember(
-                        school_id=school.id,
-                        group_id=group.id,
-                        user_id=student.id,
-                    )
-                    db.add(member)
-                    print(f"  ✓ Added {student.name} to {group_name}")
-
-            groups.append(group)
-
-        db.flush()
 
         # ============================================================
         # 6. Project (ID 1)
@@ -332,14 +276,18 @@ def seed_external_assessment_test():
         print("7. PROJECT TEAMS SETUP (Frozen Rosters)")
         print("=" * 70)
 
+        team_configs = [
+            (1, "Team 1", [students[0], students[1]]),
+            (2, "Team 2", [students[2], students[3], students[4]]),
+        ]
+
         project_teams = []
-        for group in groups:
-            # Check if project team already exists
+        for team_number, team_name, team_students in team_configs:
             project_team = (
                 db.query(ProjectTeam)
                 .filter(
                     ProjectTeam.project_id == project.id,
-                    ProjectTeam.team_number == group.team_number,
+                    ProjectTeam.team_number == team_number,
                 )
                 .first()
             )
@@ -348,32 +296,26 @@ def seed_external_assessment_test():
                 project_team = ProjectTeam(
                     school_id=school.id,
                     project_id=project.id,
-                    team_id=group.id,
-                    team_number=group.team_number,
-                    display_name_at_time=group.name,
+                    team_number=team_number,
+                    display_name_at_time=team_name,
                     version=1,
                 )
                 db.add(project_team)
                 db.flush()
                 print(
-                    f"✓ Created ProjectTeam: Team {group.team_number} (ID: {project_team.id})"
+                    f"✓ Created ProjectTeam: {team_name} (ID: {project_team.id}, Team: {team_number})"
                 )
             else:
                 print(
-                    f"✓ Using existing ProjectTeam: Team {group.team_number} (ID: {project_team.id})"
+                    f"✓ Using existing ProjectTeam: {project_team.display_name_at_time} (ID: {project_team.id}, Team: {team_number})"
                 )
 
-            # Add team members
-            group_members = (
-                db.query(GroupMember).filter(GroupMember.group_id == group.id).all()
-            )
-
-            for gm in group_members:
+            for student in team_students:
                 existing_ptm = (
                     db.query(ProjectTeamMember)
                     .filter(
                         ProjectTeamMember.project_team_id == project_team.id,
-                        ProjectTeamMember.user_id == gm.user_id,
+                        ProjectTeamMember.user_id == student.id,
                     )
                     .first()
                 )
@@ -382,11 +324,10 @@ def seed_external_assessment_test():
                     ptm = ProjectTeamMember(
                         school_id=school.id,
                         project_team_id=project_team.id,
-                        user_id=gm.user_id,
+                        user_id=student.id,
                     )
                     db.add(ptm)
-                    user = db.query(User).filter(User.id == gm.user_id).first()
-                    print(f"  ✓ Added {user.name} to ProjectTeam {group.team_number}")
+                    print(f"  ✓ Added {student.name} to {team_name}")
 
             project_teams.append(project_team)
 
@@ -524,8 +465,6 @@ def seed_external_assessment_test():
             assessment = ProjectAssessment(
                 school_id=school.id,
                 project_id=project.id,
-                group_id=groups[0].id,  # First group
-                project_team_id=project_teams[0].id,
                 rubric_id=rubric.id,
                 teacher_id=teacher.id,
                 title="Tussentijdse Beoordeling - Test Project",
@@ -602,15 +541,15 @@ def seed_external_assessment_test():
         print("=" * 70)
 
         # Link evaluators to teams
-        for idx, group in enumerate(groups):
+        for idx, project_team in enumerate(project_teams):
             evaluator = evaluators[idx % len(evaluators)]
 
             existing_link = (
                 db.query(ProjectTeamExternal)
                 .filter(
-                    ProjectTeamExternal.group_id == group.id,
+                    ProjectTeamExternal.project_team_id == project_team.id,
                     ProjectTeamExternal.assessment_id == assessment.id,
-                    ProjectTeamExternal.team_number == group.team_number,
+                    ProjectTeamExternal.team_number == project_team.team_number,
                 )
                 .first()
             )
@@ -619,11 +558,11 @@ def seed_external_assessment_test():
                 token = generate_external_token()
                 link = ProjectTeamExternal(
                     school_id=school.id,
-                    group_id=group.id,
+                    project_team_id=project_team.id,
                     external_evaluator_id=evaluator.id,
                     project_id=project.id,
                     assessment_id=assessment.id,
-                    team_number=group.team_number,
+                    team_number=project_team.team_number,
                     invitation_token=token,
                     token_expires_at=datetime.now() + timedelta(days=30),
                     status="INVITED",
@@ -631,11 +570,11 @@ def seed_external_assessment_test():
                 )
                 db.add(link)
                 print(
-                    f"✓ Linked {evaluator.name} to {group.name} (Team {group.team_number})"
+                    f"✓ Linked {evaluator.name} to {project_team.display_name_at_time} (Team {project_team.team_number})"
                 )
                 print(f"  Token: {token[:20]}...")
             else:
-                print(f"✓ Link already exists: {evaluator.name} -> {group.name}")
+                print(f"✓ Link already exists: {evaluator.name} -> {project_team.display_name_at_time}")
 
         # Flush to ensure links are created
         db.flush()
@@ -658,15 +597,18 @@ def seed_external_assessment_test():
         )
 
         # Create external assessments for each team
-        for idx, group in enumerate(groups):
+        for idx, project_team in enumerate(project_teams):
             evaluator = evaluators[idx % len(evaluators)]
-            project_team = project_teams[idx]
 
-            # Check if external assessment already exists
+            # Check if external assessment already exists (via junction table)
             existing_external_assessment = (
                 db.query(ProjectAssessment)
+                .join(
+                    ProjectAssessmentTeam,
+                    ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id,
+                )
                 .filter(
-                    ProjectAssessment.group_id == group.id,
+                    ProjectAssessmentTeam.project_team_id == project_team.id,
                     ProjectAssessment.external_evaluator_id == evaluator.id,
                     ProjectAssessment.role == "EXTERNAL",
                 )
@@ -674,15 +616,13 @@ def seed_external_assessment_test():
             )
 
             if not existing_external_assessment:
-                # Create external assessment
+                # Create external assessment (project-level, not team-level)
                 external_assessment = ProjectAssessment(
                     school_id=school.id,
                     project_id=project.id,
-                    group_id=group.id,
-                    project_team_id=project_team.id,
                     rubric_id=rubric.id,
                     external_evaluator_id=evaluator.id,
-                    title=f"External Assessment - {group.name}",
+                    title=f"External Assessment - {project_team.display_name_at_time}",
                     version="extern",
                     status="closed",  # Mark as completed
                     role="EXTERNAL",
@@ -692,8 +632,20 @@ def seed_external_assessment_test():
                 )
                 db.add(external_assessment)
                 db.flush()
+
+                # Link the assessment to the specific project team via junction table
+                assessment_team = ProjectAssessmentTeam(
+                    school_id=school.id,
+                    project_assessment_id=external_assessment.id,
+                    project_team_id=project_team.id,
+                    status="completed",
+                    scores_count=len(visible_criteria),
+                )
+                db.add(assessment_team)
+                db.flush()
+
                 print(
-                    f"\n✓ Created External Assessment for {group.name} by {evaluator.name}"
+                    f"\n✓ Created External Assessment for {project_team.display_name_at_time} by {evaluator.name}"
                 )
 
                 # Create scores for each visible criterion
@@ -728,7 +680,7 @@ def seed_external_assessment_test():
                         school_id=school.id,
                         assessment_id=external_assessment.id,
                         criterion_id=criterion.id,
-                        team_number=group.team_number,
+                        team_number=project_team.team_number,
                         student_id=None,  # Team score
                         score=score_value,
                         comment=comment if comment else None,
@@ -740,7 +692,7 @@ def seed_external_assessment_test():
                 link = (
                     db.query(ProjectTeamExternal)
                     .filter(
-                        ProjectTeamExternal.group_id == group.id,
+                        ProjectTeamExternal.project_team_id == project_team.id,
                         ProjectTeamExternal.external_evaluator_id == evaluator.id,
                         ProjectTeamExternal.assessment_id == assessment.id,
                     )
@@ -752,7 +704,7 @@ def seed_external_assessment_test():
                     link.submitted_at = datetime.now()
                     print("  ✓ Updated link status to SUBMITTED")
             else:
-                print(f"✓ External Assessment already exists for {group.name}")
+                print(f"✓ External Assessment already exists for {project_team.display_name_at_time}")
 
         # Commit all changes
         db.commit()
@@ -767,9 +719,9 @@ def seed_external_assessment_test():
         print(f"  • Rubric ID: {rubric.id} (scope='project')")
         print(f"  • ProjectAssessment ID: {assessment.id} (Teacher)")
         print("  • Students: 5 students (IDs are auto-generated)")
-        print(f"  • Groups: {len(groups)} teams")
+        print(f"  • Teams: {len(project_teams)} teams")
         print(f"  • External Evaluators: {len(evaluators)}")
-        print(f"  • External Assessments: {len(groups)} (with scores)")
+        print(f"  • External Assessments: {len(project_teams)} (with scores)")
         print("\n🔗 Test URL:")
         print("  http://localhost:3000/teacher/project-assessments/1/external")
         print("\n👤 Login credentials:")
