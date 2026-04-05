@@ -84,11 +84,20 @@ export default function ExternalAssessmentPageInner() {
           );
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
-        console.error("Could not load team details:", e);
+        const is404 =
+          typeof e === "object" &&
+          e !== null &&
+          "response" in e &&
+          (e as { response?: { status?: number } }).response?.status === 404;
+        if (!is404) {
+          console.error("Could not load team details:", e);
+        }
         const errorMessage =
           e instanceof ApiAuthError
             ? e.originalMessage
-            : "Kon advies niet laden. Probeer het opnieuw.";
+            : is404
+              ? "Geen externe adviseur gekoppeld aan dit team."
+              : "Kon advies niet laden. Probeer het opnieuw.";
         setTeamLoadErrors((prev) => new Map(prev).set(key, errorMessage));
       } finally {
         setLoadingTeams((prev) => {
