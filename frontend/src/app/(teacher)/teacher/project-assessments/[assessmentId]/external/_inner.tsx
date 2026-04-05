@@ -81,6 +81,7 @@ export default function ExternalAssessmentPageInner() {
           await externalAssessmentService.getExternalAdvisoryDetail(
             teamId,
             teamNumber,
+            assessmentId,
           );
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
