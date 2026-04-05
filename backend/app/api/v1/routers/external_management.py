@@ -669,9 +669,13 @@ def get_project_external_status(
     return status_list
 
 
+@router.get(
+    "/project-teams/{project_team_id}/external-advisory",
+)
 def get_external_advisory_detail(
     project_team_id: int,
     team_number: Optional[int] = None,
+    assessment_id: Optional[int] = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -683,6 +687,8 @@ def get_external_advisory_detail(
         project_team_id: The project team ID
         team_number: The team number within the project (recommended for proper team identification
                      when multiple teams exist in the same project)
+        assessment_id: Optional assessment ID to select the correct link when multiple
+                       external evaluators are linked to the same team
     """
     from app.infra.db.models import (
         ProjectAssessment,
@@ -696,13 +702,15 @@ def get_external_advisory_detail(
 
     require_role(user, ["teacher", "admin"])
 
-    # Get external link - filter by project_team_id and optionally team_number
+    # Get external link - filter by project_team_id and optionally team_number / assessment_id
     link_query = db.query(ProjectTeamExternal).filter(
         ProjectTeamExternal.project_team_id == project_team_id,
         ProjectTeamExternal.school_id == user.school_id,
     )
     if team_number is not None:
         link_query = link_query.filter(ProjectTeamExternal.team_number == team_number)
+    if assessment_id is not None:
+        link_query = link_query.filter(ProjectTeamExternal.assessment_id == assessment_id)
     link = link_query.first()
 
     if not link:
@@ -764,10 +772,16 @@ def get_external_advisory_detail(
             )
         )
 
-    # Get general comment from metadata
+    # Get advisory_grade, tips, tops, and general comment from metadata
     general_comment = None
+    advisory_grade = None
+    tips = None
+    tops = None
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
+        advisory_grade = assessment.metadata_json.get("advisory_grade")
+        tips = assessment.metadata_json.get("tips")
+        tops = assessment.metadata_json.get("tops")
 
     # Construct team name - use "Team X" format when team_number is provided
     team_display_name = (
@@ -782,6 +796,9 @@ def get_external_advisory_detail(
         rubric_scale_min=rubric.scale_min,
         rubric_scale_max=rubric.scale_max,
         scores=score_outputs,
+        advisory_grade=advisory_grade,
+        tips=tips,
+        tops=tops,
         general_comment=general_comment,
         submitted_at=_utc(link.submitted_at),
         status=link.status,

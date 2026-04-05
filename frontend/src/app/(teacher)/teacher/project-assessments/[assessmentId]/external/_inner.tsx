@@ -81,14 +81,31 @@ export default function ExternalAssessmentPageInner() {
           await externalAssessmentService.getExternalAdvisoryDetail(
             teamId,
             teamNumber,
+            assessmentId,
           );
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
-        console.error("Could not load team details:", e);
-        const errorMessage =
-          e instanceof ApiAuthError
-            ? e.originalMessage
-            : "Kon advies niet laden. Probeer het opnieuw.";
+        const errObj = e as {
+          response?: { status?: number; data?: { detail?: string } };
+        };
+        const status404 = errObj?.response?.status === 404;
+        const backendDetail = errObj?.response?.data?.detail ?? "";
+        if (!status404) {
+          console.error("Could not load team details:", e);
+        }
+        let errorMessage: string;
+        if (e instanceof ApiAuthError) {
+          errorMessage = e.originalMessage;
+        } else if (status404) {
+          if (backendDetail.toLowerCase().includes("assessment")) {
+            errorMessage =
+              "De beoordeling is nog niet ingediend of kon niet worden geladen.";
+          } else {
+            errorMessage = "Geen externe adviseur gekoppeld aan dit team.";
+          }
+        } else {
+          errorMessage = "Kon advies niet laden. Probeer het opnieuw.";
+        }
         setTeamLoadErrors((prev) => new Map(prev).set(key, errorMessage));
       } finally {
         setLoadingTeams((prev) => {
@@ -476,6 +493,49 @@ export default function ExternalAssessmentPageInner() {
                                     </tbody>
                                   </table>
                                 </div>
+
+                                {/* Advisory Grade */}
+                                {detailData.advisory_grade != null && (
+                                  <div className="flex items-center gap-3 bg-blue-50 rounded-lg border border-blue-200 p-4">
+                                    <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold shadow">
+                                      {detailData.advisory_grade}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-semibold text-blue-700">
+                                        Advies eindcijfer
+                                      </p>
+                                      <p className="text-xs text-blue-500">
+                                        Indicatief cijfer van de externe beoordelaar (1–10)
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Tips and Tops */}
+                                {(detailData.tips || detailData.tops) && (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {detailData.tops && (
+                                      <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4">
+                                        <h3 className="text-sm font-semibold text-emerald-700 mb-2">
+                                          ⭐ Tops
+                                        </h3>
+                                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                          {detailData.tops}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {detailData.tips && (
+                                      <div className="bg-amber-50 rounded-lg border border-amber-200 p-4">
+                                        <h3 className="text-sm font-semibold text-amber-700 mb-2">
+                                          💡 Tips
+                                        </h3>
+                                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                          {detailData.tips}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
 
                                 {/* General Comment */}
                                 {detailData.general_comment && (

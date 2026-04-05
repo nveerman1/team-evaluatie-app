@@ -83,6 +83,9 @@ export interface ExternalAssessmentDetail {
   project_description?: string;
   rubric: RubricForExternal;
   existing_scores: ExternalAssessmentScoreOut[];
+  advisory_grade?: number;
+  tips?: string;
+  tops?: string;
   general_comment?: string;
   status: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED";
 }
@@ -97,6 +100,9 @@ export interface ExternalAssessmentScoreSubmit {
 
 export interface ExternalAssessmentSubmit {
   scores: ExternalAssessmentScoreSubmit[];
+  advisory_grade?: number;
+  tips?: string;
+  tops?: string;
   general_comment?: string;
   submit: boolean;
 }
@@ -136,6 +142,7 @@ export interface ExternalAssessmentPerTeamConfig {
   evaluator_name: string;
   evaluator_email: string;
   evaluator_organisation?: string;
+  rubric_id?: number;
 }
 
 export interface ExternalAssessmentAllTeamsConfig {
@@ -183,6 +190,9 @@ export interface ExternalAdvisoryDetail {
   rubric_scale_min: number;
   rubric_scale_max: number;
   scores: ExternalAdvisoryScoreOut[];
+  advisory_grade?: number;
+  tips?: string;
+  tops?: string;
   general_comment?: string;
   submitted_at?: string;
   status: string;

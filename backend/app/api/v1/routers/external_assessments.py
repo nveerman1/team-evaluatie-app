@@ -55,10 +55,11 @@ def _validate_token(db: Session, token: str) -> ProjectTeamExternal:
             status_code=404, detail="Invalid or expired invitation token"
         )
 
-    # Check expiration
-    if team_link.token_expires_at and team_link.token_expires_at < datetime.now(
-        timezone.utc
-    ):
+    # Check expiration - token_expires_at is stored as offset-naive UTC; add tzinfo for a
+    # consistent comparison against the current UTC time.
+    if team_link.token_expires_at and team_link.token_expires_at.replace(
+        tzinfo=timezone.utc
+    ) < datetime.now(timezone.utc):
         raise HTTPException(status_code=403, detail="This invitation has expired")
 
     return team_link
@@ -293,6 +294,19 @@ def get_team_assessment_detail(
                 ext_rubric_id = (ext_config.get("all_teams_config") or {}).get(
                     "rubric_id"
                 )
+                # For per-team mode, look up rubric_id from the matching per-team config
+                if not ext_rubric_id:
+                    per_team_configs = ext_config.get("per_team_configs") or []
+                    matched = next(
+                        (
+                            c for c in per_team_configs
+                            if c.get("project_team_id") == team_link.project_team_id
+                            or c.get("team_number") == team_link.team_number
+                        ),
+                        None,
+                    )
+                    if matched:
+                        ext_rubric_id = matched.get("rubric_id")
                 if ext_rubric_id:
                     rubric = db.get(Rubric, ext_rubric_id)
                 if not rubric:
@@ -344,6 +358,9 @@ def get_team_assessment_detail(
     # Get existing scores if any
     existing_scores = []
     general_comment = None
+    advisory_grade = None
+    tips = None
+    tops = None
     if existing_assessment:
         scores = (
             db.query(ProjectAssessmentScore)
@@ -363,9 +380,12 @@ def get_team_assessment_detail(
             for s in scores
         ]
 
-        # General comment might be in metadata
+        # General comment, advisory_grade and tips/tops might be in metadata
         if existing_assessment.metadata_json:
             general_comment = existing_assessment.metadata_json.get("general_comment")
+            advisory_grade = existing_assessment.metadata_json.get("advisory_grade")
+            tips = existing_assessment.metadata_json.get("tips")
+            tops = existing_assessment.metadata_json.get("tops")
 
     # Determine status
     status = "NOT_STARTED"
@@ -389,6 +409,9 @@ def get_team_assessment_detail(
         project_description=project.description,
         rubric=rubric_out,
         existing_scores=existing_scores,
+        advisory_grade=advisory_grade,
+        tips=tips,
+        tops=tops,
         general_comment=general_comment,
         status=status,
     )
@@ -484,6 +507,19 @@ def submit_team_assessment(
                 ext_rubric_id = (ext_config.get("all_teams_config") or {}).get(
                     "rubric_id"
                 )
+                # For per-team mode, look up rubric_id from the matching per-team config
+                if not ext_rubric_id:
+                    per_team_configs = ext_config.get("per_team_configs") or []
+                    matched = next(
+                        (
+                            c for c in per_team_configs
+                            if c.get("project_team_id") == team_link.project_team_id
+                            or c.get("team_number") == team_link.team_number
+                        ),
+                        None,
+                    )
+                    if matched:
+                        ext_rubric_id = matched.get("rubric_id")
                 if ext_rubric_id:
                     rubric = db.get(Rubric, ext_rubric_id)
                 if not rubric:
@@ -532,11 +568,23 @@ def submit_team_assessment(
         db.add(assessment_team)
         db.flush()
 
-    # Update metadata with general comment
-    if payload.general_comment:
+    # Update metadata with advisory_grade, tips, tops, and general comment
+    if (
+        payload.advisory_grade is not None
+        or payload.tips is not None
+        or payload.tops is not None
+        or payload.general_comment is not None
+    ):
         if not assessment.metadata_json:
             assessment.metadata_json = {}
-        assessment.metadata_json["general_comment"] = payload.general_comment
+        if payload.advisory_grade is not None:
+            assessment.metadata_json["advisory_grade"] = payload.advisory_grade
+        if payload.tips is not None:
+            assessment.metadata_json["tips"] = payload.tips
+        if payload.tops is not None:
+            assessment.metadata_json["tops"] = payload.tops
+        if payload.general_comment is not None:
+            assessment.metadata_json["general_comment"] = payload.general_comment
 
     # Save/update scores
     for score_data in payload.scores:
