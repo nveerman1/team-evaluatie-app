@@ -82,6 +82,7 @@ export default function ExternalAssessmentTeamPage() {
   const [allTeams, setAllTeams] = useState<ExternalAssessmentTeamInfo[]>([]);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
+  const [advisoryGrade, setAdvisoryGrade] = useState<number>(6);
   const [tips, setTips] = useState("");
   const [tops, setTops] = useState("");
   const [generalComment, setGeneralComment] = useState("");
@@ -133,6 +134,7 @@ export default function ExternalAssessmentTeamPage() {
 
       setScores(initialScores);
       setComments(initialComments);
+      setAdvisoryGrade(data.advisory_grade ?? 6);
       setTips(data.tips || "");
       setTops(data.tops || "");
       setGeneralComment(data.general_comment || "");
@@ -181,6 +183,7 @@ export default function ExternalAssessmentTeamPage() {
         teamId,
         {
           scores: submitScores,
+          advisory_grade: advisoryGrade,
           tips: tips || undefined,
           tops: tops || undefined,
           general_comment: generalComment || undefined,
@@ -540,6 +543,38 @@ export default function ExternalAssessmentTeamPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Advisory Grade Slider */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+            Advies eindcijfer
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Geef een indicatief eindcijfer als advies voor dit team (1–10).
+          </p>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500 w-4">1</span>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={advisoryGrade}
+              onChange={(e) => setAdvisoryGrade(Number(e.target.value))}
+              disabled={isReadOnly}
+              className="flex-1 h-2 accent-blue-600 cursor-pointer disabled:cursor-not-allowed"
+            />
+            <span className="text-sm text-gray-500 w-4">10</span>
+            <span className="ml-2 inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold shadow">
+              {advisoryGrade}
+            </span>
+          </div>
+          <div className="flex justify-between mt-1 px-6 text-[10px] text-gray-400 select-none">
+            {Array.from({ length: 10 }, (_, i) => (
+              <span key={i + 1}>{i + 1}</span>
+            ))}
           </div>
         </div>
 

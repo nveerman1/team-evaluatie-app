@@ -149,6 +149,7 @@ class ExternalAssessmentDetail(BaseModel):
     project_description: Optional[str]
     rubric: RubricForExternal
     existing_scores: List[ExternalAssessmentScoreOut]
+    advisory_grade: Optional[int] = None
     tips: Optional[str] = None
     tops: Optional[str] = None
     general_comment: Optional[str]
@@ -170,6 +171,7 @@ class ExternalAssessmentSubmit(BaseModel):
     """Submission for external assessment"""
 
     scores: List[ExternalAssessmentScoreSubmit]
+    advisory_grade: Optional[int] = Field(None, ge=1, le=10)
     tips: Optional[str] = None
     tops: Optional[str] = None
     general_comment: Optional[str] = None
@@ -265,6 +267,7 @@ class ExternalAdvisoryDetail(BaseModel):
     rubric_scale_min: int
     rubric_scale_max: int
     scores: List[ExternalAdvisoryScoreOut]
+    advisory_grade: Optional[int] = None
     tips: Optional[str] = None
     tops: Optional[str] = None
     general_comment: Optional[str]

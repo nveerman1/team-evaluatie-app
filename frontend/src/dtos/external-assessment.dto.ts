@@ -83,6 +83,7 @@ export interface ExternalAssessmentDetail {
   project_description?: string;
   rubric: RubricForExternal;
   existing_scores: ExternalAssessmentScoreOut[];
+  advisory_grade?: number;
   tips?: string;
   tops?: string;
   general_comment?: string;
@@ -99,6 +100,7 @@ export interface ExternalAssessmentScoreSubmit {
 
 export interface ExternalAssessmentSubmit {
   scores: ExternalAssessmentScoreSubmit[];
+  advisory_grade?: number;
   tips?: string;
   tops?: string;
   general_comment?: string;
@@ -188,6 +190,7 @@ export interface ExternalAdvisoryDetail {
   rubric_scale_min: number;
   rubric_scale_max: number;
   scores: ExternalAdvisoryScoreOut[];
+  advisory_grade?: number;
   tips?: string;
   tops?: string;
   general_comment?: string;

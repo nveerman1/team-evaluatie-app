@@ -772,12 +772,14 @@ def get_external_advisory_detail(
             )
         )
 
-    # Get tips, tops, and general comment from metadata
+    # Get advisory_grade, tips, tops, and general comment from metadata
     general_comment = None
+    advisory_grade = None
     tips = None
     tops = None
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
+        advisory_grade = assessment.metadata_json.get("advisory_grade")
         tips = assessment.metadata_json.get("tips")
         tops = assessment.metadata_json.get("tops")
 
@@ -794,6 +796,7 @@ def get_external_advisory_detail(
         rubric_scale_min=rubric.scale_min,
         rubric_scale_max=rubric.scale_max,
         scores=score_outputs,
+        advisory_grade=advisory_grade,
         tips=tips,
         tops=tops,
         general_comment=general_comment,

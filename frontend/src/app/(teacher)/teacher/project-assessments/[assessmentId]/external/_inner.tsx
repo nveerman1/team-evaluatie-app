@@ -494,6 +494,23 @@ export default function ExternalAssessmentPageInner() {
                                   </table>
                                 </div>
 
+                                {/* Advisory Grade */}
+                                {detailData.advisory_grade != null && (
+                                  <div className="flex items-center gap-3 bg-blue-50 rounded-lg border border-blue-200 p-4">
+                                    <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold shadow">
+                                      {detailData.advisory_grade}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-semibold text-blue-700">
+                                        Advies eindcijfer
+                                      </p>
+                                      <p className="text-xs text-blue-500">
+                                        Indicatief cijfer van de externe beoordelaar (1–10)
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Tips and Tops */}
                                 {(detailData.tips || detailData.tops) && (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

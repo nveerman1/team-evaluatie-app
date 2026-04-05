@@ -358,6 +358,7 @@ def get_team_assessment_detail(
     # Get existing scores if any
     existing_scores = []
     general_comment = None
+    advisory_grade = None
     tips = None
     tops = None
     if existing_assessment:
@@ -379,9 +380,10 @@ def get_team_assessment_detail(
             for s in scores
         ]
 
-        # General comment and tips/tops might be in metadata
+        # General comment, advisory_grade and tips/tops might be in metadata
         if existing_assessment.metadata_json:
             general_comment = existing_assessment.metadata_json.get("general_comment")
+            advisory_grade = existing_assessment.metadata_json.get("advisory_grade")
             tips = existing_assessment.metadata_json.get("tips")
             tops = existing_assessment.metadata_json.get("tops")
 
@@ -407,6 +409,7 @@ def get_team_assessment_detail(
         project_description=project.description,
         rubric=rubric_out,
         existing_scores=existing_scores,
+        advisory_grade=advisory_grade,
         tips=tips,
         tops=tops,
         general_comment=general_comment,
@@ -565,10 +568,17 @@ def submit_team_assessment(
         db.add(assessment_team)
         db.flush()
 
-    # Update metadata with tips, tops, and general comment
-    if payload.tips is not None or payload.tops is not None or payload.general_comment is not None:
+    # Update metadata with advisory_grade, tips, tops, and general comment
+    if (
+        payload.advisory_grade is not None
+        or payload.tips is not None
+        or payload.tops is not None
+        or payload.general_comment is not None
+    ):
         if not assessment.metadata_json:
             assessment.metadata_json = {}
+        if payload.advisory_grade is not None:
+            assessment.metadata_json["advisory_grade"] = payload.advisory_grade
         if payload.tips is not None:
             assessment.metadata_json["tips"] = payload.tips
         if payload.tops is not None:
