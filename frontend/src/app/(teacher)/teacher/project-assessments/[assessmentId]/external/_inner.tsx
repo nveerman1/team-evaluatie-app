@@ -494,6 +494,32 @@ export default function ExternalAssessmentPageInner() {
                                   </table>
                                 </div>
 
+                                {/* Tips and Tops */}
+                                {(detailData.tips || detailData.tops) && (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {detailData.tops && (
+                                      <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4">
+                                        <h3 className="text-sm font-semibold text-emerald-700 mb-2">
+                                          ⭐ Tops
+                                        </h3>
+                                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                          {detailData.tops}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {detailData.tips && (
+                                      <div className="bg-amber-50 rounded-lg border border-amber-200 p-4">
+                                        <h3 className="text-sm font-semibold text-amber-700 mb-2">
+                                          💡 Tips
+                                        </h3>
+                                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                          {detailData.tips}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 {/* General Comment */}
                                 {detailData.general_comment && (
                                   <div className="bg-white rounded-lg border border-gray-200 p-4">

@@ -82,6 +82,8 @@ export default function ExternalAssessmentTeamPage() {
   const [allTeams, setAllTeams] = useState<ExternalAssessmentTeamInfo[]>([]);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
+  const [tips, setTips] = useState("");
+  const [tops, setTops] = useState("");
   const [generalComment, setGeneralComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -131,6 +133,8 @@ export default function ExternalAssessmentTeamPage() {
 
       setScores(initialScores);
       setComments(initialComments);
+      setTips(data.tips || "");
+      setTops(data.tops || "");
       setGeneralComment(data.general_comment || "");
     } catch (err: any) {
       setError(
@@ -177,6 +181,8 @@ export default function ExternalAssessmentTeamPage() {
         teamId,
         {
           scores: submitScores,
+          tips: tips || undefined,
+          tops: tops || undefined,
           general_comment: generalComment || undefined,
           submit,
         },
@@ -534,6 +540,49 @@ export default function ExternalAssessmentTeamPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Tips and Tops */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Tips &amp; Tops voor dit team
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="tops-comment"
+                className="block text-sm font-medium text-emerald-700 mb-2"
+              >
+                ⭐ Tops — wat ging er goed?
+              </label>
+              <textarea
+                id="tops-comment"
+                value={tops}
+                onChange={(e) => setTops(e.target.value)}
+                disabled={isReadOnly}
+                rows={4}
+                className="w-full px-3 py-2 border border-emerald-200 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="Benoem hier wat het team goed heeft gedaan..."
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="tips-comment"
+                className="block text-sm font-medium text-amber-700 mb-2"
+              >
+                💡 Tips — wat kan beter?
+              </label>
+              <textarea
+                id="tips-comment"
+                value={tips}
+                onChange={(e) => setTips(e.target.value)}
+                disabled={isReadOnly}
+                rows={4}
+                className="w-full px-3 py-2 border border-amber-200 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="Geef hier concrete verbeterpunten voor het team..."
+              />
+            </div>
           </div>
         </div>
 

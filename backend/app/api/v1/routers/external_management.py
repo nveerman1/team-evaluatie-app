@@ -772,10 +772,14 @@ def get_external_advisory_detail(
             )
         )
 
-    # Get general comment from metadata
+    # Get tips, tops, and general comment from metadata
     general_comment = None
+    tips = None
+    tops = None
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
+        tips = assessment.metadata_json.get("tips")
+        tops = assessment.metadata_json.get("tops")
 
     # Construct team name - use "Team X" format when team_number is provided
     team_display_name = (
@@ -790,6 +794,8 @@ def get_external_advisory_detail(
         rubric_scale_min=rubric.scale_min,
         rubric_scale_max=rubric.scale_max,
         scores=score_outputs,
+        tips=tips,
+        tops=tops,
         general_comment=general_comment,
         submitted_at=_utc(link.submitted_at),
         status=link.status,

@@ -358,6 +358,8 @@ def get_team_assessment_detail(
     # Get existing scores if any
     existing_scores = []
     general_comment = None
+    tips = None
+    tops = None
     if existing_assessment:
         scores = (
             db.query(ProjectAssessmentScore)
@@ -377,9 +379,11 @@ def get_team_assessment_detail(
             for s in scores
         ]
 
-        # General comment might be in metadata
+        # General comment and tips/tops might be in metadata
         if existing_assessment.metadata_json:
             general_comment = existing_assessment.metadata_json.get("general_comment")
+            tips = existing_assessment.metadata_json.get("tips")
+            tops = existing_assessment.metadata_json.get("tops")
 
     # Determine status
     status = "NOT_STARTED"
@@ -403,6 +407,8 @@ def get_team_assessment_detail(
         project_description=project.description,
         rubric=rubric_out,
         existing_scores=existing_scores,
+        tips=tips,
+        tops=tops,
         general_comment=general_comment,
         status=status,
     )
@@ -559,11 +565,16 @@ def submit_team_assessment(
         db.add(assessment_team)
         db.flush()
 
-    # Update metadata with general comment
-    if payload.general_comment:
+    # Update metadata with tips, tops, and general comment
+    if payload.tips is not None or payload.tops is not None or payload.general_comment is not None:
         if not assessment.metadata_json:
             assessment.metadata_json = {}
-        assessment.metadata_json["general_comment"] = payload.general_comment
+        if payload.tips is not None:
+            assessment.metadata_json["tips"] = payload.tips
+        if payload.tops is not None:
+            assessment.metadata_json["tops"] = payload.tops
+        if payload.general_comment is not None:
+            assessment.metadata_json["general_comment"] = payload.general_comment
 
     # Save/update scores
     for score_data in payload.scores:

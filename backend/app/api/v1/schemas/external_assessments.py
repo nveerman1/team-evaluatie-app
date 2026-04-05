@@ -149,6 +149,8 @@ class ExternalAssessmentDetail(BaseModel):
     project_description: Optional[str]
     rubric: RubricForExternal
     existing_scores: List[ExternalAssessmentScoreOut]
+    tips: Optional[str] = None
+    tops: Optional[str] = None
     general_comment: Optional[str]
     status: str  # NOT_STARTED | IN_PROGRESS | SUBMITTED
 
@@ -168,6 +170,8 @@ class ExternalAssessmentSubmit(BaseModel):
     """Submission for external assessment"""
 
     scores: List[ExternalAssessmentScoreSubmit]
+    tips: Optional[str] = None
+    tops: Optional[str] = None
     general_comment: Optional[str] = None
     submit: bool = False  # If True, marks as final submission
 
@@ -261,6 +265,8 @@ class ExternalAdvisoryDetail(BaseModel):
     rubric_scale_min: int
     rubric_scale_max: int
     scores: List[ExternalAdvisoryScoreOut]
+    tips: Optional[str] = None
+    tops: Optional[str] = None
     general_comment: Optional[str]
     submitted_at: Optional[datetime]
     status: str
